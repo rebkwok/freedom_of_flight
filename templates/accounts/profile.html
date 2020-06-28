@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% load accounttags %}
+
+{% block content %}
+
+<div class="container">
+           <h1>Your Profile</h1>
+           <div class="row">
+               <h2 class="col-12">Personal Details</h2>
+               <div class="col-4">Username:</div>
+               <div class="col-8">{{ user.username }}</div>
+               <div class="col-4">Name:</div>
+               <div class="col-8">{{ user.first_name }} {{ user.last_name }}</div>
+               <div class="col-4">Date of birth:</div>
+               <div class="col-8">{{ user.profile.date_of_birth }} </div>
+               <div class="col-4">Address:</div>
+               <div class="col-8">{{ user.profile.address }}, {{ user.profile.postcode }} </div>
+               <div class="col-4">Phone:</div>
+               <div class="col-8">{{ user.profile.phone }} </div>
+           </div>
+           <div class="row">
+               <h2 class="col-12">Emergency Contact Information</h2>
+               <div class="col-4">Name:</div>
+               <div class="col-8">{{ user.profile.emergency_contact_name }} </div>
+               <div class="col-4">Phone:</div>
+               <div class="col-8">{{ user.profile.emergency_contact_phone }} </div>
+               <div class="col-4">Relationship:</div>
+               <div class="col-8">{{ user.profile.emergency_contact_relationship }} </div>
+               <div class="col-12"><a class="btn btn-success" href="{% url 'accounts:update_profile' %}">Change</a></div>
+           </div>
+
+            <div class="row">
+               <h2 class="col-12">Email Addresses</h2>
+                <div class="col-4">Primary email address:</div>
+                <div class="col-8">{{ user.email }}</div>
+               <div class="col-12"><a class="btn btn-success" href="{% url 'account_email' %}">Change</a></div>
+           </div>
+
+            <div class="row">
+               <h2 class="col-12">Disclaimer</h2>
+                {% if disclaimer %}
+                <div class="col-12">Completed</div>
+                {% else %}
+                    <div class="col-12">
+                       <p>You have not completed a disclaimer form.
+                           This must be completed before you can make any bookings.</p>
+                       <p><a href="{% url 'accounts:disclaimer_form' %}">Complete waiver form now</a></p>
+                   </div>
+               {% endif %}
+           </div>
+</div>
+{% endblock content %}
+

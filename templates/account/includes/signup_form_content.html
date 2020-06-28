@@ -1,0 +1,26 @@
+    {% for field in form %}
+        {% if field.name  == 'data_privacy_confirmation' %}
+    <div class="dp-box pre-scrollable" xmlns="http://www.w3.org/1999/html"><h2>Data Privacy Policy</h2>
+            <h5>Version: {{ form.data_privacy_policy.version }}.  Issue date: {{ form.data_privacy_policy.issue_date | date:'d M Y' }}.</h5>
+                {{ form.data_privacy_policy.content|safe }}
+            </div>
+            <div class="form-group">
+               <div>
+                   {{ field }}<label for='id_data_privacy_confirmation'></label>
+                     <label class="control-label" for='id_data_privacy_confirmation'>{{ field.label }}</label>
+                    {% if field.errors %}<span class="errorlist">{{ field.errors }}</span>{% endif %}
+               </div>
+           </div>
+
+        {% else %}
+            <div class="form-actions">
+            <label class="control-label" for="{{ field.name }}_id">{{ field.label }}{% if field.field.required %}*{% endif %}</label>
+                <div {% if field.errors %}class="control-group"{% endif %}>
+                    {{ field }}
+                </div>
+                <div class="helptext">{{ field.help_text }}</div>
+                {% if field.errors %}<div class="errorlist">{{ field.errors }}</div>{% endif %}
+            </div>
+        {%  endif %}
+    {% endfor %}
+

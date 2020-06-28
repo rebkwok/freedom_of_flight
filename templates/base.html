@@ -1,0 +1,122 @@
+{% load static %}
+{% load accounttags %}
+{% load cookielaw_tags %}
+
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no user-scalable=yes">
+    <meta name="description" content="">
+    <!--<link rel="shortcut icon" href="{% static 'booking/images/favicon.ico' %}" type="image/vnd.microsoft.icon">-->
+    <!--<link rel="shortcut icon" type="image/png" href="{% static 'booking/images/icon.png' %}">-->
+    <!--<link rel="apple-touch-icon" href="{% static 'booking/images/icon.png' %}">-->
+
+    <title>Freedom of Flight Aerial Booking</title>
+
+    <!-- Bootstrap core CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+
+    <!-- Custom styles for this template -->
+    <link href="{% static 'css/custom-v1.0.css' %}" rel="stylesheet">
+      <link rel="stylesheet" type="text/css" href="{% static 'css/jquery.datetimepicker.css' %}"/>
+
+      <!-- Font awesome -->
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.13.1/css/all.min.css">
+
+  </head>
+
+  <body>
+
+    <header>
+      <!-- Fixed navbar -->
+      <nav class="navbar navbar-expand-md navbar-dark fixed-top bg-dark">
+        <a class="navbar-brand" href="#">LOGO</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarCollapse">
+          <ul class="navbar-nav mr-auto">
+            <li class="nav-item active">
+              <li><a class="nav-link" href="#">Schedule</a></li>
+            </li>
+          </ul>
+        </div>
+
+        <ul class="nav navbar-nav pull-right">
+          {% block admin-nav %}
+              {% if request.user.is_staff %}
+                 <li class="active-nav"><a href="#">Studio Admin</a></li>
+              {% endif %}
+          {% endblock admin-nav %}
+          {% if request.user.is_authenticated %}
+            <li class="dropdown">
+                <div class="welcome-menu">Signed in as {{request.user}}</div>
+              <a href="#" class="account-menu dropdown-toggle active-nav-login" data-toggle="dropdown" role="button" aria-expanded="false">Your account<span class="caret"></span></a>
+              <ul class="dropdown-menu" role="menu">
+                <li class="active-nav-login"><a href="{% url 'account_change_password' %}">Change password</a></li>
+                <li class="active-nav-login"><a href="{% url 'accounts:profile' %}">Profile</a></li>
+                  <!--{% if not request.user|has_disclaimer %}-->
+                    <!--<li class="active-nav-login"><a href="{% url 'disclaimer_form' %}">Disclaimer Form</a></li>-->
+                  <!--{% endif %}-->
+                <li class="active-nav-login"><a href="{% url 'account_logout' %}">Sign Out</a></li>
+              </ul>
+            </li>
+          {% else %}
+            <div class="welcome-menu">Not signed in</div>
+            <li class="active-nav-login account-menu"><a class="account-menu" href="{% url 'account_login' %}?next={{request.get_full_path}}">Sign In</a></li>
+          {% endif %}
+      </ul>
+
+      </nav>
+    </header>
+
+    <!-- Begin page content -->
+    <main role="main" class="container">
+    {% cookielaw_banner %}
+
+      <h1 class="mt-5">Freedom of Flight Aerial Booking</h1>
+
+        {% block body %}
+
+            {% block content %}
+                    <p>You need to define a content block!</p>
+            {% endblock %}
+        {% endblock %}
+    </main>
+
+    <footer class="footer">
+      <div class="container">
+        <span class="text-muted">
+          <div class="pull-right">
+             <div class="footer-credit">Site developed by <a href="https://twitter.com/rebkwok" target="_blank" style="color: #0B0B61">Becky Smith</a><br/>
+             </div>
+          </div>
+        </span>
+      </div>
+    </footer>
+
+    <!-- Bootstrap core JavaScript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    <!-- JS, Popper.js, and jQuery -->
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js" integrity="sha256-9/aliU8dGd2tb6OSsuzixeV4y/faTqgFtohetphbbj0=" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js" integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.13.1/js/all.min.js"></script>
+    <script src="{% static 'cookielaw/js/cookielaw.js' %}"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.27.0/moment.min.js"></script>
+    <script src="{% static 'js/jquery.datetimepicker.js' %}"></script>
+    <script src="{% static 'js/jquery.tablesorter.min.js' %}"></script>
+    <script src="{% static 'js/jquery.are-you-sure.js' %}"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-cookie/2.2.0/js.cookie.min.js" ntegrity="sha384-ujpAYcyxFaJsZN5668lLgOpEH8vtWrbOq8fvj+WZ2kD71LJwGa/9QP/suPPF1hTI" crossorigin="anonymous"></script>
+    <script src="{% static 'js/jquery.scrollreminder.js' %}"></script>
+    <script src="{% static 'js/custom-v1.0.js' %}"></script>
+
+    {% block extra_js %}{% endblock %}
+
+  </body>
+</html>
+

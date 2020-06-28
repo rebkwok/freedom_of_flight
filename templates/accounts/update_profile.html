@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container">
+            <div>
+                <h1>Edit Your Account Profile</h1>
+            </div>
+                <form action="" method="post">{% csrf_token %}
+                    {% csrf_token %}
+                      {{ form.non_field_errors }}
+                            {% for field in form %}
+                                {% if field.name == 'confirmation_key' %}
+                                    <span class="hide">{{ field }}</span>
+                                {% else %}
+                                    <div class="form-group">
+                                       <label class="control-label" for="name_id">{{ field.label }}{% if field.field.required %}*{% endif %}</label>
+                                       <div class="{% if form.field.errors %}errorlist{% endif %}">{{ field }}</div>
+                                       <div class="helptext">{{ field.help_text }}</div>
+                                        {% if field.errors %}
+                                            <div class="errorlist">
+                                                {{ field.errors }}
+                                            </div>
+                                        {% endif %}
+                                   </div>
+                                {% endif %}
+                            {% endfor %}
+
+                    <input class="btn btn-success" type="submit" value="Update" />
+                    <a href="{% url 'accounts:profile' %}"><div class="btn btn-warning">Cancel</div></a>
+                </form>
+
+</div>
+
+{% endblock content %}

@@ -1,0 +1,17 @@
+*.pyc
+.env
+.idea/
+db.sqlite3
+staticfiles
+collected-static
+/venv
+.vagrant/
+bin/
+build/
+include/
+lib/
+local/
+.DS_Store
+htmlcov/
+.coverage
+provision/.vaultpass

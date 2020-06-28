@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+    <div class="container">
+        <div class="extra-top-margin row">
+    <h1>Data Privacy Policy</h1>
+
+        <p>Please review our {% if update_needed %}updated {% endif %}data privacy policy before proceeding.</p>
+
+        {% if form.errors %}<div class="form-error">Please correct the errors below.{% endif %}</div>
+
+        <form action="" method="post">{% csrf_token %}
+            <div class="dp-box">
+        <h4>Version: {{ form.data_privacy_policy.version }}.  Issue date: {{ form.data_privacy_policy.issue_date | date:'d M Y' }}.</h4>
+            <p>
+                {{ form.data_privacy_policy.content|linebreaks|safe }}
+            </p>
+
+            </div>
+            <div class="form-group">
+               <div class="col-xs-12 vspace {% if form.confirm.errors %}ticket-error{% endif %}">
+                   {{ form.confirm }}<label for='id_confirm'></label>
+                     <label class="control-label" for='id_confirm'>{{ form.confirm.label }}</label>
+                    {% if form.confirm.errors %} {{ form.confirm.errors }}{% endif %}
+               </div>
+               <div class="studioadmin-help col-xs-10 col-xs-offset-2">{{ form.confirm.help_text }}</div>
+           </div>
+            <input type="hidden" name="next_url" value={{ form.next_url }}/>
+            <input class="btn btn-success topspace" type="submit" value="Submit" />
+        </form>
+    </div>
+    </div>
+{% endblock content %}
+
+{% block footer_class %}{% endblock %}
