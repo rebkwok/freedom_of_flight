@@ -1,5 +1,6 @@
 from django import template
 
+from ..models import has_active_disclaimer, has_expired_disclaimer
 
 register = template.Library()
 
@@ -13,4 +14,9 @@ def modify_redirect_field_value(ret_url):
 
 @register.filter
 def has_disclaimer(user):
-    return True
+    return has_active_disclaimer(user)
+
+
+@register.filter
+def has_expired_disclaimer(user):
+    return has_expired_disclaimer(user)

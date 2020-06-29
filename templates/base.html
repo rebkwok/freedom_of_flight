@@ -32,41 +32,37 @@
     <header>
       <!-- Fixed navbar -->
       <nav class="navbar navbar-expand-md navbar-dark fixed-top bg-dark">
-        <a class="navbar-brand" href="#">LOGO</a>
+        <a class="navbar-brand p-0" href="/"><img class="nav-logo" src="{% static 'images/fof_logo.jpg' %}"></a>
         <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
           <span class="navbar-toggler-icon"></span>
         </button>
 
         <div class="collapse navbar-collapse" id="navbarCollapse">
           <ul class="navbar-nav mr-auto">
-            <li class="nav-item active">
-              <li><a class="nav-link" href="#">Schedule</a></li>
+            {% for track in tracks %}
+            <li class="nav-item">
+              <li><a class="nav-link" href="{% url 'booking:events' track.slug %}">{{ track.name }}</a></li>
             </li>
+            {% endfor %}
+
+            {% if request.user.is_authenticated %}
+            <li class="nav-item">
+              <li><a class="nav-link" href="{% url 'accounts:profile' %}">Account</a></li>
+            {% if request.user.is_staff %}
+              <li><a class="nav-link" href="#">Admin</a></li>
+              {% endif %}
+            </li>
+            {% endif %}
           </ul>
+
         </div>
 
-        <ul class="nav navbar-nav pull-right">
-          {% block admin-nav %}
-              {% if request.user.is_staff %}
-                 <li class="active-nav"><a href="#">Studio Admin</a></li>
-              {% endif %}
-          {% endblock admin-nav %}
+        <ul class="nav navbar-nav mr-auto pull-right">
           {% if request.user.is_authenticated %}
-            <li class="dropdown">
-                <div class="welcome-menu">Signed in as {{request.user}}</div>
-              <a href="#" class="account-menu dropdown-toggle active-nav-login" data-toggle="dropdown" role="button" aria-expanded="false">Your account<span class="caret"></span></a>
-              <ul class="dropdown-menu" role="menu">
-                <li class="active-nav-login"><a href="{% url 'account_change_password' %}">Change password</a></li>
-                <li class="active-nav-login"><a href="{% url 'accounts:profile' %}">Profile</a></li>
-                  <!--{% if not request.user|has_disclaimer %}-->
-                    <!--<li class="active-nav-login"><a href="{% url 'disclaimer_form' %}">Disclaimer Form</a></li>-->
-                  <!--{% endif %}-->
-                <li class="active-nav-login"><a href="{% url 'account_logout' %}">Sign Out</a></li>
-              </ul>
-            </li>
+            <li class="nav-item"><a class="nav-link" href="{% url 'account_logout' %}">Log Out <span class="helptext">({{request.user}})</span></a></li>
           {% else %}
             <div class="welcome-menu">Not signed in</div>
-            <li class="active-nav-login account-menu"><a class="account-menu" href="{% url 'account_login' %}?next={{request.get_full_path}}">Sign In</a></li>
+            <li class="active-nav-login account-menu"><a class="account-menu" href="{% url 'account_login' %}?next={{request.get_full_path}}">Log In</a></li>
           {% endif %}
       </ul>
 
@@ -77,9 +73,10 @@
     <main role="main" class="container">
     {% cookielaw_banner %}
 
-      <h1 class="mt-5">Freedom of Flight Aerial Booking</h1>
+      <!--<h1 class="mt-5">Freedom of Flight Aerial Booking</h1>-->
 
         {% block body %}
+        {% block precontent %}{% endblock %}
 
             {% block content %}
                     <p>You need to define a content block!</p>

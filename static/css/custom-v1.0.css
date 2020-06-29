@@ -37,6 +37,11 @@ code {
   font-size: 80%;
 }
 
+.nav-logo {
+    max-height: 40px;
+    margin:0;
+    padding: 0;
+}
 
 /*Cookie law banner*/
 div#CookielawBanner {

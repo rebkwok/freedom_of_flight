@@ -1,16 +1,14 @@
 from django.urls import path
 from django.views.generic import RedirectView
-from booking.views import home
+from booking.views import home, EventListView, EventDetailView
 
 
 app_name = 'booking'
 
 urlpatterns = [
-    path(
-        # 'schedule/', EventListView.as_view(), name='events'
-        'schedule/', home, name='events'
-    ),
-
+    path('schedule/', home),
+    path('<slug:track>/', EventListView.as_view(), name='events'),
+    path('event/<slug>', EventDetailView.as_view(), name='event'),
     # path(
     #     'disclaimer-required/', disclaimer_required,
     #     name='disclaimer_required'

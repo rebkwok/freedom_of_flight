@@ -1,8 +1,12 @@
 
 from django.conf import settings
 
+from .models import Track
 
-def fof_email(request):
-    return {'fof_email': settings.DEFAULT_STUDIO_EMAIL}
 
+def booking(request):
+    return {
+        'fof_email': settings.DEFAULT_STUDIO_EMAIL,
+        'tracks': Track.objects.all()
+    }
 
