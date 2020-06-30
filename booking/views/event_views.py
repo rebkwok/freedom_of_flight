@@ -10,7 +10,7 @@ from django.views.decorators.http import require_http_methods
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView
 
 
-from .models import Booking, Event, Track, WaitingListUser
+from ..models import Booking, Event, Track, WaitingListUser
 
 
 def home(request):

@@ -1,14 +1,18 @@
 from django.urls import path
 from django.views.generic import RedirectView
-from booking.views import home, EventListView, EventDetailView
+from booking.views import ajax_toggle_booking, home, EventListView, EventDetailView, placeholder
 
 
 app_name = 'booking'
 
 urlpatterns = [
     path('schedule/', home),
+    path('placeholder/', placeholder, name='placeholder'),
+
     path('<slug:track>/', EventListView.as_view(), name='events'),
     path('event/<slug>', EventDetailView.as_view(), name='event'),
+    path('ajax-toggle-booking/<int:event_id>/', ajax_toggle_booking, name='ajax_toggle_booking'),
+
     # path(
     #     'disclaimer-required/', disclaimer_required,
     #     name='disclaimer_required'

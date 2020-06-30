@@ -1,0 +1,25 @@
+{% load bookingtags %}
+
+{% if alert_message %}
+    {% if alert_message.message_type == 'warning' %}
+        <script>vNotify.warning({text:'{{ alert_message.message }}',title:'{{ event }}',position: 'bottomLeft',});</script>
+    {% elif alert_message.message_type == 'success' %}
+        <script>vNotify.success({text:'{{ alert_message.message }}',title:'{{ event }}',position: 'bottomLeft',});</script>
+    {% elif alert_message.message_type == 'error' %}
+        <script>vNotify.error({text:'{{ alert_message.message }}',title:'{{ event }}',position: 'bottomLeft',sticky: true});</script>
+    {% else %}
+        <script>vNotify.info({text:'{{ alert_message.message }}',title:'{{ event }}',position: 'bottomLeft',});</script>
+    {% endif %}
+{% endif %}
+
+{% if event.id in booked_event_ids %}
+    <a class="btn btn-xs btn-dark" href="#">Cancel</a>
+{% elif event.bookable %}
+    {% if not user|has_available_block:event %}
+        <a class="btn btn-xs btn-info" href="#">Payment Options</a>
+    {% elif event.course %}
+        <a class="btn btn-xs btn-success" href="#">Book Course</a>
+    {% else %}
+        <a class="btn btn-xs btn-success" href="#">Book Drop-in</a>
+    {% endif %}
+{% endif %}
