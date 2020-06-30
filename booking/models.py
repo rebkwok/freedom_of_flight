@@ -128,18 +128,10 @@ class Event(models.Model):
         return f"{self.name} - {self.start.astimezone(pytz.timezone('Europe/London')).strftime('%d %b %Y, %H:%M')} ({self.event_type.track})"
 
 
-class BlockType(models.Model):
+
+class BaseBlockConfig(models.Model):
     """Holds cost and event info for a Course or block of (drop in) events"""
     identifier = models.CharField(max_length=255)
-
-    # COURSES
-    course_type = models.ForeignKey(CourseType, on_delete=models.SET_NULL, null=True)
-
-    # DROP-IN BLOCKS; set this from course type for Courses
-    size = models.PositiveIntegerField(help_text="Number of events in block")
-    event_type = models.ForeignKey(EventType, on_delete=models.SET_NULL, null=True)
-
-    # COMMON
     cost = models.DecimalField(max_digits=8, decimal_places=2)
     duration = models.PositiveIntegerField(help_text="Number of weeks until block expires (from first use)")
     active = models.BooleanField(default=False)
@@ -147,11 +139,24 @@ class BlockType(models.Model):
     def __str__(self):
         return self.identifier
 
-    def save(self, *args, **kwargs):
-        if self.course_type:
-            self.event_type = self.course_type.event_type
-            self.size = self.course_type.number_of_events
-        super().save(*args, **kwargs)
+
+class DropInBlockConfig(BaseBlockConfig):
+    # DROP-IN BLOCKS
+    size = models.PositiveIntegerField(help_text="Number of events in block")
+    event_type = models.ForeignKey(EventType, on_delete=models.SET_NULL, null=True)
+
+
+class CourseBlockConfig(BaseBlockConfig):
+    # COURSES
+    course_type = models.ForeignKey(CourseType, on_delete=models.SET_NULL, null=True)
+
+    @cached_property
+    def size(self):
+        return self.course_type.number_of_events
+
+    @cached_property
+    def event_type(self):
+        return self.course_type.event_type
 
 
 class Block(models.Model):
@@ -159,7 +164,8 @@ class Block(models.Model):
     Block booking
     """
     user = models.ForeignKey(User, related_name='blocks', on_delete=models.CASCADE)
-    block_type = models.ForeignKey(BlockType, on_delete=models.CASCADE)
+    dropin_block_config = models.ForeignKey(DropInBlockConfig, on_delete=models.SET_NULL, null=True, blank=True)
+    course_block_config = models.ForeignKey(CourseBlockConfig, on_delete=models.SET_NULL, null=True, blank=True)
     purchase_date = models.DateTimeField(default=timezone.now)
     start_date = models.DateTimeField(null=True, blank=True)
     paid = models.BooleanField(default=False, help_text='Payment has been made by user')
@@ -176,7 +182,11 @@ class Block(models.Model):
             ]
 
     def __str__(self):
-        return "{self.user.username} -- {self.block_type} -- purchased {self.purchase_date.strftime('%d %b %Y')}"
+        return f"{self.user.username} -- {self.block_config} -- purchased {self.purchase_date.strftime('%d %b %Y')}"
+
+    @cached_property
+    def block_config(self):
+        return self.dropin_block_config if self.dropin_block_config else self.course_block_config
 
     def _get_end_of_day(self, input_datetime):
         next_day = (input_datetime + timedelta(
@@ -199,7 +209,7 @@ class Block(models.Model):
         # replace block expiry date with very end of day in local time
         # move forwards 1 day and set hrs/min/sec/microsec to 0, then move
         # back 1 sec
-        duration = self.block_type.duration
+        duration = self.block_config.duration
         expiry_datetime = self.start_date + relativedelta(weeks=duration)
         return self._get_end_of_day(expiry_datetime)
 
@@ -218,7 +228,7 @@ class Block(models.Model):
     @property
     def full(self):
         if hasattr(self, "bookings"):
-            return self.bookings.count() >= self.block_type.size
+            return self.bookings.count() >= self.block_config.size
         return False
 
     def active_block(self):
@@ -245,6 +255,12 @@ class Block(models.Model):
                 log=f'Booking id {booking.id} booked with deleted block {self.id} has been reset'
             )
         super().delete(*args, **kwargs)
+
+    def clean(self):
+        if not self.dropin_block_config and not self.course_block_config:
+            raise ValidationError({'dropin_block_config': _('One of dropin_block_config or course_block_config is required.')})
+        elif self.dropin_block_config and self.course_block_config:
+            raise ValidationError({'course_block_config': _('Only one of dropin_block_config or course_block_config can be set.')})
 
     def save(self, *args, **kwargs):
         # for an existing block, if changed to paid, update purchase date to now
@@ -315,17 +331,17 @@ class Booking(models.Model):
     def has_available_block(self):
         if self.event.course:
             return any(
-                block for block in
-                Block.objects.select_related("user", "block_type").filter(
-                    user=self.user, block_type__course_type=self.event.course.course_type
+                True for block in
+                Block.objects.select_related("user", "course_block_config").filter(
+                    user=self.user, course_block_config__course_type=self.event.course.course_type
                 )
                 if block.active_block()
             )
         else:
             return any(
-                block for block in
-                Block.objects.select_related("user", "block_type").filter(
-                    user=self.user, block_type__course_type__isnull=True,  block_type__event_type=self.event.event_type
+                True for block in
+                Block.objects.select_related("user", "dropin_block_config").filter(
+                    user=self.user, dropin_block_config__event_type=self.event.event_type
                 )
                 if block.active_block()
             )
@@ -447,10 +463,14 @@ class BaseVoucher(models.Model):
 
 class BlockVoucher(BaseVoucher):
     code = models.CharField(max_length=255, unique=True)
-    block_types = models.ManyToManyField(BlockType)
+    block_types = models.ManyToManyField(DropInBlockConfig)
+    course_types = models.ManyToManyField(CourseBlockConfig)
 
-    def check_block_type(self, block_type):
-        return bool(block_type in self.block_types.all())
+    def all_block_configs(self):
+        return [*list(self.block_types.all()), *list(self.course_types.all())]
+
+    def check_block_config(self, block_config):
+        return any(block_config in self.all_block_configs())
 
 
 class UsedBlockVoucher(models.Model):
@@ -460,14 +480,21 @@ class UsedBlockVoucher(models.Model):
 
 
 class GiftVoucherType(models.Model):
-    block_type = models.ForeignKey(
-        BlockType, null=True, blank=True, on_delete=models.SET_NULL, related_name="gift_vouchers"
+    dropin_block_type = models.ForeignKey(
+        DropInBlockConfig, null=True, blank=True, on_delete=models.SET_NULL, related_name="dropin_gift_vouchers"
+    )
+    course_block_type = models.ForeignKey(
+        CourseBlockConfig, null=True, blank=True, on_delete=models.SET_NULL, related_name="course_gift_vouchers"
     )
     active = models.BooleanField(default=True, help_text="Display on site; set to False instead of deleting unused voucher types")
 
     @cached_property
+    def block_type(self):
+        return self.dropin_block_type if self.dropin_block_type else self.course_block_type
+
+    @cached_property
     def cost(self):
-        return self.block_type.cost
+        return self.block_type().cost
 
     def __str__(self):
-        return f"{self.block_type.identifier} -  £{self.cost}"
+        return f"{self.block_type().identifier} -  £{self.cost}"

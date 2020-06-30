@@ -40,18 +40,15 @@
         <div class="collapse navbar-collapse" id="navbarCollapse">
           <ul class="navbar-nav mr-auto">
             {% for track in tracks %}
-            <li class="nav-item">
-              <li><a class="nav-link" href="{% url 'booking:events' track.slug %}">{{ track.name }}</a></li>
-            </li>
+            <li class="nav-item"><a class="nav-link" href="{% url 'booking:events' track.slug %}">{{ track.name }}</a></li>
             {% endfor %}
+            <li><a class="nav-link" href="#">Gift Vouchers</a></li>
 
             {% if request.user.is_authenticated %}
-            <li class="nav-item">
-              <li><a class="nav-link" href="{% url 'accounts:profile' %}">Account</a></li>
-            {% if request.user.is_staff %}
-              <li><a class="nav-link" href="#">Admin</a></li>
+              <li class="nav-item"><a class="nav-link" href="{% url 'accounts:profile' %}">Account</a></li>
+              {% if request.user.is_staff %}
+                <li><a class="nav-link" href="#">Admin</a></li>
               {% endif %}
-            </li>
             {% endif %}
           </ul>
 
@@ -62,7 +59,7 @@
             <li class="nav-item"><a class="nav-link" href="{% url 'account_logout' %}">Log Out <span class="helptext">({{request.user}})</span></a></li>
           {% else %}
             <div class="welcome-menu">Not signed in</div>
-            <li class="active-nav-login account-menu"><a class="account-menu" href="{% url 'account_login' %}?next={{request.get_full_path}}">Log In</a></li>
+            <li class="nav-item"><a class="nav-link" href="{% url 'account_login' %}?next={{request.get_full_path}}">Log In</a></li>
           {% endif %}
       </ul>
 
@@ -87,10 +84,18 @@
     <footer class="footer">
       <div class="container">
         <span class="text-muted">
-          <div class="pull-right">
+          <div>
+          <span class="float-left">
+            <a href="https://www.facebook.com/freedomofflightaerial"><i class="fab fa-facebook-square fa-lg"></i></a>
+            <a href="https://www.instagram.com/freedom_of_flight_aerial"><i class="fab fa-instagram-square fa-lg"></i></a>
+            <a href="https://freedomofflightaerial.com/"><i class="fas fa-globe fa-lg"></i></a>
+          </span>
+          <span class="float-right">
              <div class="footer-credit">Site developed by <a href="https://twitter.com/rebkwok" target="_blank" style="color: #0B0B61">Becky Smith</a><br/>
              </div>
-          </div>
+          </span>
+            </div>
+
         </span>
       </div>
     </footer>

@@ -21,13 +21,13 @@
                                 <a class="btn btn-sm btn-dark" href="#">Cancel</a>
                             {% elif request.user.is_authenticated %}
                                 {% if event.full %}
-                                    <a class="btn btn-sm btn-warning" href="#">Join Waiting List</a>
+                                    <a class="btn btn-xs btn-warning" href="#">Join Waiting List</a>
                                 {% elif not user|has_available_block:event %}
-                                    <a class="btn btn-sm btn-success" href="#">Payment Options</a>
+                                    <a class="btn btn-xs btn-info" href="#">Payment Options</a>
                                 {% elif event.course %}
-                                    <a class="btn btn-sm btn-success" href="#">Book Course</a>
+                                    <a class="btn btn-xs btn-success" href="#">Book Course</a>
                                 {% else %}
-                                    <a class="btn btn-sm btn-success" href="#">Book Drop-in</a>
+                                    <a class="btn btn-xs btn-success" href="#">Book Drop-in</a>
                                 {% endif %}
                             {% else %}
                                 <span class="helptext">Log in to book</span>

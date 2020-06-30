@@ -10,6 +10,11 @@ Date.prototype.dateFormat = function( format ){
 jQuery(document).ready(function () {
     $(document).scrollreminder();
 
+    $(document).on('click', '.nav-link', function () {
+        $(".nav-item").find(".active").removeClass("active");
+    });
+    $('a[href="' + location.pathname + '"]').closest('.nav-item').addClass('active');
+
     jQuery('form.dirty-check').areYouSure();
 
     jQuery('#datetimepicker').datetimepicker({
