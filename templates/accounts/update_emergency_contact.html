@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% load accounttags %}
+
+{% block content %}
+
+<div class="container">
+
+    {% include 'accounts/includes/account_nav.html' %}
+
+    <div>
+        <h1>Edit Your Emergency Contact Information</h1>
+    </div>
+    {% if form.errors %}
+        <div class="errorlist">Please correct the errors below</div>
+    {% endif %}
+
+       <form class="dirty-check" action="" method="post">
+           {% csrf_token %}
+
+       <div>
+           <div class="col-12">
+           {% for field in form %}
+                <div class="form-group">
+                    <div class="col-12 {% if form.field.errors %}errorlist{% endif %}">
+                       {{ field }}<label for='id_{{ field.name }}'></label>
+                         <label class="control-label" for='id_{{ field.name }}'>{{ field.label }}</label>
+                        {% if field.errors %} {{ field.errors }}{% endif %}
+                   </div>
+                   <div class="helptext col-9 col-offset-3">{{ field.help_text }}</div>
+                </div>
+           {% endfor %}
+
+            <div class="col-12"><input class="btn btn-success" type="submit" value="Submit" /></div>
+       </form>
+
+</div>
+{% endblock %}

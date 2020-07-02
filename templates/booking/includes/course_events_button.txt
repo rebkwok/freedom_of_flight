@@ -1,0 +1,23 @@
+{% load bookingtags static %}
+
+{% if alert_message %}
+    {% if alert_message.message_type == 'warning' %}
+        <script>vNotify.warning({text:'{{ alert_message.message }}',title:'{{ event }}',position: 'topLeft', visibleDuration: 2500});</script>
+    {% elif alert_message.message_type == 'success' %}
+        <script>vNotify.success({text:'{{ alert_message.message }}',title:'{{ event }}',position: 'topLeft', visibleDuration: 2500});</script>
+    {% elif alert_message.message_type == 'error' %}
+        <script>vNotify.error({text:'{{ alert_message.message }}',title:'{{ event }}',position: 'topLeft', visibleDuration: 5000});</script>
+    {% else %}
+        <script>vNotify.info({text:'{{ alert_message.message }}',title:'{{ event }}',position: 'topLeft', visibleDuration: 2500});</script>
+    {% endif %}
+{% endif %}
+
+{% if already_booked %}
+    You are attending this course.
+{% elif not user|has_available_course_block:course %}
+    <a class="btn btn-sm btn-info btn-block mb-2" href="#">
+    <i id="loader_{{ course.id }}" class="btn-spinner fa fa-spinner fa-spin">
+    </i>Payment Options</a>
+{% else %}
+    <a class="btn btn-sm btn-success btn-block mb-2" href="#"><i id="loader_{{ course.id }}" class="btn-spinner fa fa-spinner fa-spin"></i>Book Course</a>
+{% endif %}

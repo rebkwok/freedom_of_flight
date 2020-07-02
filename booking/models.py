@@ -68,6 +68,20 @@ class Course(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True, default="")
     course_type = models.ForeignKey(CourseType, on_delete=models.CASCADE)
+    slug = AutoSlugField(populate_from=["name", "course_type"], max_length=40, unique=True)
+
+    email_studio_when_booked = models.BooleanField(default=False)
+    cancelled = models.BooleanField(default=False)
+
+    class Meta:
+        unique_together = ("name", "course_type")
+
+    @property
+    def full(self):
+        # A course is full if its events are full, INCLUDING no-shows
+        # Only need to check the first event
+        event = self.events.first()
+        return event.bookings.filter(status="OPEN").count() >= event.max_participants
 
     def __str__(self):
         return f"{self.name} ({self.course_type})"
@@ -76,7 +90,7 @@ class Event(models.Model):
     """A single bookable Event"""
     name = models.CharField(max_length=255)
     event_type = models.ForeignKey(EventType, on_delete=models.CASCADE)
-    course = models.ForeignKey(Course, on_delete=models.SET_NULL, null=True, blank=True)
+    course = models.ForeignKey(Course, on_delete=models.SET_NULL, null=True, blank=True, related_name="events")
     description = models.TextField(blank=True, default="")
     start = models.DateTimeField(help_text="Start date and time")
     duration = models.PositiveIntegerField(help_text="Duration in minutes", default=90)
@@ -100,12 +114,20 @@ class Event(models.Model):
 
     @property
     def spaces_left(self):
-        booked_number = Booking.objects.filter(event__id=self.id, status='OPEN', no_show=False).count()
+        if self.course:
+            # No-shows count for course event spaces
+            booked_number = self.bookings.filter(status='OPEN').count()
+        else:
+            booked_number = self.bookings.filter(status='OPEN', no_show=False).count()
         return self.max_participants - booked_number
 
     @property
-    def bookable(self):
+    def has_space(self):
         return self.spaces_left > 0
+
+    @property
+    def full(self):
+        return self.spaces_left <= 0
 
     @property
     def can_cancel(self):
@@ -206,18 +228,25 @@ class Block(models.Model):
         if self.manual_expiry_date:
             return self.extended_expiry_date
 
-        # replace block expiry date with very end of day in local time
-        # move forwards 1 day and set hrs/min/sec/microsec to 0, then move
-        # back 1 sec
-        duration = self.block_config.duration
-        expiry_datetime = self.start_date + relativedelta(weeks=duration)
-        return self._get_end_of_day(expiry_datetime)
+        if self.start_date:
+            # replace block expiry date with very end of day in local time
+            # move forwards 1 day and set hrs/min/sec/microsec to 0, then move
+            # back 1 sec
+            duration = self.block_config.duration
+            expiry_datetime = self.start_date + relativedelta(weeks=duration)
+            return self._get_end_of_day(expiry_datetime)
+        else:
+            self.expiry_date = None
 
     def set_start_date(self):
         # called when a booking is made to ensure block start/expiry is updated to the
-        # date of the first booked event
-        if has_attr(self, "bookings"):
-            self.start_date = self.bookings.first("event__start").start
+        # date of the first open booked event
+        # Check for no-show=False here - no-show bookings shouldn't reset block start dates
+        open_bookings = self.bookings.filter(status="OPEN", no_show=False).order_by("event__start")
+        if open_bookings.exists():
+            self.start_date = open_bookings.first().event.start
+        else:
+            self.start_date = None
         self.expiry_date = self.get_expiry_date()
         self.save()
 
@@ -227,7 +256,7 @@ class Block(models.Model):
 
     @property
     def full(self):
-        if hasattr(self, "bookings"):
+        if self.bookings.exists():
             return self.bookings.count() >= self.block_config.size
         return False
 
@@ -273,12 +302,11 @@ class Block(models.Model):
         # make manual expiry date end of day
         if self.manual_expiry_date:
             self.manual_expiry_date = self._get_end_of_day(self.manual_expiry_date)
-            self.expiry_date = self.self.manual_expiry_date
+            self.expiry_date = self.manual_expiry_date
 
         # start date is set to the first date the block is used and used to generate expiry date
         if self.start_date:
             self.expiry_date = self.get_expiry_date()
-
         super().save(*args, **kwargs)
 
 
@@ -385,10 +413,21 @@ class Booking(models.Model):
 
     def save(self, *args, **kwargs):
         self.full_clean()
-        if self._is_cancellation():
-            # cancelling a booking removes it from the block
+        if self._is_cancellation() and not self.event.course:
+            # cancelling a drop in booking removes it from the block
             self.block = None
+            old_block = self._old_booking().block
+        else:
+            old_block = None
+        if self._is_rebooking():
+            self.date_rebooked = timezone.now()
         super().save(*args, **kwargs)
+        # if there is a block on the booking, make sure its start date is updated
+        # if no block, and we cancelled, update the start date on the old block
+        if self.block:
+            self.block.set_start_date()
+        elif old_block:
+            old_block.set_start_date()
 
 
 class WaitingListUser(models.Model):

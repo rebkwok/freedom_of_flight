@@ -16,7 +16,7 @@
                                     <span class="hide">{{ field }}</span>
                                 {% else %}
                                     <div class="form-group">
-                                       <label class="control-label" for="name_id">{{ field.label }}{% if field.field.required %}*{% endif %}</label>
+                                       <label class="control-label" for="{{ field.name }}_id">{{ field.label }}{% if field.field.required %}*{% endif %}</label>
                                        <div class="{% if form.field.errors %}errorlist{% endif %}">{{ field }}</div>
                                        <div class="helptext">{{ field.help_text }}</div>
                                         {% if field.errors %}

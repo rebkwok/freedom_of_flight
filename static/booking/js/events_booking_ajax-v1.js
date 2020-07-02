@@ -8,127 +8,7 @@
   `$(document).ready()`.
   Equal to <code>500</code>.
  */
-var MILLS_TO_IGNORE = 500;
-
-
-/**
-   Executes a toggle click. Triggered by clicks on the book button.
- */
-var processBookingRequest = function()  {
-
-    //In this scope, "this" is the button just clicked on.
-    //The "this" in processResult is *not* the button just clicked
-    //on.
-    var $button_just_clicked_on = $(this);
-
-    //The value of the "data-event_id" attribute.
-    var event_id = $button_just_clicked_on.data('event_id');
-    var ref = $button_just_clicked_on.data('ref');
-
-    var processResult = function(
-       result, status, jqXHR)  {
-      //console.log("sf result='" + result + "', status='" + status + "', jqXHR='" + jqXHR + "', user_id='" + user_id + "'");
-      var result_no_alert = result.replace(/<script>.*<\/script>/, "")
-      for (tab_index = 0; tab_index < location_count ; tab_index++) {
-          // Runs once for each tab
-          $('#book_' + event_id + '_' + tab_index).html(result_no_alert);
-      }
-      //  display the result with alerts only on the tab we're on
-      $('#book_' + event_id + '_' + location_index).html(result);
-   }
-
-    var updateOnComplete  = function() {
-        $.ajax(
-            {
-                url: '/bookings/ajax-update-shopping-basket/',
-                dataType: 'html',
-                success: processShoppingBasketCount
-                //Should also have a "fail" call as well.
-            }
-        );
-
-        if (ref == 'events') {
-            $.ajax(
-                {
-                    url: '/bookings/ajax-update-booking-count/' + event_id + '/',
-                    dataType: 'html',
-                    success: processBookingCount
-                    //Should also have a "fail" call as well.
-                }
-            );
-        }
-        else if (ref == 'bookings') {
-            $.ajax(
-                {
-                    url: '/bookings/booking-details/' + event_id + '/',
-                    dataType: 'json',
-                    success: processBookingDetails
-                    //Should also have a "fail" call as well.
-                }
-            );
-        }
-    };
-
-    var processBookingCount = function(
-       result, status, jqXHR)  {
-      //console.log("sf result='" + result + "', status='" + status + "', jqXHR='" + jqXHR + "'");
-        for (tab_index = 0; tab_index < location_count ; tab_index++) {
-          // Runs once for each tab
-          $('#booking_count_' + event_id + '_' + tab_index).html(result);
-      }
-   }
-
-    var processShoppingBasketCount = function(
-       result, status, jqXHR)  {
-      //console.log("sf result='" + result + "', status='" + status + "', jqXHR='" + jqXHR + "'");
-      $('#shopping-basket-menu').html(result);
-      $('#shopping-basket-menu-xs').html(result);
-      $button_just_clicked_on.removeClass("td_ajax_book_btn");
-      $button_just_clicked_on.unbind();
-   }
-
-    var processBookingDetails = function(
-       result, status, jqXHR)  {
-      //console.log("sf result='" + result + "', status='" + status + "', jqXHR='" + jqXHR + "'");
-        $('#booked-' + event_id + '-' + 'status').html(result.status);
-        $('#booked-' + event_id + '-' + 'paid_status').html(result.paid_status);
-        $('#booked-' + event_id + '-' + 'payment_due').html(result.payment_due);
-        $('#booked-' + event_id + '-' + 'block').html(result.block);
-        $('#booked-' + event_id + '-' + 'confirmed').html(result.confirmed);
-        if(result.status === 'OPEN' && result.no_show === false) {
-            $('#booked-' + event_id + '-' + 'row').removeClass('expired');
-            if(result.paid === false) {
-                $('#booked-' + event_id + '-' + 'row').addClass('unpaid-booking-row');
-            }
-        }
-   }
-
-    var processFailure = function(
-       result, status, jqXHR)  {
-      //console.log("sf result='" + result + "', status='" + status + "', jqXHR='" + jqXHR + "'");
-      if (result.responseText) {
-        vNotify.error({text:result.responseText,title:'Error',position: 'bottomRight'});
-      }
-   }
-
-   $.ajax(
-       {
-          url: '/booking/ajax-create/' + event_id + '/?location_index=' + location_index + '&location_page=' + location_page + '&ref=' + ref,
-          dataType: 'html',
-          type: 'POST',
-          success: processResult,
-          //Should also have a "fail" call as well.
-          complete: updateOnComplete,
-          error: processFailure
-       }
-    );
-
-
-
-
-
-
-};
+var MILLS_TO_IGNORE = 1000;
 
 
 var processBookingToggleRequest = function()  {
@@ -149,13 +29,20 @@ var processBookingToggleRequest = function()  {
         window.location = result.url;
       }
       else {
+        $("#loader_" + event_id).hide();
         $('#book_' + event_id).html(result.html);
+        $('#block_info_' + event_id).html(result.block_info_html);
+          if (result.just_cancelled) {
+            $('#booked_tick_' + event_id).hide();
+          } else {
+            $('#booked_tick_' + event_id).show();
+          }
       }
    };
 
     var processFailure = function(
        result, status, jqXHR)  {
-      console.log("sf result='" + result + "', status='" + status + "', jqXHR='" + jqXHR + "'");
+      //console.log("sf result='" + result + "', status='" + status + "', jqXHR='" + jqXHR + "'");
       if (result.responseText) {
         vNotify.error({text:result.responseText,title:'Error',position: 'bottomRight'});
       }
@@ -166,9 +53,59 @@ var processBookingToggleRequest = function()  {
           url: '/ajax-toggle-booking/' + event_id + '/?ref=' + ref,
           dataType: 'json',
           type: 'POST',
+          data: {csrfmiddlewaretoken: window.CSRF_TOKEN},
+          beforeSend: function() {$("#loader_" + event_id).show();},
           success: processResult,
           //Should also have a "fail" call as well.
-          //complete: updateOnComplete,
+          complete: function() {$("#loader_" + event_id).hide();},
+          error: processFailure
+       }
+    );
+
+};
+
+
+var processCourseBookingRequest = function()  {
+
+    //In this scope, "this" is the button just clicked on.
+    //The "this" in processResult is *not* the button just clicked
+    //on.
+    var $button_just_clicked_on = $(this);
+
+    //The value of the "data-event_id" attribute.
+    var course_id = $button_just_clicked_on.data('course_id');
+    var ref = $button_just_clicked_on.data('ref');
+
+    var processResult = function(
+       result, status, jqXHR)  {
+      //console.log("sf result='" + result + "', status='" + status + "', jqXHR='" + jqXHR + "'");
+      if (result.redirect) {
+        window.location = result.url;
+      }
+      else {
+        $("#loader_" + course_id).hide();
+        $('#book_course_' + course_id).html(result.html);
+      }
+   };
+
+    var processFailure = function(
+       result, status, jqXHR)  {
+      //console.log("sf result='" + result + "', status='" + status + "', jqXHR='" + jqXHR + "'");
+      if (result.responseText) {
+        vNotify.error({text:result.responseText,title:'Error',position: 'bottomRight'});
+      }
+   };
+
+   $.ajax(
+       {
+          url: '/ajax-course-booking/' + course_id + '/?ref=' + ref,
+          dataType: 'json',
+          type: 'POST',
+          data: {csrfmiddlewaretoken: window.CSRF_TOKEN},
+          beforeSend: function() {$("#loader_" + course_id).show();},
+          success: processResult,
+          //Should also have a "fail" call as well.
+          complete: function() {$("#loader_" + course_id).hide();},
           error: processFailure
        }
     );
@@ -235,6 +172,7 @@ $(document).ready(function()  {
     click would be processed twice.
    */
   $('.ajax_events_btn').click(_.debounce(processBookingToggleRequest, MILLS_TO_IGNORE, true));
+  $('.ajax_course_events_btn').click(_.debounce(processCourseBookingRequest, MILLS_TO_IGNORE, true));
   $('.ajax_events_waiting_list_btn').click(_.debounce(toggleWaitingList, MILLS_TO_IGNORE, true));
   /*
     Warning: Placing the true parameter outside of the debounce call:
@@ -244,4 +182,5 @@ $(document).ready(function()  {
 
     results in "TypeError: e.handler.apply is not a function".
    */
+
 });

@@ -6,14 +6,23 @@ Date.prototype.dateFormat = function( format ){
   return moment(this).format(format);
 };
 
-
 jQuery(document).ready(function () {
     $(document).scrollreminder();
 
+    // Set active on nav items
     $(document).on('click', '.nav-link', function () {
         $(".nav-item").find(".active").removeClass("active");
     });
     $('a[href="' + location.pathname + '"]').closest('.nav-item').addClass('active');
+
+    // messages timeout after 10 sec
+    setTimeout(function() {
+        $('#message-row').fadeOut('slow');
+    }, 2000); // <-- time in milliseconds, 1000 =  1 sec
+
+
+    $('[data-toggle="tooltip"]').tooltip();
+
 
     jQuery('form.dirty-check').areYouSure();
 
@@ -51,27 +60,6 @@ jQuery(document).ready(function () {
         scrollInput: false,
     });
 
-    jQuery('#datepicker1').datetimepicker({
-        format:'DD MMM YYYY',
-        formatTime:'HH:mm',
-        timepicker: false,
-        minDate: 0,
-        closeOnDateSelect: true,
-        scrollMonth: false,
-        scrollTime: false,
-        scrollInput: false,
-    });
-
-    jQuery('#logdatepicker').datetimepicker({
-        format:'DD-MMM-YYYY',
-        formatTime:'HH:mm',
-        timepicker: false,
-        closeOnDateSelect: true,
-        scrollMonth: false,
-        scrollTime: false,
-        scrollInput: false,
-    });
-
     for(var i = 0; i < 5; i++) {
         jQuery('#datepicker_startdate_' + i).datetimepicker({
             format:'ddd DD MMM YYYY',
@@ -95,16 +83,6 @@ jQuery(document).ready(function () {
             scrollInput: false
         });
     }
-
-    jQuery('#datepicker_registerdate').datetimepicker({
-        format:'ddd DD MMM YYYY',
-        formatTime:'HH:mm',
-        timepicker: false,
-        closeOnDateSelect: true,
-        scrollMonth: false,
-        scrollTime: false,
-        scrollInput: false,
-    });
 
     jQuery('#timepicker').datetimepicker({
         format:'HH:mm',
@@ -211,5 +189,4 @@ $(function() {
             }
         }
     });
-
 });

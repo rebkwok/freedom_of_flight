@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container row">
+    <div class="col-12 mt-5">
+    <div class="card">
+        <div class="card-header"><h1>Cancel booking for {{ booking.event.name }} ({{ booking.event.event_type.track.name }})</h1></div>
+        <div class="card-body">
+            <h4 class="card-title">{{ booking.event.start|date:"D d M Y, H:i" }}</h4>
+            <div class="card-body">
+                <p class="card-text">
+                    {% if not booking.event.course %}
+                        {% if not booking.event.can_cancel %}
+                            The cancellation deadline has passed. You can cancel to allow someone else to book your place
+                            but this will not be credited back to your block and you will not receive a refund.
+                        {% elif not booking.event.allow_booking_cancellation %}
+                            Cancellation is not allowed for this event.  You can cancel to allow someone else to book your place
+                            but this will not be credited back to your block and you will not receive a refund.
+                        {% endif %}
+                    {% endif %}
+                </p>
+                <p>For further information, please email <a href="mailto:{{ event.fof_email }}?Subject=Enquiry regarding booking for {{ event.name }}" target="_blank">{{ fof_email }}</a>
+                </p>
+
+                <form action="" method="post">{% csrf_token %}
+                    {{ form.as_p }}
+                    <input class="btn btn-danger" type="submit" value="Confirm cancel" />
+                    <a {% if request.META.HTTP_REFERER %}
+                       href="{{ request.META.HTTP_REFERER }}"
+                       {% else %}
+                       href="{% url 'booking:bookings' %}"
+                       {% endif %}>
+                        <div class="btn btn-warning">Back</div></a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+{% endblock content %}
+

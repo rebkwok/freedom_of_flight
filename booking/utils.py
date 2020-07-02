@@ -1,3 +1,4 @@
+from datetime import timedelta
 
 from django.utils import timezone
 
@@ -25,30 +26,30 @@ def has_available_block(user, event):
 def get_active_user_block(user, event):
     """
     return the active block for this booking with the soonest expiry date
+    Expiry dates can be None if the block hasn't started yet, order by purchase date as well
     """
     if event.course:
         blocks = user.blocks.filter(
-            expiry_date__gte=timezone.now(), course_block_config__course_type=event.course.course_type
-        ).order_by("expiry_date")
+            course_block_config__course_type=event.course.course_type
+        ).order_by("expiry_date", "purchase_date")
     else:
         blocks = user.blocks.filter(
-            expiry_date__gte=timezone.now(), dropin_block_config__event_type=event.event_type
-        ).order_by("expiry_date")
+            dropin_block_config__event_type=event.event_type
+        ).order_by("expiry_date", "purchase_date")
     # already sorted by expiry date, so we can just get the next active one
     next_active_block = next((block for block in blocks if block.active_block()), None)
     # use the block with the soonest expiry date
     return next_active_block
 
 
-def get_block_status(booking, request):
-    blocks_used = booking.block.bookings_made()
-    total_blocks = booking.block.block_type.size
-    ActivityLog.objects.create(
-        log='Block used for booking id {} (for {}). Block id {}, '
-        'by user {}'.format(
-            booking.id, booking.event, booking.block.id,
-            request.user.username
-        )
-    )
-
+def get_block_status(block):
+    blocks_used = block.bookings_made()
+    total_blocks = block.block_config.size
     return blocks_used, total_blocks
+
+
+def booked_within_allowed_time(booking):
+    allowed_datetime = timezone.now() - timedelta(minutes=15)
+    return (
+       booking.date_rebooked and booking.date_rebooked > allowed_datetime
+    ) or (booking.date_booked > allowed_datetime)

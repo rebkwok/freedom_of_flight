@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% load static %}
+{% load bookingtags %}
+
+{% block content %}
+
+<div class="container row">
+    <div class="col-12 mt-5">
+    <div class="card">
+        <div class="card-header"><h1>Booking for {{ event.name }} ({{ event.event_type.track.name }})</h1></div>
+        <div class="card-body">
+            <h4 class="card-title">{{ event.start|date:"D d M Y, H:i" }}</h4>
+            <div class="card-body">
+                <p class="card-text">
+                    {% if not event.can_cancel %}
+                        Please note that the cancellation deadline has already passed. You will not receive any credit back to your block
+                        or any refund if you choose to cancel.
+                    {% elif not event.allow_booking_cancellation %}
+                        Cancellation is not allowed for this event.  You will not receive any credit back to your block
+                        or any refund if you choose to cancel.
+                    {% endif %}
+                </p>
+
+                <form action="" method="post">
+                    {% csrf_token %}
+                    <span class="hidden">{{ form.event }}</span>
+                    <input class="btn btn-xs btn-success" type="submit" value="Book" />
+                    <a {% if request.META.HTTP_REFERER %}
+                       href="{{ request.META.HTTP_REFERER }}"
+                       {% else %}
+                       href="{% url 'booking:bookings' %}"
+                       {% endif %}>
+                        <div class="btn btn-warning">Back</div></a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+
+
+
+{% endblock content %}

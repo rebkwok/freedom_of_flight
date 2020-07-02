@@ -13,8 +13,10 @@ from accounts.models import OnlineDisclaimer, DisclaimerContent, \
 class OnlineDisclaimerAdmin(admin.ModelAdmin):
 
     readonly_fields = (
-        'user', 'date', 'date_updated', 'terms_accepted',
-        'version'
+        'user',
+        'emergency_contact_name',
+        'emergency_contact_relationship', 'emergency_contact_phone',
+        'date', 'date_updated', 'terms_accepted', 'version'
     )
 
 

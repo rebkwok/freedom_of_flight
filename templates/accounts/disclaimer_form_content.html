@@ -8,29 +8,61 @@
        {% csrf_token %}
 
    <div class="disclaimer-form">
-       <div class="col-12">
-       {{ form.disclaimer_terms|linebreaks }}</div>
-       <div class="form-group">
-           <div class="col-12 {% if form.terms_accepted.errors %}errorlist{% endif %}">
-               {{ form.terms_accepted }}<label for='id_terms_accepted'></label>
-                 <label class="control-label" for='id_terms_accepted'>{{ form.terms_accepted.label }}</label>
-                {% if form.terms_accepted.errors %} {{ form.terms_accepted.errors }}{% endif %}
-           </div>
 
-           <div class="helptext col-9 col-offset-3">{{ form.terms_accepted.help_text }}</div>
+       <h4>Emergency Contact Information</h4>
+
+       <div class="form-group">
+           <label class="control-label" for="id_{{ form.emergency_contact_name.name }}">{{ form.emergency_contact_name.label }}{% if form.emergency_contact_name.field.required %}*{% endif %}</label>
+           {{ form.emergency_contact_name }}
+           <span class="helptext">{{ form.emergency_contact_name.help_text }}</span>
+            {% if field.errors %}
+                <span class="errorlist">{{ form.emergency_contact_name.errors }}</span>
+            {% endif %}
        </div>
 
        <div class="form-group">
-           <div class="col-12 vspace {% if form.password.errors %}errorlist{% endif %}">
-                <label class="control-label" for='password_id'>{{ form.password.label|safe }}</label>
-                <div class="col-12 {% if form.password.errors %}errorlist{% endif %}">
-                    {{ form.password }} {% if form.password.errors %}{{ form.password.errors }}{% endif %}
-                </div>
-           </div>
-           <div class="helptext col-9 col-offset-3">{{ form.password.help_text }}</div>
+           <label class="control-label" for="id_{{ form.emergency_contact_phone.name }}">{{ form.emergency_contact_phone.label }}{% if form.emergency_contact_phone.field.required %}*{% endif %}</label>
+           {{ form.emergency_contact_phone }}
+           <span class="helptext">{{ form.emergency_contact_phone.help_text }}</span>
+            {% if field.errors %}
+                <span class="errorlist">{{ form.emergency_contact_phone.errors }}</span>
+            {% endif %}
+       </div>
+
+       <div class="form-group">
+           <label class="control-label" for="id_{{ form.emergency_contact_relationship.name }}">{{ form.emergency_contact_relationship.label }}{% if form.emergency_contact_relationship.field.required %}*{% endif %}</label>
+           {{ form.emergency_contact_relationship }}
+           <span class="helptext">{{ form.emergency_contact_relationship.help_text }}</span>
+            {% if field.errors %}
+                <span class="errorlist">{{ form.emergency_contact_relationship.errors }}</span>
+            {% endif %}
+       </div>
+
+        <hr>
+       <h4>Disclaimer</h4>
+       {{ form.disclaimer_terms|linebreaks }}</div>
+       <div class="form-check form-check-inline mb-2">
+           {{ form.terms_accepted }}
+           <label class="form-check-label" for="id_{{ form.terms_accepted.name }}">{{ form.terms_accepted.label }}{% if form.terms_accepted.field.required %}*{% endif %}</label>
+           <span class="helptext">{{ form.terms_accepted.help_text }}</span>
+            {% if field.errors %}
+                <span class="errorlist">{{ form.terms_accepted.errors }}</span>
+            {% endif %}
+       </div>
+
+       <hr>
+       <div class="form-group form-group-inline">
+           {{ form.password }}
+           <label class="control-label" for="id_{{ form.password.name }}">{{ form.password.label }}{% if form.password.field.required %}*{% endif %}</label>
+           <span class="helptext">{{ form.password.help_text }}</span>
+            {% if form.password.errors %}
+                <span class="errorlist">{{ form.password.errors }}</span>
+            {% endif %}
+           {% if password_error %}
+                <span class="errorlist">{{ password_error }}</span>
+            {% endif %}
        </div>
 
         <div class="col-12"><input class="btn btn-success" type="submit" value="Submit" /></div>
-   </div>
    </form>
 

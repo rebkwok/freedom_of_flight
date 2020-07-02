@@ -63,9 +63,6 @@ class UserProfile(models.Model):
     address = models.CharField(max_length=512, null=True, blank=True)
     postcode = models.CharField(max_length=10, null=True, blank=True)
     phone = models.CharField(max_length=255, null=True, blank=True)
-    emergency_contact_name = models.CharField(max_length=255, verbose_name='name')
-    emergency_contact_relationship = models.CharField(max_length=255, verbose_name='relationship')
-    emergency_contact_phone = models.CharField(max_length=255, verbose_name='contact number')
 
     def __str__(self):
         return self.user.username
@@ -241,6 +238,9 @@ class BaseOnlineDisclaimer(models.Model):
     date = models.DateTimeField(default=timezone.now)
     version = models.DecimalField(decimal_places=1, max_digits=100)
 
+    emergency_contact_name = models.CharField(max_length=255)
+    emergency_contact_relationship = models.CharField(max_length=255)
+    emergency_contact_phone = models.CharField(max_length=255)
     terms_accepted = models.BooleanField()
 
     class Meta:
@@ -324,9 +324,6 @@ class NonRegisteredDisclaimer(BaseOnlineDisclaimer):
     address = models.CharField(max_length=512, null=True, blank=True)
     postcode = models.CharField(max_length=10, null=True, blank=True)
     phone = models.CharField(max_length=255, null=True, blank=True)
-    emergency_contact_name = models.CharField(max_length=255, verbose_name='name')
-    emergency_contact_relationship = models.CharField(max_length=255, verbose_name='relationship')
-    emergency_contact_phone = models.CharField(max_length=255, verbose_name='contact number')
 
     event_date = models.DateField()
     user_uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
@@ -399,11 +396,8 @@ def has_active_disclaimer(user):
 
 
 def has_active_online_disclaimer(user):
-    has_disclaimer = bool(
-        [
-            True for od in user.online_disclaimer.all()
-            if od.is_active
-        ]
+    has_disclaimer = any(
+        True for od in user.online_disclaimer.all() if od.is_active
     )
     return has_disclaimer
 

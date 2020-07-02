@@ -1,4 +1,3 @@
-import json
 import logging
 
 from django.conf import settings
@@ -9,41 +8,43 @@ from django.template.loader import get_template
 from django.views.decorators.http import require_http_methods
 from django.urls import reverse
 from django.shortcuts import HttpResponseRedirect, render, HttpResponse
-from django.utils import timezone
 
 from accounts.models import has_active_disclaimer
 from activitylog.models import ActivityLog
 
-from ..models import Booking, Event, WaitingListUser
+from ..models import Booking, Course, Event, WaitingListUser
 from ..utils import has_available_block, get_active_user_block
+from ..email_helpers import send_waiting_list_email, send_user_and_studio_emails
 
 
 logger = logging.getLogger(__name__)
 
 
-REQUESTED_ACTIONS_FROM_CURRENT_STATUS_AND_NO_SHOW = {
-    ("CANCELLED", True): "reopen",
-    ("CANCELLED", False): "reopen",
-    ("OPEN", True): "reopen",
-    ("OPEN", False): "cancel",
+REQUESTED_ACTIONS = {
+    ("CANCELLED", True): "reopened",
+    ("CANCELLED", False): "reopened",
+    ("OPEN", True): "reopened",
+    ("OPEN", False): "cancelled",
 }
 
 @login_required
 @require_http_methods(['POST'])
 def ajax_toggle_booking(request, event_id):
     if not has_active_disclaimer(request.user):
-        # TODO
-        # url = reverse('booking:disclaimer_required')
-        # return JsonResponse({"redirect": True, "url": url})
-        pass
+        url = reverse('booking:disclaimer_required')
+        return JsonResponse({"redirect": True, "url": url})
 
     event = Event.objects.get(id=event_id)
+    event_was_full = not event.course and event.spaces_left == 0
     ref = request.GET.get('ref')
 
     if not has_available_block(request.user, event):
-        # TODO
-        # url = reverse('booking:block_create')
-        url = reverse('booking:placeholder')
+        if event.course:
+            url = reverse('booking:course_events', args=(event.course.slug,))
+        else:
+            # TODO
+            # url = reverse('booking:block_create', args=(event.event_type,)
+            url = reverse('booking:placeholder')
         return JsonResponse({"redirect": True, "url": url})
 
     try:
@@ -52,16 +53,13 @@ def ajax_toggle_booking(request, event_id):
         existing_booking = None
 
     if existing_booking is None:
-        requested_action = "open"
+        requested_action = "opened"
     else:
-        requested_action = REQUESTED_ACTIONS_FROM_CURRENT_STATUS_AND_NO_SHOW[(existing_booking.status, existing_booking.no_show)]
+        requested_action = REQUESTED_ACTIONS[(existing_booking.status, existing_booking.no_show)]
 
-    context = {
-        "event": event,
-        "ref": ref
-    }
+    host = f'http://{request.META.get("HTTP_HOST")}'
 
-    if requested_action in ["open", "reopen"]:
+    if requested_action in ["opened", "reopened"]:
         # OPENING/REOPENING
         # make sure the event isn't full or cancelled
         if event.spaces_left <= 0 or event.cancelled:
@@ -70,11 +68,16 @@ def ajax_toggle_booking(request, event_id):
                 "Sorry, this event {}".format("has been cancelled" if event.cancelled else "is now full")
             )
 
-        if event.course:
-            # Booking an event in a course - redirect to book all events
-            # TODO
-            # url = reverse('booking:book_course'), args=(event.course,)
-            url = reverse('booking:placeholder')
+        if not event.course:
+            if not (event.allow_booking_cancellation and event.can_cancel):
+                # Not for course bookings - those always go to another page anyway
+                url = reverse('booking:create_booking', args=(event.slug,))
+                return JsonResponse({"redirect": True, "url": url})
+
+        if event.course and requested_action == "opened":
+            # First time booking for a course event - redirect to book course
+            # rebookings can be done from events page
+            url = reverse('booking:course_events', args=(event.course.slug,))
             return JsonResponse({"redirect": True, "url": url})
 
         # Update/create the booking
@@ -87,7 +90,7 @@ def ajax_toggle_booking(request, event_id):
         booking.block = get_active_user_block(request.user, event)
         booking.save()
         ActivityLog.objects.create(
-            log=f'Booking {booking.id} {requested_action}ed for "{event}" by user {request.user.username}'
+            log=f'Booking {booking.id} {requested_action} for "{event}" by user {request.user.username}'
         )
 
         try:
@@ -100,13 +103,14 @@ def ajax_toggle_booking(request, event_id):
             pass
 
     else:
-        if not (event.allow_booking_cancellation or event.can_cancel):
-            # TODO
-            # url = reverse('booking:cancel_booking'), args=(existing_booking.id,)
-            url = reverse('booking:placeholder')
-            return JsonResponse({"redirect": True, "url": url})
-
         # CANCELLING
+        # Drop in classes past cancellation period - redirect to are-you-sure page
+        if not event.course:
+            # Not for course bookings - those are always no-show anyway
+            if not (event.allow_booking_cancellation and event.can_cancel):
+                url = reverse('booking:cancel_booking', args=(existing_booking.id,))
+                return JsonResponse({"redirect": True, "url": url})
+
         booking = existing_booking
         if event.course:
             booking.no_show = True
@@ -115,8 +119,11 @@ def ajax_toggle_booking(request, event_id):
             booking.status = "CANCELLED"
         booking.save()
 
+        if event_was_full:
+            waiting_list_users = WaitingListUser.objects.filter(event=event)
+            send_waiting_list_email(event, waiting_list_users, host)
+
     # email context
-    host = 'http://{}'.format(request.META.get('HTTP_HOST'))
     ctx = {
           'host': host,
           'booking': booking,
@@ -126,65 +133,112 @@ def ajax_toggle_booking(request, event_id):
           'time': event.start.strftime('%H:%M'),
     }
 
-    # send email to user
-    send_mail(
-        f'{settings.ACCOUNT_EMAIL_SUBJECT_PREFIX} Booking for {event} {requested_action}ed',
-        get_template('booking/email/booking_created_or_updated.txt').render(ctx),
-        settings.DEFAULT_FROM_EMAIL,
-        [request.user.email],
-        html_message=get_template('booking/email/booking_created_or_updated.html').render(ctx),
-        fail_silently=False
+    subjects = {
+        "user": f"Booking for {event} {requested_action}",
+        "studio": f"{request.user.first_name} {request.user.last_name} has just booked for {event}"
+    }
+
+    # send emails
+    send_user_and_studio_emails(
+        ctx, request.user, event.email_studio_when_booked, subjects, "booking_created_or_updated"
     )
 
-    # send email to studio if flagged for the event - only for open/reopen bookings
-    if event.email_studio_when_booked:
-        send_mail(
-            f'{settings.ACCOUNT_EMAIL_SUBJECT_PREFIX} {request.user.first_name} {request.user.last_name} has just booked for {event}',
-            get_template('booking/email/to_studio_booking_created_or_updated.txt').render(ctx),
-            settings.DEFAULT_FROM_EMAIL,
-            [settings.DEFAULT_STUDIO_EMAIL],
-            fail_silently=False
-        )
-
     alert_message = {}
-    alert_message['message_type'] = 'warning' if requested_action == "cancel" else 'success'
-
-    alert_message['message'] = f"Booking has been {requested_action}ed"
-    context["alert_message"] = alert_message
-    context["event"] = event
-
-    all_events = Event.objects.filter(start__gt=timezone.now(), show_on_site=True)
-    booked_event_ids = [
-        booking.event.id for booking in request.user.bookings.filter(event__id__in=all_events, status="OPEN", no_show=False)
-    ]
-
-    context["booked_event_ids"] = booked_event_ids
+    alert_message['message_type'] = 'info' if requested_action == "cancelled" else 'success'
+    alert_message['message'] = f"Booking has been {requested_action}"
+    context = {
+        "event": event,
+        "ref": ref,
+        "alert_message": alert_message,
+        "just_booked": requested_action in ["opened", "reopened"],
+        "just_cancelled": requested_action == "cancelled"
+    }
     html = render(request, f"booking/includes/events_button.txt", context)
-    return JsonResponse({"html": html.content.decode("utf-8")})
+    block_info_html = render(request, f"booking/includes/block_info.html", {"event": event})
+    return JsonResponse(
+        {
+            "html": html.content.decode("utf-8"),
+            "block_info_html": block_info_html.content.decode("utf-8"),
+            "just_cancelled": requested_action == "cancelled",
+        }
+    )
 
 
 def placeholder(request):
     return HttpResponse("Placeholder")
 
-# TODO
-# @login_required
-# def toggle_waiting_list(request, event_id):
-#     user = request.user
-#     event = Event.objects.get(id=event_id)
-#
-#     # toggle current status
-#     try:
-#         waitinglistuser = WaitingListUser.objects.get(user=user, event=event)
-#         waitinglistuser.delete()
-#         on_waiting_list = False
-#     except WaitingListUser.DoesNotExist:
-#         WaitingListUser.objects.create(user=user, event=event)
-#         on_waiting_list = True
-#
-#     return render(
-#         request,
-#         "booking/includes/waiting_list_button.html",
-#         {'event': event, 'on_waiting_list': on_waiting_list}
-#     )
+
+@login_required
+def ajax_toggle_waiting_list(request, event_id):
+    user = request.user
+    event = Event.objects.get(id=event_id)
+
+    # toggle current status
+    try:
+        waitinglistuser = WaitingListUser.objects.get(user=user, event=event)
+        waitinglistuser.delete()
+        on_waiting_list = False
+    except WaitingListUser.DoesNotExist:
+        WaitingListUser.objects.create(user=user, event=event)
+        on_waiting_list = True
+
+    return render(
+        request,
+        "booking/includes/waiting_list_button.html",
+        {'event': event, 'on_waiting_list': on_waiting_list}
+    )
 
 
+@login_required
+@require_http_methods(['POST'])
+def ajax_course_booking(request, course_id):
+    if not has_active_disclaimer(request.user):
+        url = reverse('booking:disclaimer_required')
+        return JsonResponse({"redirect": True, "url": url})
+
+    course = Course.objects.get(id=course_id)
+    ref = request.GET.get('ref')
+
+    if not has_available_block(request.user, course.events.first()):
+        # TODO
+        # url = reverse('booking:block_create')
+        url = reverse('booking:placeholder')
+        return JsonResponse({"redirect": True, "url": url})
+
+    if course.full or course.cancelled:
+        logger.error('Attempt to book %s course', 'cancelled' if course.cancelled else 'full')
+        return HttpResponseBadRequest(
+            "Sorry, this course {}".format("has been cancelled" if course.cancelled else "is now full")
+        )
+
+    course_block = get_active_user_block(request.user, course.events.first())
+    # Book all events
+    for event in course.events.all():
+        booking, _ = Booking.objects.get_or_create(user=request.user, event=event)
+        # Make sure block is assigned but don't change booking statuses if already created
+        booking.block = course_block
+        booking.save()
+
+        ActivityLog.objects.create(
+            log=f'Course {course.name} (course.course_type) booked by user {request.user.username}'
+        )
+
+    # email context
+    ctx = {
+        'host': f'http://{request.META.get("HTTP_HOST")}',
+        'course': course,
+    }
+    subjects = {
+        "user": f"You have booked for a course: {course.name}",
+        "studio": f'{request.user.first_name} {request.user.last_name} has just booked for course: {course}'
+    }
+    # send emails
+    send_user_and_studio_emails(
+        ctx, request.user, course.email_studio_when_booked, subjects, "course_booked"
+    )
+
+    alert_message = {}
+    alert_message['message_type'] = 'success'
+    alert_message['message'] = "Course booking created"
+    url = reverse('booking:course_events', args=(course.slug,))
+    return JsonResponse({"redirect": True, "url": url})

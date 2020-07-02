@@ -10,7 +10,8 @@ from django.views.decorators.http import require_http_methods
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView
 
 
-from ..models import Booking, Event, Track, WaitingListUser
+from ..models import Booking, Course, Event, Track, WaitingListUser
+from .views_utils import DataPolicyAgreementRequiredMixin
 
 
 def home(request):
@@ -18,7 +19,7 @@ def home(request):
     return HttpResponseRedirect(reverse("booking:events", args=(track.slug,)))
 
 
-class EventListView(ListView):
+class EventListView(DataPolicyAgreementRequiredMixin, ListView):
 
     model = Event
     context_object_name = 'events_by_date'
@@ -27,7 +28,12 @@ class EventListView(ListView):
     def get_queryset(self):
         track = get_object_or_404(Track, slug=self.kwargs["track"])
         cutoff_time = timezone.now() - timedelta(minutes=10)
-        return Event.objects.filter(event_type__track=track, start__gt=cutoff_time, show_on_site=True).order_by('start__date', 'start__time')
+        return Event.objects.filter(
+            event_type__track=track, start__gt=cutoff_time, show_on_site=True, cancelled=False
+        ).order_by('start__date', 'start__time')
+
+    def get_title(self):
+        return Track.objects.get(slug=self.kwargs["track"]).name
 
     def get_context_data(self, **kwargs):
         # Call the base implementation first to get a context
@@ -41,10 +47,10 @@ class EventListView(ListView):
         events_by_date = {}
         for event_info in event_ids_by_date:
             events_by_date.setdefault(event_info["start__date"], []).append(all_events.get(id=event_info["id"]))
-
         context["page_events"] = page_events
         context["events_by_date"] = events_by_date
-        context['track'] = Track.objects.get(slug=self.kwargs["track"]).name
+        context['title'] = self.get_title()
+
         if self.request.user.is_authenticated:
             # Add in the booked_events
             # All user bookings for events in this list view (may be cancelled)
@@ -53,14 +59,18 @@ class EventListView(ListView):
             booked_event_ids = [
                 event_id for event_id, booking in user_bookings.items() if booking.status == "OPEN" and booking.no_show == False
             ]
+            cancelled_event_ids = [
+                event_id for event_id, booking in user_bookings.items() if booking.status == "CANCELLED" or booking.no_show == True
+            ]
             waiting_list_event_ids = self.request.user.waitinglists.filter(event__in=all_events).values_list('event__id', flat=True)
             context['user_bookings'] = user_bookings
             context['booked_event_ids'] = booked_event_ids
+            context['cancelled_event_ids'] = cancelled_event_ids
             context['waiting_list_event_ids'] = waiting_list_event_ids
         return context
 
 
-class EventDetailView(DetailView):
+class EventDetailView(DataPolicyAgreementRequiredMixin, DetailView):
 
     model = Event
     context_object_name = 'event'
@@ -80,4 +90,23 @@ class EventDetailView(DetailView):
             context["on_waiting_list"] = waiting_list
             context["show_video_link"] = self.object.show_video_link
 
+        return context
+
+
+class CourseEventsListView(EventListView):
+
+    def get_title(self):
+        return Course.objects.get(slug=self.kwargs["course_slug"]).name
+
+    def get_queryset(self):
+        course_slug =self.kwargs["course_slug"]
+        return Event.objects.filter(course__slug=course_slug).order_by('start__date', 'start__time')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        course = Course.objects.get(slug=self.kwargs["course_slug"])
+        context["course"] = course
+        context["has_started"] = self.get_queryset().first().start < timezone.now()
+        if self.request.user.is_authenticated:
+            context["already_booked"] = self.request.user.bookings.filter(event__course=course).exists()
         return context

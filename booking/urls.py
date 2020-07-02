@@ -1,22 +1,39 @@
 from django.urls import path
 from django.views.generic import RedirectView
-from booking.views import ajax_toggle_booking, home, EventListView, EventDetailView, placeholder
+from booking.views import (
+    ajax_course_booking, ajax_toggle_booking, ajax_toggle_waiting_list, CourseEventsListView,
+    disclaimer_required, home,
+    EventListView, EventDetailView, placeholder,
+    BookingDeleteView, permission_denied, BookingCreateView
+)
 
 
 app_name = 'booking'
 
 urlpatterns = [
     path('schedule/', home),
+
+    # MISC
+    path('disclaimer-required/', disclaimer_required, name='disclaimer_required'),
+    path('not-available/', permission_denied, name='permission_denied'),
+
     path('placeholder/', placeholder, name='placeholder'),
 
-    path('<slug:track>/', EventListView.as_view(), name='events'),
+    # EVENTS
     path('event/<slug>', EventDetailView.as_view(), name='event'),
     path('ajax-toggle-booking/<int:event_id>/', ajax_toggle_booking, name='ajax_toggle_booking'),
+    path('ajax-toggle-waiting-list/<int:event_id>/', ajax_toggle_waiting_list, name='toggle_waiting_list'),
 
-    # path(
-    #     'disclaimer-required/', disclaimer_required,
-    #     name='disclaimer_required'
-    # ),
+    # COURSES
+    path('course/<slug:course_slug>', CourseEventsListView.as_view(), name='course_events'),
+    path('ajax-course-booking/<int:course_id>/', ajax_course_booking, name='ajax_course_booking'),
+
+    # BOOKINGS
+    path("booking/<int:pk>/cancel/", BookingDeleteView.as_view(), name="cancel_booking"),
+    path('booking/<slug:event_slug>/create-booking/', BookingCreateView.as_view(), name='create_booking'),
+
+    # EVENTS LIST: needs to go last
+    path('<slug:track>/', EventListView.as_view(), name='events'),
     # path(
     #     'bookings/shopping-basket/', shopping_basket,
     #     name='shopping_basket'
@@ -33,10 +50,7 @@ urlpatterns = [
     #     'bookings/ajax-update-booking-count/<int:event_id>/',
     #     update_booking_count, name='update_booking_count'
     # ),
-    # path(
-    #     'bookings/ajax-toggle-waiting-list/<int:event_id>/',
-    #     toggle_waiting_list, name='toggle_waiting_list'
-    # ),
+
     # path(
     #     'bookings/shopping-basket-total/blocks/',
     #     ajax_shopping_basket_blocks_total, name='ajax_shopping_basket_blocks_total'

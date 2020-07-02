@@ -15,20 +15,27 @@ from allauth.account.views import EmailView, LoginView, SignupView
 
 from braces.views import LoginRequiredMixin
 
-from .forms import DisclaimerForm, DataPrivacyAgreementForm, NonRegisteredDisclaimerForm, ProfileForm
-from .models import CookiePolicy, DataPrivacyPolicy, SignedDataPrivacy, UserProfile, \
+from .forms import DisclaimerForm, DataPrivacyAgreementForm, NonRegisteredDisclaimerForm, \
+    ProfileForm, DisclaimerContactUpdateForm
+from .models import CookiePolicy, DataPrivacyPolicy, SignedDataPrivacy, UserProfile, OnlineDisclaimer, \
     has_active_data_privacy_agreement, has_active_disclaimer, has_expired_disclaimer
 from activitylog.models import ActivityLog
 
 
 @login_required
 def profile(request):
-    disclaimer = has_active_disclaimer(request.user)
-    expired_disclaimer = has_expired_disclaimer(request.user)
+    has_disclaimer = has_active_disclaimer(request.user)
+    has_exp_disclaimer = has_expired_disclaimer(request.user)
+    latest_disclaimer = request.user.online_disclaimer.exists() and request.user.online_disclaimer.latest("id")
 
     return render(
         request, 'accounts/profile.html',
-        {'disclaimer': disclaimer, 'expired_disclaimer': expired_disclaimer})
+        {
+            'has_disclaimer': has_disclaimer,
+            'has_expired_disclaimer': has_exp_disclaimer,
+            "latest_disclaimer": latest_disclaimer
+        }
+    )
 
 
 class ProfileUpdateView(LoginRequiredMixin, UpdateView):
@@ -55,6 +62,25 @@ class ProfileUpdateView(LoginRequiredMixin, UpdateView):
         self.request.user.last_name = form_data['last_name']
         self.request.user.save()
         return HttpResponseRedirect(self.get_success_url())
+
+    def get_success_url(self):
+        return reverse('accounts:profile')
+
+
+class DisclaimerContactUpdateView(LoginRequiredMixin, UpdateView):
+
+    model = OnlineDisclaimer
+    template_name = 'accounts/update_emergency_contact.html'
+    form_class = DisclaimerContactUpdateForm
+
+    def dispatch(self, request, *args, **kwargs):
+        self.user = get_object_or_404(User, pk=kwargs["user_id"])
+        if not has_active_disclaimer(self.user):
+            return HttpResponseRedirect(reverse("accounts:disclaimer_form"))
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_object(self, *args, **kwargs):
+        return OnlineDisclaimer.objects.filter(user=self.user).latest("id")
 
     def get_success_url(self):
         return reverse('accounts:profile')
@@ -111,7 +137,7 @@ class DisclaimerCreateView(LoginRequiredMixin, CreateView):
             disclaimer.save()
         else:
             form = DisclaimerForm(form.data, user=self.request.user)
-            return render(self.request, self.template_name, {'form':form, 'password_error': 'Password is incorrect'})
+            return render(self.request, self.template_name, {'form':form, 'password_error': 'Invalid password entered'})
 
         return super().form_valid(form)
 

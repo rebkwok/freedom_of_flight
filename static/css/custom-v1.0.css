@@ -92,6 +92,14 @@ div#CookielawBanner {
 
 /* Button styles */
 .btn-xs {
-  width: 130px;
+  width: 140px;
   font-size: 80%;
+}
+
+.btn-spinner {
+  display: none;
+}
+
+.hidden {
+  display: none;
 }

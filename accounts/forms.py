@@ -1,3 +1,4 @@
+from copy import deepcopy
 from datetime import datetime
 
 from django import forms
@@ -31,30 +32,15 @@ class AccountFormMixin:
         )
         self.fields["date_of_birth"] = forms.DateField(
             widget=forms.DateInput(
-                    attrs={'class': "form-control", 'id': 'dobdatepicker', "autocomplete": "off"},
-                    format='%d %b %Y'
-                )
+                attrs={'class': "form-control", 'id': 'dobdatepicker', "autocomplete": "off"},
+                format='%d %b %Y',
+            ),
+            input_formats=['%d %b %Y']
         )
         self.fields["address"] = forms.CharField(widget=forms.TextInput(attrs={'class': 'form-control'}))
         self.fields["postcode"] = forms.CharField(max_length=10, widget=forms.TextInput(attrs={'class': 'form-control'}))
         self.fields["phone"] = forms.CharField(max_length=20, widget=forms.TextInput(attrs={'class': 'form-control'}))
-        self.fields["emergency_contact_name"] = forms.CharField(widget=forms.TextInput(attrs={'class': 'form-control'}))
-        self.fields["emergency_contact_relationship"] = forms.CharField(widget=forms.TextInput(attrs={'class': 'form-control'}))
-        self.fields["emergency_contact_phone"] = forms.CharField(max_length=20, widget=forms.TextInput(attrs={'class': 'form-control'}))
 
-    def clean(self):
-        dob = self.data.get('date_of_birth', None)
-        if dob and self.errors.get('date_of_birth'):
-            del self.errors['date_of_birth']
-        if dob:
-            try:
-                dob = datetime.strptime(dob, '%d %b %Y').date()
-                self.cleaned_data['date_of_birth'] = dob
-            except ValueError:
-                self.add_error(
-                    'date_of_birth', 'Invalid date format.  Select from the date picker '
-                           'or enter date in the format e.g. 08 Jun 1990')
-        return self.cleaned_data
 
 class SignupForm(AccountFormMixin, forms.Form):
 
@@ -68,20 +54,9 @@ class SignupForm(AccountFormMixin, forms.Form):
             self.data_privacy_policy = DataPrivacyPolicy.current()
             self.fields['data_privacy_confirmation'] = forms.BooleanField(
                 widget=forms.CheckboxInput(attrs={'class': "regular-checkbox"}),
-                required=False,
-                label='I confirm I have read and agree to the terms of the data ' \
-                      'privacy policy'
+                required=True,
+                label='I confirm I have read and agree to the terms of the data privacy policy'
             )
-
-    def clean_data_privacy_confirmation(self):
-        dp = self.cleaned_data.get('data_privacy_confirmation')
-        if not dp:
-            self.add_error(
-               'data_privacy_confirmation',
-               'You must check this box to continue'
-            )
-        else:
-            return dp
 
     def signup(self, request, user):
         profile_data = self.cleaned_data.copy()
@@ -119,29 +94,32 @@ class ProfileForm(AccountFormMixin, forms.ModelForm):
     def __init__(self, *args, **kwargs):
         user = kwargs.pop("user")
         super().__init__(*args, **kwargs)
-        self.fields['date_of_birth'].initial = self.instance.date_of_birth.strftime('%d %b %Y')
         self.fields['first_name'].initial = user.first_name
         self.fields['last_name'].initial = user.last_name
 
     class Meta:
         model = UserProfile
-        fields = ("first_name", "last_name", "address", "postcode", "phone", "date_of_birth",
-                  "emergency_contact_name", "emergency_contact_phone", "emergency_contact_relationship")
+        fields = ("first_name", "last_name", "address", "postcode", "phone", "date_of_birth")
+
+
+BASE_DISCLAIMER_FORM_WIDGETS = {
+    'emergency_contact_name': forms.TextInput(attrs={'class': 'form-control', 'autofocus': 'autofocus'}),
+    'emergency_contact_relationship': forms.TextInput(attrs={'class': 'form-control'}),
+    'emergency_contact_phone': forms.TextInput(attrs={'class': 'form-control'}),
+}
 
 
 class DisclaimerForm(forms.ModelForm):
 
     terms_accepted = forms.BooleanField(
         validators=[account_validators.validate_confirm],
-        required=False,
-        widget=forms.CheckboxInput(
-            attrs={'class': 'regular-checkbox'}
-        ),
+        required=True,
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         label='Please tick to accept terms.'
     )
     password = forms.CharField(
         widget=forms.PasswordInput(),
-        label="Please re-enter your password to confirm and submit.",
+        label="Please re-enter your password to confirm.",
         required=True
     )
 
@@ -164,28 +142,15 @@ class DisclaimerForm(forms.ModelForm):
                 for field_name in self.fields:
                     if field_name not in ['terms_accepted', 'password']:
                         last_value = getattr(last_disclaimer, field_name)
-                        if field_name == 'date_of_birth':
-                            last_value = last_value.strftime('%d %b %Y')
                         self.fields[field_name].initial = last_value
 
     class Meta:
         model = OnlineDisclaimer
-        fields = ('terms_accepted',)
-
-    def clean(self):
-        dob = self.data.get('date_of_birth', None)
-        if dob and self.errors.get('date_of_birth'):
-            del self.errors['date_of_birth']
-        if dob:
-            try:
-                dob = datetime.strptime(dob, '%d %b %Y').date()
-                self.cleaned_data['date_of_birth'] = dob
-            except ValueError:
-                self.add_error(
-                    'date_of_birth', 'Invalid date format.  Select from '
-                                        'the date picker or enter date in the '
-                                        'format e.g. 08 Jun 1990')
-        return super().clean()
+        fields = (
+            'terms_accepted', 'emergency_contact_name',
+            'emergency_contact_relationship', 'emergency_contact_phone'
+        )
+        widgets = deepcopy(BASE_DISCLAIMER_FORM_WIDGETS)
 
 
 class NonRegisteredDisclaimerForm(DisclaimerForm):
@@ -207,25 +172,24 @@ class NonRegisteredDisclaimerForm(DisclaimerForm):
             'emergency_contact_phone',
             'terms_accepted', 'event_date')
 
-        widgets = {
+        widgets = deepcopy(BASE_DISCLAIMER_FORM_WIDGETS)
+        widgets.update({
             'first_name': forms.TextInput(attrs={'class': 'form-control'}),
             'last_name': forms.TextInput(attrs={'class': 'form-control'}),
             'email': forms.EmailInput(attrs={'class': 'form-control'}),
             'date_of_birth': forms.DateInput(attrs={'class': "form-control",'id': 'dobdatepicker',},format='%d %b %Y'),
-            'event_date': forms.DateInput(attrs={'class': "form-control",'id': 'eventdatepicker',},format='%d %b %Y'),
+            'event_date': forms.DateInput(attrs={'class': "form-control",'id': 'eventdatepicker',}, format='%d %b %Y'),
             'address': forms.TextInput(attrs={'class': 'form-control'}),
             'postcode': forms.TextInput(attrs={'class': 'form-control'}),
             'phone': forms.TextInput(attrs={'class': 'form-control'}),
-            'emergency_contact_name': forms.TextInput(attrs={'class': 'form-control'}),
-            'emergency_contact_relationship': forms.TextInput(attrs={'class': 'form-control'}),
-            'emergency_contact_phone': forms.TextInput(attrs={'class': 'form-control'}),
-        }
+        })
 
 
     def __init__(self, *args, **kwargs):
         kwargs['user'] = None
         super().__init__(*args, **kwargs)
         del self.fields['password']
+        self.fields['event_date'].input_formats = ['%d %b %Y']
         self.fields['event_date'].help_text = "Please enter the date of the " \
                                               "event you will be attending.  This will help us " \
                                               "retrieve your disclaimer on the day."
@@ -241,20 +205,17 @@ class NonRegisteredDisclaimerForm(DisclaimerForm):
                                 'the form (case sensitive) to confirm.'
             )
 
-        event_date = self.data.get('event_date', None)
-        if event_date and self.errors.get('event_date'):
-            del self.errors['event_date']
-        if event_date:
-            try:
-                event_date = datetime.strptime(event_date, '%d %b %Y').date()
-                self.cleaned_data['event_date'] = event_date
-            except ValueError:
-                self.add_error(
-                    'event_date', 'Invalid date format.  Select from '
-                                        'the date picker or enter date in the '
-                                        'format e.g. 08 Jun 1990')
-
         return cleaned_data
+
+
+class DisclaimerContactUpdateForm(forms.ModelForm):
+
+    class Meta:
+        model = OnlineDisclaimer
+        fields = (
+            'emergency_contact_name', 'emergency_contact_relationship', 'emergency_contact_phone'
+        )
+        widgets = deepcopy(BASE_DISCLAIMER_FORM_WIDGETS)
 
 
 class DataPrivacyAgreementForm(forms.Form):

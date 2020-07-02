@@ -5,58 +5,104 @@
 {% block extra_head %}
 <link rel="stylesheet" href="{% static 'booking/css/vanilla-notify.css' %}">
 <script type='text/javascript' src="{% static 'booking/js/vanilla-notify.min.js' %}"></script>
+
+<script type="text/javascript">
+    window.CSRF_TOKEN = "{{ csrf_token }}";
+</script>
 {% endblock %}
 
 {% block content %}
 <div class="container row">
     <div class="col-12">
-    <h1 class="mt-5">{{ track }}</h1>
+    <h1 class="mt-5">{{ title }}</h1>
     {% if events_by_date %}
+
+        {% if course %}
+            {% if request.user.is_authenticated %}
+                {% if has_started and not already_booked %}
+                    <h3 class="text-danger">NOTE: This course has started</h3>
+                {% endif %}
+                <div
+                    id="book_course_{{ course.id }}"
+                    data-course_id="{{ course.id }}"
+                    data-ref="course_events"
+                    class="ajax_course_events_btn">
+                    {% include "booking/includes/course_events_button.txt" %}
+                </div>
+            {% endif %}
+        {% endif %}
+
+
         {% for date, events in events_by_date.items %}
             <div class="list-group mb-2">
                 <div class="list-group-item list-group-item-dark pt-1 pb-1">{{ date|date:"D d M Y" }}</div>
                 {% for event in events %}
                     <div class="list-group-item pt-1 pb-1">
-                        {% if event.id in booked_event_ids %}<i class="fas fa-check-circle"></i>{% endif %}
+                        <span id="booked_tick_{{ event.id }}" {% if event.id not in booked_event_ids %}class="hidden"{% endif %}>
+                        <i class="fas fa-check-circle"></i>
+                        </span>
                         <a href="{% url 'booking:event' event.slug %}">
                                 {{ event.start|date:"H:i"  }} {{ event.name }}
                         </a>
-                        <span class="float-right">
-                            {% if request.user.is_authenticated %}
-                                {% if event.bookable or event.id in booked_events %}
+                        {% if request.user.is_authenticated %}
+                            {% if not course %}
+                                <span class="float-right">
+                                    {% if event.has_space or event.id in booked_event_ids %}
+                                        <span
+                                            id="book_{{ event.id }}"
+                                            data-event_id="{{ event.id }}"
+                                            data-ref="events"
+                                            class="ajax_events_btn">
+                                            {% include "booking/includes/events_button.txt" %}
+                                            </span>
+                                            </span>
+                                    {% elif event.full %}
+                                        <span
+                                            id="waiting_list_button_{{ event.id }}"
+                                            data-event_id="{{ event.id }}"
+                                            class="ajax_events_waiting_list_btn">
+                                        {% include "booking/includes/waiting_list_button.html" %}
+                                        </span>
+                                    {% endif %}
+                                </span>
+                            {% else %}
+                                <span class="float-right">
+                                {% if event.id in booked_event_ids or event.id in cancelled_event_ids %}
+                                    <!-- Only show the events_button for course events already booked/cancelled so user can cancel/rebook individual classes -->
                                     <span
                                         id="book_{{ event.id }}"
                                         data-event_id="{{ event.id }}"
                                         data-ref="events"
                                         class="ajax_events_btn">
-                                    {% include "booking/includes/events_button.txt" %}
+                                        {% include "booking/includes/events_button.txt" %}
                                     </span>
-                                {% elif event.full %}
-                                    <a class="btn btn-xs btn-warning" href="#">Join Waiting List</a>
-                                {% elif not user|has_available_block:event %}
-                                    <a class="btn btn-xs btn-info" href="#">Payment Options</a>
                                 {% endif %}
-                            {% else %}
-                                <span class="helptext"><a href="{% url 'account_login' %}?next={{request.get_full_path}}">Log in</a> to book</span>
+                                </span>
                             {% endif %}
-                        </span>
-                        <p>Availability: {% if event.full %}
+                        {% else %}
+                            <span class="helptext float-right"><a href="{% url 'account_login' %}?next={{request.get_full_path}}">Log in</a> to book</span>
+                        {% endif %}
+                        <div><span class="helptext">Availability: {% if event.full %}
                             <span class="badge badge-pill badge-dark">Full</span>
                             {% else %}
                             <span class="badge badge-pill badge-warning">{{ event.spaces_left }}</span>
                             {% endif %}
-                        {% if event.course %}
-                            | <span class="badge badge-warning">Course: {{ event.course.name }}</span>
-                        {% endif %}
-                        {% if event.id not in booked_event_ids and user|has_available_block:event %}
-                            | <span class="helptext">Block available for use</span>
-                         {% endif %}
-                        </p>
+                            </span>
+                            {% if event.course %}
+                                | <a href="{% url 'booking:course_events' event.course.slug %}"><span class="badge badge-info">Course: {{ event.course.name }}</span></a>
+                            {% endif %}
+                            {% if user.is_authenticated %}
+                                <span id="block_info_{{event.id}}">
+                                    {% include 'booking/includes/block_info.html' %}
+                                </span>
+                            {% endif %}
+                        </div>
                     </div>
                 {% endfor %}
             </div>
         {% endfor %}
 
+    {% if page_events.has_other_pages %}
         <!--NAVIGATION-->
         <nav aria-label="Page navigation">
           <ul class="pagination">
@@ -91,7 +137,7 @@
 
           </ul>
         </nav>
-
+    {% endif %}
     {% else %}
         <p>No events scheduled.</p>
     {% endif %}
@@ -101,15 +147,6 @@
 
 
 {% block extra_js %}
-<script>
-    $(document).ready(function() {
-        // messages timeout for 10 sec
-        setTimeout(function() {
-            $('#message-row').fadeOut('slow');
-        }, 10000); // <-- time in milliseconds, 1000 =  1 sec
-    });
-</script>
 <script type='text/javascript' src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js"></script>
 <script type='text/javascript' src="{% static 'booking/js/events_booking_ajax-v1.js' %}"></script>
-
 {% endblock %}

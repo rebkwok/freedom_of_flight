@@ -23,10 +23,10 @@
             <div class="card">
                <h2 class="card-header">Emergency Contact Information</h2>
                <div class="card-body">
-               <div class="card-text"><strong>Name:</strong> {{ user.profile.emergency_contact_name }} </div>
-               <div class="card-text"><strong>Phone:</strong> {{ user.profile.emergency_contact_phone }} </div>
-               <div class="card-text"><strong>Relationship:</strong> {{ user.profile.emergency_contact_relationship }} </div>
-               <div class="card-text"><a class="btn btn-success" href="{% url 'accounts:update_profile' %}">Change</a></div>
+               <div class="card-text"><strong>Name:</strong> {{ latest_disclaimer.emergency_contact_name }} </div>
+               <div class="card-text"><strong>Phone:</strong> {{ latest_disclaimer.emergency_contact_phone }} </div>
+               <div class="card-text"><strong>Relationship:</strong> {{ latest_disclaimer.emergency_contact_relationship }} </div>
+               <div class="card-text"><a class="btn btn-success" href="{% url 'accounts:update_emergency_contact' user.id %}">Change</a></div>
                </div>
            </div>
             <div class="card">
@@ -38,7 +38,7 @@
             <div class="card">
                <h2 class="card-header">Disclaimer</h2>
                <div class="card-body">
-                   {% if disclaimer %}
+                   {% if has_disclaimer %}
                 <div class="col-12">Completed</div>
                 {% else %}
                     <div class="col-12">

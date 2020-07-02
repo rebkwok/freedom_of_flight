@@ -1,6 +1,7 @@
 from django.urls import path
 from accounts.views import cookie_policy, data_privacy_policy, profile, \
-    ProfileUpdateView, DisclaimerCreateView, SignedDataPrivacyCreateView
+    ProfileUpdateView, DisclaimerCreateView, SignedDataPrivacyCreateView, \
+    DisclaimerContactUpdateView
 
 
 app_name = "accounts"
@@ -11,10 +12,8 @@ urlpatterns = [
         'profile/update/', ProfileUpdateView.as_view(),
         name='update_profile'
     ),
-    path(
-        'waiver/', DisclaimerCreateView.as_view(),
-        name='disclaimer_form'
-    ),
+    path('disclaimer/', DisclaimerCreateView.as_view(), name='disclaimer_form'),
+    path('emergency-contact/<int:user_id>/update/', DisclaimerContactUpdateView.as_view(), name='update_emergency_contact'),
     path(
         'data-privacy-review/', SignedDataPrivacyCreateView.as_view(),
          name='data_privacy_review'
