@@ -2,25 +2,19 @@ from datetime import timedelta
 
 from django.utils import timezone
 
-from .models import Block
-
 
 def has_available_block(user, event):
     if event.course:
         return any(
             True for block in
-            Block.objects.select_related("user", "course_block_config").filter(
-                user=user, course_block_config__course_type=event.course.course_type
-            )
-            if block.active_block()
+            user.blocks.filter(course_block_config__course_type=event.course.course_type)
+            if block.valid_for_course(event.course)
         )
     else:
         return any(
             True for block in
-            Block.objects.select_related("user", "dropin_block_config").filter(
-                user=user, dropin_block_config__event_type=event.event_type
-            )
-            if block.active_block()
+            user.blocks.filter(dropin_block_config__event_type=event.event_type)
+            if block.valid_for_event(event)
         )
 
 def get_active_user_block(user, event):
@@ -32,14 +26,13 @@ def get_active_user_block(user, event):
         blocks = user.blocks.filter(
             course_block_config__course_type=event.course.course_type
         ).order_by("expiry_date", "purchase_date")
+        # already sorted by expiry date, so we can just get the next valid one
+        return next((block for block in blocks if block.valid_for_course(event.course)), None)
     else:
         blocks = user.blocks.filter(
             dropin_block_config__event_type=event.event_type
         ).order_by("expiry_date", "purchase_date")
-    # already sorted by expiry date, so we can just get the next active one
-    next_active_block = next((block for block in blocks if block.active_block()), None)
-    # use the block with the soonest expiry date
-    return next_active_block
+        return next((block for block in blocks if block.valid_for_event(event)), None)
 
 
 def get_block_status(block):

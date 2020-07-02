@@ -21,7 +21,7 @@ from datetime import timedelta
 from dateutil.relativedelta import relativedelta
 
 from activitylog.models import ActivityLog
-
+from .utils import has_available_block as has_available_block_util
 
 logger = logging.getLogger(__name__)
 
@@ -43,11 +43,21 @@ class Track(models.Model):
         else:
             return Track.objects.first()
 
+
 class EventType(models.Model):
-    """Categorises events.  Used for assigning to courses and cost categories (see Block Type)"""
+    """
+    Categorises and configures events.
+    Used for assigning to courses and cost categories (see Block Type)
+    Also defines some common fields
+    """
     name = models.CharField(max_length=255)
     description = models.TextField(help_text="Description", null=True, blank=True)
     track = models.ForeignKey(Track, on_delete=models.SET_NULL, null=True)
+    contact_email = models.EmailField(default=settings.DEFAULT_STUDIO_EMAIL)
+    cancellation_period = models.PositiveIntegerField(default=24)
+    email_studio_when_booked = models.BooleanField(default=False)
+    allow_booking_cancellation = models.BooleanField(default=True)
+    is_online = models.BooleanField(default=False)
 
     class Meta:
         unique_together = ("name", "track")
@@ -55,22 +65,25 @@ class EventType(models.Model):
     def __str__(self):
         return f"{self.name} - {self.track}"
 
+
 class CourseType(models.Model):
-    """Holds cost and event info for a Course"""
+    """
+    Holds size and event type/quantity info for a Course, distinct from the
+    specific course events themselves
+    """
     event_type = models.ForeignKey(EventType, on_delete=models.CASCADE)
     number_of_events = models.PositiveIntegerField(default=4)
 
     def __str__(self):
         return f"{self.event_type.name} - {self.number_of_events}"
 
+
 class Course(models.Model):
-    """Associated with a number of Events of the same EventType as defined by the CourseType"""
+    """A collection of specific Events of the number and EventType as defined by the CourseType"""
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True, default="")
     course_type = models.ForeignKey(CourseType, on_delete=models.CASCADE)
     slug = AutoSlugField(populate_from=["name", "course_type"], max_length=40, unique=True)
-
-    email_studio_when_booked = models.BooleanField(default=False)
     cancelled = models.BooleanField(default=False)
 
     class Meta:
@@ -83,8 +96,12 @@ class Course(models.Model):
         event = self.events.first()
         return event.bookings.filter(status="OPEN").count() >= event.max_participants
 
+    def configured(self):
+        return self.events.count() == self.course_type.number_of_events
+
     def __str__(self):
         return f"{self.name} ({self.course_type})"
+
 
 class Event(models.Model):
     """A single bookable Event"""
@@ -95,13 +112,8 @@ class Event(models.Model):
     start = models.DateTimeField(help_text="Start date and time")
     duration = models.PositiveIntegerField(help_text="Duration in minutes", default=90)
     max_participants = models.PositiveIntegerField(default=10)
-    contact_email = models.EmailField(default=settings.DEFAULT_STUDIO_EMAIL)
-    cancellation_period = models.PositiveIntegerField(default=24)
-    email_studio_when_booked = models.BooleanField(default=False)
     slug = AutoSlugField(populate_from=['name', 'start'], max_length=40, unique=True)
     cancelled = models.BooleanField(default=False)
-    allow_booking_cancellation = models.BooleanField(default=True)
-    is_online = models.BooleanField(default=False)
     video_link = models.URLField(null=True, blank=True, help_text="Zoom/Video URL (for online classes only)")
     show_on_site = models.BooleanField(default=False)
 
@@ -133,11 +145,7 @@ class Event(models.Model):
     def can_cancel(self):
         time_until_event = self.start - timezone.now()
         time_until_event = time_until_event.total_seconds() / 3600
-        return time_until_event > self.cancellation_period
-
-    @property
-    def show_video_link(self):
-        return self.is_online and timezone.now() > self.start - timedelta(minutes=20)
+        return time_until_event > self.event_type.cancellation_period
 
     def get_absolute_url(self):
         return reverse("booking:event_detail", kwargs={'slug': self.slug})
@@ -154,6 +162,7 @@ class Event(models.Model):
 class BaseBlockConfig(models.Model):
     """Holds cost and event info for a Course or block of (drop in) events"""
     identifier = models.CharField(max_length=255)
+    description = models.TextField(null=True, blank=True)
     cost = models.DecimalField(max_digits=8, decimal_places=2)
     duration = models.PositiveIntegerField(help_text="Number of weeks until block expires (from first use)")
     active = models.BooleanField(default=False)
@@ -250,24 +259,43 @@ class Block(models.Model):
         self.expiry_date = self.get_expiry_date()
         self.save()
 
-    @cached_property
-    def expired(self):
-        return self.expiry_date < timezone.now() if self.expiry_date else False
-
     @property
     def full(self):
         if self.bookings.exists():
             return self.bookings.count() >= self.block_config.size
         return False
 
+    @property
     def active_block(self):
         """
-        A block is active if its expiry date has not passed
-        AND the number of bookings on it is < size
-        AND payment is confirmed
+        A block is active if its not full and has been paid for.  This doesn't mean it
+        is valid for a specific event (dependent on event date)
         """
-        return not self.expired and not self.full and self.paid
-    active_block.boolean = True
+        return not self.full and self.paid
+
+    def _valid_and_active_for_event(self, event):
+        # hasn't started yet OR event is within block date range
+        return self.expiry_date is None or event.start < self.expiry_date
+
+    def valid_for_event(self, event):
+        # if it's not active we don't care about anything else
+        if not self.active_block:
+            return False
+        if self.dropin_block_config is not None and self.dropin_block_config.event_type == event.event_type:
+            # it's the right type of config and event type matches
+            return self._valid_and_active_for_event(event)
+        return False
+
+    def valid_for_course(self, course):
+        # if it's not active we don't care about anything else
+        if not self.active_block:
+            return False
+        if self.course_block_config is not None and self.course_block_config.course_type == course.course_type:
+            # it's the right type of config and course type matches
+            # check the earliest event
+            event = course.events.order_by("start").first()
+            return self._valid_and_active_for_event(event)
+        return False
 
     def bookings_made(self):
         """
@@ -348,31 +376,16 @@ class Booking(models.Model):
 
     @cached_property
     def can_cancel(self):
-        if not self.event.allow_booking_cancellation:
+        if not self.event.event_type.allow_booking_cancellation:
             return False
-        if self.event.cancellation_period and \
-            self.event.start < (timezone.now() + timedelta(hours=self.event.cancellation_period)):
+        if self.event.event_type.cancellation_period and \
+            self.event.start < (timezone.now() + timedelta(hours=self.event.event_type.cancellation_period)):
             return False
         return True
 
     @property
     def has_available_block(self):
-        if self.event.course:
-            return any(
-                True for block in
-                Block.objects.select_related("user", "course_block_config").filter(
-                    user=self.user, course_block_config__course_type=self.event.course.course_type
-                )
-                if block.active_block()
-            )
-        else:
-            return any(
-                True for block in
-                Block.objects.select_related("user", "dropin_block_config").filter(
-                    user=self.user, dropin_block_config__event_type=self.event.event_type
-                )
-                if block.active_block()
-            )
+        return has_available_block_util(self.user, self.event)
 
     def _old_booking(self):
         if self.pk:

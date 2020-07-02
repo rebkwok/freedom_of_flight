@@ -82,13 +82,15 @@
                         {% else %}
                             <span class="helptext float-right"><a href="{% url 'account_login' %}?next={{request.get_full_path}}">Log in</a> to book</span>
                         {% endif %}
-                        <div><span class="helptext">Availability: {% if event.full %}
+                        <div>
+                            <span class="helptext">{{event.event_type.name}}</span>
+                            <span class="helptext"> | Availability: {% if event.full %}
                             <span class="badge badge-pill badge-dark">Full</span>
                             {% else %}
                             <span class="badge badge-pill badge-warning">{{ event.spaces_left }}</span>
                             {% endif %}
                             </span>
-                            {% if event.course %}
+                            {% if event.course and not course %}
                                 | <a href="{% url 'booking:course_events' event.course.slug %}"><span class="badge badge-info">Course: {{ event.course.name }}</span></a>
                             {% endif %}
                             {% if user.is_authenticated %}

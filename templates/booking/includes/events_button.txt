@@ -1,34 +1,34 @@
-        {% load bookingtags static %}
+{% load bookingtags static %}
 
-        {% if alert_message %}
-            {% if alert_message.message_type == 'warning' %}
-                <script>vNotify.warning({text:'{{ alert_message.message }}',title:'{{ event }}',position: 'topLeft', visibleDuration: 2500});</script>
-            {% elif alert_message.message_type == 'success' %}
-                <script>vNotify.success({text:'{{ alert_message.message }}',title:'{{ event }}',position: 'topLeft', visibleDuration: 2500});</script>
-            {% elif alert_message.message_type == 'error' %}
-                <script>vNotify.error({text:'{{ alert_message.message }}',title:'{{ event }}',position: 'topLeft', visibleDuration: 5000});</script>
-            {% else %}
-                <script>vNotify.info({text:'{{ alert_message.message }}',title:'{{ event }}',position: 'topLeft', visibleDuration: 2500});</script>
-            {% endif %}
-        {% endif %}
+{% if alert_message %}
+    {% if alert_message.message_type == 'warning' %}
+        <script>vNotify.warning({text:'{{ alert_message.message }}',title:'{{ event }}',position: 'topLeft', visibleDuration: 2500});</script>
+    {% elif alert_message.message_type == 'success' %}
+        <script>vNotify.success({text:'{{ alert_message.message }}',title:'{{ event }}',position: 'topLeft', visibleDuration: 2500});</script>
+    {% elif alert_message.message_type == 'error' %}
+        <script>vNotify.error({text:'{{ alert_message.message }}',title:'{{ event }}',position: 'topLeft', visibleDuration: 5000});</script>
+    {% else %}
+        <script>vNotify.info({text:'{{ alert_message.message }}',title:'{{ event }}',position: 'topLeft', visibleDuration: 2500});</script>
+    {% endif %}
+{% endif %}
 
-        {% if event.id in booked_event_ids or just_booked %}
-            <a class="btn btn-xs btn-dark" href="#"><i id="loader_{{ event.id }}" class="btn-spinner fa fa-spinner fa-spin"></i>Cancel</a>
-        {% elif event.has_space %}
-            {% if not user|has_available_block:event %}
-                {% if event.course %}
-                    <a class="btn btn-xs btn-outline-success" href="#">Course details</a>
-                {% else %}
-                    <a class="btn btn-xs btn-info" href="#"><i id="loader_{{ event.id }}" class="btn-spinner fa fa-spinner fa-spin"></i>Payment Options</a>
-                {% endif %}
-            {% elif event.course %}
-                <a class="btn btn-xs btn-success" href="#">
-                    <i id="loader_{{ event.id }}" class="btn-spinner fa fa-spinner fa-spin">
-                    </i>{% if event.id in cancelled_event_ids or just_cancelled %}Rebook{% else %}Book Course{% endif %}
-                </a>
-            {% else %}
-                <a class="btn btn-xs btn-success" href="#"><i id="loader_{{ event.id }}" class="btn-spinner fa fa-spinner fa-spin">
-                    </i>{% if event.id in cancelled_event_ids or just_cancelled %}Rebook{% else %}Book{% endif %} Drop-in
-                </a>
-            {% endif %}
+{% if event.id in booked_event_ids or just_booked %}
+    <a class="btn btn-xs btn-dark" href="#"><i id="loader_{{ event.id }}" class="btn-spinner fa fa-spinner fa-spin"></i>Cancel</a>
+{% elif event.has_space %}
+    {% if not user|has_available_block:event %}
+        {% if event.course %}
+            <a class="btn btn-xs btn-outline-success" href="#">Course details</a>
+        {% else %}
+            <a class="btn btn-xs btn-info" href="#"><i id="loader_{{ event.id }}" class="btn-spinner fa fa-spinner fa-spin"></i>Payment Options</a>
         {% endif %}
+    {% elif event.course %}
+        <a class="btn btn-xs btn-success" href="#">
+            <i id="loader_{{ event.id }}" class="btn-spinner fa fa-spinner fa-spin">
+            </i>{% if event.id in cancelled_event_ids or just_cancelled %}Rebook{% else %}Book Course{% endif %}
+        </a>
+    {% else %}
+        <a class="btn btn-xs btn-success" href="#"><i id="loader_{{ event.id }}" class="btn-spinner fa fa-spinner fa-spin">
+            </i>{% if event.id in cancelled_event_ids or just_cancelled %}Rebook{% else %}Book{% endif %} Drop-in
+        </a>
+    {% endif %}
+{% endif %}

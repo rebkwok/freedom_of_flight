@@ -88,7 +88,6 @@ class EventDetailView(DataPolicyAgreementRequiredMixin, DetailView):
                 context["booking"] = booking
             waiting_list = WaitingListUser.objects.filter(event=self.object, user=self.request.user).exists()
             context["on_waiting_list"] = waiting_list
-            context["show_video_link"] = self.object.show_video_link
 
         return context
 

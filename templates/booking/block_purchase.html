@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% load bookingtags static %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'booking/css/vanilla-notify.css' %}">
+<script type='text/javascript' src="{% static 'booking/js/vanilla-notify.min.js' %}"></script>
+
+<script type="text/javascript">
+    window.CSRF_TOKEN = "{{ csrf_token }}";
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="container row">
+    <div class="col-12">
+    <h1 class="mt-5">Block Purchase Options</h1>
+        {% if related_item %}<h2>for {{ related_item }}</h2>{% endif %}
+      <div class="col-12 mb-2">
+          <a class="btn btn-info btn-xs" href="{% url 'booking:shopping_basket' %}"><span>View cart <i class="fas fa-shopping-cart"></i></span></a>
+      </div>
+
+        {% for title, blocklist in available_blocks.items %}
+            <div class="list-group mb-2">
+                <div class="list-group-item list-group-item-dark pt-1 pb-1">{{ title }}</div>
+                {% for available_block_config in blocklist %}
+                    <div class="list-group-item pt-1 pb-1 {% if available_block_config in target_configs %}list-group-item-success{% endif %}">
+                        <p>{{ available_block_config }}
+                            <span
+                                id="block_config_{{ available_block_config.id }}"
+                                data-block_config_id="{{ available_block_config.id }}"
+                                data-block_config_type="{% if available_block_config.course_type %}course{% else %}dropin{% endif %}"
+                                class="float-right ajax_blocks_btn">
+                                {% include "booking/includes/blocks_button.txt" %}
+                            </span></p>
+                        <p>{% if available_block_config.description %}{{ available_block_config.description }}{% endif %}</p>
+                        <p>£{{ available_block_config.cost }} | {{ available_block_config.duration }} weeks | {{ available_block_config.size }} uses </p>
+                        <p>
+                            {% for block in user_active_blocks %}
+                                {% if block.block_config == available_block_config %}
+                                    <span data-toggle="tooltip" data-html="true" data-html="true" title='{{ block|user_block_info }}'>
+                                      <span class="badge badge-pill badge-warning">Active block</span>
+                                    </span>
+                                {% endif %}
+                            {% endfor %}
+                        </p>
+
+                    </div>
+                {% endfor %}
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock content %}
+
+
+{% block extra_js %}
+<script type='text/javascript' src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js"></script>
+<script type='text/javascript' src="{% static 'booking/js/events_blocks_ajax-v1.js' %}"></script>
+{% endblock %}

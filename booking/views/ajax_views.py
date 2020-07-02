@@ -42,9 +42,7 @@ def ajax_toggle_booking(request, event_id):
         if event.course:
             url = reverse('booking:course_events', args=(event.course.slug,))
         else:
-            # TODO
-            # url = reverse('booking:block_create', args=(event.event_type,)
-            url = reverse('booking:placeholder')
+            url = reverse('booking:dropin_block_purchase', args=(event.slug,))
         return JsonResponse({"redirect": True, "url": url})
 
     try:
@@ -68,8 +66,7 @@ def ajax_toggle_booking(request, event_id):
                 "Sorry, this event {}".format("has been cancelled" if event.cancelled else "is now full")
             )
 
-        if not event.course:
-            if not (event.allow_booking_cancellation and event.can_cancel):
+        if not event.course and not event.can_cancel:
                 # Not for course bookings - those always go to another page anyway
                 url = reverse('booking:create_booking', args=(event.slug,))
                 return JsonResponse({"redirect": True, "url": url})
@@ -105,11 +102,10 @@ def ajax_toggle_booking(request, event_id):
     else:
         # CANCELLING
         # Drop in classes past cancellation period - redirect to are-you-sure page
-        if not event.course:
+        if not event.course and not event.can_cancel:
             # Not for course bookings - those are always no-show anyway
-            if not (event.allow_booking_cancellation and event.can_cancel):
-                url = reverse('booking:cancel_booking', args=(existing_booking.id,))
-                return JsonResponse({"redirect": True, "url": url})
+            url = reverse('booking:cancel_booking', args=(existing_booking.id,))
+            return JsonResponse({"redirect": True, "url": url})
 
         booking = existing_booking
         if event.course:
@@ -140,7 +136,7 @@ def ajax_toggle_booking(request, event_id):
 
     # send emails
     send_user_and_studio_emails(
-        ctx, request.user, event.email_studio_when_booked, subjects, "booking_created_or_updated"
+        ctx, request.user, event.event_type.email_studio_when_booked, subjects, "booking_created_or_updated"
     )
 
     alert_message = {}
@@ -200,9 +196,7 @@ def ajax_course_booking(request, course_id):
     ref = request.GET.get('ref')
 
     if not has_available_block(request.user, course.events.first()):
-        # TODO
-        # url = reverse('booking:block_create')
-        url = reverse('booking:placeholder')
+        url = reverse('booking:course_block_purchase', args=(course.slug,))
         return JsonResponse({"redirect": True, "url": url})
 
     if course.full or course.cancelled:
@@ -234,7 +228,7 @@ def ajax_course_booking(request, course_id):
     }
     # send emails
     send_user_and_studio_emails(
-        ctx, request.user, course.email_studio_when_booked, subjects, "course_booked"
+        ctx, request.user, course.course_type.event_type.email_studio_when_booked, subjects, "course_booked"
     )
 
     alert_message = {}

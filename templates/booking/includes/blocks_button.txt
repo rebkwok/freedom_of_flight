@@ -1,0 +1,23 @@
+{% load bookingtags static %}
+
+{% if alert_message %}
+    {% if alert_message.message_type == 'warning' %}
+        <script>vNotify.warning({text:'{{ alert_message.message }}',title:'{{ event }}',position: 'topLeft', visibleDuration: 2500});</script>
+    {% elif alert_message.message_type == 'success' %}
+        <script>vNotify.success({text:'{{ alert_message.message }}',title:'{{ event }}',position: 'topLeft', visibleDuration: 2500});</script>
+    {% elif alert_message.message_type == 'error' %}
+        <script>vNotify.error({text:'{{ alert_message.message }}',title:'{{ event }}',position: 'topLeft', visibleDuration: 5000});</script>
+    {% else %}
+        <script>vNotify.info({text:'{{ alert_message.message }}',title:'{{ event }}',position: 'topLeft', visibleDuration: 2500});</script>
+    {% endif %}
+{% endif %}
+
+
+{% if user|has_unpaid_block:available_block_config %}
+    <span class="helptext">Added to cart</span>
+    <a class="badge badge-secondary mr-1" href="#">
+    <i id="loader_{{ available_block_config.id }}" class="btn-spinner fa fa-spinner fa-spin"></i>X</i></a>
+{% else %}
+    <a href="#" class="btn btn-xs btn-success">
+    <i id="loader_{{ available_block_config.id }}" class="btn-spinner fa fa-spinner fa-spin"></i>Add to cart</a>
+{% endif %}

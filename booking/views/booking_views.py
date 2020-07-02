@@ -43,7 +43,6 @@ class BookingDeleteView(
         event_was_full = not event.course and event.spaces_left == 0
 
         if not event.course and not (
-            event.allow_booking_cancellation and
             event.can_cancel and not booked_within_allowed_time(booking)
         ):
             # course event or no cancellation allowed/too late - set to no-show
@@ -58,12 +57,12 @@ class BookingDeleteView(
         # send email to user
         host = f"http://{self.request.META.get('HTTP_HOST')}"
         ctx = {
-              'host': host,
-              'booking': booking,
-              'event': event,
-              'requested_action': "cancelled",
-              'date': event.start.strftime('%A %d %B'),
-              'time': event.start.strftime('%I:%M %p'),
+            'host': host,
+            'booking': booking,
+            'event': event,
+            'requested_action': "cancelled",
+            'date': event.start.strftime('%A %d %B'),
+            'time': event.start.strftime('%I:%M %p'),
           }
         subjects = {"user": f"Booking for {event} cancelled"}
         send_user_and_studio_emails(ctx, self.request.user, False, subjects, "booking_created_or_updated")
@@ -139,6 +138,8 @@ class BookingCreateView(
             action = "reopened"
         except Booking.DoesNotExist:
             action = "created"
+        booking.status = "OPEN"
+        booking.no_show = False
         booking.user = self.request.user
         booking.block = get_active_user_block(self.request.user, booking.event)
         booking.save()
@@ -163,7 +164,7 @@ class BookingCreateView(
 
         # send emails
         send_user_and_studio_emails(
-            ctx, self.request.user, booking.event.email_studio_when_booked, subjects, "booking_created_or_updated"
+            ctx, self.request.user, booking.event.event_type.email_studio_when_booked, subjects, "booking_created_or_updated"
         )
 
         messages.success(self.request, self.success_message.format(self.event))
