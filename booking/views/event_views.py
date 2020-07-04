@@ -105,7 +105,6 @@ class CourseEventsListView(EventListView):
         context = super().get_context_data(**kwargs)
         course = Course.objects.get(slug=self.kwargs["course_slug"])
         context["course"] = course
-        context["has_started"] = self.get_queryset().first().start < timezone.now()
         if self.request.user.is_authenticated:
             context["already_booked"] = self.request.user.bookings.filter(event__course=course).exists()
         return context

@@ -1,7 +1,7 @@
 from django.contrib import admin
 
 from .models import (
-    Block, DropInBlockConfig, CourseBlockConfig, Booking, BlockVoucher, UsedBlockVoucher, GiftVoucherType,
+    Block, DropInBlockConfig, CourseBlockConfig, Booking, BlockVoucher, GiftVoucherType,
     Course, CourseType, Event, EventType, Track, WaitingListUser
 )
 
@@ -17,5 +17,4 @@ admin.site.register(CourseBlockConfig)
 admin.site.register(EventType)
 admin.site.register(WaitingListUser)
 admin.site.register(BlockVoucher)
-admin.site.register(UsedBlockVoucher)
 admin.site.register(GiftVoucherType)

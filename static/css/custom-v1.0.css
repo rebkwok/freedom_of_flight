@@ -103,3 +103,11 @@ div#CookielawBanner {
 .hidden {
   display: none;
 }
+
+.superceded-cost {
+  text-decoration: line-through;
+}
+
+.no-close .ui-dialog-titlebar-close {
+  display: none;
+}

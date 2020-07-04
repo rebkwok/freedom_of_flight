@@ -2,9 +2,7 @@
 
 {% if user|has_available_block:event  %}
     | <span class="helptext">{{ user|block_used:event }}</span>
-    <span data-toggle="tooltip" data-html="true" title='<span class="helptext">{{ user|block_info:event }}</span>'>
+    <span data-toggle="tooltip" data-html="true" title="<span class='helptext'>{{ user|block_info:event }}</span>">
       <i class="fas fa-info-circle"></i>
     </span>
 {% endif %}
-
-<script>$('[data-toggle="tooltip"]').tooltip();</script>

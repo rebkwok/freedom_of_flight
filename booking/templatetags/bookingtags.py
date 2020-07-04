@@ -1,6 +1,7 @@
 from django import template
 
 from ..utils import has_available_block as has_available_block_util
+from ..utils import has_available_course_block as has_available_course_block_util
 from ..utils import get_active_user_block, get_block_status
 
 register = template.Library()
@@ -12,7 +13,7 @@ def has_available_block(user, event):
 
 @register.filter
 def has_available_course_block(user, course):
-    return has_available_block_util(user, course.events.first())
+    return has_available_course_block_util(user, course)
 
 
 @register.filter

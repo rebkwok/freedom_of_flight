@@ -20,50 +20,114 @@ var processBookingToggleRequest = function()  {
 
     //The value of the "data-event_id" attribute.
     var event_id = $button_just_clicked_on.data('event_id');
-    var ref = $button_just_clicked_on.data('ref');
+    var can_cancel = $button_just_clicked_on.data('can_cancel');
+    var cancellation_allowed = $button_just_clicked_on.data('cancellation_allowed');
+    var show_payment_options = $button_just_clicked_on.data('show_payment_options');
+    var on_course = $button_just_clicked_on.data('on_course');
+    var is_course = $button_just_clicked_on.data('is_course');
 
-    var processResult = function(
-       result, status, jqXHR)  {
-      //console.log("sf result='" + result + "', status='" + status + "', jqXHR='" + jqXHR + "'");
-      if (result.redirect) {
-        window.location = result.url;
-      }
-      else {
-        $("#loader_" + event_id).hide();
-        $('#book_' + event_id).html(result.html);
-        $('#block_info_' + event_id).html(result.block_info_html);
-          if (result.just_cancelled) {
-            $('#booked_tick_' + event_id).hide();
-          } else {
-            $('#booked_tick_' + event_id).show();
+    var ask_for_confirmation = function () {
+        if (on_course) {
+            return false
+        } else if (is_course) {
+            return false
+        } else if (show_payment_options) {
+            return false
+        } else if (!cancellation_allowed) {
+            return true
+        } else {
+            return !can_cancel
+        }
+    };
+
+    if (ask_for_confirmation()) {
+          $('#confirm-dialog').dialog({
+            height: "auto",
+            width: 500,
+            modal: true,
+            closeOnEscape: true,
+            dialogClass: "no-close",
+            title: "Warning!",
+            open: function() {
+              var contentText;
+              if (!cancellation_allowed) {
+                  contentText = "Cancellation is not allowed; if you choose to cancel you will not receive andy credit back to your block or any refund.";
+              } else {
+                  contentText = 'The allowed cancellation period has passed; if you choose to cancel you will not receive andy credit back to your block or any refund.';
+              }
+              $(this).html(contentText + "<br>Please confirm you want to continue.");
+            },
+            buttons: [
+                {
+                    text: "OK",
+                    click: function () {
+                        doTheAjax();
+                        $(this).dialog('close');
+                    },
+                    "class": "btn btn-success"
+                },
+                {
+                    text: "Cancel",
+                    click: function () {
+                        $(this).dialog('close');
+                    },
+                    "class": "btn btn-dark"
+                }
+            ]
+        })
+      } else {
+          doTheAjax()
+    }
+
+    function doTheAjax() {
+
+        var processResult = function(
+           result, status, jqXHR)  {
+          //console.log("sf result='" + result + "', status='" + status + "', jqXHR='" + jqXHR + "'");
+          if (result.redirect) {
+            window.location = result.url;
           }
-      }
-   };
+          else {
+            $("#loader_" + event_id).hide();
+            $('#book_' + event_id).html(result.html);
+            $('#block_info_' + event_id).html(result.block_info_html);
+            $('#availability_' + event_id).html(result.event_availability_html);
+              if (result.just_cancelled) {
+                $('#booked_tick_' + event_id).hide();
+              } else {
+                $('#booked_tick_' + event_id).show();
+              }
+          }
+       };
 
-    var processFailure = function(
-       result, status, jqXHR)  {
-      //console.log("sf result='" + result + "', status='" + status + "', jqXHR='" + jqXHR + "'");
-      if (result.responseText) {
-        vNotify.error({text:result.responseText,title:'Error',position: 'bottomRight'});
-      }
-   };
+        var processFailure = function(
+           result, status, jqXHR)  {
+          //console.log("sf result='" + result + "', status='" + status + "', jqXHR='" + jqXHR + "'");
+          if (result.responseText) {
+            vNotify.error({text:result.responseText,title:'Error',position: 'bottomRight'});
+          }
+       };
 
-   $.ajax(
-       {
-          url: '/ajax-toggle-booking/' + event_id + '/?ref=' + ref,
-          dataType: 'json',
-          type: 'POST',
-          data: {csrfmiddlewaretoken: window.CSRF_TOKEN},
-          beforeSend: function() {$("#loader_" + event_id).show();},
-          success: processResult,
-          //Should also have a "fail" call as well.
-          complete: function() {$("#loader_" + event_id).hide();},
-          error: processFailure
-       }
-    );
+       $.ajax(
+           {
+              url: '/ajax-toggle-booking/' + event_id + '/',
+              dataType: 'json',
+              type: 'POST',
+              data: {csrfmiddlewaretoken: window.CSRF_TOKEN},
+              beforeSend: function() {$("#loader_" + event_id).show()},
+              success: processResult,
+              //Should also have a "fail" call as well.
+              complete: function() {$("#loader_" + event_id).hide();},
+              error: processFailure
+           }
+       ).done(
+           function( ) {
+                $('[data-toggle="tooltip"]').tooltip();
+            }
+       );
+    }
 
 };
-
 
 var processCourseBookingRequest = function()  {
 
@@ -74,42 +138,93 @@ var processCourseBookingRequest = function()  {
 
     //The value of the "data-event_id" attribute.
     var course_id = $button_just_clicked_on.data('course_id');
-    var ref = $button_just_clicked_on.data('ref');
+    var has_started = $button_just_clicked_on.data('has_started');
+    var has_available_block = $button_just_clicked_on.data('has_available_block');
+    var already_booked = $button_just_clicked_on.data('already_booked');
+    console.log(already_booked);
+    var ask_for_confirmation = function () {
+        if (has_started && !already_booked) {
+            return true
+        } else {
+            return false
+        }
+    };
 
-    var processResult = function(
-       result, status, jqXHR)  {
-      //console.log("sf result='" + result + "', status='" + status + "', jqXHR='" + jqXHR + "'");
-      if (result.redirect) {
-        window.location = result.url;
-      }
-      else {
-        $("#loader_" + course_id).hide();
-        $('#book_course_' + course_id).html(result.html);
-      }
-   };
+    if (ask_for_confirmation()) {
+          $('#confirm-dialog').dialog({
+            height: "auto",
+            width: 500,
+            modal: true,
+            closeOnEscape: true,
+            dialogClass: "no-close",
+            title: "Warning!",
+            open: function() {
+                var contentText;
+                if (has_available_block) {
+                    contentText = "This course has already started. If you choose to book, you will not receive any refund for past classes."
+                } else {
+                    contentText = "This course has already started. If you choose to purchase a block and book this course, you will not receive any refund for past classes."
+                }
+                $(this).html(contentText + "<br>Please confirm you want to continue.");
+            },
+            buttons: [
+                {
+                    text: "OK",
+                    click: function () {
+                        doTheCourseAjax();
+                        $(this).dialog('close');
+                    },
+                    "class": "btn btn-success"
+                },
+                {
+                    text: "Cancel",
+                    click: function () {
+                        $(this).dialog('close');
+                    },
+                    "class": "btn btn-dark"
+                }
+            ]
+        })
+      } else {
+          doTheCourseAjax()
+    }
 
-    var processFailure = function(
-       result, status, jqXHR)  {
-      //console.log("sf result='" + result + "', status='" + status + "', jqXHR='" + jqXHR + "'");
-      if (result.responseText) {
-        vNotify.error({text:result.responseText,title:'Error',position: 'bottomRight'});
-      }
-   };
+    function doTheCourseAjax () {
+        var processResult = function(
+           result, status, jqXHR)  {
+          //console.log("sf result='" + result + "', status='" + status + "', jqXHR='" + jqXHR + "'");
+          if (result.redirect) {
+            window.location = result.url;
+          }
+          else {
+            $("#loader_" + course_id).hide();
+            $('#book_course_' + course_id).html(result.html);
+          }
+       };
 
-   $.ajax(
-       {
-          url: '/ajax-course-booking/' + course_id + '/?ref=' + ref,
-          dataType: 'json',
-          type: 'POST',
-          data: {csrfmiddlewaretoken: window.CSRF_TOKEN},
-          beforeSend: function() {$("#loader_" + course_id).show();},
-          success: processResult,
-          //Should also have a "fail" call as well.
-          complete: function() {$("#loader_" + course_id).hide();},
-          error: processFailure
-       }
-    );
+        var processFailure = function(
+           result, status, jqXHR)  {
+          //console.log("sf result='" + result + "', status='" + status + "', jqXHR='" + jqXHR + "'");
+          if (result.responseText) {
+            vNotify.error({text:result.responseText,title:'Error',position: 'bottomRight'});
+          }
+       };
 
+       $.ajax(
+           {
+                url: '/ajax-course-booking/' + course_id + "/",
+                dataType: 'json',
+                type: 'POST',
+                data: {csrfmiddlewaretoken: window.CSRF_TOKEN},
+                beforeSend: function() {$("#loader_" + course_id).show();},
+                success: processResult,
+                //Should also have a "fail" call as well.
+                complete: function() {$("#loader_" + course_id).hide();},
+                error: processFailure
+           }
+       );
+
+    }
 };
 
 

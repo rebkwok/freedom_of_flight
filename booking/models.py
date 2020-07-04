@@ -93,8 +93,12 @@ class Course(models.Model):
     def full(self):
         # A course is full if its events are full, INCLUDING no-shows
         # Only need to check the first event
-        event = self.events.first()
+        event = self.events.order_by("start").first()
         return event.bookings.filter(status="OPEN").count() >= event.max_participants
+
+    @property
+    def has_started(self):
+        return self.events.order_by("start").first().start < timezone.now()
 
     def configured(self):
         return self.events.count() == self.course_type.number_of_events
@@ -190,6 +194,67 @@ class CourseBlockConfig(BaseBlockConfig):
         return self.course_type.event_type
 
 
+class BaseVoucher(models.Model):
+    discount = models.PositiveIntegerField(help_text="Enter a number between 1 and 100")
+    start_date = models.DateTimeField(default=timezone.now)
+    expiry_date = models.DateTimeField(null=True, blank=True)
+    max_vouchers = models.PositiveIntegerField(
+        null=True, blank=True, verbose_name='Maximum available vouchers',
+        help_text="Maximum uses across all users")
+    max_per_user = models.PositiveIntegerField(
+        null=True, blank=True, default=1,
+        verbose_name="Maximum uses per user",
+        help_text="Maximum times this voucher can be used by a single user"
+    )
+    # for gift vouchers
+    is_gift_voucher = models.BooleanField(default=False)
+    activated = models.BooleanField(default=True)
+    name = models.CharField(null=True, blank=True, max_length=255, help_text="Name of recipient")
+    message = models.TextField(null=True, blank=True, max_length=500, help_text="Message (max 500 characters)")
+    purchaser_email = models.EmailField(null=True, blank=True)
+
+    @property
+    def has_expired(self):
+        if self.expiry_date and self.expiry_date < timezone.now():
+            return True
+        return False
+
+    @property
+    def has_started(self):
+        return bool(self.start_date < timezone.now() and self.activated)
+
+    def save(self, *args, **kwargs):
+        # replace start time with very start of day
+        self.start_date = self.start_date.replace(
+                hour=0, minute=0, second=0, microsecond=0
+            )
+        if self.expiry_date:
+            # replace time with very end of day
+            # move forwards 1 day and set hrs/min/sec/microsec to 0, then move
+            # back 1 sec
+            next_day = (self.expiry_date + timedelta(
+                days=1)).replace(
+                hour=0, minute=0, second=0, microsecond=0
+            )
+            self.expiry_date = next_day - timedelta(seconds=1)
+        super().save(*args, **kwargs)
+
+
+class BlockVoucher(BaseVoucher):
+    code = models.CharField(max_length=255, unique=True)
+    dropin_block_configs = models.ManyToManyField(DropInBlockConfig, blank=True)
+    course_block_configs = models.ManyToManyField(CourseBlockConfig, blank=True)
+
+    def all_block_configs(self):
+        return list(self.dropin_block_configs.all()) + list(self.course_block_configs.all())
+
+    def check_block_config(self, block_config):
+        return block_config in self.all_block_configs()
+
+    def __str__(self):
+        return self.code
+
+
 class Block(models.Model):
     """
     Block booking
@@ -200,6 +265,8 @@ class Block(models.Model):
     purchase_date = models.DateTimeField(default=timezone.now)
     start_date = models.DateTimeField(null=True, blank=True)
     paid = models.BooleanField(default=False, help_text='Payment has been made by user')
+
+    voucher = models.ForeignKey(BlockVoucher, on_delete=models.SET_NULL, null=True, blank=True, related_name="blocks")
 
     manual_expiry_date = models.DateTimeField(blank=True, null=True)
     expiry_date = models.DateTimeField(blank=True, null=True)
@@ -462,91 +529,22 @@ class WaitingListUser(models.Model):
         ]
 
 
-class BaseVoucher(models.Model):
-    discount = models.PositiveIntegerField(
-        help_text="Enter a number between 1 and 100"
-    )
-    start_date = models.DateTimeField(default=timezone.now)
-    expiry_date = models.DateTimeField(null=True, blank=True)
-    max_vouchers = models.PositiveIntegerField(
-        null=True, blank=True, verbose_name='Maximum available vouchers',
-        help_text="Maximum uses across all users")
-    max_per_user = models.PositiveIntegerField(
-        null=True, blank=True, default=1,
-        verbose_name="Maximum uses per user",
-        help_text="Maximum times this voucher can be used by a single user"
-    )
-    # for gift vouchers
-    is_gift_voucher = models.BooleanField(default=False)
-    activated = models.BooleanField(default=True)
-    name = models.CharField(null=True, blank=True, max_length=255, help_text="Name of recipient")
-    message = models.TextField(null=True, blank=True, max_length=500, help_text="Message (max 500 characters)")
-    purchaser_email = models.EmailField(null=True, blank=True)
-
-    def __str__(self):
-        return self.code
-
-    @cached_property
-    def has_expired(self):
-        if self.expiry_date and self.expiry_date < timezone.now():
-            return True
-        return False
-
-    @cached_property
-    def has_started(self):
-        return bool(self.start_date < timezone.now() and self.activated)
-
-    def save(self, *args, **kwargs):
-        # replace start time with very start of day
-        self.start_date = self.start_date.replace(
-                hour=0, minute=0, second=0, microsecond=0
-            )
-        if self.expiry_date:
-            # replace time with very end of day
-            # move forwards 1 day and set hrs/min/sec/microsec to 0, then move
-            # back 1 sec
-            next_day = (self.expiry_date + timedelta(
-                days=1)).replace(
-                hour=0, minute=0, second=0, microsecond=0
-            )
-            self.expiry_date = next_day - timedelta(seconds=1)
-        super().save(*args, **kwargs)
-
-
-class BlockVoucher(BaseVoucher):
-    code = models.CharField(max_length=255, unique=True)
-    block_types = models.ManyToManyField(DropInBlockConfig)
-    course_types = models.ManyToManyField(CourseBlockConfig)
-
-    def all_block_configs(self):
-        return [*list(self.block_types.all()), *list(self.course_types.all())]
-
-    def check_block_config(self, block_config):
-        return any(block_config in self.all_block_configs())
-
-
-class UsedBlockVoucher(models.Model):
-    voucher = models.ForeignKey(BlockVoucher, on_delete=models.CASCADE)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    block_id = models.CharField(max_length=20, null=True, blank=True)
-
-
 class GiftVoucherType(models.Model):
-    dropin_block_type = models.ForeignKey(
+    dropin_block_config = models.ForeignKey(
         DropInBlockConfig, null=True, blank=True, on_delete=models.SET_NULL, related_name="dropin_gift_vouchers"
     )
-    course_block_type = models.ForeignKey(
+    course_block_config = models.ForeignKey(
         CourseBlockConfig, null=True, blank=True, on_delete=models.SET_NULL, related_name="course_gift_vouchers"
     )
     active = models.BooleanField(default=True, help_text="Display on site; set to False instead of deleting unused voucher types")
 
     @cached_property
-    def block_type(self):
-        return self.dropin_block_type if self.dropin_block_type else self.course_block_type
+    def block_config(self):
+        return self.dropin_block_config if self.dropin_block_config else self.course_block_config
 
     @cached_property
     def cost(self):
-        return self.block_type().cost
+        return self.block_config.cost
 
     def __str__(self):
-        return f"{self.block_type().identifier} -  £{self.cost}"
+        return f"{self.block_config} -  £{self.cost}"

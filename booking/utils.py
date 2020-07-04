@@ -1,7 +1,3 @@
-from datetime import timedelta
-
-from django.utils import timezone
-
 
 def has_available_block(user, event):
     if event.course:
@@ -16,6 +12,9 @@ def has_available_block(user, event):
             user.blocks.filter(dropin_block_config__event_type=event.event_type)
             if block.valid_for_event(event)
         )
+
+def has_available_course_block(user, course):
+    return has_available_block(user, course.events.order_by("start").first())
 
 def get_active_user_block(user, event):
     """
@@ -39,10 +38,3 @@ def get_block_status(block):
     blocks_used = block.bookings_made()
     total_blocks = block.block_config.size
     return blocks_used, total_blocks
-
-
-def booked_within_allowed_time(booking):
-    allowed_datetime = timezone.now() - timedelta(minutes=15)
-    return (
-       booking.date_rebooked and booking.date_rebooked > allowed_datetime
-    ) or (booking.date_booked > allowed_datetime)

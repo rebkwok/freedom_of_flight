@@ -12,6 +12,9 @@
 {% endblock %}
 
 {% block content %}
+
+<div id="confirm-dialog"></div></div>
+
 <div class="container row">
     <div class="col-12">
     <h1 class="mt-5">{{ title }}</h1>
@@ -19,13 +22,15 @@
 
         {% if course %}
             {% if request.user.is_authenticated %}
-                {% if has_started and not already_booked %}
+                {% if course.has_started and not already_booked %}
                     <h3 class="text-danger">NOTE: This course has started</h3>
                 {% endif %}
                 <div
                     id="book_course_{{ course.id }}"
                     data-course_id="{{ course.id }}"
-                    data-ref="course_events"
+                    data-has_started={{ course.has_started|yesno:"1,0" }}
+                    data-has_available_block={{ user|has_available_course_block:course|yesno:"1,0" }}
+                    data-already_booked={{ already_booked|yesno:"1,0" }}
                     class="ajax_course_events_btn">
                     {% include "booking/includes/course_events_button.txt" %}
                 </div>
@@ -51,11 +56,14 @@
                                         <span
                                             id="book_{{ event.id }}"
                                             data-event_id="{{ event.id }}"
-                                            data-ref="events"
+                                            data-can_cancel={{ event.can_cancel|yesno:"1,0" }}
+                                            data-cancellation_allowed={{ event.event_type.allow_booking_cancellation|yesno:"1,0" }}
+                                            data-show_payment_options={% if event.id in booked_event_ids or user|has_available_block:event %}"0"{% else %}"1"{% endif %}
+                                            data-is_course={{ event.course|yesno:"1,0" }}
                                             class="ajax_events_btn">
                                             {% include "booking/includes/events_button.txt" %}
                                             </span>
-                                            </span>
+                                        </span>
                                     {% elif event.full %}
                                         <span
                                             id="waiting_list_button_{{ event.id }}"
@@ -72,7 +80,7 @@
                                     <span
                                         id="book_{{ event.id }}"
                                         data-event_id="{{ event.id }}"
-                                        data-ref="events"
+                                        data-on_course={% if event.course %}"1"{% else %}"0"{% endif %}
                                         class="ajax_events_btn">
                                         {% include "booking/includes/events_button.txt" %}
                                     </span>
@@ -84,11 +92,8 @@
                         {% endif %}
                         <div>
                             <span class="helptext">{{event.event_type.name}}</span>
-                            <span class="helptext"> | Availability: {% if event.full %}
-                            <span class="badge badge-pill badge-dark">Full</span>
-                            {% else %}
-                            <span class="badge badge-pill badge-warning">{{ event.spaces_left }}</span>
-                            {% endif %}
+                            <span class="helptext"> | Availability:
+                                <span id="availability_{{ event.id }}">{% include 'booking/includes/event_availability_badge.html' %}</span>
                             </span>
                             {% if event.course and not course %}
                                 | <a href="{% url 'booking:course_events' event.course.slug %}"><span class="badge badge-info">Course: {{ event.course.name }}</span></a>

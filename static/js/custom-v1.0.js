@@ -20,9 +20,10 @@ jQuery(document).ready(function () {
         $('#message-row').fadeOut('slow');
     }, 2000); // <-- time in milliseconds, 1000 =  1 sec
 
-
     $('[data-toggle="tooltip"]').tooltip();
 
+    //register the confirm dialogs
+    //$( "#confirm-dialog" ).dialog({ autoOpen: false });
 
     jQuery('form.dirty-check').areYouSure();
 

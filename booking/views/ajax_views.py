@@ -36,7 +36,6 @@ def ajax_toggle_booking(request, event_id):
 
     event = Event.objects.get(id=event_id)
     event_was_full = not event.course and event.spaces_left == 0
-    ref = request.GET.get('ref')
 
     if not has_available_block(request.user, event):
         if event.course:
@@ -65,11 +64,6 @@ def ajax_toggle_booking(request, event_id):
             return HttpResponseBadRequest(
                 "Sorry, this event {}".format("has been cancelled" if event.cancelled else "is now full")
             )
-
-        if not event.course and not event.can_cancel:
-                # Not for course bookings - those always go to another page anyway
-                url = reverse('booking:create_booking', args=(event.slug,))
-                return JsonResponse({"redirect": True, "url": url})
 
         if event.course and requested_action == "opened":
             # First time booking for a course event - redirect to book course
@@ -100,13 +94,6 @@ def ajax_toggle_booking(request, event_id):
             pass
 
     else:
-        # CANCELLING
-        # Drop in classes past cancellation period - redirect to are-you-sure page
-        if not event.course and not event.can_cancel:
-            # Not for course bookings - those are always no-show anyway
-            url = reverse('booking:cancel_booking', args=(existing_booking.id,))
-            return JsonResponse({"redirect": True, "url": url})
-
         booking = existing_booking
         if event.course:
             booking.no_show = True
@@ -144,17 +131,18 @@ def ajax_toggle_booking(request, event_id):
     alert_message['message'] = f"Booking has been {requested_action}"
     context = {
         "event": event,
-        "ref": ref,
         "alert_message": alert_message,
         "just_booked": requested_action in ["opened", "reopened"],
         "just_cancelled": requested_action == "cancelled"
     }
     html = render(request, f"booking/includes/events_button.txt", context)
     block_info_html = render(request, f"booking/includes/block_info.html", {"event": event})
+    event_availability_html = render(request, f"booking/includes/event_availability_badge.html", {"event": event})
     return JsonResponse(
         {
             "html": html.content.decode("utf-8"),
             "block_info_html": block_info_html.content.decode("utf-8"),
+            "event_availability_html": event_availability_html.content.decode("utf-8"),
             "just_cancelled": requested_action == "cancelled",
         }
     )
@@ -193,7 +181,6 @@ def ajax_course_booking(request, course_id):
         return JsonResponse({"redirect": True, "url": url})
 
     course = Course.objects.get(id=course_id)
-    ref = request.GET.get('ref')
 
     if not has_available_block(request.user, course.events.first()):
         url = reverse('booking:course_block_purchase', args=(course.slug,))

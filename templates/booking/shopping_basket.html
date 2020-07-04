@@ -3,89 +3,91 @@
 {% load bookingtags %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="{% static 'booking/vanilla-notify.css' %}">
-<script type='text/javascript' src="{% static 'booking/vanilla-notify.min.js' %}"></script>
+<link rel="stylesheet" href="{% static 'booking/css/vanilla-notify.css' %}">
+<script type='text/javascript' src="{% static 'booking/js/vanilla-notify.min.js' %}"></script>
+<script type="text/javascript">window.CSRF_TOKEN = "{{ csrf_token }}";</script>
 {% endblock %}
 
 {% block content %}
 
 
-<div class="container container-basket row">
+<div class="container container-basket">
+    <div class="row">
         <h1>Shopping Basket</h1>
     
-    {% if unpaid_blocks %}
+        {% if unpaid_block_info %}
 
-        <div class="col-12 basket-section">
-            <div class="row">
-                <div class="col-7 basket-heading"><h4>Block</h4></div>
-                <div class="col-5 basket-heading"><h4>Cost</h4></div>
-            </div>
-
-            {% for block in unpaid_blocks %}
-            <div id="blockrow-{{ block.id}}">
-                <div class="row basket-row">
-                    <div class="col-7">
-                        {{ block.block_config }}
-                    </div>
-                    <div class="col-2">
-                        {% if block.id in voucher_applied_blocks %}
-                            <s>£{{ block.block_config.cost }}</s>
-                            <!--block.block_config.cost|voucher_applied_cost:block_voucher.discount-->
-                            £ placeholder - voucher applied cost
-                        {% else %}
-                            £{{ block.block_config.cost }}
+            <table class="table table-bordered">
+              <thead class="thead-light">
+                <tr>
+                  <th>Block</th>
+                  <th>Cost</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for block_info in unpaid_block_info %}
+                <tr>
+                    <td>{{ block_info.block.block_config }}</td>
+                    <td>
+                        <p>Cost: {% if block_info.voucher_applied.discounted_cost is not None %}
+                                <span class="superceded-cost">£{{ block_info.original_cost }}</span> £{{ block_info.voucher_applied.discounted_cost }}
+                            {% else %}
+                                £{{ block_info.original_cost }}
+                            {% endif %}
+                        {% if block_info.voucher_applied.discounted_cost is not None %}
+                        <br><span class="text-secondary"><small><em>Voucher code applied: {{ block_info.voucher_applied.code }}</em></small></span>
                         {% endif %}
-                    </div>
-                    <div class="col-3 text-left">
-                        <button
-                            class="btn btn-danger btn-xs"
-                            data-block_id="{{ block_config.id }}"
-                            data-block_code="{{ block_code }}"
-                        >X</button>
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
+                        </p>
+                    </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+              <tfoot>
+              <tr>
+                  <td colspan="2">
+                      <strong>TOTAL: £ {{ total_cost }}</strong>
+                      <span
+                          class="ajax-checkout-btn"
+                          id="checkout-btn"
+                          data-user_id="{{ user.id }}"
+                          data-total="{{ total_cost }}"
+                          data-block_ids="{{ unpaid_block_ids }}"
+                      >
+                          {% include "booking/includes/payment_button.txt" %}
+                      </span>
+                          <a class="btn btn-xs btn-outline-primary" href="{% url 'booking:block_purchase' %}">Add more items</a>
+                      <hr>
+                          <form name="block_voucher_form" class="form-inline" method="post" action="">
+                            {% csrf_token %}
+                            <input name="code" type="text" required="required"/>
+                            <input class="btn btn-sm btn-outline-info ml-2" type="submit" name="add_voucher_code" value="Apply voucher code"/>
+                        </form>
+                        <span class="errorlist">{{ voucher_add_error }}</span>
+                      {% if applied_voucher_codes_and_discount %}
+                      <hr>
+                      <div>Codes applied:</div>
+                          {% for applied_voucher_code, applied_voucher_discount in applied_voucher_codes_and_discount %}
+                                <form class="form-inline mb-1" method="post" action="">
+                                    {% csrf_token %}
+                                    <input name="code" type="hidden" value="{{ applied_voucher_code }}"/>
+                                    <span class="mr-2 mb-0 p-1 alert alert-info"><strong>{{ applied_voucher_code }}</strong> ({{ applied_voucher_discount }}%)</span>
+                                    <button type="submit" name="remove_voucher_code" class="btn btn-sm btn-danger"><i class="fas fa-trash-alt"></i></button>
+                                </form>
+                            {% endfor %}
+                      </ul>
+                      {% endif %}
 
-            <div class="row basket-row">
-                <div class="col-6 col-sm-4 col-md-3">
-                    <span id="checkout-blocks-total-and-paypalform">
-                        TOTAL PLACEHOLDER
-                    <!--booking/includes/shopping_basket_blocks_total.html-->
-                    </span>
-                </div>
-                <!--<div class="col-6 col-sm-8 col-md-9">-->
-                    <!--{% if not valid_block_voucher %}-->
-                        <!--<form name="block_voucher_form" class="form-inline" method="get" action="">-->
-                        <!--<label for="block_code_id">{{ block_voucher_form.block_code.label }}</label> {{ block_voucher_form.block_code }}-->
-                        <!--{% if booking_code %}-->
-                            <!--<input type="hidden" name="booking_code" value="{{ booking_code }}"/>-->
-                       <!--{% endif %}-->
-                        <!--<input class="btn btn-success table-btn" type="submit" value="Apply"/>-->
-                        <!--{% if block_voucher_error %}-->
-                            <!--<p class="errorlist">{{ block_voucher_error }}</p>-->
-                        <!--{% endif %}-->
-                    <!--</form>-->
-                    <!--{% else %}-->
-                        <!--<form class="form-inline" method="get" action="">-->
-                            <!--<label><strong>Voucher applied: {{ block_voucher.code }} ({{ block_voucher.discount }}% discount)</strong></label>-->
-                            <!--{% if booking_code %}-->
-                                <!--<input type="hidden" name="booking_code" value="{{ booking_code }}"/>-->
-                            <!--{% endif %}-->
-                            <!--<input class="btn btn-success table-btn" type="submit" name="remove_block_voucher" value="Remove" /><br/>-->
-                            <!--<small>You have already used this voucher for {{ times_booking_voucher_used }} block{% if times_block_voucher_used != 1 %}s{% endif %} (max {{block_voucher.max_per_user }})</small>-->
-                            <!--{% for msg in block_voucher_msg %}<br/><span class="errorlist">{{ msg }}</span>{% endfor %}-->
-                        <!--</form>-->
-                    <!--{% endif %}-->
-                <!--</div>-->
-            </div>
-        </div>
-
+                  </td>
+              </tr>
+              </tfoot>
+            </table>
+    </div>
 
 {% else %}
+    <div class="col-12">
     Your basket is empty
+    </div>
 {% endif %}
-
 </div>
 
 {% endblock content %}

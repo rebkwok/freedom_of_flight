@@ -4,9 +4,9 @@ from booking.views import (
     ajax_course_booking, ajax_toggle_booking, ajax_toggle_waiting_list, CourseEventsListView,
     disclaimer_required, home,
     EventListView, EventDetailView, placeholder,
-    BookingDeleteView, permission_denied, BookingCreateView, dropin_block_purchase_view,
+    permission_denied, dropin_block_purchase_view,
     course_block_purchase_view, block_purchase_view, ajax_course_block_purchase,
-    ajax_dropin_block_purchase, shopping_basket
+    ajax_dropin_block_purchase, shopping_basket, ajax_checkout
 )
 
 
@@ -31,8 +31,6 @@ urlpatterns = [
     path('ajax-course-booking/<int:course_id>/', ajax_course_booking, name='ajax_course_booking'),
 
     # BOOKINGS
-    path("booking/<int:pk>/cancel/", BookingDeleteView.as_view(), name="cancel_booking"),
-    path('booking/<slug:event_slug>/create-booking/', BookingCreateView.as_view(), name='create_booking'),
 
     # BLOCKS
     path("blocks/dropin/<slug:event_slug>/purchase-options/", dropin_block_purchase_view, name="dropin_block_purchase"),
@@ -43,6 +41,7 @@ urlpatterns = [
 
     # SHOPPING BASKET
     path("shopping-cart/", shopping_basket, name="shopping_basket"),
+    path("ajax-checkout/", ajax_checkout, name="ajax_checkout"),
 
 
     # EVENTS LIST: needs to go last

@@ -1,0 +1,5 @@
+{% if event.full %}
+<span class="badge badge-pill badge-dark">Full</span>
+{% else %}
+<span class="badge badge-pill badge-warning">{{ event.spaces_left }}</span>
+{% endif %}

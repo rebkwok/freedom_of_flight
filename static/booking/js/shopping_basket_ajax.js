@@ -11,24 +11,23 @@
 var MILLS_TO_IGNORE = 1000;
 
 
-var processBlockPurchaseRequest = function()  {
+var processCheckoutRequest = function()  {
 
     //In this scope, "this" is the button just clicked on.
     //The "this" in processResult is *not* the button just clicked
     //on.
     var $button_just_clicked_on = $(this);
 
-    //The value of the "data-event_id" attribute.
-    var block_config_id = $button_just_clicked_on.data('block_config_id');
-    var block_config_type = $button_just_clicked_on.data('block_config_type');
+    var user_id = $button_just_clicked_on.data('user_id');
+    var cart_total = $button_just_clicked_on.data('total');
 
     var processResult = function(
        result, status, jqXHR)  {
       //console.log("sf result='" + result + "', status='" + status + "', jqXHR='" + jqXHR + "'");
+    $("#loader").hide();
+    $('#checkout-btn').html(result);
+    $('#go_to_paypal').submit();
 
-    $("#loader_" + block_config_id).hide();
-    $('#block_config_' + block_config_id).html(result.html);
-    $('#cart_item_menu_count').text(result.cart_item_menu_count);
    };
 
     var processFailure = function(
@@ -41,14 +40,14 @@ var processBlockPurchaseRequest = function()  {
 
    $.ajax(
        {
-          url: '/ajax-block-purchase/' + block_config_type + "/" + block_config_id + '/',
-          dataType: 'json',
+          url: '/ajax-checkout/',
+          dataType: 'html',
           type: 'POST',
-          data: {csrfmiddlewaretoken: window.CSRF_TOKEN},
-          beforeSend: function() {$("#loader_" + block_config_id).show();},
+          data: {csrfmiddlewaretoken: window.CSRF_TOKEN, "user_id": user_id, "cart_total": cart_total},
+          beforeSend: function() {$("#loader").show();},
           success: processResult,
           //Should also have a "fail" call as well.
-          complete: function() {$("#loader_" + block_config_id).hide();},
+          complete: function() {},
           error: processFailure
        }
     );
@@ -84,7 +83,7 @@ $(document).ready(function()  {
     would attach a *second* listener to every button, meaning each
     click would be processed twice.
    */
-  $('.ajax_blocks_btn').click(_.debounce(processBlockPurchaseRequest, MILLS_TO_IGNORE, true));
+  $('.ajax-checkout-btn').click(_.debounce(processCheckoutRequest, MILLS_TO_IGNORE, true));
   /*
     Warning: Placing the true parameter outside of the debounce call:
 

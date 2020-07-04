@@ -4,7 +4,7 @@ from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.urls import reverse
-
+from django.http import JsonResponse
 from django.shortcuts import HttpResponseRedirect, render, get_object_or_404
 from django.views.generic import ListView, CreateView, DeleteView
 from django.core.mail import send_mail
@@ -21,14 +21,6 @@ from .views_utils import data_privacy_required, disclaimer_required
 from activitylog.models import ActivityLog
 
 logger = logging.getLogger(__name__)
-
-
-# TODO
-# List all available block types (dropin and course)
-# Order with relevant eventtype/coursetype blocks first and highlighted
-# Grey out ones that user already has
-# Purchase buttons for available ones
-# login required, disclaimer required, data privacy required
 
 
 def active_user_blocks(user):
@@ -102,6 +94,18 @@ def block_purchase_view(request):
 def ajax_dropin_block_purchase(request, block_config_id):
     block_config = get_object_or_404(DropInBlockConfig, pk=block_config_id)
     block, new = Block.objects.get_or_create(user=request.user, dropin_block_config=block_config, paid=False)
+    return process_block_purchase(request, block, new, block_config)
+
+
+@login_required
+@require_http_methods(['POST'])
+def ajax_course_block_purchase(request, block_config_id):
+    course_config = get_object_or_404(CourseBlockConfig, pk=block_config_id)
+    block, new = Block.objects.get_or_create(user=request.user, course_block_config=course_config, paid=False)
+    return process_block_purchase(request, block, new, course_config)
+
+
+def process_block_purchase(request, block, new, block_config):
     if not new:
         block.delete()
         alert_message = {
@@ -117,26 +121,10 @@ def ajax_dropin_block_purchase(request, block_config_id):
         "available_block_config": block_config,
         "alert_message": alert_message
     }
-    return render(request, f"booking/includes/blocks_button.txt", context)
-
-@login_required
-@require_http_methods(['POST'])
-def ajax_course_block_purchase(request, block_config_id):
-    course_config = get_object_or_404(CourseBlockConfig, pk=block_config_id)
-    block, new = Block.objects.get_or_create(user=request.user, course_block_config=course_config, paid=False)
-    if not new:
-        block.delete()
-        alert_message = {
-            "message_type": "info",
-            "message": f"Block removed from cart"
+    html =  render(request, f"booking/includes/blocks_button.txt", context)
+    return JsonResponse(
+        {
+            "html": html.content.decode("utf-8"),
+            "cart_item_menu_count": request.user.blocks.filter(paid=False).count(),
         }
-    else:
-        alert_message = {
-            "message_type": "success",
-            "message": f"Block added to cart"
-        }
-    context = {
-        "available_block_config": course_config,
-        "alert_message": alert_message
-    }
-    return render(request, f"booking/includes/blocks_button.txt", context)
+    )
