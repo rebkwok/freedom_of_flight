@@ -8,7 +8,7 @@
   `$(document).ready()`.
   Equal to <code>500</code>.
  */
-var MILLS_TO_IGNORE = 1000;
+var MILLS_TO_IGNORE = 500;
 
 
 var processBookingToggleRequest = function()  {
@@ -20,6 +20,7 @@ var processBookingToggleRequest = function()  {
 
     //The value of the "data-event_id" attribute.
     var event_id = $button_just_clicked_on.data('event_id');
+    var user_id = $button_just_clicked_on.data('user_id');
     var can_cancel = $button_just_clicked_on.data('can_cancel');
     var cancellation_allowed = $button_just_clicked_on.data('cancellation_allowed');
     var show_payment_options = $button_just_clicked_on.data('show_payment_options');
@@ -94,8 +95,12 @@ var processBookingToggleRequest = function()  {
             $('#availability_' + event_id).html(result.event_availability_html);
               if (result.just_cancelled) {
                 $('#booked_tick_' + event_id).hide();
+                $('#cancelled-text-' + event_id).text("You have cancelled this booking")  ;
+                $('#list-item-' + event_id).addClass("list-group-item-secondary text-secondary");
               } else {
                 $('#booked_tick_' + event_id).show();
+                $('#cancelled-text-' + event_id).text("");
+                $('#list-item-' + event_id).removeClass("list-group-item-secondary text-secondary");
               }
           }
        };
@@ -113,7 +118,7 @@ var processBookingToggleRequest = function()  {
               url: '/ajax-toggle-booking/' + event_id + '/',
               dataType: 'json',
               type: 'POST',
-              data: {csrfmiddlewaretoken: window.CSRF_TOKEN},
+              data: {csrfmiddlewaretoken: window.CSRF_TOKEN, "user_id": user_id},
               beforeSend: function() {$("#loader_" + event_id).addClass("fa fa-spinner fa-spin").show()},
               success: processResult,
               //Should also have a "fail" call as well.
@@ -138,6 +143,7 @@ var processCourseBookingRequest = function()  {
 
     //The value of the "data-event_id" attribute.
     var course_id = $button_just_clicked_on.data('course_id');
+    var user_id = $button_just_clicked_on.data('user_id');
     var has_started = $button_just_clicked_on.data('has_started');
     var has_available_block = $button_just_clicked_on.data('has_available_block');
     var already_booked = $button_just_clicked_on.data('already_booked');
@@ -215,7 +221,7 @@ var processCourseBookingRequest = function()  {
                 url: '/ajax-course-booking/' + course_id + "/",
                 dataType: 'json',
                 type: 'POST',
-                data: {csrfmiddlewaretoken: window.CSRF_TOKEN},
+                data: {csrfmiddlewaretoken: window.CSRF_TOKEN, "user_id": user_id},
                 beforeSend: function() {$("#loader_" + course_id).addClass("fa fa-spinner fa-spin").show();},
                 success: processResult,
                 //Should also have a "fail" call as well.
@@ -240,16 +246,19 @@ var toggleWaitingList = function()  {
 
     //The value of the "data-event_id" attribute.
     var event_id = $button_just_clicked_on.data('event_id');
+    var user_id = $button_just_clicked_on.data('user_id');
 
     var processResult = function(
        result, status, jqXHR)  {
       //console.log("sf result='" + result + "', status='" + status + "', jqXHR='" + jqXHR + "', user_id='" + user_id + "'");
-      $('#waiting_list_button_' + event_id).html(result);
+        $('#waiting_list_button_' + event_id).html(result);
    };
 
    $.ajax(
        {
           url: '/ajax-toggle-waiting-list/' + event_id + '/',
+          type: 'POST',
+          data: {csrfmiddlewaretoken: window.CSRF_TOKEN, "user_id": user_id},
           dataType: 'html',
           success: processResult
           //Should also have a "fail" call as well.

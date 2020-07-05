@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% load bookingtags static %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'booking/css/vanilla-notify.css' %}">
+<script type='text/javascript' src="{% static 'booking/js/vanilla-notify.min.js' %}"></script>
+
+<script type="text/javascript">
+    window.CSRF_TOKEN = "{{ csrf_token }}";
+</script>
+{% endblock %}
+
+{% block content %}
+
+<div id="confirm-dialog"></div></div>
+
+<div class="container row">
+    <div class="col-12">
+    <h1 class="mt-5">Active Bookings</h1>
+    {% if bookings_by_date %}
+
+        {% for date, bookings in bookings_by_date.items %}
+            <div class="list-group mb-2">
+                <div class="list-group-item list-group-item-dark pt-1 pb-1">{{ date|date:"D d M Y" }}</div>
+                {% for booking in bookings %}
+                    <div id="list-item-{{ booking.event.id }}" class="list-group-item pt-1 pb-1 {% if booking.status == 'CANCELLED' or booking.no_show %}list-group-item-secondary text-secondary{% endif %}">
+                        <a href="{% url 'booking:event' booking.event.slug %}">
+                                {{ booking.event.start|date:"H:i"  }} {{ booking.event.name }}
+                        </a> <em><span id="cancelled-text-{{ booking.event.id}}">{% if booking.status == 'CANCELLED' or booking.no_show %}You have cancelled this booking{% endif %}</span></em>
+                            <span class="float-right">
+
+                                <span
+                                    id="book_{{ booking.event.id }}"
+                                    data-user_id="{{ booking.user.id }}"
+                                    data-event_id="{{ booking.event.id }}"
+                                    data-can_cancel={{ event.can_cancel|yesno:"1,0" }}
+                                    data-cancellation_allowed={{ booking.event.event_type.allow_booking_cancellation|yesno:"1,0" }}
+                                    data-show_payment_options="0"
+                                    data-is_course={{ booking.event.course|yesno:"1,0" }}
+                                    class="ajax_events_btn">
+                                    {% include "booking/includes/bookings_button.txt" %}
+                                </span>
+
+                                {% if booking.event.full %}
+                                    {% if booking.status == "CANCELLED" or booking.no_show %}
+                                        <span
+                                            id="waiting_list_button_{{ booking.event.id }}"
+                                            data-event_id="{{ booking.event.id }}"
+                                            data-user_id="{{ user.id }}"
+                                            class="ajax_events_waiting_list_btn">
+                                        {% include "booking/includes/waiting_list_button.html" %}
+                                        </span>
+                                    {% endif %}
+                                {% endif %}
+                            </span>
+                        <div>
+                            <span class="helptext">{{ booking.event.event_type.name }}</span>
+                            <span class="helptext"> | Availability:
+                                <span id="availability_{{ booking.event.id }}">{% include 'booking/includes/event_availability_badge.html' %}</span>
+                            </span>
+                            {% if booking.event.course and not course %}
+                                | <a href="{% url 'booking:course_events' booking.event.course.slug %}"><span class="badge badge-info">Course: {{ booking.event.course.name }}</span></a>
+                            {% endif %}
+                            {% if user.is_authenticated %}
+                                <span id="block_info_{{booking.event.id}}">
+                                    {% include 'booking/includes/block_info.html' %}
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endfor %}
+
+    {% if page_bookings.has_other_pages %}
+        <!--NAVIGATION-->
+        <nav aria-label="Page navigation">
+          <ul class="pagination">
+            {% if page_bookings.has_previous %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ page_bookings.previous_page_number }}" aria-label="Previous">
+                <span aria-hidden="true">&laquo;</span>
+                <span class="sr-only">Previous</span>
+              </a>
+            </li>
+            {% else %}
+              <a class="page-link" disabled=disabled href="#" aria-label="Previous">
+                <span aria-hidden="true">&laquo;</span>
+                <span class="sr-only">Previous</span>
+              </a>
+            {% endif %}
+          <li class="page-item"><a class="page-link" href="#">Page {{ page_bookings.number }} of {{ page_bookings.paginator.num_pages }}</a></li>
+
+          <li class="page-item">
+            {% if page_events.has_next %}
+              <a class="page-link" href="?page={{ page_bookings.next_page_number }}" aria-label="Next">
+                <span aria-hidden="true">&raquo;</span>
+                <span class="sr-only">Next</span>
+              </a>
+            {% else %}
+              <a class="page-link" disabled=disabled href="#" aria-label="Next">
+                <span aria-hidden="true">&raquo;</span>
+                <span class="sr-only">Next</span>
+              </a>
+            {% endif %}
+          </li>
+
+          </ul>
+        </nav>
+    {% endif %}
+    {% else %}
+        <p>No active bookings.</p>
+    {% endif %}
+
+</div>
+{% endblock content %}
+
+
+{% block extra_js %}
+<script>$(document).scrollreminder();</script>
+<script type='text/javascript' src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js"></script>
+<script type='text/javascript' src="{% static 'booking/js/events_booking_ajax-v1.js' %}"></script>
+{% endblock %}

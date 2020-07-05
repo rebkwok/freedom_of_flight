@@ -34,7 +34,9 @@
                                 {% include "booking/includes/blocks_button.txt" %}
                             </span></p>
                         <p>{% if available_block_config.description %}{{ available_block_config.description }}{% endif %}</p>
-                        <p>£{{ available_block_config.cost }} | {{ available_block_config.duration }} weeks | {{ available_block_config.size }} uses </p>
+                        <p>£{{ available_block_config.cost }} |
+                            {% if available_block_config.duration %} Expires after {{ available_block_config.duration }} weeks{% else %}Never expires {% endif %} |
+                            {{ available_block_config.size }} uses </p>
                         <p>
                             {% active_block_info user_active_blocks available_block_config %}
                         </p>

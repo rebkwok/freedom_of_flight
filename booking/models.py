@@ -171,7 +171,7 @@ class BaseBlockConfig(models.Model):
     identifier = models.CharField(max_length=255)
     description = models.TextField(null=True, blank=True)
     cost = models.DecimalField(max_digits=8, decimal_places=2)
-    duration = models.PositiveIntegerField(help_text="Number of weeks until block expires (from first use)")
+    duration = models.PositiveIntegerField(help_text="Number of weeks until block expires (from first use)", default=4, null=True, blank=True)
     active = models.BooleanField(default=False)
 
     def __str__(self):
@@ -311,7 +311,10 @@ class Block(models.Model):
         # (unless it's been set to be earlier than the calculated expiry date)
         # extended_expiry_date is set to end of day on save, so just return it
         if self.manual_expiry_date:
-            return self.extended_expiry_date
+            return self.manual_expiry_date
+
+        if self.block_config.duration is None:
+            return None
 
         if self.start_date:
             # replace block expiry date with very end of day in local time
@@ -351,6 +354,7 @@ class Block(models.Model):
 
     def _valid_and_active_for_event(self, event):
         # hasn't started yet OR event is within block date range
+        # Note we've already checked it's active and the right type
         return self.expiry_date is None or event.start < self.expiry_date
 
     def valid_for_event(self, event):

@@ -153,23 +153,22 @@ def placeholder(request):
 
 
 @login_required
+@require_http_methods(['POST'])
 def ajax_toggle_waiting_list(request, event_id):
-    user = request.user
+    user_id = int(request.POST.get("user_id"))
     event = Event.objects.get(id=event_id)
 
     # toggle current status
     try:
-        waitinglistuser = WaitingListUser.objects.get(user=user, event=event)
+        waitinglistuser = WaitingListUser.objects.get(user_id=user_id, event=event)
         waitinglistuser.delete()
-        on_waiting_list = False
     except WaitingListUser.DoesNotExist:
-        WaitingListUser.objects.create(user=user, event=event)
-        on_waiting_list = True
+        WaitingListUser.objects.create(user_id=user_id, event=event)
 
     return render(
         request,
         "booking/includes/waiting_list_button.html",
-        {'event': event, 'on_waiting_list': on_waiting_list}
+        {'event': event}
     )
 
 

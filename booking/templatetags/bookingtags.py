@@ -1,5 +1,6 @@
 from django import template
 
+from ..models import WaitingListUser
 from ..utils import has_available_block as has_available_block_util
 from ..utils import has_available_course_block as has_available_course_block_util
 from ..utils import get_active_user_block, get_block_status
@@ -64,3 +65,8 @@ def active_block_info(user_active_blocks, block_config):
     available_active_blocks = [block for block in user_active_blocks if block.block_config == block_config]
     block_info_texts = [user_block_info(block) for block in available_active_blocks]
     return {"block_info_texts": block_info_texts}
+
+
+@register.filter
+def on_waiting_list(user, event):
+    return WaitingListUser.objects.filter(user=user, event=event).exists()

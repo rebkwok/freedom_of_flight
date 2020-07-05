@@ -50,7 +50,11 @@
             <li><a class="nav-link" href="#">Gift Vouchers</a></li>
 
             {% if request.user.is_authenticated %}
-              <li class="nav-item"><a class="nav-link" href="{% url 'accounts:profile' %}">Account</a></li>
+              <li class="nav-item">
+                <a class="nav-link" href="{% url 'booking:block_purchase' %}">Blocks</a>
+              </li>
+              <li class="nav-item"><a class="nav-link" href="{% url 'accounts:profile' %}">My Account</a></li>
+
               {% if request.user.is_staff %}
                 <li><a class="nav-link" href="#">Admin</a></li>
               {% endif %}

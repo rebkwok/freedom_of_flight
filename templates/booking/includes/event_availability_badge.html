@@ -1,5 +1,6 @@
-{% if event.full %}
+{% if event.full or booking.event.full %}
 <span class="badge badge-pill badge-dark">Full</span>
 {% else %}
-<span class="badge badge-pill badge-warning">{{ event.spaces_left }}</span>
+<span class="badge badge-pill badge-warning">{{ event.spaces_left }}{{ booking.event.spaces_left }}</span>
 {% endif %}
+
