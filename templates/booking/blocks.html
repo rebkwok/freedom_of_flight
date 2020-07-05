@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% load bookingtags static %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'booking/css/vanilla-notify.css' %}">
+<script type='text/javascript' src="{% static 'booking/js/vanilla-notify.min.js' %}"></script>
+
+<script type="text/javascript">
+    window.CSRF_TOKEN = "{{ csrf_token }}";
+</script>
+{% endblock %}
+
+{% block content %}
+
+    {% include 'accounts/includes/account_nav.html' %}
+
+<div class="container row">
+    <div class="col-12">
+    <h1 class="mt-5">Active Blocks</h1>
+    {% if active_blocks_by_config %}
+        {% for config, blocks in active_blocks_by_config.items  %}
+            <div class="list-group mb-2">
+                <div class="list-group-item list-group-item-dark pt-1 pb-1">{{ config }}</div>
+                {% for block in blocks %}
+                    <div class="list-group-item">
+                        Purchased: {{ block.purchase_date | date:"d M Y" }}<br/>
+                        User: {{ block.user.first_name }} {{ block.user.last_name }}<br/>
+                        Bookings: {% if not block.bookings.exists %}N/A{% endif %}<br/>
+                        {{ block|block_expiry_text }}
+                        <ul>
+                            {% for booking in block.bookings.all %}
+                                <li>{{ booking }}</li>
+                            {% endfor %}
+                        </ul>
+                        </div>
+                {% endfor %}
+            </div>
+        {% endfor %}
+    {% else %}
+        <p>No active bookings.</p>
+    {% endif %}
+</div>
+{% endblock content %}
+
+
+{% block extra_js %}
+<script>$(document).scrollreminder();</script>
+<script type='text/javascript' src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js"></script>
+<script type='text/javascript' src="{% static 'booking/js/events_booking_ajax-v1.js' %}"></script>
+{% endblock %}

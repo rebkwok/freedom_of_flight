@@ -30,18 +30,24 @@ def block_used(user, event):
         return f"Block used"
     return f"Block available"
 
+
+def get_block_info(block):
+    used, total = get_block_status(block)
+    base_text = f"<span class='helptext'>{block.block_config.identifier} ({total - used}/{total} remaining)"
+    if block.expiry_date:
+        return f"{base_text}; expires {block.expiry_date.strftime('%d %b %y')}</span>"
+    elif block.block_config.duration:
+        return  f"{base_text}; not started</span>"
+    else:
+        return f"{base_text}; never expires</span>"
+
 @register.filter
 def block_info(user, event):
     block = get_active_user_block(user, event)
     if event.course:
         # Don't show the used/total for course blocks
         return f"<span class='helptext'>{block.block_config.identifier}</span>"
-
-    used, total = get_block_status(block)
-    if block.expiry_date:
-        return f"<span class='helptext'>{block.block_config.identifier} ({total - used}/{total} remaining)" \
-                f"</br>Expires {block.expiry_date.strftime('%d %b %y')}</span>"
-    return f"<span class='helptext'>{block.block_config.identifier} ({total - used}/{total} remaining)</span>"
+    return get_block_info(block)
 
 
 @register.filter
@@ -49,11 +55,7 @@ def user_block_info(block):
     if block.course_block_config:
         # Don't show the used/total for course blocks
         return f"<span class='helptext'>{block.block_config.identifier}</span>"
-    used, total = get_block_status(block)
-    if block.expiry_date:
-        return f"<span class='helptext'>{block.block_config.identifier} ({total - used}/{total} remaining); expires {block.expiry_date.strftime('%d %b %y')}</span>"
-    return f"<span class='helptext'>{block.block_config.identifier} ({total - used}/{total} remaining); not started</span>"
-
+    return get_block_info(block)
 
 @register.filter
 def has_unpaid_block(user, block_config):
@@ -70,3 +72,14 @@ def active_block_info(user_active_blocks, block_config):
 @register.filter
 def on_waiting_list(user, event):
     return WaitingListUser.objects.filter(user=user, event=event).exists()
+
+
+@register.filter
+def block_expiry_text(block):
+    if block.expiry_date:
+        return f"Expires {block.expiry_date.strftime('%d %b %y')}"
+    elif block.block_config.duration:
+        # Don't show the used/total for course blocks
+        return "Not started yet"
+    else:
+        return "Never expires"

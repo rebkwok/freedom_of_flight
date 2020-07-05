@@ -11,11 +11,12 @@ from django.core.mail import send_mail
 from django.template.loader import get_template
 from django.views.decorators.http import require_http_methods
 
+from braces.views import LoginRequiredMixin
 
 from booking.models import (
     Block, DropInBlockConfig, Course, CourseType, Event, EventType, CourseBlockConfig
 )
-from .views_utils import data_privacy_required, disclaimer_required
+from .views_utils import data_privacy_required, disclaimer_required, DataPolicyAgreementRequiredMixin
 
 
 from activitylog.models import ActivityLog
@@ -26,6 +27,25 @@ logger = logging.getLogger(__name__)
 def active_user_blocks(user):
     return [block for block in user.blocks.all() if block.active_block]
 
+
+class BlockListView(DataPolicyAgreementRequiredMixin, LoginRequiredMixin, ListView):
+
+    model = Block
+    template_name = 'booking/blocks.html'
+
+    def get_queryset(self):
+        users = [self.request.user, *[childprofile.user for childprofile in self.request.user.userprofile.managed_profiles.all()]]
+        return [block for block in Block.objects.filter(user_id__in=users).order_by("purchase_date") if block.active_block]
+
+    def get_context_data(self, **kwargs):
+        # Call the base implementation first to get a context
+        context = super().get_context_data(**kwargs)
+        all_active_blocks = self.get_queryset()
+        active_blocks_by_config = {}
+        for block in all_active_blocks:
+            active_blocks_by_config.setdefault(block.block_config, []).append(block)
+        context["active_blocks_by_config"] = active_blocks_by_config
+        return context
 
 @disclaimer_required
 @data_privacy_required

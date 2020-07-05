@@ -55,15 +55,18 @@ def has_readonly_fields(original_class):
 BOOL_CHOICES = ((True, 'Yes'), (False, 'No'))
 
 
-class UserProfile(models.Model):
-    user = models.OneToOneField(
-        User, on_delete=models.CASCADE, related_name='profile'
-    )
+class BaseUserProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
     date_of_birth = models.DateField(verbose_name='date of birth')
     address = models.CharField(max_length=512, null=True, blank=True)
     postcode = models.CharField(max_length=10, null=True, blank=True)
     phone = models.CharField(max_length=255, null=True, blank=True)
 
+    class Meta:
+        abstract = True
+
+
+class UserProfile(BaseUserProfile):
     student = models.BooleanField(default=True)
     manager = models.BooleanField(default=False)
 
@@ -71,15 +74,7 @@ class UserProfile(models.Model):
         return self.user.username
 
 
-class ChildUserProfile(models.Model):
-    user = models.OneToOneField(
-        User, on_delete=models.CASCADE, related_name='child_profile'
-    )
-    date_of_birth = models.DateField(verbose_name='date of birth')
-    address = models.CharField(max_length=512, null=True, blank=True)
-    postcode = models.CharField(max_length=10, null=True, blank=True)
-    phone = models.CharField(max_length=255, null=True, blank=True)
-
+class ChildUserProfile(BaseUserProfile):
     parent_user_profile = models.ForeignKey(
         UserProfile, null=True, blank=True, on_delete=models.CASCADE, related_name="managed_profiles"
     )

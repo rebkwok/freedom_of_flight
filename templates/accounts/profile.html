@@ -13,9 +13,9 @@
                <div class="card-body">
                    <div class="card-text"><strong>Username:</strong> {{ user.username }}</div>
                    <div class="card-text"><strong>Name:</strong> {{ user.first_name }} {{ user.last_name }}</div>
-                   <div class="card-text"><strong>Date of birth:</strong> {{ user.profile.date_of_birth }}</div>
-                   <div class="card-text"><strong>Address:</strong> {{ user.profile.address }}, {{ user.profile.postcode }}</div>
-                   <div class="card-text"><strong>Phone:</strong> {{ user.profile.phone }}</div>
+                   <div class="card-text"><strong>Date of birth:</strong> {{ user.userprofile.date_of_birth }}</div>
+                   <div class="card-text"><strong>Address:</strong> {{ user.userprofile.address }}, {{ user.userprofile.postcode }}</div>
+                   <div class="card-text"><strong>Phone:</strong> {{ user.userprofile.phone }}</div>
                   <div class="card-text"><a class="btn btn-success" href="{% url 'accounts:update_profile' %}">Change</a></div>
 
                 </div>
@@ -38,12 +38,12 @@
            <div class="card">
                <h2 class="card-header">Accounts</h2>
                <div class="card-body">
-                <div class="card-text">{% if user.profile.student %}{{ user.first_name }} {{ user.last_name }}{% endif %}</div>
-               {% if user.profile.manager %}
+                <div class="card-text">{% if user.userprofile.student %}{{ user.first_name }} {{ user.last_name }}{% endif %}</div>
+               {% if user.userprofile.manager %}
                    <div class="card-text">
-                   Managed Accounts:  {% if not user.profile.managed_users.exists %}No managed accounts set up yet{% endif %}
+                   Managed Accounts:  {% if not user.userprofile.managed_users.exists %}No managed accounts set up yet{% endif %}
                    <ul>
-                       {% for managed_profile in user.profile.managed_profiles.all %}
+                       {% for managed_profile in user.userprofile.managed_profiles.all %}
                        <li>{{ managed_profile.user.first_name }} {{ managed_profile.user.last_name }}</li>
                        {% endfor %}
                    </ul>

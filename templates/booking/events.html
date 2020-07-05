@@ -19,7 +19,6 @@
     <div class="col-12">
     <h1 class="mt-5">{{ title }}</h1>
     {% if events_by_date %}
-
         {% if course %}
             {% if request.user.is_authenticated %}
                 {% if course.has_started and not already_booked %}

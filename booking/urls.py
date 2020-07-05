@@ -2,7 +2,7 @@ from django.urls import path
 from django.views.generic import RedirectView
 from booking.views import (
     ajax_block_delete, ajax_course_booking, ajax_toggle_booking, ajax_toggle_waiting_list,
-    CourseEventsListView, BookingListView,
+    CourseEventsListView, BookingListView, BlockListView,
     disclaimer_required, home,
     EventListView, EventDetailView, placeholder,
     permission_denied, dropin_block_purchase_view,
@@ -35,6 +35,7 @@ urlpatterns = [
     path('bookings/', BookingListView.as_view(), name="bookings"),
 
     # BLOCKS
+    path('blocks/active/', BlockListView.as_view(), name="blocks"),
     path("blocks/dropin/<slug:event_slug>/purchase-options/", dropin_block_purchase_view, name="dropin_block_purchase"),
     path("blocks/course/<slug:course_slug>/purchase-options/", course_block_purchase_view, name="course_block_purchase"),
     path("blocks/purchase-options/", block_purchase_view, name="block_purchase"),

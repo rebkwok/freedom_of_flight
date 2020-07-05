@@ -13,10 +13,7 @@ def booking(request):
     tracks = Track.objects.filter(id__in=tracks_with_events)
     if not tracks:
         tracks = Track.objects.filter(default=True)
-
-    student_users = [child_profile.user for child_profile in request.user.profile.managed_profiles.all()]
-    if request.user.profile.student:
-        student_users.insert(0, request.user)
+    student_users = [request.user, *[childprofile.user for childprofile in request.user.userprofile.managed_profiles.all()]]
 
     return {
         'studio_email': settings.DEFAULT_STUDIO_EMAIL,
