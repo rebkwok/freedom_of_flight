@@ -14,11 +14,14 @@ def booking(request):
     if not tracks:
         tracks = Track.objects.filter(default=True)
 
+    student_users = [child_profile.user for child_profile in request.user.profile.managed_profiles.all()]
+    if request.user.profile.student:
+        student_users.insert(0, request.user)
+
     return {
         'studio_email': settings.DEFAULT_STUDIO_EMAIL,
         'tracks': tracks,
-        # TODO this will need to include user's sub-users too and user only if they've check the box to say they are an active user themselves
-        'managed_users': [request.user],
+        'student_users': student_users,
         'cart_item_count': request.user.is_authenticated and request.user.blocks.filter(paid=False).count()
     }
 

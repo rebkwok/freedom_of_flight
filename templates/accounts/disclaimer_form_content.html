@@ -15,7 +15,7 @@
            <label class="control-label" for="id_{{ form.emergency_contact_name.name }}">{{ form.emergency_contact_name.label }}{% if form.emergency_contact_name.field.required %}*{% endif %}</label>
            {{ form.emergency_contact_name }}
            <span class="helptext">{{ form.emergency_contact_name.help_text }}</span>
-            {% if field.errors %}
+            {% if form.emergency_contact_name.errors %}
                 <span class="errorlist">{{ form.emergency_contact_name.errors }}</span>
             {% endif %}
        </div>
@@ -24,7 +24,7 @@
            <label class="control-label" for="id_{{ form.emergency_contact_phone.name }}">{{ form.emergency_contact_phone.label }}{% if form.emergency_contact_phone.field.required %}*{% endif %}</label>
            {{ form.emergency_contact_phone }}
            <span class="helptext">{{ form.emergency_contact_phone.help_text }}</span>
-            {% if field.errors %}
+            {% if form.emergency_contact_phone.errors %}
                 <span class="errorlist">{{ form.emergency_contact_phone.errors }}</span>
             {% endif %}
        </div>
@@ -33,7 +33,7 @@
            <label class="control-label" for="id_{{ form.emergency_contact_relationship.name }}">{{ form.emergency_contact_relationship.label }}{% if form.emergency_contact_relationship.field.required %}*{% endif %}</label>
            {{ form.emergency_contact_relationship }}
            <span class="helptext">{{ form.emergency_contact_relationship.help_text }}</span>
-            {% if field.errors %}
+            {% if form.emergency_contact_relationship.errors %}
                 <span class="errorlist">{{ form.emergency_contact_relationship.errors }}</span>
             {% endif %}
        </div>
@@ -45,7 +45,7 @@
            {{ form.terms_accepted }}
            <label class="form-check-label" for="id_{{ form.terms_accepted.name }}">{{ form.terms_accepted.label }}{% if form.terms_accepted.field.required %}*{% endif %}</label>
            <span class="helptext">{{ form.terms_accepted.help_text }}</span>
-            {% if field.errors %}
+            {% if form.terms_accepted.errors %}
                 <span class="errorlist">{{ form.terms_accepted.errors }}</span>
             {% endif %}
        </div>

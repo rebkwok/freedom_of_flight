@@ -35,6 +35,25 @@
                 <div class="card-text"><strong>Primary email address:</strong> {{ user.email }}</div>
                <div class="card-text"><a class="btn btn-success" href="{% url 'account_email' %}">Change</a></div>
            </div>
+           <div class="card">
+               <h2 class="card-header">Accounts</h2>
+               <div class="card-body">
+                <div class="card-text">{% if user.profile.student %}{{ user.first_name }} {{ user.last_name }}{% endif %}</div>
+               {% if user.profile.manager %}
+                   <div class="card-text">
+                   Managed Accounts:  {% if not user.profile.managed_users.exists %}No managed accounts set up yet{% endif %}
+                   <ul>
+                       {% for managed_profile in user.profile.managed_profiles.all %}
+                       <li>{{ managed_profile.user.first_name }} {{ managed_profile.user.last_name }}</li>
+                       {% endfor %}
+                   </ul>
+                   </div>
+                    <div class="card-text"><a class="btn btn-success" href="#">Add Managed Account</a></div>
+               {% else %}
+                   <div class="card-text">You do not manage accounts for other users.</div>
+                   <div class="card-text"><a class="btn btn-success" href="{% url 'accounts:update_profile' %}">Change</a></div>
+               {% endif %}
+           </div>
             <div class="card">
                <h2 class="card-header">Disclaimer</h2>
                <div class="card-body">

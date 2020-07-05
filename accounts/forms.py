@@ -40,7 +40,15 @@ class AccountFormMixin:
         self.fields["address"] = forms.CharField(widget=forms.TextInput(attrs={'class': 'form-control'}))
         self.fields["postcode"] = forms.CharField(max_length=10, widget=forms.TextInput(attrs={'class': 'form-control'}))
         self.fields["phone"] = forms.CharField(max_length=20, widget=forms.TextInput(attrs={'class': 'form-control'}))
-
+        self.fields["student"] = forms.BooleanField(
+            widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            label="Tick if you are registering as a student yourself"
+        )
+        self.fields["manager"] = forms.BooleanField(
+            widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            label="Tick if you will manage child account(s)",
+            help_text="You'll be able to add managed accounts on the next page."
+        )
 
 class SignupForm(AccountFormMixin, forms.Form):
 
@@ -53,7 +61,7 @@ class SignupForm(AccountFormMixin, forms.Form):
         if DataPrivacyPolicy.current():
             self.data_privacy_policy = DataPrivacyPolicy.current()
             self.fields['data_privacy_confirmation'] = forms.BooleanField(
-                widget=forms.CheckboxInput(attrs={'class': "regular-checkbox"}),
+                widget=forms.CheckboxInput(attrs={'class': "form-check-input"}),
                 required=True,
                 label='I confirm I have read and agree to the terms of the data privacy policy'
             )
@@ -67,7 +75,7 @@ class SignupForm(AccountFormMixin, forms.Form):
 
         non_profile_fields = [
             'first_name', 'last_name', 'password1', 'password2', 'username',
-            'email', 'email2', 'data_privacy_confirmation'
+            'email', 'email2', 'data_privacy_confirmation', 'student', 'manager'
         ]
         for field in non_profile_fields:
             if field in profile_data:
@@ -99,7 +107,7 @@ class ProfileForm(AccountFormMixin, forms.ModelForm):
 
     class Meta:
         model = UserProfile
-        fields = ("first_name", "last_name", "address", "postcode", "phone", "date_of_birth")
+        fields = ("first_name", "last_name", "address", "postcode", "phone", "date_of_birth", "student", "manager")
 
 
 BASE_DISCLAIMER_FORM_WIDGETS = {

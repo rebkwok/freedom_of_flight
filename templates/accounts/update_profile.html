@@ -14,9 +14,18 @@
                             {% for field in form %}
                                 {% if field.name == 'confirmation_key' %}
                                     <span class="hide">{{ field }}</span>
+                                {% elif field.name == "student" or field.name == "manager" %}
+                                    <div class="form-check mb-2">
+                                       {{ field }}
+                                       <label class="form-check-label" for="id_{{ field.name }}">{{ field.label }}{% if field.field.required %}*{% endif %}</label><br/>
+                                       <span class="helptext">{{ field.help_text }}</span>
+                                        {% if field.errors %}
+                                            <span class="errorlist">{{ field.errors }}</span>
+                                        {% endif %}
+                                   </div>
                                 {% else %}
                                     <div class="form-group">
-                                       <label class="control-label" for="{{ field.name }}_id">{{ field.label }}{% if field.field.required %}*{% endif %}</label>
+                                       <label class="control-label" for="{{ field.name }}_id">{{ field.label }}{% if field.field.required %}*{% endif %}</label><br/>
                                        <div class="{% if form.field.errors %}errorlist{% endif %}">{{ field }}</div>
                                        <div class="helptext">{{ field.help_text }}</div>
                                         {% if field.errors %}
