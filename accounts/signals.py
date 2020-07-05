@@ -4,7 +4,7 @@ from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 
 from activitylog.models import ActivityLog
-from accounts.models import disclaimer_cache_key, OnlineDisclaimer, UserProfile
+from accounts.models import active_disclaimer_cache_key, OnlineDisclaimer, UserProfile
 
 
 @receiver(post_save, sender=User)
@@ -21,4 +21,4 @@ def user_post_save(sender, instance, created, *args, **kwargs):
 @receiver(post_delete, sender=OnlineDisclaimer)
 def update_cache(sender, instance, **kwargs):
     # set cache to False
-    cache.set(disclaimer_cache_key(instance.user), False, None)
+    cache.set(active_disclaimer_cache_key(instance.user), False, None)

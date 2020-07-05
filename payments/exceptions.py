@@ -1,0 +1,4 @@
+
+
+class PayPalProcessingError(Exception):
+    pass

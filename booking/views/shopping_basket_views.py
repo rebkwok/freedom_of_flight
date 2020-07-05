@@ -3,12 +3,18 @@ from decimal import Decimal
 import logging
 
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.models import User
+from django.contrib import messages
 from django.template.response import TemplateResponse
 from django.shortcuts import get_object_or_404, render
 from django.views.decorators.http import require_http_methods
+from django.http import JsonResponse
+from django.urls import reverse
+
+from payments.models import Invoice
+from payments.utils import get_paypal_form
 
 from ..models import Block, BlockVoucher
+from ..utils import calculate_user_cart_total
 from .views_utils import data_privacy_required, disclaimer_required
 
 logger = logging.getLogger(__name__)
@@ -56,11 +62,6 @@ def validate_voucher_for_unpaid_block(block):
     return
 
 
-def block_cost_with_voucher(block):
-    percentage_to_pay = (100 - block.voucher.discount) / 100
-    return Decimal(float(block.block_config.cost) * percentage_to_pay).quantize(Decimal('.05'))
-
-
 def get_valid_applied_voucher_info(block):
     """
     Validate codes already applied to unpaid blocks and return info
@@ -68,7 +69,7 @@ def get_valid_applied_voucher_info(block):
     if block.voucher:
         try:
             validate_voucher_for_unpaid_block(block)
-            return {"code": block.voucher.code, "discounted_cost": block_cost_with_voucher(block)}
+            return {"code": block.voucher.code, "discounted_cost": block.cost_with_voucher}
         except VoucherValidationError as voucher_error:
             block.voucher = None
             block.save()
@@ -146,15 +147,11 @@ def shopping_basket(request):
     # We do this AFTER generating the voucher applied costs, as that may have modified some used vouchers if they weren't valid
     applied_voucher_codes_and_discount = user.blocks.filter(id__in=unpaid_block_ids, voucher__isnull=False)\
         .order_by("voucher__code").distinct("voucher__code").values_list("voucher__code", "voucher__discount")
-    def _cost(block_info):
-        if block_info["voucher_applied"]["discounted_cost"] is not None:
-            return block_info["voucher_applied"]["discounted_cost"]
-        return block_info["original_cost"]
 
     context.update({
         "unpaid_block_info": unpaid_block_info,
         "applied_voucher_codes_and_discount": applied_voucher_codes_and_discount,
-        "total_cost": sum(_cost(block_info) for block_info in unpaid_block_info)
+        "total_cost": calculate_user_cart_total(unpaid_blocks)
     })
 
     return TemplateResponse(
@@ -171,11 +168,39 @@ def ajax_checkout(request):
     Called when clicking on checkout from the shopping basket page
     Re-check the voucher codes and the total
     """
-    total = request.POST.get("cart_total")
-    user = get_object_or_404(User, pk=request.POST.get("user_id"))
-    alert_message = {}
-    context = {
-        "checkout_clicked": True,
-    }
-    return render(request, "booking/includes/payment_button.txt", context)
+    total = Decimal(request.POST.get("cart_total"))
+    unpaid_blocks = Block.objects.filter(user=request.user, paid=False)
+    check_total = calculate_user_cart_total(unpaid_blocks)
+    if total != check_total:
+        messages.error(request, "Some cart items changed; please check and try again")
+        url = reverse('booking:shopping_basket')
+        return JsonResponse({"redirect": True, "url": url})
 
+    # NOTE: invoice user will always be the request.user, not any attached sub-user
+    # May be different to the user on the purchased blocks
+    try:
+        # check for an existing unpaid invoice with this user and amount
+        invoice =  Invoice.objects.get(username=request.user, amount=Decimal(total), transaction_id__isnull=True)
+        # if it exists, check that the blocks are the same
+        invoice_blocks = invoice.blocks.all()
+        assert unpaid_blocks.count() == invoice.blocks.count()
+        for block in invoice_blocks:
+            assert block in unpaid_blocks
+    except (Invoice.DoesNotExist, AssertionError):
+        invoice = Invoice.objects.create(invoice_id=Invoice.generate_invoice_id(), amount=Decimal(total), username=request.user)
+        for block in unpaid_blocks:
+            block.invoice = invoice
+            block.save()
+    except Invoice.MultipleObjectsReturned:
+        # This shouldn't happen, but in case we got more than one exact same invoice, take the first one
+        invoice =  Invoice.objects.filter(username=request.user, amount=Decimal(total), transaction_id__isnull=True).first()
+
+    # encrypted custom field so we can verify it on return from paypal
+    paypal_form = get_paypal_form(request, invoice)
+    paypal_form_html = render(request, "payments/includes/paypal_button.html", {"form": paypal_form})
+
+    return JsonResponse(
+        {
+            "paypal_form_html": paypal_form_html.content.decode("utf-8"),
+        }
+    )

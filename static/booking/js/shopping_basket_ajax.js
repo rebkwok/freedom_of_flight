@@ -17,17 +17,65 @@ var processCheckoutRequest = function()  {
     //The "this" in processResult is *not* the button just clicked
     //on.
     var $button_just_clicked_on = $(this);
-
-    var user_id = $button_just_clicked_on.data('user_id');
     var cart_total = $button_just_clicked_on.data('total');
+
+    var processResult = function(result, status, jqXHR)  {
+      //console.log("sf result='" + result + "', status='" + status + "', jqXHR='" + jqXHR + "'");
+
+      if (result.redirect) {
+          window.location = result.url;
+      } else {
+        $("#loader").removeClass("fa fa-spinner fa-spin").hide();
+        $('#checkout-btn').hide();
+        $('#paypal-checkout-btn').html(result.paypal_form_html);
+        $('#submit_paypal').click();
+        }
+    };
+
+    var processFailure = function(result, status, jqXHR)  {
+      //console.log("sf result='" + result + "', status='" + status + "', jqXHR='" + jqXHR + "'");
+      if (result.responseText) {
+        vNotify.error({text:result.responseText,title:'Error',position: 'bottomRight'});
+      }
+   };
+
+   $.ajax(
+       {
+          url: '/ajax-checkout/',
+          dataType: 'json',
+          type: 'POST',
+          data: {csrfmiddlewaretoken: window.CSRF_TOKEN, "cart_total": cart_total},
+          beforeSend: function() {
+              $("#loader").addClass("fa fa-spinner fa-spin").show();
+
+          },
+          success: processResult,
+          //Should also have a "fail" call as well.
+          complete: function() {},
+          error: processFailure
+       }
+    );
+
+};
+
+
+var processRemoveBlock = function()  {
+
+    //In this scope, "this" is the button just clicked on.
+    //The "this" in processResult is *not* the button just clicked
+    //on.
+    var $button_just_clicked_on = $(this);
+
+    //The value of the "data-event_id" attribute.
+    var block_id = $button_just_clicked_on.data('block_id');
 
     var processResult = function(
        result, status, jqXHR)  {
       //console.log("sf result='" + result + "', status='" + status + "', jqXHR='" + jqXHR + "'");
-    $("#loader").hide();
-    $('#checkout-btn').html(result);
-    $('#go_to_paypal').submit();
-
+    $('#cart-row-' + block_id).html("");
+    $('#cart_item_menu_count').text(result.cart_item_menu_count);
+    $('#total').text(result.cart_total);
+    $('#checkout-btn').data('total', result.cart_total);
    };
 
     var processFailure = function(
@@ -40,14 +88,12 @@ var processCheckoutRequest = function()  {
 
    $.ajax(
        {
-          url: '/ajax-checkout/',
-          dataType: 'html',
+          url: '/ajax-block-delete/' + block_id + "/",
+          dataType: 'json',
           type: 'POST',
-          data: {csrfmiddlewaretoken: window.CSRF_TOKEN, "user_id": user_id, "cart_total": cart_total},
-          beforeSend: function() {$("#loader").show();},
+          data: {csrfmiddlewaretoken: window.CSRF_TOKEN},
           success: processResult,
           //Should also have a "fail" call as well.
-          complete: function() {},
           error: processFailure
        }
     );
@@ -84,6 +130,14 @@ $(document).ready(function()  {
     click would be processed twice.
    */
   $('.ajax-checkout-btn').click(_.debounce(processCheckoutRequest, MILLS_TO_IGNORE, true));
+
+  $('.remove-block').click(_.debounce(processRemoveBlock, MILLS_TO_IGNORE, true));
+
+  // delegate events for the paypal form input
+  $( "#paypal-btn-wrapper" ).on('click', 'input[type=image]', function( event ) {
+    console.log("Submitted the go to paypal form");
+});
+
   /*
     Warning: Placing the true parameter outside of the debounce call:
 

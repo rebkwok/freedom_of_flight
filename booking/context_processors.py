@@ -9,6 +9,6 @@ def booking(request):
         'fof_email': settings.DEFAULT_STUDIO_EMAIL,
         'tracks': Track.objects.all(),
         # TODO this will need to include user's sub-user blocks too
-        'cart_item_count': request.user.blocks.filter(paid=False).count()
+        'cart_item_count': request.user.is_authenticated and request.user.blocks.filter(paid=False).count()
     }
 

@@ -7,13 +7,13 @@ from django.http import HttpResponseBadRequest, JsonResponse
 from django.template.loader import get_template
 from django.views.decorators.http import require_http_methods
 from django.urls import reverse
-from django.shortcuts import HttpResponseRedirect, render, HttpResponse
+from django.shortcuts import get_object_or_404, render, HttpResponse
 
 from accounts.models import has_active_disclaimer
 from activitylog.models import ActivityLog
 
-from ..models import Booking, Course, Event, WaitingListUser
-from ..utils import has_available_block, get_active_user_block
+from ..models import Booking, Block, Course, Event, WaitingListUser
+from ..utils import calculate_user_cart_total, has_available_block, get_active_user_block
 from ..email_helpers import send_waiting_list_email, send_user_and_studio_emails
 
 
@@ -223,3 +223,14 @@ def ajax_course_booking(request, course_id):
     alert_message['message'] = "Course booking created"
     url = reverse('booking:course_events', args=(course.slug,))
     return JsonResponse({"redirect": True, "url": url})
+
+
+@login_required
+@require_http_methods(['POST'])
+def ajax_block_delete(request, block_id):
+    block = get_object_or_404(Block, pk=block_id)
+    block.delete()
+    unpaid_blocks = request.user.blocks.filter(paid=False)
+    total = calculate_user_cart_total(unpaid_blocks)
+    return JsonResponse({"cart_total": total, "cart_item_menu_count": unpaid_blocks.count()})
+

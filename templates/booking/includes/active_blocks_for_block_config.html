@@ -1,0 +1,12 @@
+{% load bookingtags %}
+
+{% if block_info_texts %}
+    <span 
+      data-toggle="tooltip" 
+      data-html="true" 
+      data-html="true" 
+      title='{% for block_info in block_info_texts %}{% if forloop.counter0 != 0 %}<hr class="tooltip-hr">{% endif %}{{ block_info }}{% endfor %}'
+    >
+      <span class="badge badge-pill badge-warning">Active blocks</span>
+    </span>
+{% endif %}

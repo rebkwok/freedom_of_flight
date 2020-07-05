@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from decimal import Decimal
 import logging
 import pytz
 import shortuuid
@@ -21,6 +22,8 @@ from datetime import timedelta
 from dateutil.relativedelta import relativedelta
 
 from activitylog.models import ActivityLog
+from payments.models import Invoice
+
 from .utils import has_available_block as has_available_block_util
 
 logger = logging.getLogger(__name__)
@@ -266,6 +269,7 @@ class Block(models.Model):
     start_date = models.DateTimeField(null=True, blank=True)
     paid = models.BooleanField(default=False, help_text='Payment has been made by user')
 
+    invoice = models.ForeignKey(Invoice, on_delete=models.SET_NULL, null=True, blank=True, related_name="blocks")
     voucher = models.ForeignKey(BlockVoucher, on_delete=models.SET_NULL, null=True, blank=True, related_name="blocks")
 
     manual_expiry_date = models.DateTimeField(blank=True, null=True)
@@ -285,6 +289,11 @@ class Block(models.Model):
     @cached_property
     def block_config(self):
         return self.dropin_block_config if self.dropin_block_config else self.course_block_config
+
+    @property
+    def cost_with_voucher(self):
+        percentage_to_pay = (100 - self.voucher.discount) / 100
+        return Decimal(float(self.block_config.cost) * percentage_to_pay).quantize(Decimal('.05'))
 
     def _get_end_of_day(self, input_datetime):
         next_day = (input_datetime + timedelta(

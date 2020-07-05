@@ -16,8 +16,8 @@
     You are attending this course.
 {% elif not user|has_available_course_block:course %}
     <a class="btn btn-sm btn-info btn-block mb-2" href="#">
-    <i id="loader_{{ course.id }}" class="btn-spinner fa fa-spinner fa-spin">
+    <i id="loader_{{ course.id }}">
     </i>Payment Options</a>
 {% else %}
-    <a class="btn btn-sm btn-success btn-block mb-2" href="#"><i id="loader_{{ course.id }}" class="btn-spinner fa fa-spinner fa-spin"></i>Book Course</a>
+    <a class="btn btn-sm btn-success btn-block mb-2" href="#"><i id="loader_{{ course.id }}"></i> Book Course</a>
 {% endif %}

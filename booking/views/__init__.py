@@ -1,4 +1,4 @@
-from .ajax_views import ajax_course_booking, ajax_toggle_booking, ajax_toggle_waiting_list, placeholder
+from .ajax_views import ajax_block_delete, ajax_course_booking, ajax_toggle_booking, ajax_toggle_waiting_list, placeholder
 from .block_views import (
     dropin_block_purchase_view, course_block_purchase_view, block_purchase_view,
     ajax_dropin_block_purchase, ajax_course_block_purchase

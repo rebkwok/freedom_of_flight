@@ -38,3 +38,12 @@ def get_block_status(block):
     blocks_used = block.bookings_made()
     total_blocks = block.block_config.size
     return blocks_used, total_blocks
+
+
+def calculate_user_cart_total(unpaid_blocks=None):
+    def _cost(unpaid_block):
+        if unpaid_block.voucher:
+            return unpaid_block.cost_with_voucher
+        else:
+            return unpaid_block.block_config.cost
+    return sum(_cost(block) for block in unpaid_blocks)

@@ -1,7 +1,8 @@
 from django.urls import path
 from django.views.generic import RedirectView
 from booking.views import (
-    ajax_course_booking, ajax_toggle_booking, ajax_toggle_waiting_list, CourseEventsListView,
+    ajax_block_delete, ajax_course_booking, ajax_toggle_booking, ajax_toggle_waiting_list,
+    CourseEventsListView,
     disclaimer_required, home,
     EventListView, EventDetailView, placeholder,
     permission_denied, dropin_block_purchase_view,
@@ -42,6 +43,7 @@ urlpatterns = [
     # SHOPPING BASKET
     path("shopping-cart/", shopping_basket, name="shopping_basket"),
     path("ajax-checkout/", ajax_checkout, name="ajax_checkout"),
+    path('ajax-block-delete/<int:block_id>/', ajax_block_delete, name='ajax_block_delete'),
 
 
     # EVENTS LIST: needs to go last

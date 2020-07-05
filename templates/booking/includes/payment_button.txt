@@ -12,8 +12,4 @@
     {% endif %}
 {% endif %}
 
-{% if checkout_clicked %}
-    <form id="go_to_paypal" action="{% url 'booking:placeholder' %}"></form>
-{% else %}
-    <a href="#" class="btn btn-sm btn-warning"><i id="loader" class="btn-spinner fa fa-spinner fa-spin"></i>Checkout with PayPal</a>
-{% endif %}
+<div><a href="#" class="btn btn-sm btn-warning mb-1"><i id="loader"></i> Checkout with PayPal</a></div>

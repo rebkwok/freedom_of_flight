@@ -7,7 +7,6 @@ Date.prototype.dateFormat = function( format ){
 };
 
 jQuery(document).ready(function () {
-    $(document).scrollreminder();
 
     // Set active on nav items
     $(document).on('click', '.nav-link', function () {

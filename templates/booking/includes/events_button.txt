@@ -13,22 +13,22 @@
 {% endif %}
 
 {% if event.id in booked_event_ids or just_booked %}
-    <a class="btn btn-xs btn-dark" href="#"><i id="loader_{{ event.id }}" class="btn-spinner fa fa-spinner fa-spin"></i>Cancel</a>
+    <a class="btn btn-xs btn-dark" href="#"><i id="loader_{{ event.id }}"></i> Cancel</a>
 {% elif event.has_space %}
     {% if not user|has_available_block:event %}
         {% if event.course %}
             <a class="btn btn-xs btn-outline-success" href="#">Course details</a>
         {% else %}
-            <a class="btn btn-xs btn-info" href="#"><i id="loader_{{ event.id }}" class="btn-spinner fa fa-spinner fa-spin"></i>Payment Options</a>
+            <a class="btn btn-xs btn-info" href="#"><i id="loader_{{ event.id }}"></i> Payment Options</a>
         {% endif %}
     {% elif event.course %}
         <a class="btn btn-xs btn-success" href="#">
-            <i id="loader_{{ event.id }}" class="btn-spinner fa fa-spinner fa-spin">
-            </i>{% if event.id in cancelled_event_ids or just_cancelled %}Rebook{% else %}Book Course{% endif %}
+            <i id="loader_{{ event.id }}">
+            </i> {% if event.id in cancelled_event_ids or just_cancelled %}Rebook{% else %}Book Course{% endif %}
         </a>
     {% else %}
-        <a class="btn btn-xs btn-success" href="#"><i id="loader_{{ event.id }}" class="btn-spinner fa fa-spinner fa-spin">
-            </i>{% if event.id in cancelled_event_ids or just_cancelled %}Rebook{% else %}Book{% endif %} Drop-in
+        <a class="btn btn-xs btn-success" href="#"><i id="loader_{{ event.id }}">
+            </i> {% if event.id in cancelled_event_ids or just_cancelled %}Rebook{% else %}Book{% endif %} Drop-in
         </a>
     {% endif %}
 {% endif %}

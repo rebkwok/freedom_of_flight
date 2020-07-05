@@ -79,6 +79,9 @@ INSTALLED_APPS = [
     'timetable',
     'studioadmin',
     'ckeditor',
+    'paypal.standard.ipn',
+    'paypal.standard.pdt',
+    'payments',
     'activitylog',
 ]
 
@@ -348,7 +351,7 @@ if env('USE_MAILCATCHER'):  # pragma: no cover
 TESTING = any([test_str in arg for arg in sys.argv for test_str in ["test", "pytest"]])
 
 # TRAVIS and HEROKU logging
-if env('TRAVIS') or env('HEROKU') or TESTING:  # pragma: no cover
+if env('TRAVIS') or env('HEROKU') or TESTING or env('LOCAL'):  # pragma: no cover
     LOGGING = {
         'version': 1,
         'disable_existing_loggers': False,
@@ -431,3 +434,9 @@ S3_LOG_BACKUP_PATH = "s3://backups.polefitstarlet.co.uk/freedomofflight_activity
 S3_LOG_BACKUP_ROOT_FILENAME = "freedomofflight_activity_logs_backup"
 
 SITE_ID=1
+
+# PAYPAL
+PAYPAL_TEST=env("PAYPAL_TEST")
+PAYPAL_IDENTITY_TOKEN=env("PAYPAL_IDENTITY_TOKEN")
+DEFAULT_PAYPAL_EMAIL=env("DEFAULT_PAYPAL_EMAIL")
+INVOICE_KEY=env("INVOICE_KEY")

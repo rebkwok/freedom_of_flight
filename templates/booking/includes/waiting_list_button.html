@@ -2,10 +2,10 @@
 
 {% if on_waiting_list or event.id in waiting_list_event_ids %}
         <button class="btn btn-xs btn-warning" id="leave_waiting_list_button">
-                <i id="loader_{{ event.id }}" class="btn-spinner fa fa-spinner fa-spin"></i>Leave waiting list
+                <i id="loader_{{ event.id }}"></i> Leave waiting list
         </button>
 {% else %}
         <button class="btn btn-xs btn-outline-dark" id="join_waiting_list_button">
-                <i id="loader_{{ event.id }}" class="btn-spinner fa fa-spinner fa-spin"></i>Join waiting list
+                <i id="loader_{{ event.id }}"></i> Join waiting list
         </button>
 {% endif %}

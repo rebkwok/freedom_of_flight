@@ -36,13 +36,7 @@
                         <p>{% if available_block_config.description %}{{ available_block_config.description }}{% endif %}</p>
                         <p>£{{ available_block_config.cost }} | {{ available_block_config.duration }} weeks | {{ available_block_config.size }} uses </p>
                         <p>
-                            {% for block in user_active_blocks %}
-                                {% if block.block_config == available_block_config %}
-                                    <span data-toggle="tooltip" data-html="true" data-html="true" title='{{ block|user_block_info }}'>
-                                      <span class="badge badge-pill badge-warning">Active block</span>
-                                    </span>
-                                {% endif %}
-                            {% endfor %}
+                            {% active_block_info user_active_blocks available_block_config %}
                         </p>
 
                     </div>

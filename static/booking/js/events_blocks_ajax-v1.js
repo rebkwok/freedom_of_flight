@@ -26,7 +26,7 @@ var processBlockPurchaseRequest = function()  {
        result, status, jqXHR)  {
       //console.log("sf result='" + result + "', status='" + status + "', jqXHR='" + jqXHR + "'");
 
-    $("#loader_" + block_config_id).hide();
+    $("#loader_" + block_config_id).removeClass("fa fa-spinner fa-spin").hide();
     $('#block_config_' + block_config_id).html(result.html);
     $('#cart_item_menu_count').text(result.cart_item_menu_count);
    };
@@ -45,10 +45,10 @@ var processBlockPurchaseRequest = function()  {
           dataType: 'json',
           type: 'POST',
           data: {csrfmiddlewaretoken: window.CSRF_TOKEN},
-          beforeSend: function() {$("#loader_" + block_config_id).show();},
+          beforeSend: function() {$("#loader_" + block_config_id).addClass("fa fa-spinner fa-spin").show();},
           success: processResult,
           //Should also have a "fail" call as well.
-          complete: function() {$("#loader_" + block_config_id).hide();},
+          complete: function() {$("#loader_" + block_config_id).removeClass("fa fa-spinner fa-spin").hide();},
           error: processFailure
        }
     );

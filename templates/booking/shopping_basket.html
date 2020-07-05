@@ -26,36 +26,44 @@
               </thead>
               <tbody>
                 {% for block_info in unpaid_block_info %}
-                <tr>
-                    <td>{{ block_info.block.block_config }}</td>
-                    <td>
-                        <p>Cost: {% if block_info.voucher_applied.discounted_cost is not None %}
-                                <span class="superceded-cost">£{{ block_info.original_cost }}</span> £{{ block_info.voucher_applied.discounted_cost }}
-                            {% else %}
-                                £{{ block_info.original_cost }}
+                    <tr id="cart-row-{{ block_info.block.id }}">
+                        <td>{{ block_info.block.block_config }}</td>
+                        <td>
+                            <p>Cost: {% if block_info.voucher_applied.discounted_cost is not None %}
+                                    <span class="superceded-cost">£{{ block_info.original_cost }}</span> £{{ block_info.voucher_applied.discounted_cost }}
+                                {% else %}
+                                    £{{ block_info.original_cost }}
+                                {% endif %}
+                            {% if block_info.voucher_applied.discounted_cost is not None %}
+                            <br><span class="text-secondary"><small><em>Voucher code applied: {{ block_info.voucher_applied.code }}</em></small></span>
                             {% endif %}
-                        {% if block_info.voucher_applied.discounted_cost is not None %}
-                        <br><span class="text-secondary"><small><em>Voucher code applied: {{ block_info.voucher_applied.code }}</em></small></span>
-                        {% endif %}
-                        </p>
-                    </td>
-                </tr>
+                            <span
+                                    id="remove-block-{{ block_info.block.id }}"
+                                    class="remove-block float-right"
+                                    data-block_id="{{ block_info.block.id }}"
+                                    >
+                                <a class="btn btn-sm btn-danger" href="#"><i class="fas fa-trash-alt"></i></a>
+                            </span>
+                            </p>
+                        </td>
+                    </tr>
                 {% endfor %}
               </tbody>
               <tfoot>
               <tr>
                   <td colspan="2">
-                      <strong>TOTAL: £ {{ total_cost }}</strong>
+                      <strong>TOTAL: £ <span id="total">{{ total_cost }}</span></strong>
                       <span
                           class="ajax-checkout-btn"
                           id="checkout-btn"
-                          data-user_id="{{ user.id }}"
                           data-total="{{ total_cost }}"
-                          data-block_ids="{{ unpaid_block_ids }}"
                       >
                           {% include "booking/includes/payment_button.txt" %}
                       </span>
-                          <a class="btn btn-xs btn-outline-primary" href="{% url 'booking:block_purchase' %}">Add more items</a>
+
+                      <span id="paypal-btn-wrapper"><span id="paypal-checkout-btn"></span></span>
+
+                      <a class="btn btn-xs btn-outline-primary" href="{% url 'booking:block_purchase' %}">Add more items</a>
                       <hr>
                           <form name="block_voucher_form" class="form-inline" method="post" action="">
                             {% csrf_token %}

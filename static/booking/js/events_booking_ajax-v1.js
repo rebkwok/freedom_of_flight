@@ -88,7 +88,7 @@ var processBookingToggleRequest = function()  {
             window.location = result.url;
           }
           else {
-            $("#loader_" + event_id).hide();
+            $("#loader_" + event_id).removeClass("fa fa-spinner fa-spin").hide();
             $('#book_' + event_id).html(result.html);
             $('#block_info_' + event_id).html(result.block_info_html);
             $('#availability_' + event_id).html(result.event_availability_html);
@@ -114,10 +114,10 @@ var processBookingToggleRequest = function()  {
               dataType: 'json',
               type: 'POST',
               data: {csrfmiddlewaretoken: window.CSRF_TOKEN},
-              beforeSend: function() {$("#loader_" + event_id).show()},
+              beforeSend: function() {$("#loader_" + event_id).addClass("fa fa-spinner fa-spin").show()},
               success: processResult,
               //Should also have a "fail" call as well.
-              complete: function() {$("#loader_" + event_id).hide();},
+              complete: function() {$("#loader_" + event_id).removeClass("fa fa-spinner fa-spin").hide();},
               error: processFailure
            }
        ).done(
@@ -197,7 +197,7 @@ var processCourseBookingRequest = function()  {
             window.location = result.url;
           }
           else {
-            $("#loader_" + course_id).hide();
+            $("#loader_" + course_id).removeClass("fa fa-spinner fa-spin").hide();
             $('#book_course_' + course_id).html(result.html);
           }
        };
@@ -216,10 +216,10 @@ var processCourseBookingRequest = function()  {
                 dataType: 'json',
                 type: 'POST',
                 data: {csrfmiddlewaretoken: window.CSRF_TOKEN},
-                beforeSend: function() {$("#loader_" + course_id).show();},
+                beforeSend: function() {$("#loader_" + course_id).addClass("fa fa-spinner fa-spin").show();},
                 success: processResult,
                 //Should also have a "fail" call as well.
-                complete: function() {$("#loader_" + course_id).hide();},
+                complete: function() {$("#loader_" + course_id).removeClass("fa fa-spinner fa-spin").hide();},
                 error: processFailure
            }
        );
