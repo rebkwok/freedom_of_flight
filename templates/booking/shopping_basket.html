@@ -27,9 +27,9 @@
               <tbody>
                 {% for block_info in unpaid_block_info %}
                     <tr id="cart-row-{{ block_info.block.id }}">
-                        <td>{{ block_info.block.block_config }}</td>
-                        <td>
-                            <p>Cost: {% if block_info.voucher_applied.discounted_cost is not None %}
+                        <td class="p-1">{{ block_info.block.block_config }} <span class="badge badge-info">{{ block_info.block.user.first_name }} {{ block_info.block.user.last_name }}</span></td>
+                        <td class="p-1">
+                            <div>Cost: {% if block_info.voucher_applied.discounted_cost is not None %}
                                     <span class="superceded-cost">£{{ block_info.original_cost }}</span> £{{ block_info.voucher_applied.discounted_cost }}
                                 {% else %}
                                     £{{ block_info.original_cost }}
@@ -44,7 +44,7 @@
                                     >
                                 <a class="btn btn-sm btn-danger" href="#"><i class="fas fa-trash-alt"></i></a>
                             </span>
-                            </p>
+                            </div>
                         </td>
                     </tr>
                 {% endfor %}
@@ -70,19 +70,19 @@
                             <input name="code" type="text" required="required"/>
                             <input class="btn btn-sm btn-outline-info ml-2" type="submit" name="add_voucher_code" value="Apply voucher code"/>
                         </form>
-                        <span class="errorlist">{{ voucher_add_error }}</span>
+                        <span class="errorlist"><ul>{% for error in voucher_add_error %}<li>{{ error }}</li>{% endfor %}</ul></span>
                       {% if applied_voucher_codes_and_discount %}
-                      <hr>
-                      <div>Codes applied:</div>
+                      <hr class="mb-2">
+                      <div><small><strong>Codes applied:</strong></small>
                           {% for applied_voucher_code, applied_voucher_discount in applied_voucher_codes_and_discount %}
-                                <form class="form-inline mb-1" method="post" action="">
+                                <form class="form-inline mt-0 mb-1" method="post" action="">
                                     {% csrf_token %}
                                     <input name="code" type="hidden" value="{{ applied_voucher_code }}"/>
-                                    <span class="mr-2 mb-0 p-1 alert alert-info"><strong>{{ applied_voucher_code }}</strong> ({{ applied_voucher_discount }}%)</span>
-                                    <button type="submit" name="remove_voucher_code" class="btn btn-sm btn-danger"><i class="fas fa-trash-alt"></i></button>
+                                    <span class="mr-1 m-0 pb-1 pl-1 pr-1 pt-0 alert alert-info"><small><strong>{{ applied_voucher_code }}</strong> ({{ applied_voucher_discount }}%)</small></span>
+                                    <button type="submit" name="remove_voucher_code" class="btn btn-sm btn-danger pb-1 pl-2 pr-2 pt-0"><small><i class="fas fa-trash-alt"></i></small></button>
                                 </form>
                             {% endfor %}
-                      </ul>
+                     </div>
                       {% endif %}
 
                   </td>

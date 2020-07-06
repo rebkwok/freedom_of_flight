@@ -12,12 +12,13 @@
     {% endif %}
 {% endif %}
 
-
-{% if user|has_unpaid_block:available_block_config %}
-    <span class="helptext">In cart</span>
-    <a class="badge badge-secondary mr-1" href="#">
-    <i id="loader_{{ available_block_config.id }}"></i> X</i></a>
-{% else %}
-    <a href="#" class="btn btn-xs btn-success">
-    <i id="loader_{{ available_block_config.id }}"></i> Add to cart</a>
-{% endif %}
+<div class="block_purchase_btn">
+    {% if available_user|has_unpaid_block:available_block_config %}
+        <a href="#" class="btn btn-xs btn-table-xs btn-secondary mb-1 p-1">
+        <span class="pr-4"><em>In cart</em></span> <i id="loader_{{ available_block_config.id }}"></i><i class="fas fa-trash-alt"></i>
+        </a>
+    {% else %}
+        <a href="#" class="btn btn-xs btn-table-xs btn-success mb-1 p-1">
+        <i id="loader_{{ available_block_config.id }}"></i> Add to cart</a>
+    {% endif %}
+</div>

@@ -13,8 +13,8 @@
 {% endif %}
 
 {% if already_booked %}
-    You are attending this course.
-{% elif not user|has_available_course_block:course %}
+    {{ view_as_user }} is attending this course.
+{% elif not view_as_user|has_available_course_block:course %}
     <a class="btn btn-sm btn-info btn-block mb-2" href="#">
     <i id="loader_{{ course.id }}">
     </i>Payment Options</a>

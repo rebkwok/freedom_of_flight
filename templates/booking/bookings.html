@@ -19,6 +19,12 @@
 
 <div class="container row">
     <div class="col-12">
+
+    <form class="form-inline" method="post">
+        {% csrf_token %}
+        {{ available_users_form }}
+    </form>
+
     <h1 class="mt-5">Active Bookings</h1>
     {% if bookings_by_date %}
 
@@ -49,7 +55,7 @@
                                         <span
                                             id="waiting_list_button_{{ booking.event.id }}"
                                             data-event_id="{{ booking.event.id }}"
-                                            data-user_id="{{ user.id }}"
+                                            data-user_id="{{ booking.user.id }}"
                                             class="ajax_events_waiting_list_btn">
                                         {% include "booking/includes/waiting_list_button.html" %}
                                         </span>

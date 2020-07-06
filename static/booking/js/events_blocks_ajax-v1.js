@@ -21,13 +21,14 @@ var processBlockPurchaseRequest = function()  {
     //The value of the "data-event_id" attribute.
     var block_config_id = $button_just_clicked_on.data('block_config_id');
     var block_config_type = $button_just_clicked_on.data('block_config_type');
+    var user_id = $button_just_clicked_on.data('user_id');
 
     var processResult = function(
        result, status, jqXHR)  {
       //console.log("sf result='" + result + "', status='" + status + "', jqXHR='" + jqXHR + "'");
 
     $("#loader_" + block_config_id).removeClass("fa fa-spinner fa-spin").hide();
-    $('#block_config_' + block_config_id).html(result.html);
+    $('#block_config_' + block_config_id + '_' + user_id).html(result.html);
     $('#cart_item_menu_count').text(result.cart_item_menu_count);
    };
 
@@ -44,7 +45,7 @@ var processBlockPurchaseRequest = function()  {
           url: '/ajax-block-purchase/' + block_config_type + "/" + block_config_id + '/',
           dataType: 'json',
           type: 'POST',
-          data: {csrfmiddlewaretoken: window.CSRF_TOKEN},
+          data: {csrfmiddlewaretoken: window.CSRF_TOKEN, "user_id": user_id},
           beforeSend: function() {$("#loader_" + block_config_id).addClass("fa fa-spinner fa-spin").show();},
           success: processResult,
           //Should also have a "fail" call as well.

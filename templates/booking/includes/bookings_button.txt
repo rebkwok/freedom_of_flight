@@ -20,7 +20,7 @@
         </i> {% if booking.status == "CANCELLED" or booking.no_show %}Rebook{% else %}Book Course{% endif %}
     </a>
 {% elif booking.event.has_space %}
-    {% if not user|has_available_block:booking.event %}
+    {% if not view_as_user|has_available_block:booking.event %}
         {% if booking.event.course %}
             <a class="btn btn-xs btn-outline-success" href="#">Course details</a>
         {% else %}

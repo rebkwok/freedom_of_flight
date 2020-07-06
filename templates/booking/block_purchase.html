@@ -20,31 +20,51 @@
           <a class="btn btn-info btn-xs" href="{% url 'booking:shopping_basket' %}"><span>View cart <i class="fas fa-shopping-cart"></i></span></a>
       </div>
 
-        {% for title, blocklist in available_blocks.items %}
-            <div class="list-group mb-2">
-                <div class="list-group-item list-group-item-dark pt-1 pb-1">{{ title }}</div>
-                {% for available_block_config in blocklist %}
-                    <div class="list-group-item pt-1 pb-1 {% if available_block_config in target_configs %}list-group-item-success{% endif %}">
-                        <p>{{ available_block_config }}
+        <table class="table table-sm">
+              <thead>
+                <th style="width: 75%"></th>
+                <th style="width: 10%"></th>
+                <th style="width: 15%"></th>
+              </thead>
+              <tbody>
+                {% for title, blocklist in available_blocks.items %}
+                    <tr class="table-secondary"><td colspan="3">{{ title }}</td> </tr>
+                    {% for available_block_config in blocklist %}
+                    <tr {% if available_block_config in target_configs %}class="table-success"{% endif %}>
+                        <td>
+                            <p>{{ available_block_config }}</p>
+                            <p>{% if available_block_config.description %}{{ available_block_config.description }}{% endif %}</p>
+                            <p>£{{ available_block_config.cost }} |
+                                {% if available_block_config.duration %} Expires after {{ available_block_config.duration }} weeks{% else %}Never expires {% endif %} |
+                                {{ available_block_config.size }} uses </p>
+                            <p>
+                                {% active_block_info user_active_blocks available_block_config %}
+                            </p>
+                        </td>
+                        <td>
+                            {% for available_user in available_users %}
+                            <div class="block_purchase_btn ">
+                                <span class="badge badge-info float-right"><span class="helptext">{{ available_user.first_name }} {{ available_user.last_name }}</span></span><br/>
+                            </div>
+                            {% endfor %}
+                        </td>
+                        <td class="table-purchase-td">
+                            {% for available_user in available_users %}
                             <span
-                                id="block_config_{{ available_block_config.id }}"
+                                id="block_config_{{ available_block_config.id }}_{{ available_user.id }}"
+                                data-user_id="{{ available_user.id }}"
                                 data-block_config_id="{{ available_block_config.id }}"
                                 data-block_config_type="{% if available_block_config.course_type %}course{% else %}dropin{% endif %}"
                                 class="float-right ajax_blocks_btn">
                                 {% include "booking/includes/blocks_button.txt" %}
-                            </span></p>
-                        <p>{% if available_block_config.description %}{{ available_block_config.description }}{% endif %}</p>
-                        <p>£{{ available_block_config.cost }} |
-                            {% if available_block_config.duration %} Expires after {{ available_block_config.duration }} weeks{% else %}Never expires {% endif %} |
-                            {{ available_block_config.size }} uses </p>
-                        <p>
-                            {% active_block_info user_active_blocks available_block_config %}
-                        </p>
-
-                    </div>
+                            </span><br/>
+                            {% endfor %}
+                        </td>
+                    </tr>
+                    {% endfor %}
                 {% endfor %}
-            </div>
-        {% endfor %}
+              </tbody>
+         </table>
     </div>
 </div>
 {% endblock content %}
