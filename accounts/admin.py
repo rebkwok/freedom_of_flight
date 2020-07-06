@@ -7,7 +7,7 @@ from django.contrib.auth.models import User
 from django import forms
 
 from accounts.models import OnlineDisclaimer, DisclaimerContent, \
-    CookiePolicy, DataPrivacyPolicy, SignedDataPrivacy, NonRegisteredDisclaimer, UserProfile
+    CookiePolicy, DataPrivacyPolicy, SignedDataPrivacy, NonRegisteredDisclaimer, UserProfile, ChildUserProfile
 
 
 class OnlineDisclaimerAdmin(admin.ModelAdmin):
@@ -137,9 +137,14 @@ class UserProfileInline(admin.StackedInline):
     can_delete = False
 
 
+class ChildProfileInline(admin.StackedInline):
+    model = ChildUserProfile
+    can_delete = False
+
+
 # Define a new User admin
 class UserAdmin(BaseUserAdmin):
-    inlines = (UserProfileInline,)
+    inlines = (UserProfileInline, ChildProfileInline,)
 
 
 # Re-register UserAdmin

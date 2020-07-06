@@ -1,3 +1,23 @@
+from django.contrib.auth.models import User
+
+
+def get_view_as_user(request):
+    # use the user set on the session if there is one
+    user_id_from_session = request.session.get("user_id")
+    if not user_id_from_session:
+        if not request.user.is_student and \
+                request.user.is_manager and \
+                request.user.managed_profiles.exists():
+            # not a student, is a manager, and has at least one managed account
+            view_as_user = request.user.userprofile.managed_profiles.first()
+        else:
+            # anything else
+            view_as_user = request.user
+    else:
+        view_as_user = User.objects.get(id=user_id_from_session)
+    request.session["user_id"] = view_as_user.id
+    return view_as_user
+
 
 def has_available_block(user, event):
     if event.course:
@@ -15,6 +35,7 @@ def has_available_block(user, event):
 
 def has_available_course_block(user, course):
     return has_available_block(user, course.events.order_by("start").first())
+
 
 def get_active_user_block(user, event):
     """

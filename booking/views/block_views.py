@@ -2,6 +2,7 @@ import logging
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
 from django.contrib import messages
 from django.urls import reverse
 from django.http import JsonResponse
@@ -16,7 +17,10 @@ from braces.views import LoginRequiredMixin
 from booking.models import (
     Block, DropInBlockConfig, Course, CourseType, Event, EventType, CourseBlockConfig
 )
-from .views_utils import data_privacy_required, disclaimer_required, DataPolicyAgreementRequiredMixin
+from .views_utils import (
+    data_privacy_required, disclaimer_required, DataPolicyAgreementRequiredMixin,
+    get_unpaid_user_managed_blocks
+)
 
 
 from activitylog.models import ActivityLog
@@ -28,14 +32,17 @@ def active_user_blocks(user):
     return [block for block in user.blocks.all() if block.active_block]
 
 
+def active_user_managed_blocks(core_user, order_by_fields=("purchase_date",)):
+    return [block for block in Block.objects.filter(user__in=core_user.managed_users).order_by(*order_by_fields) if block.active_block]
+
+
 class BlockListView(DataPolicyAgreementRequiredMixin, LoginRequiredMixin, ListView):
 
     model = Block
     template_name = 'booking/blocks.html'
 
     def get_queryset(self):
-        users = [self.request.user, *[childprofile.user for childprofile in self.request.user.userprofile.managed_profiles.all()]]
-        return [block for block in Block.objects.filter(user_id__in=users).order_by("purchase_date") if block.active_block]
+        return active_user_managed_blocks(self.request.user, order_by_fields=("purchase_date",))
 
     def get_context_data(self, **kwargs):
         # Call the base implementation first to get a context
@@ -47,7 +54,6 @@ class BlockListView(DataPolicyAgreementRequiredMixin, LoginRequiredMixin, ListVi
         context["active_blocks_by_config"] = active_blocks_by_config
         return context
 
-@disclaimer_required
 @data_privacy_required
 @login_required
 def dropin_block_purchase_view(request, event_slug):
@@ -62,7 +68,7 @@ def dropin_block_purchase_view(request, event_slug):
             "Drop-in Blocks": dropin_block_configs,
             "Course Blocks": course_block_configs
         },
-        "user_active_blocks": active_user_blocks(request.user),
+        "user_active_blocks": active_user_managed_blocks(request.user, order_by_fields=("expiry_date", "purchase_date")),
         "related_item": event,
         "target_configs": target_configs
     }
@@ -70,7 +76,6 @@ def dropin_block_purchase_view(request, event_slug):
     return render(request, "booking/block_purchase.html", context)
 
 
-@disclaimer_required
 @data_privacy_required
 @login_required
 def course_block_purchase_view(request, course_slug):
@@ -85,7 +90,7 @@ def course_block_purchase_view(request, course_slug):
             "Course Blocks": course_block_configs,
             "Drop-in Blocks": dropin_block_configs,
         },
-        "user_active_blocks": active_user_blocks(request.user),
+        "user_active_blocks": active_user_managed_blocks(request.user, order_by_fields=("expiry_date", "purchase_date")),
         "related_item": course,
         "target_configs": target_configs
     }
@@ -93,7 +98,6 @@ def course_block_purchase_view(request, course_slug):
     return render(request, "booking/block_purchase.html", context)
 
 
-@disclaimer_required
 @data_privacy_required
 @login_required
 def block_purchase_view(request):
@@ -104,7 +108,7 @@ def block_purchase_view(request):
             "Drop-in Blocks": dropin_block_configs,
             "Course Blocks": course_block_configs
         },
-        "user_active_blocks": active_user_blocks(request.user),
+        "user_active_blocks": active_user_managed_blocks(request.user, order_by_fields=("purchase_date",)),
     }
     return render(request, "booking/block_purchase.html", context)
 
@@ -112,16 +116,20 @@ def block_purchase_view(request):
 @login_required
 @require_http_methods(['POST'])
 def ajax_dropin_block_purchase(request, block_config_id):
+    user_id = request.POST["user_id"]
+    user = get_object_or_404(User, pk=user_id)
     block_config = get_object_or_404(DropInBlockConfig, pk=block_config_id)
-    block, new = Block.objects.get_or_create(user=request.user, dropin_block_config=block_config, paid=False)
+    block, new = Block.objects.get_or_create(user=user, dropin_block_config=block_config, paid=False)
     return process_block_purchase(request, block, new, block_config)
 
 
 @login_required
 @require_http_methods(['POST'])
 def ajax_course_block_purchase(request, block_config_id):
+    user_id = request.POST["user_id"]
+    user = get_object_or_404(User, pk=user_id)
     course_config = get_object_or_404(CourseBlockConfig, pk=block_config_id)
-    block, new = Block.objects.get_or_create(user=request.user, course_block_config=course_config, paid=False)
+    block, new = Block.objects.get_or_create(user=user, course_block_config=course_config, paid=False)
     return process_block_purchase(request, block, new, course_config)
 
 
@@ -130,21 +138,22 @@ def process_block_purchase(request, block, new, block_config):
         block.delete()
         alert_message = {
             "message_type": "info",
-            "message": f"Block removed from cart"
+            "message": f"Block removed from cart for {block.user.first_name} {block.user.last_name}"
         }
     else:
         alert_message = {
             "message_type": "success",
-            "message": f"Block added to cart"
+            "message": f"Block added to cart for {block.user.first_name} {block.user.last_name}"
         }
     context = {
         "available_block_config": block_config,
+        "available_user": block.user,
         "alert_message": alert_message
     }
     html =  render(request, f"booking/includes/blocks_button.txt", context)
     return JsonResponse(
         {
             "html": html.content.decode("utf-8"),
-            "cart_item_menu_count": request.user.blocks.filter(paid=False).count(),
+            "cart_item_menu_count": get_unpaid_user_managed_blocks(request.user).count(),
         }
     )

@@ -2,6 +2,7 @@ import logging
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
 from django.core.mail import send_mail
 from django.http import HttpResponseBadRequest, JsonResponse
 from django.template.loader import get_template
@@ -30,14 +31,22 @@ REQUESTED_ACTIONS = {
 @login_required
 @require_http_methods(['POST'])
 def ajax_toggle_booking(request, event_id):
-    if not has_active_disclaimer(request.user):
+    user_id = request.POST["user_id"]
+    if user_id == request.user.id:
+        user = request.user
+    else:
+        user = get_object_or_404(User, id=user_id)
+
+    if not has_active_disclaimer(user):
+        # TODO
+        # url = reverse('booking:disclaimer_required', args=(user_id,))
         url = reverse('booking:disclaimer_required')
         return JsonResponse({"redirect": True, "url": url})
 
     event = Event.objects.get(id=event_id)
     event_was_full = not event.course and event.spaces_left == 0
 
-    if not has_available_block(request.user, event):
+    if not has_available_block(user, event):
         if event.course:
             url = reverse('booking:course_events', args=(event.course.slug,))
         else:
@@ -45,7 +54,7 @@ def ajax_toggle_booking(request, event_id):
         return JsonResponse({"redirect": True, "url": url})
 
     try:
-        existing_booking = Booking.objects.get(user=request.user, event=event)
+        existing_booking = Booking.objects.get(user=user, event=event)
     except Booking.DoesNotExist:
         existing_booking = None
 
@@ -73,22 +82,22 @@ def ajax_toggle_booking(request, event_id):
 
         # Update/create the booking
         if existing_booking is None:
-            booking = Booking.objects.create(user=request.user, event=event)
+            booking = Booking.objects.create(user=user, event=event)
         else:
             booking = existing_booking
         booking.status = 'OPEN'
         booking.no_show = False
-        booking.block = get_active_user_block(request.user, event)
+        booking.block = get_active_user_block(user, event)
         booking.save()
         ActivityLog.objects.create(
-            log=f'Booking {booking.id} {requested_action} for "{event}" by user {request.user.username}'
+            log=f'Booking {booking.id} {requested_action} for "{event}" (user {user.first_name} {user.last_name}) made by user {request.user.username}'
         )
 
         try:
             waiting_list_user = WaitingListUser.objects.get(user=booking.user, event=booking.event)
             waiting_list_user.delete()
             ActivityLog.objects.create(
-                log=f'User {request.user.username} removed from waiting list for {event}'
+                log=f'User {user.username} removed from waiting list for {event}'
             )
         except WaitingListUser.DoesNotExist:
             pass
@@ -118,7 +127,7 @@ def ajax_toggle_booking(request, event_id):
 
     subjects = {
         "user": f"Booking for {event} {requested_action}",
-        "studio": f"{request.user.first_name} {request.user.last_name} has just booked for {event}"
+        "studio": f"{user.first_name} {user.last_name} has just booked for {event}"
     }
 
     # send emails
@@ -155,7 +164,7 @@ def placeholder(request):
 @login_required
 @require_http_methods(['POST'])
 def ajax_toggle_waiting_list(request, event_id):
-    user_id = int(request.POST.get("user_id"))
+    user_id = request.POST["user_id"]
     event = Event.objects.get(id=event_id)
 
     # toggle current status
@@ -175,13 +184,21 @@ def ajax_toggle_waiting_list(request, event_id):
 @login_required
 @require_http_methods(['POST'])
 def ajax_course_booking(request, course_id):
-    if not has_active_disclaimer(request.user):
+
+    user_id = request.POST["user_id"]
+    if user_id == request.user.id:
+        user = request.user
+    else:
+        user = get_object_or_404(id=user_id)
+
+    if not has_active_disclaimer(user):
+        # TODO DISCLAIMER FOR BOOKING USER, NOT NEC REQUEST.USER
         url = reverse('booking:disclaimer_required')
         return JsonResponse({"redirect": True, "url": url})
 
     course = Course.objects.get(id=course_id)
 
-    if not has_available_block(request.user, course.events.first()):
+    if not has_available_block(user, course.events.first()):
         url = reverse('booking:course_block_purchase', args=(course.slug,))
         return JsonResponse({"redirect": True, "url": url})
 
@@ -191,16 +208,16 @@ def ajax_course_booking(request, course_id):
             "Sorry, this course {}".format("has been cancelled" if course.cancelled else "is now full")
         )
 
-    course_block = get_active_user_block(request.user, course.events.first())
+    course_block = get_active_user_block(user, course.events.first())
     # Book all events
     for event in course.events.all():
-        booking, _ = Booking.objects.get_or_create(user=request.user, event=event)
+        booking, _ = Booking.objects.get_or_create(user=user, event=event)
         # Make sure block is assigned but don't change booking statuses if already created
         booking.block = course_block
         booking.save()
 
         ActivityLog.objects.create(
-            log=f'Course {course.name} (course.course_type) booked by user {request.user.username}'
+            log=f'Course {course.name} (course.course_type) for {user.first_name} {user.last_name} booked by user {request.user.username}'
         )
 
     # email context
@@ -210,7 +227,7 @@ def ajax_course_booking(request, course_id):
     }
     subjects = {
         "user": f"You have booked for a course: {course.name}",
-        "studio": f'{request.user.first_name} {request.user.last_name} has just booked for course: {course}'
+        "studio": f'{user.first_name} {user.last_name} has just booked for course: {course}'
     }
     # send emails
     send_user_and_studio_emails(
@@ -229,7 +246,7 @@ def ajax_course_booking(request, course_id):
 def ajax_block_delete(request, block_id):
     block = get_object_or_404(Block, pk=block_id)
     block.delete()
-    unpaid_blocks = request.user.blocks.filter(paid=False)
+    unpaid_blocks = Block.objects.filter(paid=False, user__in=request.user.managed_users)
     total = calculate_user_cart_total(unpaid_blocks)
     return JsonResponse({"cart_total": total, "cart_item_menu_count": unpaid_blocks.count()})
 

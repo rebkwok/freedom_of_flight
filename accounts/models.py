@@ -57,7 +57,7 @@ BOOL_CHOICES = ((True, 'Yes'), (False, 'No'))
 
 class BaseUserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    date_of_birth = models.DateField(verbose_name='date of birth')
+    date_of_birth = models.DateField(verbose_name='date of birth', null=True, blank=True)
     address = models.CharField(max_length=512, null=True, blank=True)
     postcode = models.CharField(max_length=10, null=True, blank=True)
     phone = models.CharField(max_length=255, null=True, blank=True)
@@ -451,3 +451,31 @@ def has_active_data_privacy_agreement(user):
     else:
         has_active_agreement = bool(cache.get(key))
     return has_active_agreement
+
+
+@property
+def managed_users(self):
+    if self.userprofile:
+        return [self, *[childprofile.user for childprofile in self.userprofile.managed_profiles.all()]]
+    return [self]
+
+
+@property
+def is_student(self):
+    if self.userprofile:
+        return getattr("student", self.userprofile, True)
+    return False
+
+
+@property
+def is_manager(self):
+    if self.userprofile:
+        return getattr("manager", self.userprofile, False)
+    return False
+
+
+
+
+User.add_to_class("managed_users", managed_users)
+User.add_to_class("is_student", is_student)
+User.add_to_class("is_manager", is_manager)

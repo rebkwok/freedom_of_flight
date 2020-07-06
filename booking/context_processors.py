@@ -2,8 +2,8 @@ from datetime import timedelta
 from django.conf import settings
 from django.utils import timezone
 
-from .models import Track, Event
-
+from .models import Block, Track, Event
+from .utils import get_view_as_user
 
 def booking(request):
     # Only show tracks that have upcoming events (that are visible and not cancelled)
@@ -13,12 +13,13 @@ def booking(request):
     tracks = Track.objects.filter(id__in=tracks_with_events)
     if not tracks:
         tracks = Track.objects.filter(default=True)
-    student_users = [request.user, *[childprofile.user for childprofile in request.user.userprofile.managed_profiles.all()]]
+
 
     return {
         'studio_email': settings.DEFAULT_STUDIO_EMAIL,
         'tracks': tracks,
-        'student_users': student_users,
-        'cart_item_count': request.user.is_authenticated and request.user.blocks.filter(paid=False).count()
+        'available_users': request.user.managed_users,
+        'cart_item_count': request.user.is_authenticated and Block.objects.filter(user__in=request.user.managed_users, paid=False).count(),
+        'view_as_user': get_view_as_user(request),
     }
 

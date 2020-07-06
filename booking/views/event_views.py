@@ -10,7 +10,9 @@ from django.views.decorators.http import require_http_methods
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView
 
 
+from ..forms import AvailableUsersForm
 from ..models import Booking, Course, Event, Track, WaitingListUser
+from ..utils import get_view_as_user
 from .views_utils import DataPolicyAgreementRequiredMixin
 
 
@@ -24,6 +26,11 @@ class EventListView(DataPolicyAgreementRequiredMixin, ListView):
     model = Event
     context_object_name = 'events_by_date'
     template_name = 'booking/events.html'
+
+    def post(self, request, *args, **kwargs):
+        view_as_user = request.POST.get("view_as_user")
+        self.request.session["user_id"] = view_as_user
+        return HttpResponseRedirect(reverse("booking:events", args=(self.kwargs["track"],)))
 
     def get_queryset(self):
         track = get_object_or_404(Track, slug=self.kwargs["track"])
@@ -54,7 +61,8 @@ class EventListView(DataPolicyAgreementRequiredMixin, ListView):
         if self.request.user.is_authenticated:
             # Add in the booked_events
             # All user bookings for events in this list view (may be cancelled)
-            user_bookings = {booking.event.id: booking for booking in self.request.user.bookings.filter(event__id__in=all_events)}
+            view_as_user = get_view_as_user(self.request)
+            user_bookings = {booking.event.id: booking for booking in view_as_user.bookings.filter(event__id__in=all_events)}
             # Event ids for the open bookings the use has
             booked_event_ids = [
                 event_id for event_id, booking in user_bookings.items() if booking.status == "OPEN" and booking.no_show == False
@@ -62,11 +70,12 @@ class EventListView(DataPolicyAgreementRequiredMixin, ListView):
             cancelled_event_ids = [
                 event_id for event_id, booking in user_bookings.items() if booking.status == "CANCELLED" or booking.no_show == True
             ]
-            waiting_list_event_ids = self.request.user.waitinglists.filter(event__in=all_events).values_list('event__id', flat=True)
+            waiting_list_event_ids = view_as_user.waitinglists.filter(event__in=all_events).values_list('event__id', flat=True)
             context['user_bookings'] = user_bookings
             context['booked_event_ids'] = booked_event_ids
             context['cancelled_event_ids'] = cancelled_event_ids
             context['waiting_list_event_ids'] = waiting_list_event_ids
+            context["available_users_form"] = AvailableUsersForm(request=self.request, view_as_user=view_as_user)
         return context
 
 

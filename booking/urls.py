@@ -36,8 +36,8 @@ urlpatterns = [
 
     # BLOCKS
     path('blocks/active/', BlockListView.as_view(), name="blocks"),
-    path("blocks/dropin/<slug:event_slug>/purchase-options/", dropin_block_purchase_view, name="dropin_block_purchase"),
-    path("blocks/course/<slug:course_slug>/purchase-options/", course_block_purchase_view, name="course_block_purchase"),
+    path("blocks/purchase-options/dropin/<slug:event_slug>/", dropin_block_purchase_view, name="dropin_block_purchase"),
+    path("blocks/purchase-options/course/<slug:course_slug>/", course_block_purchase_view, name="course_block_purchase"),
     path("blocks/purchase-options/", block_purchase_view, name="block_purchase"),
     path('ajax-block-purchase/course/<int:block_config_id>/', ajax_course_block_purchase, name='ajax_block_purchase'),
     path('ajax-block-purchase/dropin/<int:block_config_id>/', ajax_dropin_block_purchase, name='ajax_block_purchase'),
