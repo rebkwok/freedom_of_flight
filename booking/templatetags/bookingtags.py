@@ -33,7 +33,7 @@ def block_used(user, event):
 
 def get_block_info(block):
     used, total = get_block_status(block)
-    base_text = f"<span class='helptext'>{block.block_config.identifier} ({total - used}/{total} remaining)"
+    base_text = f"<span class='helptext'>{block.user.first_name} {block.user.last_name}: {block.block_config.identifier} ({total - used}/{total} remaining)"
     if block.expiry_date:
         return f"{base_text}; expires {block.expiry_date.strftime('%d %b %y')}</span>"
     elif block.block_config.duration:
@@ -46,7 +46,7 @@ def block_info(user, event):
     block = get_active_user_block(user, event)
     if event.course:
         # Don't show the used/total for course blocks
-        return f"<span class='helptext'>{block.block_config.identifier}</span>"
+        return f"<span class='helptext'>{block.block_config.identifier} </span>"
     return get_block_info(block)
 
 
@@ -54,7 +54,7 @@ def block_info(user, event):
 def user_block_info(block):
     if block.course_block_config:
         # Don't show the used/total for course blocks
-        return f"<span class='helptext'>{block.block_config.identifier}</span>"
+        return f"<span class='helptext'>{block.user.first_name} {block.user.last_name}: {block.block_config.identifier}</span>"
     return get_block_info(block)
 
 @register.filter

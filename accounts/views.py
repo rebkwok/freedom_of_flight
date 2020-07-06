@@ -14,11 +14,12 @@ from django.template.loader import get_template
 from allauth.account.views import EmailView, LoginView, SignupView
 
 from braces.views import LoginRequiredMixin
+from shortuuid import ShortUUID
 
 from .forms import DisclaimerForm, DataPrivacyAgreementForm, NonRegisteredDisclaimerForm, \
-    ProfileForm, DisclaimerContactUpdateForm
+    ProfileForm, DisclaimerContactUpdateForm, RegisterChildUserForm
 from .models import CookiePolicy, DataPrivacyPolicy, SignedDataPrivacy, UserProfile, OnlineDisclaimer, \
-    has_active_data_privacy_agreement, has_active_disclaimer, has_expired_disclaimer
+    has_active_data_privacy_agreement, has_active_disclaimer, has_expired_disclaimer, ChildUserProfile
 from activitylog.models import ActivityLog
 
 
@@ -56,7 +57,7 @@ class ProfileUpdateView(LoginRequiredMixin, UpdateView):
 
     def form_valid(self, form):
         form.save()
-        form_data = form.cleaned_data.copy()
+        form_data = form.cleaned_data
         # update the user with first and last name that are on the User model
         self.request.user.first_name = form_data['first_name']
         self.request.user.last_name = form_data['last_name']
@@ -67,6 +68,44 @@ class ProfileUpdateView(LoginRequiredMixin, UpdateView):
         return reverse('accounts:profile')
 
 
+
+class ChildUserCreateView(LoginRequiredMixin, CreateView):
+
+    model = ChildUserProfile
+    template_name = 'accounts/register_child_user.html'
+    form_class = RegisterChildUserForm
+
+    def get_form_kwargs(self):
+        form_kwargs = super().get_form_kwargs()
+        form_kwargs["parent_user_profile"] = self.request.user.userprofile
+        return form_kwargs
+
+    def form_valid(self, form):
+        child_profile = form.save(commit=False)
+
+        # generate a random username; this use won't log in
+        username = ShortUUID().random(length=10)
+        while User.objects.filter(username=username).exists():
+            username = ShortUUID().random(length=10)
+        child_user = User.objects.create(
+            first_name=form.cleaned_data["first_name"],
+            last_name=form.cleaned_data["last_name"],
+            username=username
+        )
+        child_user.set_unusable_password()
+        child_profile.user = child_user
+        child_profile.parent_user_profile = self.request.user.userprofile
+        child_profile.save()
+        ActivityLog.objects.create(
+            log=f"Managed user account created for {child_user.first_name} {child_user.last_name} by {self.request.user.first_name} { self.request.user.last_name}"
+        )
+        return HttpResponseRedirect(self.get_success_url(child_user.id))
+
+    def get_success_url(self, child_user_id):
+        return reverse('accounts:disclaimer_form', args=(child_user_id,))
+
+
+
 class DisclaimerContactUpdateView(LoginRequiredMixin, UpdateView):
 
     model = OnlineDisclaimer
@@ -74,13 +113,18 @@ class DisclaimerContactUpdateView(LoginRequiredMixin, UpdateView):
     form_class = DisclaimerContactUpdateForm
 
     def dispatch(self, request, *args, **kwargs):
-        self.user = get_object_or_404(User, pk=kwargs["user_id"])
-        if not has_active_disclaimer(self.user):
-            return HttpResponseRedirect(reverse("accounts:disclaimer_form"))
+        self.disclaimer_user = get_object_or_404(User, pk=kwargs["user_id"])
+        if not has_active_disclaimer(self.disclaimer_user):
+            return HttpResponseRedirect(reverse("accounts:disclaimer_form", args=(self.disclaimer_user.id,)))
         return super().dispatch(request, *args, **kwargs)
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data()
+        context["disclaimer_user"] = self.disclaimer_user
+        return context
+
     def get_object(self, *args, **kwargs):
-        return OnlineDisclaimer.objects.filter(user=self.user).latest("id")
+        return OnlineDisclaimer.objects.filter(user=self.disclaimer_user).latest("id")
 
     def get_success_url(self):
         return reverse('accounts:profile')
@@ -105,26 +149,19 @@ class DisclaimerCreateView(LoginRequiredMixin, CreateView):
     template_name = 'accounts/disclaimer_form.html'
 
     def dispatch(self, request, *args, **kwargs):
-        if request.method == 'POST' and not request.user.is_anonymous:
-            if has_active_disclaimer(request.user):
-                return HttpResponseRedirect(reverse('accounts:disclaimer_form'))
-        return super().dispatch(
-            request, *args, **kwargs
-        )
+        self.disclaimer_user = get_object_or_404(User, pk=kwargs["user_id"])
+        return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-
-        context['disclaimer'] = has_active_disclaimer(self.request.user)
-        context['expired_disclaimer'] = has_expired_disclaimer(
-            self.request.user
-        )
-
+        context["disclaimer_user"] = self.disclaimer_user
+        context['disclaimer'] = has_active_disclaimer(self.disclaimer_user)
+        context['expired_disclaimer'] = has_expired_disclaimer(self.disclaimer_user)
         return context
 
     def get_form_kwargs(self, **kwargs):
         form_kwargs = super().get_form_kwargs(**kwargs)
-        form_kwargs["user"] = self.request.user
+        form_kwargs["disclaimer_user"] = self.disclaimer_user
         return form_kwargs
 
     def form_valid(self, form):
@@ -132,11 +169,12 @@ class DisclaimerCreateView(LoginRequiredMixin, CreateView):
         disclaimer.version = form.disclaimer_content.version
         password = form.cleaned_data['password']
 
+        # Check the password for self.request.user, but set the disclaimer user to self.user, which could be different
         if self.request.user.check_password(password):
-            disclaimer.user = self.request.user
+            disclaimer.user = self.disclaimer_user
             disclaimer.save()
         else:
-            form = DisclaimerForm(form.data, user=self.request.user)
+            form = DisclaimerForm(form.data, disclaimer_user=self.disclaimer_user)
             return render(self.request, self.template_name, {'form':form, 'password_error': 'Invalid password entered'})
 
         return super().form_valid(form)

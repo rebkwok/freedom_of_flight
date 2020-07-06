@@ -17,15 +17,13 @@
 
 <div id="confirm-dialog"></div></div>
 
-<div class="container row">
-    <div class="col-12">
-
+<div class="container">
     <form class="form-inline" method="post">
         {% csrf_token %}
         {{ available_users_form }}
     </form>
 
-    <h1 class="mt-5">Active Bookings</h1>
+    <h1 class="mt-3">Active Bookings</h1>
     {% if bookings_by_date %}
 
         {% for date, bookings in bookings_by_date.items %}

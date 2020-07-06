@@ -56,10 +56,10 @@
            <label class="control-label" for="id_{{ form.password.name }}">{{ form.password.label }}{% if form.password.field.required %}*{% endif %}</label>
            <span class="helptext">{{ form.password.help_text }}</span>
             {% if form.password.errors %}
-                <span class="errorlist">{{ form.password.errors }}</span>
+                <br/><span class="errorlist">{{ form.password.errors }}</span>
             {% endif %}
            {% if password_error %}
-                <span class="errorlist">{{ password_error }}</span>
+                <br/><span class="errorlist">{{ password_error }}</span>
             {% endif %}
        </div>
 

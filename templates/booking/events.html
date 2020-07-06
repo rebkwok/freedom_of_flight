@@ -15,15 +15,14 @@
 
 <div id="confirm-dialog"></div></div>
 
-<div class="container row">
-    <div class="col-12">
+<div class="container">
 
         <form class="form-inline" method="post">
             {% csrf_token %}
             {{ available_users_form }}
         </form>
 
-    <h1 class="mt-5">{{ title }}</h1>
+    <h1 class="mt-3">{{ title }}</h1>
 
     {% if events_by_date %}
         {% if course %}
@@ -43,11 +42,10 @@
                     {% include "booking/includes/course_events_button.txt" %}
                 </div>
                 {% else %}
-                    <span class="helptext float-right"><a href="{% url 'accounts:disclaimer_form' %}">Complete a disclaimer</a> to book</span>
+                    <span class="helptext float-right"><a href="{% url 'accounts:disclaimer_form' view_as_user.id %}">Complete a disclaimer</a> to book</span>
                 {% endif %}
             {% endif %}
         {% endif %}
-
 
         {% for date, events in events_by_date.items %}
             <div class="list-group mb-2">
@@ -103,7 +101,7 @@
                                     </span>
                                 {% endif %}
                             {% else %}
-                                <span class="helptext float-right"><a href="{% url 'accounts:disclaimer_form' %}">Complete a disclaimer</a> to book</span>
+                                <span class="helptext float-right"><a href="{% url 'accounts:disclaimer_form' view_as_user.id %}">Complete a disclaimer</a> to book</span>
                             {% endif %}
                         {% else %}
                             <span class="helptext float-right"><a href="{% url 'account_login' %}?next={{request.get_full_path}}">Log in</a> to book</span>

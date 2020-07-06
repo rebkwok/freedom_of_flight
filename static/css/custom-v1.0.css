@@ -96,10 +96,18 @@ div#CookielawBanner {
   font-size: 75%;
 }
 
+.btn-xs-wide {
+  width: 170px;
+  font-size: 80%;
+}
+
 .block_purchase_btn {
   height: 30px;
 }
 
+.block_purchase_btn .badge {
+  border: 1px lightgrey solid;
+}
 .hidden {
   display: none;
 }

@@ -20,3 +20,11 @@ def has_disclaimer(user):
 @register.filter
 def has_expired_disclaimer(user):
     return has_expired_disclaimer(user)
+
+
+@register.filter
+def latest_disclaimer(user):
+    # return latest disclaimer, regardless of whether it's expired or not
+    # (for emergency contact details)
+    if user.online_disclaimer.exists():
+        return user.online_disclaimer.latest("id")

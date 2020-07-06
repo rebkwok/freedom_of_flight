@@ -456,24 +456,23 @@ def has_active_data_privacy_agreement(user):
 @property
 def managed_users(self):
     if self.userprofile:
-        return [self, *[childprofile.user for childprofile in self.userprofile.managed_profiles.all()]]
+        child_users = [childprofile.user for childprofile in self.userprofile.managed_profiles.all()]
+        return [self, *child_users] if self.is_student else [*child_users, self]
     return [self]
 
 
 @property
 def is_student(self):
-    if self.userprofile:
-        return getattr("student", self.userprofile, True)
+    if hasattr(self, "userprofile"):
+        return self.userprofile.student
     return False
 
 
 @property
 def is_manager(self):
-    if self.userprofile:
-        return getattr("manager", self.userprofile, False)
+    if hasattr(self, "userprofile"):
+        return self.userprofile.manager
     return False
-
-
 
 
 User.add_to_class("managed_users", managed_users)

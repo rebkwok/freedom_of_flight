@@ -17,7 +17,7 @@ urlpatterns = [
     path('schedule/', home),
 
     # MISC
-    path('disclaimer-required/', disclaimer_required, name='disclaimer_required'),
+    path('disclaimer-required/<int:user_id>/', disclaimer_required, name='disclaimer_required'),
     path('not-available/', permission_denied, name='permission_denied'),
 
     path('placeholder/', placeholder, name='placeholder'),

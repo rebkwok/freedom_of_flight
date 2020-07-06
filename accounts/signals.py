@@ -13,7 +13,7 @@ def user_post_save(sender, instance, created, *args, **kwargs):
     if created:
         ActivityLog.objects.create(
             log='New user registered: {} {}, username {}'.format(
-                    instance.first_name, instance.last_name, instance.username
+                    instance.first_name, instance.last_name, instance.username,
             )
         )
 

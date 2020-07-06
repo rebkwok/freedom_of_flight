@@ -19,6 +19,7 @@
         </a>
     {% else %}
         <a href="#" class="btn btn-xs btn-table-xs btn-success mb-1 p-1">
-        <i id="loader_{{ available_block_config.id }}"></i> Add to cart</a>
+        <i id="loader_{{ available_block_config.id }}"></i>
+        Add to cart</a>
     {% endif %}
 </div>

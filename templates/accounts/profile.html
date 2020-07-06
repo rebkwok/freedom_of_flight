@@ -7,7 +7,7 @@
 
     {% include 'accounts/includes/account_nav.html' %}
 
-           <h1 class="mt-5">Your Profile</h1>
+           <h1 class="mt-3">Your Profile</h1>
            <div class="card">
                <h2 class="card-header">Personal Details</h2>
                <div class="card-body">
@@ -16,7 +16,7 @@
                    <div class="card-text"><strong>Date of birth:</strong> {{ user.userprofile.date_of_birth }}</div>
                    <div class="card-text"><strong>Address:</strong> {{ user.userprofile.address }}, {{ user.userprofile.postcode }}</div>
                    <div class="card-text"><strong>Phone:</strong> {{ user.userprofile.phone }}</div>
-                  <div class="card-text"><a class="btn btn-success" href="{% url 'accounts:update_profile' %}">Change</a></div>
+                  <div class="card-text"><a class="btn btn-xs btn-xs-wide btn-success" href="{% url 'accounts:update_profile' %}">Change</a></div>
 
                 </div>
                </div>
@@ -26,47 +26,81 @@
                <div class="card-text"><strong>Name:</strong> {{ latest_disclaimer.emergency_contact_name }} </div>
                <div class="card-text"><strong>Phone:</strong> {{ latest_disclaimer.emergency_contact_phone }} </div>
                <div class="card-text"><strong>Relationship:</strong> {{ latest_disclaimer.emergency_contact_relationship }} </div>
-               <div class="card-text"><a class="btn btn-success" href="{% url 'accounts:update_emergency_contact' user.id %}">Change</a></div>
+               <div class="card-text"><a class="btn btn-xs btn-xs-wide btn-success" href="{% url 'accounts:update_emergency_contact' user.id %}">Change</a></div>
                </div>
            </div>
             <div class="card">
                <h2 class="card-header">Email Addresses</h2>
                <div class="card-body">
                 <div class="card-text"><strong>Primary email address:</strong> {{ user.email }}</div>
-               <div class="card-text"><a class="btn btn-success" href="{% url 'account_email' %}">Change</a></div>
+               <div class="card-text"><a class="btn btn-xs btn-xs-wide btn-success" href="{% url 'account_email' %}">Change</a></div>
            </div>
            <div class="card">
                <h2 class="card-header">Accounts</h2>
                <div class="card-body">
-                <div class="card-text">{% if user.userprofile.student %}{{ user.first_name }} {{ user.last_name }}{% endif %}</div>
-               {% if user.userprofile.manager %}
-                   <div class="card-text">
-                   Managed Accounts:  {% if not user.userprofile.managed_users.exists %}No managed accounts set up yet{% endif %}
+                <div class="card-text">
+                   The following accounts are registered as student users:
                    <ul>
-                       {% for managed_profile in user.userprofile.managed_profiles.all %}
-                       <li>{{ managed_profile.user.first_name }} {{ managed_profile.user.last_name }}</li>
-                       {% endfor %}
-                   </ul>
-                   </div>
-                    <div class="card-text"><a class="btn btn-success" href="#">Add Managed Account</a></div>
+                        <li>{% if user.is_student %}{{ user.first_name }} {{ user.last_name }} (main account) {% endif %}</li>
+                       {% if user.is_manager %}
+                            {% for managed_user in user.managed_users %}
+                                {% if managed_user.id != user.id %}
+                               <li>{{ managed_user.first_name }} {{ managed_user.last_name }} (managed account)
+                                   {% if managed_user|has_disclaimer %}
+                                        {% with managed_user|latest_disclaimer as managed_user_disclaimer %}
+                                        <span class="helptext text-secondary">
+                                            <div><strong>Emergency Contact Information</strong>  <a class="btn btn-xs btn-outline-success p-0" href="{% url 'accounts:update_emergency_contact' managed_user.id %}">Change</a></div>
+                                            <div><strong>Name:</strong> {{ managed_user_disclaimer.emergency_contact_name }} </div>
+                                           <div><strong>Phone:</strong> {{ managed_user_disclaimer.emergency_contact_phone }} </div>
+                                           <div><strong>Relationship:</strong> {{ managed_user_disclaimer.emergency_contact_relationship }} </div>
+                                            </span>
+                                        {% endwith %}
+
+                                   {% endif %}
+                               </li>
+                                {% endif %}
+                           {% endfor %}
+                    </ul>
+                   {% if user.is_manager %}
+                        <div class="card-text"><a class="btn btn-xs btn-success btn-xs-wide" href="{% url 'accounts:register_child_user' %}">Add Managed Account</a></div>
+                    {% endif %}
                {% else %}
                    <div class="card-text">You do not manage accounts for other users.</div>
-                   <div class="card-text"><a class="btn btn-success" href="{% url 'accounts:update_profile' %}">Change</a></div>
+                   <div class="card-text"><a class="btn btn-xs btn-xs-wide btn-success" href="{% url 'accounts:update_profile' %}">Change</a></div>
                {% endif %}
+                    {% if not user.is_student %}You are not currently registered as a student.
+                        <div class="card-text"><a class="btn btn-xs btn-xs-wide btn-success" href="{% url 'accounts:update_profile' %}">Change</a></div>
+                    {% endif %}
+                </div>
            </div>
             <div class="card">
-               <h2 class="card-header">Disclaimer</h2>
-               <div class="card-body">
-                   {% if has_disclaimer %}
-                <div class="col-12">Completed</div>
-                {% else %}
-                    <div class="col-12">
-                       <p>You have not completed a disclaimer form.
-                           This must be completed before you can make any bookings.</p>
-                       <p><a href="{% url 'accounts:disclaimer_form' %}">Complete disclaimer form now</a></p>
-                   </div>
-               {% endif %}
-           </div>
+               <h2 class="card-header">Disclaimers</h2>
+                <div class="card-body">
+                    All students must have a completed and current disclaimer before any bookings can be made.  Disclaimers will need to be reviewed
+                    annually and whenever terms are updated.
+                    <ul>
+                        {% if user.is_student %}
+                        <li>
+                            {{ user.first_name }} {{ user.last_name }}:
+                            {% if user|has_disclaimer %}
+                                <span class="badge badge-success">Completed</span>
+                            {% else %}<span class="badge badge-dark">Not Completed</span><a href="{% url 'accounts:disclaimer_form' user.id %}">Complete now</a>{% endif %}
+                        </li>
+                        {% endif %}
+                        {% for managed_user in user.managed_users %}
+                            {% if managed_user.id != user.id %}
+                                <li>
+                                    {{ managed_user.first_name }} {{ managed_user.last_name }}:
+                                    {% if managed_user|has_disclaimer %}<span class="badge badge-success">Completed</span>
+                                    {% else %}<span class="badge badge-dark">Not Completed</span>
+                                    <a href="{% url 'accounts:disclaimer_form' managed_user.id %}">Add disclaimer</a>{% endif %}
+                                </li>
+                               {% endif %}
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    </div>
+
 
             </div>
 {% endblock content %}

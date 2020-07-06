@@ -15,7 +15,7 @@ from payments.utils import get_paypal_form
 
 from ..models import Block, BlockVoucher
 from ..utils import calculate_user_cart_total
-from .views_utils import data_privacy_required, disclaimer_required, get_unpaid_user_managed_blocks
+from .views_utils import data_privacy_required, get_unpaid_user_managed_blocks
 
 logger = logging.getLogger(__name__)
 
@@ -92,7 +92,6 @@ def apply_voucher_to_unpaid_blocks(voucher, unpaid_blocks):
         relevant_block.save()
 
 
-@disclaimer_required
 @data_privacy_required
 @login_required
 def shopping_basket(request):

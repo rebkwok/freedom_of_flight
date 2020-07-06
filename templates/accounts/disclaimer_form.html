@@ -9,13 +9,17 @@
        <div class="panel panel-default">
 
             <div class="panel-heading">
-                <h1 class="panel-title">Disclaimer Form</h1>
+                <h1 class="panel-title">Disclaimer Form for {{ disclaimer_user.first_name }} {{ disclaimer_user.last_name }}</h1>
             </div>
            <div class="panel-body">
 
                {% if disclaimer %}
                     <div class="col-xs-12">
-                        <p>You have already completed a disclaimer.</p>
+                        {% if disclaimer_user == request.user %}
+                            <p>You have already completed a disclaimer.</p>
+                        {% else %}
+                            <p>{{ disclaimer_user.first_name }} {{ disclaimer_user.last_name }} already has a completed disclaimer.</p>
+                        {% endif %}
                     </div>
                    <div class="col-xs-12">
                        <p>If you have any additional questions or concerns about the data you have provided, please contact

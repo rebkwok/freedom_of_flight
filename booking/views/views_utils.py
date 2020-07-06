@@ -40,18 +40,5 @@ def data_privacy_required(view_func):
     return wrap
 
 
-def disclaimer_required(view_func):
-    def wrap(request, *args, **kwargs):
-        if (
-            request.user.is_authenticated
-            and not has_active_disclaimer(request.user)
-        ):
-            return HttpResponseRedirect(
-                reverse('accounts:disclaimer_form')
-            )
-        return view_func(request, *args, **kwargs)
-    return wrap
-
-
 def get_unpaid_user_managed_blocks(user):
     return Block.objects.filter(user__in=user.managed_users, paid=False).order_by('user_id')

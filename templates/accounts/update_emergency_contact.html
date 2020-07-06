@@ -8,29 +8,29 @@
     {% include 'accounts/includes/account_nav.html' %}
 
     <div>
+        {% if disclaimer_user == request.user %}
         <h1>Edit Your Emergency Contact Information</h1>
+        {% else %}
+        <h1>Edit Emergency Contact Information for {{ disclaimer_user.first_name }} {{ disclaimer_user.last_name }}</h1>
+        {% endif %}
     </div>
     {% if form.errors %}
         <div class="errorlist">Please correct the errors below</div>
     {% endif %}
 
-       <form class="dirty-check" action="" method="post">
+       <form class="dirty-check form" action="" method="post">
            {% csrf_token %}
 
-       <div>
-           <div class="col-12">
            {% for field in form %}
                 <div class="form-group">
-                    <div class="col-12 {% if form.field.errors %}errorlist{% endif %}">
-                       {{ field }}<label for='id_{{ field.name }}'></label>
-                         <label class="control-label" for='id_{{ field.name }}'>{{ field.label }}</label>
-                        {% if field.errors %} {{ field.errors }}{% endif %}
+                     <label class="control-label" for='id_{{ field.name }}'>{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.errors %}<span class="errorlist">{{ field.errors }}</span>{% endif %}
                    </div>
-                   <div class="helptext col-9 col-offset-3">{{ field.help_text }}</div>
-                </div>
+                   <div class="helptext ">{{ field.help_text }}</div>
            {% endfor %}
 
-            <div class="col-12"><input class="btn btn-success" type="submit" value="Submit" /></div>
+            <div><input class="btn btn-success" type="submit" value="Submit" /></div>
        </form>
 
 </div>

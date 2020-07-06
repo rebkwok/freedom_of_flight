@@ -8,7 +8,7 @@ from django.utils import timezone
 
 from accounts import validators as account_validators
 from .models import DataPrivacyPolicy, SignedDataPrivacy, OnlineDisclaimer, UserProfile, \
-    DisclaimerContent, has_expired_disclaimer, NonRegisteredDisclaimer
+    DisclaimerContent, has_expired_disclaimer, NonRegisteredDisclaimer, ChildUserProfile
 
 
 class AccountFormMixin:
@@ -40,6 +40,12 @@ class AccountFormMixin:
         self.fields["address"] = forms.CharField(widget=forms.TextInput(attrs={'class': 'form-control'}))
         self.fields["postcode"] = forms.CharField(max_length=10, widget=forms.TextInput(attrs={'class': 'form-control'}))
         self.fields["phone"] = forms.CharField(max_length=20, widget=forms.TextInput(attrs={'class': 'form-control'}))
+
+
+class CoreAccountFormMixin:
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.fields["student"] = forms.BooleanField(
             widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             label="Tick if you are registering as a student yourself"
@@ -50,7 +56,8 @@ class AccountFormMixin:
             help_text="You'll be able to add managed accounts on the next page."
         )
 
-class SignupForm(AccountFormMixin, forms.Form):
+
+class SignupForm(CoreAccountFormMixin, AccountFormMixin, forms.Form):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -90,7 +97,7 @@ class SignupForm(AccountFormMixin, forms.Form):
            )
 
 
-class ProfileForm(AccountFormMixin, forms.ModelForm):
+class ProfileForm(CoreAccountFormMixin, AccountFormMixin, forms.ModelForm):
 
     first_name = forms.CharField(
         widget=forms.TextInput(attrs={'class': "form-control"}), required = True
@@ -108,6 +115,31 @@ class ProfileForm(AccountFormMixin, forms.ModelForm):
     class Meta:
         model = UserProfile
         fields = ("first_name", "last_name", "address", "postcode", "phone", "date_of_birth", "student", "manager")
+
+
+
+class RegisterChildUserForm(AccountFormMixin, forms.ModelForm):
+    first_name = forms.CharField(
+        widget=forms.TextInput(attrs={'class': "form-control"}), required = True
+    )
+    last_name = forms.CharField(
+        widget=forms.TextInput(attrs={'class': "form-control"}), required = True
+    )
+
+    def __init__(self, *args, **kwargs):
+        parent_user_profile = kwargs.pop("parent_user_profile")
+        super().__init__(*args, **kwargs)
+        if not self.instance.id:
+            # prepopulate fields from parent profile
+            self.fields['address'].initial = parent_user_profile.address
+            self.fields['postcode'].initial = parent_user_profile.postcode
+            self.fields['phone'].initial = parent_user_profile.phone
+
+    class Meta:
+        model = ChildUserProfile
+        fields = ("first_name", "last_name", "address", "postcode", "phone", "date_of_birth")
+
+
 
 
 BASE_DISCLAIMER_FORM_WIDGETS = {
@@ -132,7 +164,7 @@ class DisclaimerForm(forms.ModelForm):
     )
 
     def __init__(self, *args, **kwargs):
-        user = kwargs.pop('user')
+        user = kwargs.pop('disclaimer_user')
         super().__init__(*args, **kwargs)
 
         if self.instance.id:

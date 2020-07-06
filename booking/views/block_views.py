@@ -18,7 +18,7 @@ from booking.models import (
     Block, DropInBlockConfig, Course, CourseType, Event, EventType, CourseBlockConfig
 )
 from .views_utils import (
-    data_privacy_required, disclaimer_required, DataPolicyAgreementRequiredMixin,
+    data_privacy_required, DataPolicyAgreementRequiredMixin,
     get_unpaid_user_managed_blocks
 )
 

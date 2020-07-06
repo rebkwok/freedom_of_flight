@@ -38,9 +38,7 @@ def ajax_toggle_booking(request, event_id):
         user = get_object_or_404(User, id=user_id)
 
     if not has_active_disclaimer(user):
-        # TODO
-        # url = reverse('booking:disclaimer_required', args=(user_id,))
-        url = reverse('booking:disclaimer_required')
+        url = reverse('booking:disclaimer_required', args=(user_id,))
         return JsonResponse({"redirect": True, "url": url})
 
     event = Event.objects.get(id=event_id)
