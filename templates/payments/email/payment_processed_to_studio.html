@@ -1,0 +1,15 @@
+{% extends 'email_base.html' %}
+
+{% block messagecontent %}
+<h2>Payment processed</h2>
+<p><strong>Invoice number:</strong> {{ invoice.id }}</p>
+<p><strong>Paypal Transaction id:</strong> {{ invoice.transaction_id }}</p>
+<p><strong>User: {{ user.first_name}} {{ user.last_name}}</strong></p>
+<p><strong>Purchased:</strong>
+    <ul>
+        {% for block in invoice.blocks.all %}
+            <li>{{ block }}</li>
+        {% endif %}
+    </ul>
+</p>
+{% endblock %}

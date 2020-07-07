@@ -5,9 +5,9 @@ from django.shortcuts import render
 
 from paypal.standard.pdt.views import process_pdt
 
+from .emails import send_processed_payment_emails, send_failed_payment_emails
 from .exceptions import PayPalProcessingError
-from .models import Invoice
-from .utils import check_paypal_data, retrieve_invoice_from_paypal_data
+from .utils import check_paypal_data, get_invoice_from_ipn_or_pdt
 
 logger = logging.getLogger(__name__)
 
@@ -17,34 +17,31 @@ def paypal_return(request):
     pdt_obj, failed = process_pdt(request)
     context = {"failed": failed, "pdt_obj": pdt_obj}
     if not failed:
-        if not pdt_obj.invoice:
-            # sometimes paypal doesn't send back the invoice id - try to retrieve it from the custom field
-            invoice = retrieve_invoice_from_paypal_data(pdt_obj)
-            if invoice is None:
-                logging.error("Error processing paypal PDT %s; could not find invoice", pdt_obj.id)
-                # Don't raise the exception here; leave it for the IPN signal to raise and emails will be sent to admins
-                failed = True
-
-        invoice = Invoice.objects.get(invoice_id=pdt_obj.invoice)
-        if invoice.transaction_id is None:
-            # not already processed by IPN, do it now
-            # Check expected invoice details and receiver email
-            try:
-                check_paypal_data(pdt_obj, invoice)
-            except PayPalProcessingError as e:
-                logging.error("Error processing paypal PDT %s", e)
-                failed = True
+        invoice = get_invoice_from_ipn_or_pdt(ipn_or_pdt, "PDT", raise_immediately=False)
+        if invoice is not None:
+            if invoice.transaction_id is None:
+                # not already processed by IPN, do it now
+                # Check expected invoice details and receiver email
+                try:
+                    check_paypal_data(pdt_obj, invoice)
+                except PayPalProcessingError as e:
+                    logging.error("Error processing paypal PDT %s", e)
+                    failed = True
+                else:
+                    # Everything is OK
+                    for block in invoice.blocks.all():
+                        block.paid = True
+                        block.save()
+                    invoice.transaction_id = pdt_obj.txn_id
+                    invoice.save()
+                    # SEND EMAILS
+                    send_processed_payment_emails(invoice)
             else:
-                # Everything is OK
-                for block in invoice.blocks.all():
-                    block.paid = True
-                    block.save()
-                invoice.transaction_id = pdt_obj.txn_id
-                invoice.save()
-                # TODO send emails
+                logger.info("PDT signal received for invoice %s; already processed", invoice.invoice_id)
         else:
-            logger.info("PDT signal received for invoice %s; already processed", invoice.invoice_id)
-
+            # No invoice retrieved, fail
+            failed = True
+            send_failed_payment_emails(pdt_obj)
     if not failed:
         return render(request, 'payments/valid_payment.html', context)
     return render(request, 'payments/non_valid_payment.html', context)

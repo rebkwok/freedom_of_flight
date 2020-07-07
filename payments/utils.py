@@ -1,5 +1,4 @@
-from typing import NamedTuple
-
+import logging
 from django.conf import settings
 from django.urls import reverse
 
@@ -56,6 +55,29 @@ def check_paypal_data(ipn_or_pdt, invoice):
 
     if ipn_or_pdt.mc_currency != 'GBP':
         raise PayPalProcessingError(f"Unexpected currency {pdt_obj.mc_currency}")
+
+
+def get_invoice_from_ipn_or_pdt(ipn_or_pdt, paypal_obj_type, raise_immediately=False):
+    # For PDTs, we don't raise the exception here so we don't expose it to the user; leave it for
+    # the IPN signal to raise and emails will be sent to admins
+    if not ipn_or_pdt.invoice:
+        # sometimes paypal doesn't send back the invoice id - try to retrieve it from the custom field
+        invoice = retrieve_invoice_from_paypal_data(ipn_or_pdt)
+        if invoice is None:
+            logging.error("Error processing paypal %s %s; could not find invoice", paypal_obj_type, ipn_or_pdt.id)
+            if raise_immediately:
+                raise PayPalProcessingError(f"Error processing paypal {paypal_obj_type} {ipn_or_pdt.id}; could not find invoice")
+            return None
+        # set the retrieved invoice on the paypal obj
+        ipn_or_pdt.invoice = invoice.id
+        ipn_or_pdt.save()
+    try:
+        return Invoice.objects.get(invoice_id=ipn_or_pdt.invoice)
+    except Invoice.DoesNotExist:
+        logging.error("Error processing paypal %s %s; could not find invoice", paypal_obj_type, ipn_or_pdt.id)
+        if raise_immediately:
+            raise PayPalProcessingError(f"Error processing paypal {paypal_obj_type} {ipn_or_pdt.id}; could not find invoice")
+        return None
 
 
 def retrieve_invoice_from_paypal_data(ipn_or_pdt):

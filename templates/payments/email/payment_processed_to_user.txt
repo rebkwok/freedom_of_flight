@@ -1,0 +1,12 @@
+{% extends 'email_base.txt' %}
+
+{% block messagecontent %}
+Thank you for your payment
+-----------------------------
+Invoice number: {{ invoice.id }}</p>
+Paypal Transaction id: {{ invoice.transaction_id }}
+User: {{ user.first_name}} {{ user.last_name}}
+Purchased:
+{% for block in invoice.blocks.all %}-{{ block }}{% endif %}
+
+{% endblock %}

@@ -1,0 +1,12 @@
+{% extends 'email_base.txt' %}
+
+{% block messagecontent %}
+
+ACTION REQUIRED: CHECK STATUS OF ERROR TRANSACTION
+Payment Error
+-----------------------------
+Invoice number: {{ ipn_or_pdt.id }}</p>
+Paypal transaction id: {{ ipn_or_pdt.txn_id }}
+Paypal payment status: {{ ipn_or_pdt.payment_status }}
+
+{% endblock %}
