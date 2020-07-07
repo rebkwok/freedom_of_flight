@@ -5,11 +5,13 @@ django-allauth==0.40.0
 django-braces==1.14.0
 django-classy-tags==1.0.0  # for cookie-law
 django-cookie-law==2.0.3
+django-crispy-forms==1.9.1
 django-debug-toolbar==2.0
 django-environ==0.4.5
 django-extensions==2.2.8
 django-migration-testcase==0.0.15
 django-paypal==1.0.0
+dynamic-django-forms==0.1.4
 #djangorestframework==3.10.3
 #dj-static==0.0.6
 psycopg2==2.8.4

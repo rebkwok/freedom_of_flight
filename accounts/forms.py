@@ -188,7 +188,7 @@ class DisclaimerForm(forms.ModelForm):
         model = OnlineDisclaimer
         fields = (
             'terms_accepted', 'emergency_contact_name',
-            'emergency_contact_relationship', 'emergency_contact_phone'
+            'emergency_contact_relationship', 'emergency_contact_phone', 'health_questionnaire_responses'
         )
         widgets = deepcopy(BASE_DISCLAIMER_FORM_WIDGETS)
 
@@ -209,7 +209,7 @@ class NonRegisteredDisclaimerForm(DisclaimerForm):
         fields = (
             'first_name', 'last_name', 'email', 'date_of_birth', 'address', 'postcode',
             'phone', 'emergency_contact_name', 'emergency_contact_relationship',
-            'emergency_contact_phone',
+            'emergency_contact_phone', 'health_questionnaire_responses',
             'terms_accepted', 'event_date')
 
         widgets = deepcopy(BASE_DISCLAIMER_FORM_WIDGETS)

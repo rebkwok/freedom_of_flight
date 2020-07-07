@@ -74,6 +74,8 @@ INSTALLED_APPS = [
     'allauth.socialaccount',
     'django_extensions',
     'debug_toolbar',
+    'crispy_forms',
+    'dynamic_forms',
     'accounts',
     'booking',
     'timetable',
@@ -440,3 +442,8 @@ PAYPAL_TEST=env("PAYPAL_TEST")
 PAYPAL_IDENTITY_TOKEN=env("PAYPAL_IDENTITY_TOKEN")
 DEFAULT_PAYPAL_EMAIL=env("DEFAULT_PAYPAL_EMAIL")
 INVOICE_KEY=env("INVOICE_KEY")
+
+
+# for dynamic disclaimer form
+CRISPY_TEMPLATE_PACK = 'bootstrap4'
+USE_CRISPY = True

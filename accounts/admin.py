@@ -16,6 +16,7 @@ class OnlineDisclaimerAdmin(admin.ModelAdmin):
         'user',
         'emergency_contact_name',
         'emergency_contact_relationship', 'emergency_contact_phone',
+        'health_questionnaire_responses',
         'date', 'date_updated', 'terms_accepted', 'version'
     )
 
@@ -25,7 +26,7 @@ class NonRegisteredDisclaimerAdmin(admin.ModelAdmin):
     readonly_fields = (
         'first_name', 'last_name', 'email', 'date', 'date_of_birth', 'address', 'postcode', 'phone',
         'emergency_contact_name',
-        'emergency_contact_relationship', 'emergency_contact_phone',
+        'emergency_contact_relationship', 'emergency_contact_phone', 'health_questionnaire_responses',
         'terms_accepted',
         'version'
     )
@@ -83,6 +84,7 @@ class DisclaimerContentAdminForm(forms.ModelForm):
             current_content = DisclaimerContent.current()
             if current_content:
                 self.fields['disclaimer_terms'].initial = current_content.disclaimer_terms
+                self.fields['form'].initial = current_content.form
                 next_default_version = Decimal(floor((DisclaimerContent.current_version() + 1)))
                 self.fields['version'].help_text = f'Current version is {current_content.version}.  Leave ' \
                                            f'blank for next major version ({next_default_version:.1f})'
@@ -98,10 +100,11 @@ class DisclaimerContentAdminForm(forms.ModelForm):
 
     def clean(self):
         new_disclaimer_terms = self.cleaned_data.get('disclaimer_terms')
+        new_health_questionnaire = self.cleaned_data.get('form')
 
         # check content has changed
         current_content = DisclaimerContent.current()
-        if current_content and current_content.disclaimer_terms == new_disclaimer_terms:
+        if current_content and current_content.disclaimer_terms == new_disclaimer_terms and current_content.form == new_health_questionnaire:
             self.add_error(
                 None, 'No changes made from previous version; new version must update disclaimer content'
             )

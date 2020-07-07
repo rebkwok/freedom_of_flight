@@ -5,8 +5,10 @@ from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import Group
 from django.core.mail import send_mail
+from django.forms.widgets import CheckboxInput, CheckboxSelectMultiple, TextInput, RadioSelect
 from django.shortcuts import render, HttpResponseRedirect, get_object_or_404
 from django.views.generic import UpdateView, CreateView, FormView
+from django.views.generic.edit import FormMixin
 from django.contrib.auth.models import User
 from django.urls import reverse
 from django.template.loader import get_template
@@ -143,7 +145,28 @@ class CustomLoginView(LoginView):
         return ret
 
 
-class DisclaimerCreateView(LoginRequiredMixin, CreateView):
+class DynamicDisclaimerFormMixin(FormMixin):
+
+    def get_form(self, *args, **kwargs):
+        form = super().get_form(*args, **kwargs)
+
+        # # Form should already have the correct disclaimer content added, use it to get the form
+        json_data = form.disclaimer_content.form
+        # Add fields in JSON to dynamic form rendering field.
+        form.fields["health_questionnaire_responses"].add_fields(json_data)
+        for field in form.fields["health_questionnaire_responses"].fields:
+            if isinstance(field.widget, TextInput) and not field.initial:
+                # prevent Chrome's wonky autofill
+                field.initial = "-"
+        return form
+
+    def form_pre_commit(self, form):
+        pre_saved_disclaimer = form.save(commit=False)
+        pre_saved_disclaimer.version = form.disclaimer_content.version
+        return pre_saved_disclaimer
+
+
+class DisclaimerCreateView(LoginRequiredMixin, DynamicDisclaimerFormMixin, CreateView):
 
     form_class = DisclaimerForm
     template_name = 'accounts/disclaimer_form.html'
@@ -165,8 +188,8 @@ class DisclaimerCreateView(LoginRequiredMixin, CreateView):
         return form_kwargs
 
     def form_valid(self, form):
-        disclaimer = form.save(commit=False)
-        disclaimer.version = form.disclaimer_content.version
+        disclaimer = self.form_pre_commit(form)
+
         password = form.cleaned_data['password']
 
         # Check the password for self.request.user, but set the disclaimer user to self.user, which could be different

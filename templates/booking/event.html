@@ -11,10 +11,9 @@
             <h4 class="card-title">{{ event.start|date:"D d M Y, H:i" }}</h4>
             <h4 class="card-title">Description</h4>
             <p class="card-text">{{ event.description }}</p>
-            <h4 class="card-title">Booking</h4>
-            <p class="card-text">Booking</p>
+            <hr>
             {% if booking %}
-            <p class="card-body">Booked</div>
+            <p class="card-title">You have booked for this event</div>
             {% endif %}
         </div>
     </div>

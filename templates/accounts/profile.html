@@ -84,7 +84,7 @@
                             {{ user.first_name }} {{ user.last_name }}:
                             {% if user|has_disclaimer %}
                                 <span class="badge badge-success">Completed</span>
-                            {% else %}<span class="badge badge-dark">Not Completed</span><a href="{% url 'accounts:disclaimer_form' user.id %}">Complete now</a>{% endif %}
+                            {% else %}<span class="badge badge-dark">Not Completed</span><a href="{% url 'accounts:disclaimer_form' user.id %}"> Add disclaimer</a>{% endif %}
                         </li>
                         {% endif %}
                         {% for managed_user in user.managed_users %}

@@ -12,10 +12,10 @@ from dateutil.relativedelta import relativedelta
 from django.db import models
 from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
-
 from django.contrib.auth.models import User
 from django.utils import timezone
 
+from dynamic_forms.models import FormField, ResponseField
 
 from activitylog.models import ActivityLog
 
@@ -203,10 +203,12 @@ class SignedDataPrivacy(models.Model):
 
 @has_readonly_fields
 class DisclaimerContent(models.Model):
-    read_only_fields = ('disclaimer_terms', 'version', 'issue_date')
+    read_only_fields = ('disclaimer_terms', 'version', 'issue_date', 'form')
     disclaimer_terms = models.TextField()
     version = models.DecimalField(unique=True, decimal_places=1, max_digits=100)
     issue_date = models.DateTimeField(default=timezone.now)
+
+    form = FormField(verbose_name="health questionnaire")
     is_draft = models.BooleanField(default=False)
 
     @classmethod
@@ -230,7 +232,7 @@ class DisclaimerContent(models.Model):
     def save(self, **kwargs):
         if not self.id:
             current = DisclaimerContent.current()
-            if current and current.disclaimer_terms == self.disclaimer_terms:
+            if current and current.disclaimer_terms == self.disclaimer_terms and current.form == self.form:
                 raise ValidationError('No changes made to content; not saved')
 
         if not self.id and not self.version:
@@ -254,6 +256,9 @@ class BaseOnlineDisclaimer(models.Model):
     emergency_contact_name = models.CharField(max_length=255)
     emergency_contact_relationship = models.CharField(max_length=255)
     emergency_contact_phone = models.CharField(max_length=255)
+
+    health_questionnaire_responses = ResponseField()
+
     terms_accepted = models.BooleanField()
 
     class Meta:

@@ -1,5 +1,4 @@
 
-
 {% if form.errors %}
     <div class="errorlist">Please correct the errors below</div>
 {% endif %}
@@ -38,7 +37,16 @@
             {% endif %}
        </div>
 
-        <hr>
+       <hr>
+
+       <h4>Health Questionnaire</h4>
+       {% for field in form %}
+           {% if field.name == "health_questionnaire_responses" %}
+                {{ field }}
+           {% endif %}
+       {% endfor %}
+
+    <hr>
        <h4>Disclaimer</h4>
        {{ form.disclaimer_terms|linebreaks }}</div>
        <div class="form-check form-check-inline mb-2">
