@@ -1,1 +1,11 @@
-booking_created_or_updated
+{% extends 'email_base.html' %}
+
+
+{% block messagecontent %}
+
+Thank you for your booking for the course: {{ course }}.  You have been registered for all course classes.
+{% for event in course.events %}
+-{{ event }}
+{% endfor %}
+
+{% endblock %}

@@ -1,1 +1,8 @@
-booking_created_or_updated
+{% extends 'email_base.txt' %}
+
+
+{% block messagecontent %}
+
+{{ course.user.first_name }} {{ course.user.last_name }} has just booked for {{ course }}.
+
+{% endblock %}

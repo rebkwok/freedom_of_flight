@@ -1,1 +1,8 @@
-booking_created_or_updated
+{% extends 'email_base.html' %}
+
+
+{% block messagecontent %}
+
+<p>Your booking for {{ event }} has been {{ requested_action }}.</p>
+
+{% endblock %}

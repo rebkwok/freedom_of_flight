@@ -1,1 +1,3 @@
-booking_created_or_updated
+{% block messagecontent %}
+Your booking for {{ event }} has been {{ requested_action }}.
+{% endblock %}

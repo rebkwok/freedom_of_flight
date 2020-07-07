@@ -1,24 +1,5 @@
-<html>
-<body>
+{% include "accounts/email/do_not_reply.txt" %}
 
-<div class="row">
-    {%  block donotreply %}<div style="font-family: sans-serif; font-size: small;">{% include "accounts/email/do_not_reply.html" %}</div></br>{% endblock %}
-    {% block messagecontent %}{% endblock %}
-    </div>
-    <div class="row" style="padding-top: 3em;">
-        <div class="col-xs-12">
-            <a href=http://www.freedomofflightaerial.com"><img src="{{ host }}/static/images/logo_email.png"
-            width="100"
-            height="auto"
-            border="0"
-            alt="Freedom of Flight Aerial logo">
-            </a>
-        </div>
-        <div class="col-xs-12" style="font-family: sans-serif; padding-top: 1em;">
-            FREEDOM OF FLIGHT AERIAL<br />
-            {{ studio_email }}
-        </div>
-    </div>
+{% block messagecontent %}{% endblock %}
 
-</body>
-</html>
+{% include "accounts/email/footer.txt" %}
