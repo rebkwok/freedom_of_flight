@@ -48,12 +48,14 @@ class CoreAccountFormMixin:
         super().__init__(*args, **kwargs)
         self.fields["student"] = forms.BooleanField(
             widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            label="Tick if you are registering as a student yourself"
+            label="Tick if you are registering as a student yourself",
+            required=False,
         )
         self.fields["manager"] = forms.BooleanField(
             widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             label="Tick if you will manage child account(s)",
-            help_text="You'll be able to add managed accounts on the next page."
+            help_text="You'll be able to add managed accounts on the next page.",
+            required=False,
         )
 
 
@@ -64,7 +66,8 @@ class SignupForm(CoreAccountFormMixin, AccountFormMixin, forms.Form):
         # get the current version here to make sure we always display and save
         # with the same version, even if it changed while the form was being
         # completed
-        self.fields['email'].widget.attrs.update({'autofocus': 'autofocus', "class": "form-control"})
+        if "email" in self.fields:  # it's not there in form tests
+            self.fields['email'].widget.attrs.update({'autofocus': 'autofocus', "class": "form-control"})
         if DataPrivacyPolicy.current():
             self.data_privacy_policy = DataPrivacyPolicy.current()
             self.fields['data_privacy_confirmation'] = forms.BooleanField(
@@ -173,7 +176,8 @@ class DisclaimerForm(forms.ModelForm):
             self.disclaimer_content = DisclaimerContent.current()
         # in the DisclaimerForm, these fields are autopoulated
         self.disclaimer_terms = self.disclaimer_content.disclaimer_terms
-
+        self.has_health_questionnaire = self.disclaimer_content.form not in [None, []]
+        self.fields["health_questionnaire_responses"].required = False
         if user is not None:
             if has_expired_disclaimer(user):
                 last_disclaimer = OnlineDisclaimer.objects.filter(user=user).last()

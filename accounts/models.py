@@ -208,7 +208,7 @@ class DisclaimerContent(models.Model):
     version = models.DecimalField(unique=True, decimal_places=1, max_digits=100)
     issue_date = models.DateTimeField(default=timezone.now)
 
-    form = FormField(verbose_name="health questionnaire")
+    form = FormField(verbose_name="health questionnaire", null=True, blank=True)
     is_draft = models.BooleanField(default=False)
 
     @classmethod
@@ -323,7 +323,12 @@ class OnlineDisclaimer(BaseOnlineDisclaimer):
             ignore_fields = ['id', 'user_id', '_state']
             fields = {key: value for key, value in self.__dict__.items() if key not in ignore_fields and not key.endswith('_oldval')}
             fields["name"] = f"{self.user.first_name} {self.user.last_name}"
-            ArchivedDisclaimer.objects.create(**fields)
+            ArchivedDisclaimer.objects.create(
+                date_of_birth=self.user.userprofile.date_of_birth,
+                phone=self.user.userprofile.phone,
+                address=self.user.userprofile.address,
+                postcode=self.user.userprofile.postcode,
+                **fields)
             ActivityLog.objects.create(
                 log="Online disclaimer deleted; archive created for user {} {}".format(
                     self.user.first_name, self.user.last_name
@@ -364,7 +369,9 @@ class NonRegisteredDisclaimer(BaseOnlineDisclaimer):
     def delete(self, using=None, keep_parents=False):
         expiry = timezone.now() - relativedelta(years=6)
         if self.date > expiry:
-            ignore_fields = ['id', '_state', 'first_name', 'last_name', 'email', 'user_uuid']
+            ignore_fields = [
+                'id', '_state', 'first_name', 'last_name', 'email', 'user_uuid',
+            ]
             fields = {key: value for key, value in self.__dict__.items() if key not in ignore_fields and not key.endswith('_oldval')}
 
             ArchivedDisclaimer.objects.create(name='{} {}'.format(self.first_name, self.last_name), **fields)
@@ -381,6 +388,10 @@ class ArchivedDisclaimer(BaseOnlineDisclaimer):
     name = models.CharField(max_length=255)
     date_updated = models.DateTimeField(null=True, blank=True)
     date_archived = models.DateTimeField(default=timezone.now)
+    date_of_birth = models.DateField(verbose_name='date of birth')
+    address = models.CharField(max_length=512, null=True, blank=True)
+    postcode = models.CharField(max_length=10, null=True, blank=True)
+    phone = models.CharField(max_length=255, null=True, blank=True)
     event_date = models.DateField(blank=True, null=True)
 
     def __str__(self):

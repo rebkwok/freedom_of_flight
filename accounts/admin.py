@@ -6,7 +6,7 @@ from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import User
 from django import forms
 
-from accounts.models import OnlineDisclaimer, DisclaimerContent, \
+from accounts.models import OnlineDisclaimer, DisclaimerContent, ArchivedDisclaimer, \
     CookiePolicy, DataPrivacyPolicy, SignedDataPrivacy, NonRegisteredDisclaimer, UserProfile, ChildUserProfile
 
 
@@ -161,3 +161,4 @@ admin.site.register(CookiePolicy, CookiePolicyAdmin)
 admin.site.register(SignedDataPrivacy, SignedDataPrivacyAdmin)
 admin.site.register(NonRegisteredDisclaimer, NonRegisteredDisclaimerAdmin)
 admin.site.register(DisclaimerContent, DisclaimerContentAdmin)
+admin.site.register(ArchivedDisclaimer)

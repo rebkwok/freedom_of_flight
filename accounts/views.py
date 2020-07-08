@@ -154,7 +154,23 @@ class DynamicDisclaimerFormMixin(FormMixin):
         json_data = form.disclaimer_content.form
         # Add fields in JSON to dynamic form rendering field.
         form.fields["health_questionnaire_responses"].add_fields(json_data)
+        if has_expired_disclaimer(self.disclaimer_user):
+            updating_disclaimer = OnlineDisclaimer.objects.filter(user=self.disclaimer_user).last()
+        else:
+            updating_disclaimer = None
+
         for field in form.fields["health_questionnaire_responses"].fields:
+            if updating_disclaimer and field.label in updating_disclaimer.health_questionnaire_responses.keys():
+                previous_response = updating_disclaimer.health_questionnaire_responses[field.label]
+                # check that previous choices are still valid
+                if hasattr(field.widget, "choices") and isinstance(previous_response, list):
+                    if set(previous_response) - {choice[0] for choice in field.widget.choices} == set():
+                        field.initial = previous_response
+                else:
+                    # if the question type changed and the response type is now invalid, the initial
+                    # will either get ignored or validated by the form, so it should be safe to use the
+                    # previous response and let the form handle any errors
+                    field.initial = previous_response
             if isinstance(field.widget, TextInput) and not field.initial:
                 # prevent Chrome's wonky autofill
                 field.initial = "-"
@@ -247,7 +263,7 @@ class SignedDataPrivacyCreateView(LoginRequiredMixin, FormView):
         if self.request.user.is_authenticated and \
                 has_active_data_privacy_agreement(self.request.user):
             return HttpResponseRedirect(
-                self.request.GET.get('next', reverse('booking:lessons'))
+                self.request.GET.get('next', reverse('booking:schedule'))
             )
         return super().dispatch(*args, **kwargs)
 
