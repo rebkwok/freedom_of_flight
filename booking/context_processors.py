@@ -14,12 +14,21 @@ def booking(request):
     if not tracks:
         tracks = Track.objects.filter(default=True)
 
+    if request.user.is_authenticated:
+        available_users = request.user.managed_users
+        cart_item_count = Block.objects.filter(user__in=request.user.managed_users, paid=False).count()
+        view_as_user =get_view_as_user(request)
+    else:
+        available_users = [request.user]
+        cart_item_count = None
+        view_as_user = request.user
+
 
     return {
         'studio_email': settings.DEFAULT_STUDIO_EMAIL,
         'tracks': tracks,
-        'available_users': request.user.managed_users,
-        'cart_item_count': request.user.is_authenticated and Block.objects.filter(user__in=request.user.managed_users, paid=False).count(),
-        'view_as_user': get_view_as_user(request),
+        'available_users': available_users,
+        'cart_item_count': cart_item_count,
+        'view_as_user': view_as_user,
     }
 

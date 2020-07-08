@@ -70,7 +70,6 @@ class ProfileUpdateView(LoginRequiredMixin, UpdateView):
         return reverse('accounts:profile')
 
 
-
 class ChildUserCreateView(LoginRequiredMixin, CreateView):
 
     model = ChildUserProfile
@@ -205,9 +204,7 @@ class DisclaimerCreateView(LoginRequiredMixin, DynamicDisclaimerFormMixin, Creat
 
     def form_valid(self, form):
         disclaimer = self.form_pre_commit(form)
-
         password = form.cleaned_data['password']
-
         # Check the password for self.request.user, but set the disclaimer user to self.user, which could be different
         if self.request.user.check_password(password):
             disclaimer.user = self.disclaimer_user

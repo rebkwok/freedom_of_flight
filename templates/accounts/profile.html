@@ -83,7 +83,7 @@
                         <li>
                             {% if user|has_disclaimer %}
                                 <span class="badge disclaimer-badge badge-success">Completed</span>
-                            {% else %}<span class="badge disclaimer-badge badge-dark">{% if managed_user|has_expired_disclaimer %}Expired{% else %}Not Completed{% endif %}</span>
+                            {% else %}<span class="badge disclaimer-badge badge-dark">{% if user|has_expired_disclaimer %}Expired{% else %}Not Completed{% endif %}</span>
                             <a class="btn btn-xs btn-outline-success p-0" href="{% url 'accounts:disclaimer_form' user.id %}"> Add new disclaimer</a>{% endif %}
                             {{ user.first_name }} {{ user.last_name }}
                         </li>

@@ -1,6 +1,6 @@
 from django import template
 
-from ..models import has_active_disclaimer, has_expired_disclaimer
+from ..models import has_active_disclaimer, has_expired_disclaimer as has_expired_disclaimer_util
 
 register = template.Library()
 
@@ -19,7 +19,7 @@ def has_disclaimer(user):
 
 @register.filter
 def has_expired_disclaimer(user):
-    return has_expired_disclaimer(user)
+    return has_expired_disclaimer_util(user)
 
 
 @register.filter

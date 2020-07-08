@@ -14,7 +14,7 @@ from booking.views import (
 app_name = 'booking'
 
 urlpatterns = [
-    path('schedule/', home),
+    path('schedule/', home, name="schedule"),
 
     # MISC
     path('disclaimer-required/<int:user_id>/', disclaimer_required, name='disclaimer_required'),
