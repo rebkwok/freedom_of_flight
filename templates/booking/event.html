@@ -13,7 +13,7 @@
             <p class="card-text">{{ event.description }}</p>
             <hr>
             {% if booking %}
-            <p class="card-title">You have booked for this event</div>
+            <p class="card-title">{% if booking.user == request.user %}You have{% else %}{{ booking.user.first_name }} {{ booking.user.last_name }} has{% endif %} booked for this event</div>
             {% endif %}
         </div>
     </div>

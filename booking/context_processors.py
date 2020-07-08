@@ -23,7 +23,6 @@ def booking(request):
         cart_item_count = None
         view_as_user = request.user
 
-
     return {
         'studio_email': settings.DEFAULT_STUDIO_EMAIL,
         'tracks': tracks,

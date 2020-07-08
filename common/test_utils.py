@@ -9,7 +9,7 @@ from model_bakery import baker
 from accounts.models import (
     DisclaimerContent, has_active_data_privacy_agreement, DataPrivacyPolicy,
     SignedDataPrivacy, OnlineDisclaimer, has_active_disclaimer, NonRegisteredDisclaimer,
-    UserProfile
+    UserProfile, ChildUserProfile
 )
 
 def make_disclaimer_content(**kwargs):
@@ -77,6 +77,16 @@ class TestUsersMixin:
             first_name="Student1", last_name="User"
         )
 
+        self.manager_user = User.objects.create_user(
+            username='manager@test.com', email='manager@test.com', password='test',
+            first_name="Manager", last_name="User"
+        )
+
+        self.child_user = User.objects.create(
+            username='random-user-name', first_name="Child", last_name="User"
+        )
+        self.child_user.set_unusable_password()
+
         UserProfile.objects.create(
             user=self.staff_user, address="test", postcode="test",
             date_of_birth=datetime(1990, 6, 7, tzinfo=timezone.utc), phone="123455",
@@ -92,7 +102,16 @@ class TestUsersMixin:
             date_of_birth=datetime(1990, 6, 7, tzinfo=timezone.utc), phone="789",
             student=True, manager=False
         )
-
+        parent_profile = UserProfile.objects.create(
+            user=self.manager_user, address="test3", postcode="test123",
+            date_of_birth=datetime(1970, 6, 7, tzinfo=timezone.utc), phone="789",
+            student=False, manager=True
+        )
+        ChildUserProfile.objects.create(
+            user=self.child_user, address="test3", postcode="test123",
+            date_of_birth=datetime(2014, 6, 7, tzinfo=timezone.utc), phone="789",
+            parent_user_profile=parent_profile
+        )
 
     def login(self, user, password=None):
         self.client.login(username=user.username, password=password or "test")

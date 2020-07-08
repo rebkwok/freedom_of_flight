@@ -92,10 +92,11 @@ class EventDetailView(DataPolicyAgreementRequiredMixin, DetailView):
         # Call the base implementation first to get a context
         context = super().get_context_data()
         if self.request.user.is_authenticated:
-            booking = Booking.objects.filter(event=self.object, user=self.request.user)
+            view_as_user = get_view_as_user(self.request)
+            booking = Booking.objects.filter(event=self.object, user=view_as_user)
             if booking:
-                context["booking"] = booking
-            waiting_list = WaitingListUser.objects.filter(event=self.object, user=self.request.user).exists()
+                context["booking"] = booking[0]
+            waiting_list = WaitingListUser.objects.filter(event=self.object, user=view_as_user).exists()
             context["on_waiting_list"] = waiting_list
 
         return context
@@ -106,6 +107,11 @@ class CourseEventsListView(EventListView):
     def get_title(self):
         return Course.objects.get(slug=self.kwargs["course_slug"]).name
 
+    def post(self, request, *args, **kwargs):
+        view_as_user = request.POST.get("view_as_user")
+        self.request.session["user_id"] = view_as_user
+        return HttpResponseRedirect(reverse("booking:course_events", args=(self.kwargs["course_slug"],)))
+
     def get_queryset(self):
         course_slug =self.kwargs["course_slug"]
         return Event.objects.filter(course__slug=course_slug).order_by('start__date', 'start__time')
@@ -115,5 +121,6 @@ class CourseEventsListView(EventListView):
         course = Course.objects.get(slug=self.kwargs["course_slug"])
         context["course"] = course
         if self.request.user.is_authenticated:
-            context["already_booked"] = self.request.user.bookings.filter(event__course=course).exists()
+            view_as_user = get_view_as_user(self.request)
+            context["already_booked"] = view_as_user.bookings.filter(event__course=course).exists()
         return context

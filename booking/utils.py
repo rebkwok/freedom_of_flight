@@ -7,9 +7,9 @@ def get_view_as_user(request):
     if not user_id_from_session:
         if not request.user.is_student and \
                 request.user.is_manager and \
-                request.user.managed_profiles.exists():
+                request.user.managed_users:
             # not a student, is a manager, and has at least one managed account
-            view_as_user = request.user.userprofile.managed_profiles.first()
+            view_as_user = request.user.managed_users[0]
         else:
             # anything else
             view_as_user = request.user
