@@ -1,6 +1,7 @@
 
 {% if form.errors %}
     <div class="errorlist">Please correct the errors below</div>
+    {{ form.non_form_errors }}
 {% endif %}
 
    <form class="dirty-check" action="" method="post">
@@ -37,14 +38,15 @@
             {% endif %}
        </div>
 
+       {% if form.has_health_questionnaire %}
        <hr>
-
-       <h4>Health Questionnaire</h4>
-       {% for field in form %}
-           {% if field.name == "health_questionnaire_responses" %}
-                {{ field }}
-           {% endif %}
-       {% endfor %}
+           <h4>Health Questionnaire</h4>
+           {% for field in form %}
+               {% if field.name == "health_questionnaire_responses" %}
+                    {{ field }}
+               {% endif %}
+           {% endfor %}
+       {% endif %}
 
     <hr>
        <h4>Disclaimer</h4>

@@ -108,6 +108,19 @@ div#CookielawBanner {
 .block_purchase_btn .badge {
   border: 1px lightgrey solid;
 }
+
+.disclaimer-badge {
+  width: 100px;
+  font-weight: normal;
+}
+
+.disclaimer-badge.badge-success {
+  opacity: 0.8;
+}
+.disclaimer-badge.badge-dark {
+  opacity: 0.6;
+}
+
 .hidden {
   display: none;
 }
