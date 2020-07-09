@@ -348,8 +348,9 @@ class Block(models.Model):
     def set_start_date(self):
         # called when a booking is made to ensure block start/expiry is updated to the
         # date of the first open booked event
-        # Check for no-show=False here - no-show bookings shouldn't reset block start dates
-        open_bookings = self.bookings.filter(status="OPEN", no_show=False).order_by("event__start")
+        # Check for ANY open booking - no-shows still count towards start dates
+        open_bookings = self.bookings.filter(status="OPEN").order_by("event__start")
+        # set to the earliest start date, including no-shows
         if open_bookings.exists():
             self.start_date = open_bookings.first().event.start
         else:

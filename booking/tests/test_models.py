@@ -190,8 +190,9 @@ class BookingTests(EventTestMixin, TestUsersMixin, TestCase):
         assert block.start_date.date() == self.event.start.date()
         assert block.expiry_date is not None
 
-        booking.status == "CANCELLED"
+        booking.status = "CANCELLED"
         booking.save()
+        block.refresh_from_db()
         assert block.start_date is None
         assert block.expiry_date is None
 
@@ -203,7 +204,6 @@ class BookingTests(EventTestMixin, TestUsersMixin, TestCase):
         booking.save()
         assert block.start_date.date() == self.event.start.date()
         assert block.expiry_date is not None
-
         booking.no_show = True
         booking.save()
         assert block.start_date.date() == self.event.start.date()
