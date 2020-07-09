@@ -23,7 +23,7 @@ class BookingListView(DataPolicyAgreementRequiredMixin, LoginRequiredMixin, List
 
     def post(self, request, *args, **kwargs):
         view_as_user = request.POST.get("view_as_user")
-        self.request.session["user_id"] = view_as_user
+        self.request.session["user_id"] = int(view_as_user)
         return HttpResponseRedirect(reverse("booking:bookings"))
 
     def get_queryset(self):

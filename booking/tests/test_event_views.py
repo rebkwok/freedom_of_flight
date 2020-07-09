@@ -10,28 +10,7 @@ from accounts.models import DataPrivacyPolicy, SignedDataPrivacy
 from accounts.models import has_active_data_privacy_agreement
 
 from booking.models import Event, Booking, Course, Track, EventType
-from common.test_utils import make_disclaimer_content, make_online_disclaimer, TestUsersMixin
-
-
-class EventTestMixin:
-    @classmethod
-    def setUpTestData(cls):
-        cls.adult_track = baker.make(Track, name="Adults", default=True)
-        cls.kids_track = baker.make(Track, name="Kids")
-
-        cls.aerial_event_type = baker.make(EventType, name="aerial", track=cls.adult_track)
-        cls.floor_event_type = baker.make(EventType, name="floor", track=cls.adult_track)
-        cls.kids_aerial_event_type = baker.make(EventType, name="aerial", track=cls.kids_track)
-        cls.kids_floor_event_type = baker.make(EventType, name="floor", track=cls.kids_track)
-
-        cls.aerial_events = baker.make_recipe("booking.future_event", event_type=cls.aerial_event_type,  _quantity=2)
-        cls.floor_events = baker.make_recipe("booking.future_event", event_type=cls.floor_event_type,  _quantity=3)
-        cls.kids_aerial_events = baker.make_recipe("booking.future_event", event_type=cls.kids_aerial_event_type,  _quantity=3)
-        cls.kids_floor_events = baker.make_recipe("booking.future_event", event_type=cls.kids_floor_event_type,  _quantity=3)
-        cls.course = baker.make(Course, course_type__event_type=cls.aerial_event_type)
-        cls.course_event = baker.make_recipe(
-            "booking.future_event", event_type=cls.aerial_event_type, course=cls.course
-        )
+from common.test_utils import make_disclaimer_content, make_online_disclaimer, TestUsersMixin, EventTestMixin
 
 
 class EventListViewTests(EventTestMixin, TestUsersMixin, TestCase):
@@ -217,6 +196,20 @@ class EventListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         resp = self.client.post(self.adult_url, data={"view_as_user": self.child_user.id}, follow=True)
         assert self.client.session["user_id"] == self.child_user.id
         assert len(resp.context_data['booked_event_ids']) == 0
+
+    def test_button_displays(self):
+        # TODO
+        # With a single event, check that the button displays as expected for:
+        # - no disclaimer
+        # - not booked (with and without available blocks)
+        # - booked and open
+        # - cancelled (with and without available blocks)
+        # - no-show (with and without available blocks)
+        # - event full and booked
+        # - event full and cancelled/no-show
+        # - event cancelled and cancelled/no-show
+        # - on waiting list
+        ...
 
 
     # def test_online_event_video_link(self):

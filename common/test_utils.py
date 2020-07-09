@@ -11,6 +11,8 @@ from accounts.models import (
     SignedDataPrivacy, OnlineDisclaimer, has_active_disclaimer, NonRegisteredDisclaimer,
     UserProfile, ChildUserProfile
 )
+from booking.models import Event, EventType, Course, CourseType, Track
+
 
 def make_disclaimer_content(**kwargs):
     defaults = {
@@ -127,3 +129,24 @@ class TestUsersMixin:
             if DisclaimerContent.current_version() == 0:
                 make_disclaimer_content(version=1)
             make_online_disclaimer(user=user, version=DisclaimerContent.current_version())
+
+
+class EventTestMixin:
+    @classmethod
+    def setUpTestData(cls):
+        cls.adult_track = baker.make(Track, name="Adults", default=True)
+        cls.kids_track = baker.make(Track, name="Kids")
+
+        cls.aerial_event_type = baker.make(EventType, name="aerial", track=cls.adult_track)
+        cls.floor_event_type = baker.make(EventType, name="floor", track=cls.adult_track)
+        cls.kids_aerial_event_type = baker.make(EventType, name="aerial", track=cls.kids_track)
+        cls.kids_floor_event_type = baker.make(EventType, name="floor", track=cls.kids_track)
+
+        cls.aerial_events = baker.make_recipe("booking.future_event", event_type=cls.aerial_event_type,  _quantity=2)
+        cls.floor_events = baker.make_recipe("booking.future_event", event_type=cls.floor_event_type,  _quantity=3)
+        cls.kids_aerial_events = baker.make_recipe("booking.future_event", event_type=cls.kids_aerial_event_type,  _quantity=3)
+        cls.kids_floor_events = baker.make_recipe("booking.future_event", event_type=cls.kids_floor_event_type,  _quantity=3)
+        cls.course = baker.make(Course, course_type__event_type=cls.aerial_event_type)
+        cls.course_event = baker.make_recipe(
+            "booking.future_event", event_type=cls.aerial_event_type, course=cls.course
+        )
