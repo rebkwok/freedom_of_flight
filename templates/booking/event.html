@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% load accounttags %}
+{% load accounttags bookingtags %}
 
 {% block content %}
 <div class="container">
@@ -9,13 +9,34 @@
         <div class="card-header"><h1>{{ event.name }} ({{ event.event_type.track.name }})</h1></div>
         <div class="card-body">
             <h4 class="card-title">{{ event.start|date:"D d M Y, H:i" }}</h4>
+            {% if event.description %}
             <h4 class="card-title">Description</h4>
             <p class="card-text">{{ event.description }}</p>
-            <hr>
-            {% if booking %}
-            <p class="card-title">{% if booking.user == request.user %}You have{% else %}{{ booking.user.first_name }} {{ booking.user.last_name }} has{% endif %} booked for this event</div>
             {% endif %}
+    </div>
+    {% if booking %}
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <p class="card-text">{% if booking.user == request.user %}You have{% else %}{{ booking.user.first_name }} {{ booking.user.last_name }} has{% endif %} booked for this event</p>
+            </div>
         </div>
+    {% elif view_as_user|on_waiting_list:event %}
+        <div class="card bg-warning">
+            <div class="card-body">
+                <p class="card-text">{% if view_as_user == request.user %}You are{% else %}{{ view_as_user.first_name }} {{ view_as_user.last_name }} is{% endif %} on the waiting list for this event</p>
+            </div>
+        </div>
+    {% endif %}
+    </div>
+
+    <div class="mt-2"><a
+        class="btn btn-sm btn-dark"
+        {% if event.course %}
+        href="{% url 'booking:course_events' event.course.slug %}"
+        {% else %}
+        href="{% url 'booking:events' event.event_type.track.slug %}"
+        {% endif %}
+        >Back</a></div>
     </div>
 </div>
 {% endblock content %}

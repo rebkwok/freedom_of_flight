@@ -86,19 +86,16 @@ class EventDetailView(DataPolicyAgreementRequiredMixin, DetailView):
     template_name = 'booking/event.html'
 
     def get_object(self):
-        return get_object_or_404(Event, slug=self.kwargs['slug'], show_on_site=True)
+        return get_object_or_404(Event, slug=self.kwargs['slug'])
 
     def get_context_data(self, **kwargs):
         # Call the base implementation first to get a context
         context = super().get_context_data()
         if self.request.user.is_authenticated:
             view_as_user = get_view_as_user(self.request)
-            booking = Booking.objects.filter(event=self.object, user=view_as_user)
+            booking = view_as_user.bookings.filter(event=self.object, user=view_as_user)
             if booking:
                 context["booking"] = booking[0]
-            waiting_list = WaitingListUser.objects.filter(event=self.object, user=view_as_user).exists()
-            context["on_waiting_list"] = waiting_list
-
         return context
 
 

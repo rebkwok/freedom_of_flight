@@ -17,7 +17,7 @@ def booking(request):
     if request.user.is_authenticated:
         available_users = request.user.managed_users
         cart_item_count = Block.objects.filter(user__in=request.user.managed_users, paid=False).count()
-        view_as_user =get_view_as_user(request)
+        view_as_user = get_view_as_user(request)
     else:
         available_users = [request.user]
         cart_item_count = None

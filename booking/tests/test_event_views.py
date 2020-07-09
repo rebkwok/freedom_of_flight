@@ -1,23 +1,15 @@
-import os
-import pytest
-
-from unittest.mock import patch
-
 from model_bakery import baker
-from datetime import datetime, timedelta
-from bs4 import BeautifulSoup
+from datetime import timedelta
 
 from django.core.cache import cache
 from django.urls import reverse
 from django.test import TestCase
-from django.contrib.auth.models import Permission
 from django.utils import timezone
 
 from accounts.models import DataPrivacyPolicy, SignedDataPrivacy
 from accounts.models import has_active_data_privacy_agreement
 
 from booking.models import Event, Booking, Course, Track, EventType
-from booking.views import EventListView, EventDetailView
 from common.test_utils import make_disclaimer_content, make_online_disclaimer, TestUsersMixin
 
 
@@ -161,7 +153,7 @@ class EventListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         event = self.kids_aerial_events[0]
         baker.make(Booking, user=self.child_user, event=event)
         resp = self.client.get(self.kids_url)
-        booked_events = [event for event in resp.context_data['booked_event_ids']]
+        booked_events = resp.context_data['booked_event_ids']
         assert len(booked_events) == 1
         assert event.id in booked_events
 
@@ -202,6 +194,30 @@ class EventListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         assert Event.objects.filter(event_type__track=self.adult_track).count() == 7
         resp = self.client.get(self.adult_url)
         assert len(sum(list(resp.context_data['events_by_date'].values()), [])) == 6
+
+    def test_event_list_change_view_as_user(self):
+        # manager is also a student
+        self.make_disclaimer(self.manager_user)
+        self.manager_user.userprofile.student = True
+        self.manager_user.userprofile.save()
+        self.make_disclaimer(self.child_user)
+        self.login(self.manager_user)
+        for event in self.aerial_events:
+            # create a booking for the manager user for all events
+            baker.make(
+                Booking, block__dropin_block_config__event_type=self.aerial_event_type,
+                user=self.manager_user, event=event
+            )
+
+        # manager is a student, so by default shows them as view_as_user
+        resp = self.client.get(self.adult_url)
+        assert len(resp.context_data['booked_event_ids']) == 2
+
+        # post to change the user
+        resp = self.client.post(self.adult_url, data={"view_as_user": self.child_user.id}, follow=True)
+        assert self.client.session["user_id"] == self.child_user.id
+        assert len(resp.context_data['booked_event_ids']) == 0
+
 
     # def test_online_event_video_link(self):
     #     online_class = baker.make_recipe(
