@@ -146,7 +146,11 @@ class EventTestMixin:
         cls.floor_events = baker.make_recipe("booking.future_event", event_type=cls.floor_event_type,  _quantity=3)
         cls.kids_aerial_events = baker.make_recipe("booking.future_event", event_type=cls.kids_aerial_event_type,  _quantity=3)
         cls.kids_floor_events = baker.make_recipe("booking.future_event", event_type=cls.kids_floor_event_type,  _quantity=3)
-        cls.course = baker.make(Course, course_type__event_type=cls.aerial_event_type)
+        cls.course = baker.make(
+            Course, name="This month's aerial course", course_type__event_type=cls.aerial_event_type,
+            max_participants=2,
+        )
         cls.course_event = baker.make_recipe(
-            "booking.future_event", event_type=cls.aerial_event_type, course=cls.course
+            "booking.future_event", event_type=cls.aerial_event_type, course=cls.course,
+
         )

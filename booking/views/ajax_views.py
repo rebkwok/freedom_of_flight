@@ -13,9 +13,10 @@ from django.shortcuts import get_object_or_404, render, HttpResponse
 from accounts.models import has_active_disclaimer
 from activitylog.models import ActivityLog
 
-from ..models import Booking, Block, Course, Event, WaitingListUser
+from ..models import Booking, Block, Course, Event, WaitingListUser, DropInBlockConfig, CourseBlockConfig
 from ..utils import calculate_user_cart_total, has_available_block, get_active_user_block
 from ..email_helpers import send_waiting_list_email, send_user_and_studio_emails
+from .views_utils import get_unpaid_user_managed_blocks
 
 
 logger = logging.getLogger(__name__)
@@ -248,3 +249,48 @@ def ajax_block_delete(request, block_id):
     total = calculate_user_cart_total(unpaid_blocks)
     return JsonResponse({"cart_total": total, "cart_item_menu_count": unpaid_blocks.count()})
 
+
+@login_required
+@require_http_methods(['POST'])
+def ajax_dropin_block_purchase(request, block_config_id):
+    user_id = request.POST["user_id"]
+    user = get_object_or_404(User, pk=user_id)
+    block_config = get_object_or_404(DropInBlockConfig, pk=block_config_id)
+    block, new = Block.objects.get_or_create(user=user, dropin_block_config=block_config, paid=False)
+    return process_block_purchase(request, block, new, block_config)
+
+
+@login_required
+@require_http_methods(['POST'])
+def ajax_course_block_purchase(request, block_config_id):
+    user_id = request.POST["user_id"]
+    user = get_object_or_404(User, pk=user_id)
+    course_config = get_object_or_404(CourseBlockConfig, pk=block_config_id)
+    block, new = Block.objects.get_or_create(user=user, course_block_config=course_config, paid=False)
+    return process_block_purchase(request, block, new, course_config)
+
+
+def process_block_purchase(request, block, new, block_config):
+    if not new:
+        block.delete()
+        alert_message = {
+            "message_type": "info",
+            "message": f"Block removed from cart for {block.user.first_name} {block.user.last_name}"
+        }
+    else:
+        alert_message = {
+            "message_type": "success",
+            "message": f"Block added to cart for {block.user.first_name} {block.user.last_name}"
+        }
+    context = {
+        "available_block_config": block_config,
+        "available_user": block.user,
+        "alert_message": alert_message
+    }
+    html =  render(request, f"booking/includes/blocks_button.txt", context)
+    return JsonResponse(
+        {
+            "html": html.content.decode("utf-8"),
+            "cart_item_menu_count": get_unpaid_user_managed_blocks(request.user).count(),
+        }
+    )

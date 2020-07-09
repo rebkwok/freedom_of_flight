@@ -44,7 +44,10 @@ class Track(models.Model):
         if default:
             return default[0]
         else:
-            return Track.objects.first()
+            try:
+                return Track.objects.first()
+            except Track.DoesNotExist:
+                return None
 
 
 class EventType(models.Model):
@@ -88,22 +91,24 @@ class Course(models.Model):
     course_type = models.ForeignKey(CourseType, on_delete=models.CASCADE)
     slug = AutoSlugField(populate_from=["name", "course_type"], max_length=40, unique=True)
     cancelled = models.BooleanField(default=False)
+    max_participants = models.PositiveIntegerField()
 
     class Meta:
         unique_together = ("name", "course_type")
 
     @property
     def full(self):
-        # A course is full if its events are full, INCLUDING no-shows
+        # A course is full if its events are full, INCLUDING no-shows and cancellations (although
+        # a course event never really gets cancelled, only set to no-show)
         # Only need to check the first event
         event = self.events.order_by("start").first()
-        return event.bookings.filter(status="OPEN").count() >= event.max_participants
+        return event.bookings.filter().count() >= event.max_participants
 
     @property
     def has_started(self):
         return self.events.order_by("start").first().start < timezone.now()
 
-    def configured(self):
+    def is_configured(self):
         return self.events.count() == self.course_type.number_of_events
 
     def __str__(self):
@@ -134,8 +139,8 @@ class Event(models.Model):
     @property
     def spaces_left(self):
         if self.course:
-            # No-shows count for course event spaces
-            booked_number = self.bookings.filter(status='OPEN').count()
+            # No-shows and cancelled count for course event spaces
+            booked_number = self.bookings.filter().count()
         else:
             booked_number = self.bookings.filter(status='OPEN', no_show=False).count()
         return self.max_participants - booked_number
@@ -155,7 +160,7 @@ class Event(models.Model):
         return time_until_event > self.event_type.cancellation_period
 
     def get_absolute_url(self):
-        return reverse("booking:event_detail", kwargs={'slug': self.slug})
+        return reverse("booking:event", kwargs={'slug': self.slug})
 
     @property
     def is_past(self):
@@ -164,6 +169,20 @@ class Event(models.Model):
     def __str__(self):
         return f"{self.name} - {self.start.astimezone(pytz.timezone('Europe/London')).strftime('%d %b %Y, %H:%M')} ({self.event_type.track})"
 
+    def clean(self):
+        if self.course and not self.course.course_type.event_type == self.event_type:
+            raise ValidationError({'course': _('Cannot add this course - event types do not match.')})
+        if self.course and self.course.is_configured():
+            raise ValidationError({'course': _('Cannot add this course - course is already configured with all its events.')})
+
+    def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
+        self.full_clean()
+        if self.course and self.max_participants != self.course.max_participants:
+            self.max_participants = self.course.max_participants
+            ActivityLog.objects.create(
+                log="Event {self.event} added to course (self.course); max participants for event has been adjusted to match course"
+            )
+        super().save()
 
 
 class BaseBlockConfig(models.Model):
@@ -361,6 +380,9 @@ class Block(models.Model):
         # if it's not active we don't care about anything else
         if not self.active_block:
             return False
+        if event.course:
+            # if the event is part of a course, it should be using a course block
+            return False
         if self.dropin_block_config is not None and self.dropin_block_config.event_type == event.event_type:
             # it's the right type of config and event type matches
             return self._valid_and_active_for_event(event)
@@ -377,16 +399,11 @@ class Block(models.Model):
             return self._valid_and_active_for_event(event)
         return False
 
-    def bookings_made(self):
-        """
-        Number of bookings made against block
-        """
-        return self.bookings.count() if hasattr(self, "bookings") else 0
-
     def delete(self, *args, **kwargs):
         bookings = self.bookings.all() if hasattr(self, "bookings") else []
         for booking in bookings:
             booking.block = None
+
             booking.save()
             ActivityLog.objects.create(
                 log=f'Booking id {booking.id} booked with deleted block {self.id} has been reset'
@@ -400,6 +417,7 @@ class Block(models.Model):
             raise ValidationError({'course_block_config': _('Only one of dropin_block_config or course_block_config can be set.')})
 
     def save(self, *args, **kwargs):
+        self.full_clean()
         # for an existing block, if changed to paid, update purchase date to now
         # (in case a user leaves a block sitting in basket for a while)
         if self.id:

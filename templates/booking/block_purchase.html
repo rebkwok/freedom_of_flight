@@ -28,13 +28,13 @@
               <tbody>
                 {% for title, blocklist in available_blocks.items %}
                     <tr class="table-secondary">
-                        <td>{{ title }}</td>
+                        <td class="pl-2">{{ title }}</td>
                         <td class="text-center">User</td>
                         <td></td>
                     </tr>
                     {% for available_block_config in blocklist %}
                     <tr {% if available_block_config in target_configs %}class="table-success"{% endif %}>
-                        <td>
+                        <td class="pl-2">
                             <p>{{ available_block_config }}</p>
                             <p>{% if available_block_config.description %}{{ available_block_config.description }}{% endif %}</p>
                             <p>£{{ available_block_config.cost }} |

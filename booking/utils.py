@@ -56,7 +56,7 @@ def get_active_user_block(user, event):
 
 
 def get_block_status(block):
-    blocks_used = block.bookings_made()
+    blocks_used = block.bookings.count()
     total_blocks = block.block_config.size
     return blocks_used, total_blocks
 
