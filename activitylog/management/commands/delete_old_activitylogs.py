@@ -32,8 +32,6 @@ class Command(BaseCommand):
         cutoff = (now-relativedelta(years=age)).replace(hour=0, minute=0, second=0, microsecond=0)
         filename = f"{settings.S3_LOG_BACKUP_ROOT_FILENAME}_{cutoff.strftime('%Y-%m-%d')}_{now.strftime('%Y%m%d%H%M%S')}.csv"
         s3_upload_path = os.path.join(settings.S3_LOG_BACKUP_PATH, filename)
-        # Delete the empty logs first
-        management.call_command('delete_empty_job_logs', cutoff.strftime('%Y%m%d'))
 
         old_logs = ActivityLog.objects.filter(timestamp__lt=cutoff)
         old_logs_count = old_logs.count()
