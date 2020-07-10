@@ -14,7 +14,7 @@
 
 {% if event.id in booked_event_ids or just_booked %}
     <a class="btn btn-xs btn-dark" href="#"><i id="loader_{{ event.id }}"></i> Cancel</a>
-{% elif event.has_space %}
+{% elif view_as_user|can_book_or_cancel:event %}
     {% if not view_as_user|has_available_block:event %}
         {% if event.course %}
             <a class="btn btn-xs btn-outline-success" href="#">Course details</a>

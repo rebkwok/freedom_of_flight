@@ -1,11 +1,9 @@
 import logging
 
-from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
-from django.core.mail import send_mail
 from django.http import HttpResponseBadRequest, JsonResponse
-from django.template.loader import get_template
 from django.views.decorators.http import require_http_methods
 from django.urls import reverse
 from django.shortcuts import get_object_or_404, render, HttpResponse
@@ -67,7 +65,7 @@ def ajax_toggle_booking(request, event_id):
     if requested_action in ["opened", "reopened"]:
         # OPENING/REOPENING
         # make sure the event isn't full or cancelled
-        if event.spaces_left <= 0 or event.cancelled:
+        if not event.course and (event.spaces_left <= 0 or event.cancelled):
             logger.error('Attempt to book %s class', 'cancelled' if event.cancelled else 'full')
             return HttpResponseBadRequest(
                 "Sorry, this event {}".format("has been cancelled" if event.cancelled else "is now full")
@@ -88,9 +86,6 @@ def ajax_toggle_booking(request, event_id):
         booking.no_show = False
         booking.block = get_active_user_block(user, event)
         booking.save()
-        ActivityLog.objects.create(
-            log=f'Booking {booking.id} {requested_action} for "{event}" (user {user.first_name} {user.last_name}) made by user {request.user.username}'
-        )
 
         try:
             waiting_list_user = WaitingListUser.objects.get(user=booking.user, event=booking.event)
@@ -105,19 +100,28 @@ def ajax_toggle_booking(request, event_id):
         booking = existing_booking
         if event.course:
             booking.no_show = True
+        elif not event.event_type.allow_booking_cancellation:
+            booking.no_show = True
         else:
-            booking.block = None
-            booking.status = "CANCELLED"
+            if event.can_cancel:
+                booking.block = None
+                booking.status = "CANCELLED"
+            else:
+                booking.no_show = True
         booking.save()
-
         if event_was_full:
             waiting_list_users = WaitingListUser.objects.filter(event=event)
             send_waiting_list_email(event, waiting_list_users, host)
+
+    ActivityLog.objects.create(
+            log=f'Booking {booking.id} {requested_action} for "{event}" (user {user.first_name} {user.last_name}) by user {request.user.username}'
+        )
 
     # email context
     ctx = {
           'host': host,
           'booking': booking,
+          'manager_user': request.user,
           'requested_action': requested_action,
           'event': event,
           'date': event.start.strftime('%A %d %B'),
@@ -188,11 +192,11 @@ def ajax_course_booking(request, course_id):
     if user_id == request.user.id:
         user = request.user
     else:
-        user = get_object_or_404(id=user_id)
+        user = get_object_or_404(User, id=user_id)
 
     if not has_active_disclaimer(user):
-        # TODO DISCLAIMER FOR BOOKING USER, NOT NEC REQUEST.USER
-        url = reverse('booking:disclaimer_required')
+        # DISCLAIMER FOR BOOKING USER, NOT NEC REQUEST.USER
+        url = reverse('booking:disclaimer_required', args=(user_id,))
         return JsonResponse({"redirect": True, "url": url})
 
     course = Course.objects.get(id=course_id)
@@ -223,9 +227,11 @@ def ajax_course_booking(request, course_id):
     ctx = {
         'host': f'http://{request.META.get("HTTP_HOST")}',
         'course': course,
+        'course_user': user,
+        'manager_user': request.user
     }
     subjects = {
-        "user": f"You have booked for a course: {course.name}",
+        "user": f"Course booked: {course.name}",
         "studio": f'{user.first_name} {user.last_name} has just booked for course: {course}'
     }
     # send emails
@@ -233,9 +239,7 @@ def ajax_course_booking(request, course_id):
         ctx, request.user, course.course_type.event_type.email_studio_when_booked, subjects, "course_booked"
     )
 
-    alert_message = {}
-    alert_message['message_type'] = 'success'
-    alert_message['message'] = "Course booking created"
+    messages.success(request, "Course booking created")
     url = reverse('booking:course_events', args=(course.slug,))
     return JsonResponse({"redirect": True, "url": url})
 

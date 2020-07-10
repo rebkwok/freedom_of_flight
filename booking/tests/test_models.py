@@ -109,6 +109,10 @@ class EventTests(EventTestMixin, TestCase):
             self.event.save()
         assert error.value.messages == ['Cannot add this course - course is already configured with all its events.']
 
+    def test_can_update_event_on_full_course(self):
+        # TODO validation check for configured course passes if this event is already on the course
+        pass
+
 
 class BookingTests(EventTestMixin, TestUsersMixin, TestCase):
 
@@ -287,6 +291,14 @@ class CourseTests(EventTestMixin, TestCase):
         self.event.course = None
         self.event.save()
         assert self.course.is_configured() is False
+
+    def test_changing_max_participants_updates_linked_events(self):
+        # TODO
+        pass
+
+    def test_cancelling_course_cancels_linked_events(self):
+        # TODO
+        pass
 
 
 class BlockConfigTests(TestCase):

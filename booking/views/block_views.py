@@ -1,29 +1,18 @@
 import logging
 
-from django.conf import settings
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.models import User
-from django.contrib import messages
-from django.urls import reverse
-from django.http import JsonResponse
-from django.shortcuts import HttpResponseRedirect, render, get_object_or_404
-from django.views.generic import ListView, CreateView, DeleteView
-from django.core.mail import send_mail
-from django.template.loader import get_template
-from django.views.decorators.http import require_http_methods
+from django.shortcuts import render, get_object_or_404
+from django.views.generic import ListView
 
 from braces.views import LoginRequiredMixin
 
 from booking.models import (
-    Block, DropInBlockConfig, Course, CourseType, Event, EventType, CourseBlockConfig
+    Block, DropInBlockConfig, Course, Event, CourseBlockConfig
 )
 from .views_utils import (
     data_privacy_required, DataPolicyAgreementRequiredMixin,
-    get_unpaid_user_managed_blocks
 )
 
-
-from activitylog.models import ActivityLog
 
 logger = logging.getLogger(__name__)
 

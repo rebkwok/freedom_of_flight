@@ -8,11 +8,18 @@ from activitylog.models import ActivityLog
 
 def send_waiting_list_email(event, waiting_list_users, host):
     if waiting_list_users:
-        user_emails = [waiting_list_user.user.email for waiting_list_user in waiting_list_users]
+        user_emails = []
+        for waitinglistuser in waiting_list_users:
+            if hasattr(waitinglistuser.user, "childuserprofile"):
+                # send waiting list email to manager user
+                user_emails.append(waitinglistuser.user.childuserprofile.parent_user_profile.user.email)
+            else:
+                user_emails.append(waitinglistuser.user.email)
+
         msg = EmailMultiAlternatives(
             '{} {}'.format(settings.ACCOUNT_EMAIL_SUBJECT_PREFIX, event),
             get_template('booking/email/waiting_list_email.txt').render(
-                {'event': event, 'host': host}
+                {'event': event, 'host': host, "studio_email": settings.DEFAULT_STUDIO_EMAIL}
             ),
             settings.DEFAULT_FROM_EMAIL,
             bcc=user_emails,
@@ -32,6 +39,7 @@ def send_waiting_list_email(event, waiting_list_users, host):
 
 
 def send_user_and_studio_emails(context, user, send_to_studio, subjects, template_short_name):
+    context.update({"studio_email": settings.DEFAULT_STUDIO_EMAIL})
     # send email to user
     send_mail(
         f'{settings.ACCOUNT_EMAIL_SUBJECT_PREFIX} {subjects["user"]}',

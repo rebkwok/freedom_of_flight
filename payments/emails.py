@@ -9,6 +9,7 @@ def send_processed_payment_emails(invoice):
     ctx = {
         'user': user,
         'invoice': invoice,
+        "studio_email": settings.DEFAULT_STUDIO_EMAIL
     }
 
     # send email to studio
@@ -38,6 +39,7 @@ def send_processed_refund_emails(invoice):
     ctx = {
         'user': user,
         'invoice': invoice,
+        "studio_email": settings.DEFAULT_STUDIO_EMAIL
     }
 
     # send email to support only for checking;

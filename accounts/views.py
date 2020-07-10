@@ -1,11 +1,7 @@
-from django.shortcuts import render
-
-
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.models import Group
 from django.core.mail import send_mail
-from django.forms.widgets import CheckboxInput, CheckboxSelectMultiple, TextInput, RadioSelect
+from django.forms.widgets import TextInput
 from django.shortcuts import render, HttpResponseRedirect, get_object_or_404
 from django.views.generic import UpdateView, CreateView, FormView
 from django.views.generic.edit import FormMixin

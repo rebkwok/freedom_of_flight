@@ -83,3 +83,22 @@ def block_expiry_text(block):
         return "Not started yet"
     else:
         return "Never expires"
+
+
+@register.filter
+def can_book_or_cancel(user, event):
+    if event.has_space:
+        return True
+    elif user.bookings.filter(event=event, status="OPEN", no_show=False):
+        # user has open booking
+        return True
+    elif event.course and user.bookings.filter(event=event):
+        # user has cancelled or no-show booking, but it's a course event
+        return True
+    else:
+        return False
+
+
+@register.filter
+def has_open_or_cancelled_booking(user, event):
+    return user.bookings.filter(event=event).exists()

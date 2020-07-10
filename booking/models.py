@@ -114,6 +114,22 @@ class Course(models.Model):
     def __str__(self):
         return f"{self.name} ({self.course_type})"
 
+    def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
+        super().save()
+        for event in self.events.all():
+            if event.max_participants != self.max_participants:
+                event.max_participants = self.max_participants
+                event.save()
+                ActivityLog.objects.create(
+                    log=f"Course {self} updated; max participants for linked events have been adjusted to match"
+                )
+            if self.cancelled and not event.cancelled:
+                event.cancelled = True
+                event.save()
+                ActivityLog.objects.create(
+                    log=f"Course {self} cancelled; linked events have cancelled also"
+                )
+
 
 class Event(models.Model):
     """A single bookable Event"""
@@ -172,7 +188,7 @@ class Event(models.Model):
     def clean(self):
         if self.course and not self.course.course_type.event_type == self.event_type:
             raise ValidationError({'course': _('Cannot add this course - event types do not match.')})
-        if self.course and self.course.is_configured():
+        if self.course and self.course.is_configured() and self not in self.course.events.all():
             raise ValidationError({'course': _('Cannot add this course - course is already configured with all its events.')})
 
     def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
@@ -180,7 +196,7 @@ class Event(models.Model):
         if self.course and self.max_participants != self.course.max_participants:
             self.max_participants = self.course.max_participants
             ActivityLog.objects.create(
-                log="Event {self.event} added to course (self.course); max participants for event has been adjusted to match course"
+                log=f"Event {self} added to course ({self.course}); max participants for event has been adjusted to match course"
             )
         super().save()
 
@@ -509,7 +525,7 @@ class Booking(models.Model):
 
     def clean(self):
         if self._is_rebooking():
-            if self.event.spaces_left == 0:
+            if self.event.spaces_left == 0 and not self.event.course:
                 raise ValidationError(
                     _('Attempting to reopen booking for full event %s' % self.event.id)
                 )
