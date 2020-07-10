@@ -1,9 +1,7 @@
 import os
-import sys
-from io import StringIO
 from unittest.mock import patch
 
-from datetime import datetime, timedelta
+from datetime import datetime
 from model_bakery import baker
 from dateutil.relativedelta import relativedelta
 

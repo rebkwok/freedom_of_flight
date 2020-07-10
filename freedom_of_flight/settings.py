@@ -77,6 +77,7 @@ INSTALLED_APPS = [
     'crispy_forms',
     'dynamic_forms',
     'accounts',
+    'activitylog',
     'booking',
     'timetable',
     'studioadmin',
@@ -84,7 +85,6 @@ INSTALLED_APPS = [
     'paypal.standard.ipn',
     'paypal.standard.pdt',
     'payments',
-    'activitylog',
 ]
 
 MIDDLEWARE = [

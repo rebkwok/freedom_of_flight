@@ -440,8 +440,24 @@ class WaitinglistToggleAjaxViewTests(EventTestMixin, TestUsersMixin, TestCase):
 
 
 class AjaxBlockDeleteView(TestUsersMixin, TestCase):
-    pass
+
+    def test_delete_block(self):
+        pass
+
+    def test_recalculate_total_cart_items(self):
+        # calculate total for all manager users blocks
+        pass
 
 
 class AjaxBlockPurchase(TestUsersMixin, TestCase):
-    pass
+
+    def test_add_new_dropin_block(self):
+        # create block, set to unpaid
+        pass
+
+    def test_add_new_course_block(self):
+        # create block, set to unpaid
+        pass
+
+    def test_add_block_for_managed_user(self):
+        pass
