@@ -253,6 +253,7 @@ class CourseTests(EventTestMixin, TestCase):
 
     def setUp(self):
         self.course.course_type.number_of_events = 2
+        self.course.course_type.save()
         self.course.max_participants = 2
         self.course.save()
         self.event = self.aerial_events[0]

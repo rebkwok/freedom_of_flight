@@ -413,15 +413,30 @@ class BookingAjaxCourseBookingViewTests(EventTestMixin, TestUsersMixin, TestCase
 
 class WaitinglistToggleAjaxViewTests(EventTestMixin, TestUsersMixin, TestCase):
 
-    def test_user_added_to_waiting_list(self):
-        pass
+    def setUp(self):
+        self.create_users()
+        self.make_data_privacy_agreement(self.student_user)
+        self.make_disclaimer(self.student_user)
+        self.make_data_privacy_agreement(self.manager_user)
+        self.event = self.aerial_events[0]
+        self.url = reverse("booking:toggle_waiting_list", args=(self.event.id,))
+        self.login(self.student_user)
 
-    def test_user_removed_from_waiting_list(self):
-        pass
+    def test_toggle_waiting_list(self):
+        self.client.post(self.url, data={"user_id": self.student_user.id})
+        assert WaitingListUser.objects.filter(user=self.student_user, event=self.event).exists()
+
+        self.client.post(self.url, data={"user_id": self.student_user.id})
+        assert WaitingListUser.objects.filter(user=self.student_user, event=self.event).exists() is False
 
     def test_view_as_user_added_waiting_list(self):
         # if viewing as a different user, the view as user is the one added to the waiting list
-        pass
+        self.login(self.manager_user)
+        self.client.post(self.url, data={"user_id": self.child_user.id})
+        assert WaitingListUser.objects.filter(user=self.child_user, event=self.event).exists()
+
+        self.client.post(self.url, data={"user_id": self.child_user.id})
+        assert WaitingListUser.objects.filter(user=self.child_user, event=self.event).exists() is False
 
 
 class AjaxBlockDeleteView(TestUsersMixin, TestCase):
