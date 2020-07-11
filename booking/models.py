@@ -92,6 +92,7 @@ class Course(models.Model):
     slug = AutoSlugField(populate_from=["name", "course_type"], max_length=40, unique=True)
     cancelled = models.BooleanField(default=False)
     max_participants = models.PositiveIntegerField()
+    show_on_site = models.BooleanField(default=False)
 
     class Meta:
         unique_together = ("name", "course_type")
@@ -119,7 +120,6 @@ class Course(models.Model):
         for event in self.events.all():
             if event.max_participants != self.max_participants:
                 event.max_participants = self.max_participants
-                event.save()
                 ActivityLog.objects.create(
                     log=f"Course {self} updated; max participants for linked events have been adjusted to match"
                 )
@@ -129,6 +129,13 @@ class Course(models.Model):
                 ActivityLog.objects.create(
                     log=f"Course {self} cancelled; linked events have cancelled also"
                 )
+            if self.show_on_site and not event.show_on_site:
+                event.show_on_site = self.show_on_site
+                event.save()
+                ActivityLog.objects.create(
+                    log=f"Course {self} updated; show_on_site for linked events has been adjusted to match"
+                )
+            event.save()
 
 
 class Event(models.Model):
@@ -193,11 +200,17 @@ class Event(models.Model):
 
     def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
         self.full_clean()
-        if self.course and self.max_participants != self.course.max_participants:
-            self.max_participants = self.course.max_participants
-            ActivityLog.objects.create(
-                log=f"Event {self} added to course ({self.course}); max participants for event has been adjusted to match course"
-            )
+        if self.course:
+            if self.max_participants != self.course.max_participants:
+                self.max_participants = self.course.max_participants
+                ActivityLog.objects.create(
+                    log=f"Event {self} max participants does not match course; event has been adjusted to match course"
+                )
+            if self.show_on_site != self.course.show_on_site:
+                self.show_on_site = self.course.show_on_site
+                ActivityLog.objects.create(
+                    log=f"Event {self} show_on_course does not match course; event has been adjusted to match course"
+                )
         super().save()
 
 

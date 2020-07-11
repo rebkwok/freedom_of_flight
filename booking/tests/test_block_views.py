@@ -40,7 +40,7 @@ class BlockPurchaseViewTests(TestUsersMixin, TestCase):
         assert resp.context["user_active_blocks"] == []
 
     def test_course_purchase_view_shows_target_configs_at_start(self):
-        course = baker.make(Course, course_type=self.courseconfig.course_type)
+        course = baker.make(Course, course_type=self.courseconfig.course_type, show_on_site=True)
         url = reverse("booking:course_block_purchase", args=(course.slug,))
         resp = self.client.get(url)
         # course blocks shown first

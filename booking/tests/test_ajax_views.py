@@ -1,20 +1,18 @@
 # -*- coding: utf-8 -*-
 from datetime import timedelta
-from unittest.mock import patch
+from decimal import Decimal
 from model_bakery import baker
 
 from django.conf import settings
 from django.core import mail
 from django.urls import reverse
-from django.test import override_settings, TestCase
-from django.contrib.auth.models import Group, User
+from django.test import TestCase
 from django.utils import timezone
 
-from accounts.models import DisclaimerContent, OnlineDisclaimer, has_active_disclaimer
+from accounts.models import has_active_disclaimer
 
-from booking.models import Event, EventType, Booking, Block, WaitingListUser
-from common.test_utils import make_disclaimer_content, make_online_disclaimer, TestUsersMixin, EventTestMixin
-
+from booking.models import Booking, Block, WaitingListUser, DropInBlockConfig, CourseBlockConfig
+from common.test_utils import TestUsersMixin, EventTestMixin
 
 
 class BookingToggleAjaxViewTests(EventTestMixin, TestUsersMixin, TestCase):
@@ -441,23 +439,132 @@ class WaitinglistToggleAjaxViewTests(EventTestMixin, TestUsersMixin, TestCase):
 
 class AjaxBlockDeleteView(TestUsersMixin, TestCase):
 
+    def setUp(self):
+        self.create_users()
+        self.login(self.student_user)
+
     def test_delete_block(self):
-        pass
+        block = baker.make_recipe("booking.dropin_block", user=self.student_user)
+        url = reverse("booking:ajax_block_delete", args=(block.id,))
+        resp = self.client.post(url)
+        assert Block.objects.exists() is False
+        assert resp.json() == {"cart_total": 0, "cart_item_menu_count": 0}
 
     def test_recalculate_total_cart_items(self):
         # calculate total for all manager users blocks
-        pass
+        # the block to delete
+        self.login(self.manager_user)
+        block = baker.make_recipe(
+            "booking.dropin_block", dropin_block_config__cost=10, user=self.child_user
+        )
+        # some other blocks for manager and managed user
+        baker.make_recipe(
+            "booking.dropin_block", dropin_block_config__cost=1, user=self.child_user
+        )
+        baker.make_recipe(
+            "booking.dropin_block", dropin_block_config__cost=2, user=self.manager_user
+        )
+        baker.make_recipe(
+            "booking.dropin_block", dropin_block_config__cost=3, user=self.manager_user
+        )
+        # paid blocks don't count towards total
+        baker.make_recipe(
+            "booking.dropin_block", dropin_block_config__cost=100, user=self.manager_user,
+            paid=True
+        )
+        baker.make_recipe(
+            "booking.dropin_block", dropin_block_config__cost=200, user=self.child_user,
+            paid=True
+        )
+
+        url = reverse("booking:ajax_block_delete", args=(block.id,))
+        resp = self.client.post(url)
+        assert Block.objects.filter(id=block.id).exists() is False
+        # 3 blocks still in cart (2 for manager, 1 for child) - not the deleted one or the paid ones
+        # cost
+        assert resp.json() == {"cart_total": "6.00", "cart_item_menu_count": 3}
+
+    def test_delete_course_block(self):
+        block = baker.make_recipe("booking.course_block", user=self.student_user)
+        url = reverse("booking:ajax_block_delete", args=(block.id,))
+        resp = self.client.post(url)
+        assert Block.objects.exists() is False
+        assert resp.json() == {"cart_total": 0, "cart_item_menu_count": 0}
 
 
-class AjaxBlockPurchase(TestUsersMixin, TestCase):
+class AjaxBlockPurchaseTests(TestUsersMixin, TestCase):
+
+    def setUp(self):
+        self.create_users()
+        self.dropin_config = baker.make(DropInBlockConfig, cost=20)
+        self.course_config = baker.make(CourseBlockConfig, cost=20)
+        self.login(self.student_user)
 
     def test_add_new_dropin_block(self):
         # create block, set to unpaid
-        pass
+        assert Block.objects.exists() is False
+        url = reverse("booking:ajax_dropin_block_purchase", args=(self.dropin_config.id,))
+        resp = self.client.post(url, data={"user_id": self.student_user.id})
+        assert Block.objects.exists()
+        new_block = Block.objects.first()
+        assert new_block.user == self.student_user
+        assert new_block.block_config == self.dropin_config
+        assert new_block.paid is False
+        resp_json = resp.json()
+        assert resp_json["cart_item_menu_count"] == 1
+        assert "Add to cart" not in resp_json["html"]
+        assert 'class="fas fa-trash-alt"' in resp_json["html"]
+        assert f"Block added to cart for {self.student_user.first_name} {self.student_user.last_name}" in resp_json["html"]
 
     def test_add_new_course_block(self):
         # create block, set to unpaid
-        pass
+        assert Block.objects.exists() is False
+        url = reverse("booking:ajax_course_block_purchase", args=(self.course_config.id,))
+        resp = self.client.post(url, data={"user_id": self.student_user.id})
+        assert Block.objects.exists()
+        new_block = Block.objects.first()
+        assert new_block.user == self.student_user
+        assert new_block.block_config == self.course_config
+        assert new_block.paid is False
+        resp_json = resp.json()
+        assert resp_json["cart_item_menu_count"] == 1
+        assert "Add to cart" not in resp_json["html"]
+        assert 'class="fas fa-trash-alt"' in resp_json["html"]
+        assert f"Block added to cart for {self.student_user.first_name} {self.student_user.last_name}" in resp_json["html"]
 
     def test_add_block_for_managed_user(self):
-        pass
+        self.login(self.manager_user)
+        # manager has another unpaid block already
+        baker.make_recipe("booking.course_block", user=self.manager_user)
+        url = reverse("booking:ajax_dropin_block_purchase", args=(self.dropin_config.id,))
+        resp = self.client.post(url, data={"user_id": self.child_user.id})
+        new_block = Block.objects.latest("id")
+        assert new_block.user == self.child_user
+        assert new_block.block_config == self.dropin_config
+        assert new_block.paid is False
+        resp_json = resp.json()
+        assert resp_json["cart_item_menu_count"] == 2
+        assert "Add to cart" not in resp_json["html"]
+        assert 'class="fas fa-trash-alt"' in resp_json["html"]
+        assert f"Block added to cart for {self.child_user.first_name} {self.child_user.last_name}" in resp_json[
+            "html"]
+
+    def test_delete_from_cart(self):
+        self.login(self.manager_user)
+        # user has multiple unpaid blocks
+        course_block = baker.make_recipe("booking.course_block", course_block_config=self.course_config, user=self.manager_user)
+        dropin_block1 = baker.make_recipe("booking.dropin_block", dropin_block_config=self.dropin_config, user=self.child_user)
+        # this is the block that will get deleted
+        baker.make_recipe("booking.dropin_block", dropin_block_config=self.dropin_config, user=self.manager_user)
+
+        url = reverse("booking:ajax_dropin_block_purchase", args=(self.dropin_config.id,))
+        resp = self.client.post(url, data={"user_id": self.manager_user.id})
+        assert [block.id for block in self.manager_user.blocks.all()] == [course_block.id]
+        assert [block.id for block in self.child_user.blocks.all()] == [dropin_block1.id]
+        assert Block.objects.count() == 2
+        resp_json = resp.json()
+        assert resp_json["cart_item_menu_count"] == 2
+        assert "Add to cart" in resp_json["html"]
+        assert 'class="fas fa-trash-alt"' not in resp_json["html"]
+        assert f"Block removed from cart for {self.manager_user.first_name} {self.manager_user.last_name}" in \
+               resp_json["html"]

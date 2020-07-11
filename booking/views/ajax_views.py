@@ -275,23 +275,25 @@ def ajax_course_block_purchase(request, block_config_id):
 
 
 def process_block_purchase(request, block, new, block_config):
+    block_user = block.user
+    block_user_name = f"{block_user.first_name} {block_user.last_name}"
     if not new:
         block.delete()
         alert_message = {
             "message_type": "info",
-            "message": f"Block removed from cart for {block.user.first_name} {block.user.last_name}"
+            "message": f"Block removed from cart for {block_user_name}"
         }
     else:
         alert_message = {
             "message_type": "success",
-            "message": f"Block added to cart for {block.user.first_name} {block.user.last_name}"
+            "message": f"Block added to cart for {block_user_name}"
         }
     context = {
         "available_block_config": block_config,
-        "available_user": block.user,
+        "available_user": block_user,
         "alert_message": alert_message
     }
-    html =  render(request, f"booking/includes/blocks_button.txt", context)
+    html = render(request, f"booking/includes/blocks_button.txt", context)
     return JsonResponse(
         {
             "html": html.content.decode("utf-8"),
