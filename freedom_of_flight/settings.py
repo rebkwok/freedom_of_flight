@@ -213,7 +213,7 @@ EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', None)
 if EMAIL_HOST_PASSWORD is None:  # pragma: no cover
     print("No email host password provided!")
 EMAIL_PORT = 587
-DEFAULT_FROM_EMAIL = 'freedomofflight.bookings@gmail.com'
+DEFAULT_FROM_EMAIL = 'freedomofflightbooking@gmail.com'
 DEFAULT_STUDIO_EMAIL = 'freedomofflightaerial@gmail.com'
 SUPPORT_EMAIL = 'rebkwok@gmail.com'
 

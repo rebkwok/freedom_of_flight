@@ -187,12 +187,11 @@ def ajax_checkout(request):
         if block.voucher:
             try:
                 validate_voucher(block.voucher)
-                validate_voucher_for_block_configs_in_cart(block.voucher, [unpaid_blocks])
+                validate_voucher_for_block_configs_in_cart(block.voucher, [block])
                 validate_voucher_for_user(block.voucher, block.user)
             except VoucherValidationError:
                 block.voucher = None
                 block.save()
-
     check_total = calculate_user_cart_total(unpaid_blocks)
     if total != check_total:
         messages.error(request, "Some cart items changed; please check and try again")

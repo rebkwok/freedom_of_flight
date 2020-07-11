@@ -309,7 +309,7 @@ class AjaxShoppingBasketCheckoutTests(TestUsersMixin, TestCase):
         assert invoice.username == self.student_user.username
         assert invoice.amount == 20
         assert block.invoice == invoice
-        assert "paypal_form" in resp
+        assert "paypal_form_html" in resp
 
     def test_zero_total(self):
         voucher = baker.make(BlockVoucher, code="test", discount=100, max_per_user=10)
@@ -326,14 +326,16 @@ class AjaxShoppingBasketCheckoutTests(TestUsersMixin, TestCase):
         assert resp["url"] == reverse("booking:blocks")
 
     def test_uses_existing_invoice(self):
+        invoice = baker.make(
+            Invoice, username=self.student_user.username, amount=20, transaction_id=None
+        )
         block = baker.make_recipe(
             "booking.dropin_block", dropin_block_config=self.dropin_block_config, user=self.student_user,
+            invoice=invoice
         )
-        invoice = baker.make(Invoice, username=self.student_user.username, amount=20, transaction_id=None)
         # total is correct
         resp = self.client.post(self.url, data={"cart_total": 20}).json()
         block.refresh_from_db()
         assert Invoice.objects.count() == 1
         assert block.invoice == invoice
-        resp_json = resp.json()
-        assert "paypal_form" in resp_json
+        assert "paypal_form_html" in resp

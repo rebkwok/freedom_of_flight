@@ -61,7 +61,7 @@ class BookingToggleAjaxViewTests(EventTestMixin, TestUsersMixin, TestCase):
         assert Booking.objects.exists() is False
         resp = self.client.post(self.url(self.aerial_events[0].id), data={"user_id": self.student_user.id})
         assert resp.status_code == 200
-        redirect_url = reverse('booking:dropin_block_purchase', args=(self.aerial_events[0].slug,))
+        redirect_url = reverse('booking:events', args=(self.adult_track.slug,))
         assert resp.json() == {"redirect": True, "url": redirect_url}
 
     def test_create_booking(self):
@@ -446,9 +446,10 @@ class AjaxBlockDeleteView(TestUsersMixin, TestCase):
     def test_delete_block(self):
         block = baker.make_recipe("booking.dropin_block", user=self.student_user)
         url = reverse("booking:ajax_block_delete", args=(block.id,))
-        resp = self.client.post(url)
+        resp = self.client.post(url).json()
         assert Block.objects.exists() is False
-        assert resp.json() == {"cart_total": 0, "cart_item_menu_count": 0}
+        assert resp["cart_total"] == 0
+        assert resp["cart_item_menu_count"] == 0
 
     def test_recalculate_total_cart_items(self):
         # calculate total for all manager users blocks
@@ -478,18 +479,20 @@ class AjaxBlockDeleteView(TestUsersMixin, TestCase):
         )
 
         url = reverse("booking:ajax_block_delete", args=(block.id,))
-        resp = self.client.post(url)
+        resp = self.client.post(url).json()
         assert Block.objects.filter(id=block.id).exists() is False
         # 3 blocks still in cart (2 for manager, 1 for child) - not the deleted one or the paid ones
         # cost
-        assert resp.json() == {"cart_total": "6.00", "cart_item_menu_count": 3}
+        assert resp["cart_total"] == "6.00"
+        assert resp["cart_item_menu_count"] == 3
 
     def test_delete_course_block(self):
         block = baker.make_recipe("booking.course_block", user=self.student_user)
         url = reverse("booking:ajax_block_delete", args=(block.id,))
-        resp = self.client.post(url)
+        resp = self.client.post(url).json()
         assert Block.objects.exists() is False
-        assert resp.json() == {"cart_total": 0, "cart_item_menu_count": 0}
+        assert resp["cart_total"] == 0
+        assert resp["cart_item_menu_count"] == 0
 
 
 class AjaxBlockPurchaseTests(TestUsersMixin, TestCase):

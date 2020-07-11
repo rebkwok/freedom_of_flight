@@ -31,7 +31,7 @@ REQUESTED_ACTIONS = {
 @require_http_methods(['POST'])
 def ajax_toggle_booking(request, event_id):
     user_id = request.POST["user_id"]
-    ref = request.POST["ref"]
+    ref = request.POST.get("ref", "events")
     if user_id == request.user.id:
         user = request.user
     else:
@@ -59,10 +59,12 @@ def ajax_toggle_booking(request, event_id):
     if requested_action in ["opened", "reopened"]:
 
         if not has_available_block(user, event):
-            if ref == "events":
-                url = reverse('booking:events', args=(event.event_type.track.slug,))
-            else:
+            if ref == "bookings":
+                url = reverse('booking:bookings')
+            elif ref == "course":
                 url = reverse('booking:course_events', args=(event.course.slug,))
+            else:
+                url = reverse('booking:events', args=(event.event_type.track.slug,))
 
             if event.course:
                 messages.error(request, "You do not have an active block for this course")
