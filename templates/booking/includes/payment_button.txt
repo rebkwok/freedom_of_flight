@@ -12,4 +12,5 @@
     {% endif %}
 {% endif %}
 
-<div><a href="#" class="btn btn-sm btn-warning mb-1"><i id="loader"></i> Checkout with PayPal</a></div>
+<div><a href="#" class="btn btn-xs btn-warning mb-1"><i id="loader"></i>
+{% if total_cost > 0 %}Checkout with PayPal{% else %}Submit{% endif %}</a></div>

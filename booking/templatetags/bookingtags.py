@@ -37,7 +37,7 @@ def get_block_info(block):
     if block.expiry_date:
         return f"{base_text}; expires {block.expiry_date.strftime('%d %b %y')}</span>"
     elif block.block_config.duration:
-        return  f"{base_text}; not started</span>"
+        return f"{base_text}; not started</span>"
     else:
         return f"{base_text}; never expires</span>"
 
@@ -87,7 +87,9 @@ def block_expiry_text(block):
 
 @register.filter
 def can_book_or_cancel(user, event):
-    if event.has_space:
+    if event.cancelled:
+        return False
+    elif event.has_space:
         return True
     elif user.bookings.filter(event=event, status="OPEN", no_show=False):
         # user has open booking

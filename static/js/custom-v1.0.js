@@ -21,8 +21,6 @@ jQuery(document).ready(function () {
 
     $('[data-toggle="tooltip"]').tooltip();
 
-    //register the confirm dialogs
-    //$( "#confirm-dialog" ).dialog({ autoOpen: false });
 
     jQuery('form.dirty-check').areYouSure();
 

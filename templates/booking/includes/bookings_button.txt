@@ -13,23 +13,23 @@
 {% endif %}
 
 {% if booking.status == "OPEN" and not booking.no_show %}
-    <a class="btn btn-xs btn-dark" href="#"><i id="loader_{{ booking.event.id }}"></i> Cancel</a>
+    <div class="btn btn-xs btn-dark" href="#"><i id="loader_{{ booking.event.id }}"></i> Cancel</div>
 {% elif booking.event.course %}
-    <a class="btn btn-xs btn-success" href="#">
+    <div class="btn btn-xs btn-success" href="#">
         <i id="loader_{{ booking.event.id }}">
         </i> {% if booking.status == "CANCELLED" or booking.no_show %}Rebook{% else %}Book Course{% endif %}
-    </a>
+    </div>
 {% elif booking.event.has_space %}
     {% if not view_as_user|has_available_block:booking.event %}
         {% if booking.event.course %}
-            <a class="btn btn-xs btn-outline-success" href="#">Course details</a>
+            <div class="btn btn-xs btn-outline-success" href="#">Course details</div>
         {% else %}
-            <a class="btn btn-xs btn-info" href="#"><i id="loader_{{ booking.event.id }}"></i> Payment Options</a>
+            <div class="btn btn-xs btn-info" href="#"><i id="loader_{{ booking.event.id }}"></i> Payment Options</div>
         {% endif %}
 
     {% else %}
-        <a class="btn btn-xs btn-success" href="#"><i id="loader_{{ booking.event.id }}">
+        <div class="btn btn-xs btn-success" href="#"><i id="loader_{{ booking.event.id }}">
             </i> {% if booking.status == "CANCELLED" or booking.no_show %}Rebook{% else %}Book{% endif %} Drop-in
-        </a>
+        </div>
     {% endif %}
 {% endif %}

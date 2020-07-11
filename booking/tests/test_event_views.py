@@ -6,6 +6,8 @@ from django.urls import reverse
 from django.test import TestCase
 from django.utils import timezone
 
+from bs4 import BeautifulSoup
+
 from accounts.models import DataPrivacyPolicy, SignedDataPrivacy
 from accounts.models import has_active_data_privacy_agreement
 
@@ -196,6 +198,37 @@ class EventListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         resp = self.client.post(self.adult_url, data={"view_as_user": self.child_user.id}, follow=True)
         assert self.client.session["user_id"] == self.child_user.id
         assert len(resp.context_data['booked_event_ids']) == 0
+
+    def test_block_info(self):
+        self.make_disclaimer(self.student_user)
+        block = baker.make_recipe(
+            "booking.dropin_block", dropin_block_config__event_type=self.aerial_event_type,
+            dropin_block_config__size=10, user=self.student_user, paid=True
+        )
+        resp = self.client.get(self.adult_url)
+        assert "(10/10 remaining); not started" in resp.rendered_content
+
+        block.dropin_block_config.duration = None
+        block.dropin_block_config.save()
+        resp = self.client.get(self.adult_url)
+        assert "(10/10 remaining); never expires" in resp.rendered_content
+
+        block.dropin_block_config.duration = 2
+        block.save()
+        baker.make(Booking, block=block, event=self.aerial_events[0])
+        resp = self.client.get(self.adult_url)
+        assert f"(9/10 remaining); expires {(self.aerial_events[0].start + timedelta(14)).strftime('%d %b %y')}" in resp.rendered_content
+        block.delete()
+
+        baker.make_recipe(
+            "booking.course_block",
+            course_block_config__identifier="A Test Course Block",
+            course_block_config__course_type=self.course_type,
+            user=self.student_user, paid=True)
+        resp = self.client.get(self.adult_url)
+        assert "A Test Course Block" in resp.rendered_content
+        # Doesn't show the remaining count
+        assert "remaining" not in resp.rendered_content
 
     def test_button_displays(self):
         # TODO

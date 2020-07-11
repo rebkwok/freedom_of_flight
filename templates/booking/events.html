@@ -15,7 +15,7 @@
 
 <div id="confirm-dialog"></div></div>
 
-<div class="container">
+<div class="container pb-2">
 
         <form class="form-inline" method="post">
             {% csrf_token %}
@@ -36,6 +36,7 @@
                     <div
                         id="book_course_{{ course.id }}"
                         data-user_id="{{ view_as_user.id }}"
+                        data-ref="course"
                         data-course_id="{{ course.id }}"
                         data-has_started={{ course.has_started|yesno:"1,0" }}
                         data-has_available_block={{ view_as_user|has_available_course_block:course|yesno:"1,0" }}
@@ -71,6 +72,7 @@
                                                 id="book_{{ event.id }}"
                                                 data-event_id="{{ event.id }}"
                                                 data-user_id="{{ view_as_user.id }}"
+                                                data-ref="events"
                                                 data-can_cancel={{ event.can_cancel|yesno:"1,0" }}
                                                 data-cancellation_allowed={{ event.event_type.allow_booking_cancellation|yesno:"1,0" }}
                                                 data-show_payment_options={% if event.id in booked_event_ids or view_as_user|has_available_block:event %}"0"{% else %}"1"{% endif %}
@@ -97,6 +99,7 @@
                                             id="book_{{ event.id }}"
                                             data-event_id="{{ event.id }}"
                                             data-user_id="{{ view_as_user.id }}"
+                                            data-ref="course"
                                             data-on_course={% if event.course %}"1"{% else %}"0"{% endif %}
                                             class="ajax_events_btn">
                                             {% include "booking/includes/events_button.txt" %}
@@ -174,7 +177,6 @@
 
 
 {% block extra_js %}
-<script>$(document).scrollreminder();</script>
 <script type='text/javascript' src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js"></script>
 <script type='text/javascript' src="{% static 'booking/js/events_booking_ajax-v1.js' %}"></script>
 {% endblock %}

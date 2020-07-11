@@ -50,31 +50,7 @@ urlpatterns = [
 
     # EVENTS LIST: needs to go last
     path('<slug:track>/', EventListView.as_view(), name='events'),
-    # path(
-    #     'bookings/shopping-basket/', shopping_basket,
-    #     name='shopping_basket'
-    # ),
-    # path(
-    #     'bookings/shopping-basket/submit-block/', submit_zero_block_payment,
-    #     name='submit_zero_block_payment'
-    # ),
-    # path(
-    #     'bookings/ajax-update-shopping-basket/',
-    #     update_shopping_basket_count, name='update_shopping_basket_count'
-    # ),
-    # path(
-    #     'bookings/ajax-update-booking-count/<int:event_id>/',
-    #     update_booking_count, name='update_booking_count'
-    # ),
 
-    # path(
-    #     'bookings/shopping-basket-total/blocks/',
-    #     ajax_shopping_basket_blocks_total, name='ajax_shopping_basket_blocks_total'
-    # ),
-    # path(
-    #     'blocks_modal/',
-    #     blocks_modal, name='blocks_modal'
-    # ),
     # path('gift-vouchers/', GiftVoucherPurchaseView.as_view(), name='buy_gift_voucher'),
     # path('gift-voucher/<voucher_code>', gift_voucher_details, name='gift_voucher_details'),
     # path('gift-voucher/<voucher_code>/update', GiftVoucherPurchaseView.as_view(), name='gift_voucher_update'),

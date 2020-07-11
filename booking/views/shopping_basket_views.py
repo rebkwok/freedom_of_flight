@@ -181,30 +181,50 @@ def ajax_checkout(request):
     """
     total = Decimal(request.POST.get("cart_total"))
     unpaid_blocks = get_unpaid_user_managed_blocks(request.user)
+
+    # verify any vouchers on blocks
+    for block in unpaid_blocks:
+        if block.voucher:
+            try:
+                validate_voucher(block.voucher)
+                validate_voucher_for_block_configs_in_cart(block.voucher, [unpaid_blocks])
+                validate_voucher_for_user(block.voucher, block.user)
+            except VoucherValidationError:
+                block.voucher = None
+                block.save()
+
     check_total = calculate_user_cart_total(unpaid_blocks)
     if total != check_total:
         messages.error(request, "Some cart items changed; please check and try again")
         url = reverse('booking:shopping_basket')
         return JsonResponse({"redirect": True, "url": url})
 
+    if total == 0:
+        for block in unpaid_blocks:
+            block.paid = True
+            block.save()
+        messages.success(request, "Voucher applied successfully; block ready to use")
+        url = reverse("booking:blocks")
+        return JsonResponse({"redirect": True, "url": url})
+
     # NOTE: invoice user will always be the request.user, not any attached sub-user
     # May be different to the user on the purchased blocks
     try:
         # check for an existing unpaid invoice with this user and amount
-        invoice =  Invoice.objects.get(username=request.user, amount=Decimal(total), transaction_id__isnull=True)
+        invoice = Invoice.objects.get(username=request.user.username, amount=Decimal(total), transaction_id__isnull=True)
         # if it exists, check that the blocks are the same
         invoice_blocks = invoice.blocks.all()
         assert unpaid_blocks.count() == invoice.blocks.count()
         for block in invoice_blocks:
             assert block in unpaid_blocks
     except (Invoice.DoesNotExist, AssertionError):
-        invoice = Invoice.objects.create(invoice_id=Invoice.generate_invoice_id(), amount=Decimal(total), username=request.user)
+        invoice = Invoice.objects.create(invoice_id=Invoice.generate_invoice_id(), amount=Decimal(total), username=request.user.username)
         for block in unpaid_blocks:
             block.invoice = invoice
             block.save()
     except Invoice.MultipleObjectsReturned:
         # This shouldn't happen, but in case we got more than one exact same invoice, take the first one
-        invoice =  Invoice.objects.filter(username=request.user, amount=Decimal(total), transaction_id__isnull=True).first()
+        invoice = Invoice.objects.filter(username=request.user.username, amount=Decimal(total), transaction_id__isnull=True).first()
 
     # encrypted custom field so we can verify it on return from paypal
     paypal_form = get_paypal_form(request, invoice)

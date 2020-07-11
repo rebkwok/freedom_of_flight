@@ -36,9 +36,11 @@
                         </a> <em><span id="cancelled-text-{{ booking.event.id}}">{% if booking.status == 'CANCELLED' or booking.no_show %}You have cancelled this booking{% endif %}</span></em>
                             <span class="float-right">
 
+                            {% if user|can_book_or_cancel:booking.event %}
                                 <span
                                     id="book_{{ booking.event.id }}"
                                     data-user_id="{{ booking.user.id }}"
+                                    data-ref="bookings"
                                     data-event_id="{{ booking.event.id }}"
                                     data-can_cancel={{ event.can_cancel|yesno:"1,0" }}
                                     data-cancellation_allowed={{ booking.event.event_type.allow_booking_cancellation|yesno:"1,0" }}
@@ -47,8 +49,7 @@
                                     class="ajax_events_btn">
                                     {% include "booking/includes/bookings_button.txt" %}
                                 </span>
-
-                                {% if booking.event.full %}
+                                {% elif booking.event.full %}
                                     {% if booking.status == "CANCELLED" or booking.no_show %}
                                         <span
                                             id="waiting_list_button_{{ booking.event.id }}"
@@ -58,6 +59,8 @@
                                         {% include "booking/includes/waiting_list_button.html" %}
                                         </span>
                                     {% endif %}
+                                {% elif booking.event.cancelled %}
+                                    <span>Event Cancelled</span>
                                 {% endif %}
                             </span>
                         <div>

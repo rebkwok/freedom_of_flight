@@ -58,7 +58,7 @@
                           id="checkout-btn"
                           data-total="{{ total_cost }}"
                       >
-                          {% include "booking/includes/payment_button.txt" %}
+                          <span id="payment-btn">{% include "booking/includes/payment_button.txt" %}</span>
                       </span>
 
                       <span id="paypal-btn-wrapper"><span id="paypal-checkout-btn"></span></span>
@@ -93,7 +93,7 @@
 
 {% else %}
     <div class="col-12">
-    Your basket is empty
+    Your cart is empty
     </div>
 {% endif %}
 </div>

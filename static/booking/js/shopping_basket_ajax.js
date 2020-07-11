@@ -76,6 +76,7 @@ var processRemoveBlock = function()  {
     $('#cart_item_menu_count').text(result.cart_item_menu_count);
     $('#total').text(result.cart_total);
     $('#checkout-btn').data('total', result.cart_total);
+    $('#payment-btn').html(result.payment_button_html);
    };
 
     var processFailure = function(

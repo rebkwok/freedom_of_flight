@@ -9,9 +9,10 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no user-scalable=yes">
     <meta name="description" content="">
-    <!--<link rel="shortcut icon" href="{% static 'booking/images/favicon.ico' %}" type="image/vnd.microsoft.icon">-->
-    <!--<link rel="shortcut icon" type="image/png" href="{% static 'booking/images/icon.png' %}">-->
-    <!--<link rel="apple-touch-icon" href="{% static 'booking/images/icon.png' %}">-->
+    <!--<link rel="shortcut icon" href="{% static 'images/fof_logo_letter.png' %}" type="image/vnd.microsoft.icon">-->
+    <link rel="icon" type="image/png" href="{% static 'images/fof_logo_letter.png' %}">
+    <link rel="shortcut icon" type="image/png" href="{% static 'images/fof_logo_letter.png' %}">
+    <link rel="apple-touch-icon" href="{% static 'images/fof_logo_letter.png' %}">
 
     <title>Freedom of Flight Aerial Booking</title>
 
@@ -36,8 +37,8 @@
 
     <header>
       <!-- Fixed navbar -->
-      <nav class="navbar navbar-expand-md navbar-dark fixed-top bg-dark">
-        <a class="navbar-brand p-0" href="/"><img class="nav-logo" src="{% static 'images/fof_logo.jpg' %}"></a>
+      <nav class="navbar navbar-expand-md navbar-dark fixed-top bg-dark p-1">
+        <a class="navbar-brand p-0" href="/"><img class="nav-logo" src="{% static 'images/fof_logo.png' %}"></a>
         <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
           <span class="navbar-toggler-icon"></span>
         </button>
@@ -162,7 +163,7 @@
     <script src="{% static 'js/jquery.tablesorter.min.js' %}"></script>
     <script src="{% static 'js/jquery.are-you-sure.js' %}"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/js-cookie/2.2.0/js.cookie.min.js" integrity="sha384-ujpAYcyxFaJsZN5668lLgOpEH8vtWrbOq8fvj+WZ2kD71LJwGa/9QP/suPPF1hTI" crossorigin="anonymous"></script>
-    <script src="{% static 'js/jquery.scrollreminder.js' %}"></script>
+    <script src="{% static 'booking/js/jquery.rememberscroll.js' %}"></script>
     <script src="{% static 'js/custom-v1.0.js' %}"></script>
 
     {% block extra_js %}{% endblock %}

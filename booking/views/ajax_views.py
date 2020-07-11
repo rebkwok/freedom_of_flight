@@ -31,6 +31,7 @@ REQUESTED_ACTIONS = {
 @require_http_methods(['POST'])
 def ajax_toggle_booking(request, event_id):
     user_id = request.POST["user_id"]
+    ref = request.POST["ref"]
     if user_id == request.user.id:
         user = request.user
     else:
@@ -42,13 +43,6 @@ def ajax_toggle_booking(request, event_id):
 
     event = Event.objects.get(id=event_id)
     event_was_full = not event.course and event.spaces_left == 0
-
-    if not has_available_block(user, event):
-        if event.course:
-            url = reverse('booking:course_events', args=(event.course.slug,))
-        else:
-            url = reverse('booking:dropin_block_purchase', args=(event.slug,))
-        return JsonResponse({"redirect": True, "url": url})
 
     try:
         existing_booking = Booking.objects.get(user=user, event=event)
@@ -63,6 +57,19 @@ def ajax_toggle_booking(request, event_id):
     host = f'http://{request.META.get("HTTP_HOST")}'
 
     if requested_action in ["opened", "reopened"]:
+
+        if not has_available_block(user, event):
+            if ref == "events":
+                url = reverse('booking:events', args=(event.event_type.track.slug,))
+            else:
+                url = reverse('booking:course_events', args=(event.course.slug,))
+
+            if event.course:
+                messages.error(request, "You do not have an active block for this course")
+            else:
+                messages.error(request, "You do not have an active block for this event")
+            return JsonResponse({"redirect": True, "url": url})
+
         # OPENING/REOPENING
         # make sure the event isn't full or cancelled
         if not event.course and (event.spaces_left <= 0 or event.cancelled):
@@ -251,7 +258,15 @@ def ajax_block_delete(request, block_id):
     block.delete()
     unpaid_blocks = Block.objects.filter(paid=False, user__in=request.user.managed_users)
     total = calculate_user_cart_total(unpaid_blocks)
-    return JsonResponse({"cart_total": total, "cart_item_menu_count": unpaid_blocks.count()})
+    payment_button_html = render(
+        request, f"booking/includes/payment_button.txt", {"total_cost": total}
+    )
+    return JsonResponse(
+        {
+            "cart_total": total,
+            "cart_item_menu_count": unpaid_blocks.count(),
+            "payment_button_html": payment_button_html.content.decode("utf-8")
+        })
 
 
 @login_required

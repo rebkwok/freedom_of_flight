@@ -253,7 +253,7 @@ class BaseVoucher(models.Model):
         null=True, blank=True, verbose_name='Maximum available vouchers',
         help_text="Maximum uses across all users")
     max_per_user = models.PositiveIntegerField(
-        null=True, blank=True, default=1,
+        null=True, blank=True,
         verbose_name="Maximum uses per user",
         help_text="Maximum times this voucher can be used by a single user"
     )

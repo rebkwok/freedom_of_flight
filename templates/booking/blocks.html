@@ -25,11 +25,11 @@
                     <div class="list-group-item">
                         Purchased: {{ block.purchase_date | date:"d M Y" }}<br/>
                         User: {{ block.user.first_name }} {{ block.user.last_name }}<br/>
-                        Bookings: {% if not block.bookings.exists %}N/A{% endif %}<br/>
-                        {{ block|block_expiry_text }}
+                        {{ block|block_expiry_text }}<br/>
+                        Bookings: {% if not block.bookings.exists %}N/A{% endif %}
                         <ul>
                             {% for booking in block.bookings.all %}
-                                <li>{{ booking }}</li>
+                                <li>{{ booking.event.name }} | {{ booking.event.start|date:"D d M Y, H:i" }}</li>
                             {% endfor %}
                         </ul>
                         </div>

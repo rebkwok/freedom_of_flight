@@ -29,7 +29,6 @@ urlpatterns = [
     path('accounts/', include('accounts.urls', namespace="accounts")),
     path('payments/ipn-paypal-notify/', include('paypal.standard.ipn.urls')),
     path('payments/', include('payments.urls')),
-    path('favicon.ico/', RedirectView.as_view(url=settings.STATIC_URL + 'favicon.ico',  permanent=False)),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 

@@ -10,7 +10,6 @@
  */
 var MILLS_TO_IGNORE = 500;
 
-
 var processBookingToggleRequest = function()  {
 
     //In this scope, "this" is the button just clicked on.
@@ -21,6 +20,7 @@ var processBookingToggleRequest = function()  {
     //The value of the "data-event_id" attribute.
     var event_id = $button_just_clicked_on.data('event_id');
     var user_id = $button_just_clicked_on.data('user_id');
+    var ref = $button_just_clicked_on.data('ref');
     var can_cancel = $button_just_clicked_on.data('can_cancel');
     var cancellation_allowed = $button_just_clicked_on.data('cancellation_allowed');
     var show_payment_options = $button_just_clicked_on.data('show_payment_options');
@@ -118,7 +118,7 @@ var processBookingToggleRequest = function()  {
               url: '/ajax-toggle-booking/' + event_id + '/',
               dataType: 'json',
               type: 'POST',
-              data: {csrfmiddlewaretoken: window.CSRF_TOKEN, "user_id": user_id},
+              data: {csrfmiddlewaretoken: window.CSRF_TOKEN, "user_id": user_id, "ref": ref},
               beforeSend: function() {$("#loader_" + event_id).addClass("fa fa-spinner fa-spin").show()},
               success: processResult,
               //Should also have a "fail" call as well.
@@ -144,6 +144,7 @@ var processCourseBookingRequest = function()  {
     //The value of the "data-event_id" attribute.
     var course_id = $button_just_clicked_on.data('course_id');
     var user_id = $button_just_clicked_on.data('user_id');
+    var user_id = $button_just_clicked_on.data('ref');
     var has_started = $button_just_clicked_on.data('has_started');
     var has_available_block = $button_just_clicked_on.data('has_available_block');
     var already_booked = $button_just_clicked_on.data('already_booked');
@@ -221,7 +222,7 @@ var processCourseBookingRequest = function()  {
                 url: '/ajax-course-booking/' + course_id + "/",
                 dataType: 'json',
                 type: 'POST',
-                data: {csrfmiddlewaretoken: window.CSRF_TOKEN, "user_id": user_id},
+                data: {csrfmiddlewaretoken: window.CSRF_TOKEN, "user_id": user_id, "ref": ref},
                 beforeSend: function() {$("#loader_" + course_id).addClass("fa fa-spinner fa-spin").show();},
                 success: processResult,
                 //Should also have a "fail" call as well.
