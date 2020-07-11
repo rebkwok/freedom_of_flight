@@ -1,5 +1,5 @@
 from django.apps import AppConfig
 
 
-class BookingConfig(AppConfig):
+class ActivityLogConfig(AppConfig):
     name = 'activitylog'
