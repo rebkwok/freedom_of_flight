@@ -48,15 +48,18 @@ class BlockListView(DataPolicyAgreementRequiredMixin, LoginRequiredMixin, ListVi
 def dropin_block_purchase_view(request, event_slug):
     event = get_object_or_404(Event, slug=event_slug)
     dropin_block_configs = list(DropInBlockConfig.objects.filter(active=True))
-    dropin_block_configs.sort(key=lambda x: x.event_type==event.event_type, reverse=True)
+    dropin_block_configs.sort(key=lambda x: x.event_type == event.event_type, reverse=True)
     target_configs = [config for config in dropin_block_configs if config.event_type == event.event_type]
-    course_block_configs = CourseBlockConfig.objects.filter(active=True)
+    course_block_configs = list(CourseBlockConfig.objects.filter(active=True))
+
+    available_blocks = {}
+    if dropin_block_configs:
+        available_blocks.update({"Drop-in Blocks": dropin_block_configs})
+    if course_block_configs:
+        available_blocks.update({"Course Blocks": course_block_configs})
 
     context = {
-        "available_blocks": {
-            "Drop-in Blocks": dropin_block_configs,
-            "Course Blocks": course_block_configs
-        },
+        "available_blocks": available_blocks,
         "user_active_blocks": active_user_managed_blocks(request.user, order_by_fields=("expiry_date", "purchase_date")),
         "related_item": event,
         "target_configs": target_configs
@@ -74,11 +77,14 @@ def course_block_purchase_view(request, course_slug):
     dropin_block_configs = DropInBlockConfig.objects.filter(active=True)
     target_configs = [config for config in course_block_configs if config.course_type == course.course_type]
 
+    available_blocks = {}
+    if course_block_configs:
+        available_blocks.update({"Course Blocks": course_block_configs})
+    if dropin_block_configs:
+        available_blocks.update({"Drop-in Blocks": dropin_block_configs})
+
     context = {
-        "available_blocks": {
-            "Course Blocks": course_block_configs,
-            "Drop-in Blocks": dropin_block_configs,
-        },
+        "available_blocks": available_blocks,
         "user_active_blocks": active_user_managed_blocks(request.user, order_by_fields=("expiry_date", "purchase_date")),
         "related_item": course,
         "target_configs": target_configs
@@ -92,11 +98,13 @@ def course_block_purchase_view(request, course_slug):
 def block_purchase_view(request):
     dropin_block_configs = DropInBlockConfig.objects.filter(active=True)
     course_block_configs = CourseBlockConfig.objects.filter(active=True)
+    available_blocks = {}
+    if dropin_block_configs:
+        available_blocks.update({"Drop-in Blocks": dropin_block_configs})
+    if course_block_configs:
+        available_blocks.update({"Course Blocks": course_block_configs})
     context = {
-        "available_blocks": {
-            "Drop-in Blocks": dropin_block_configs,
-            "Course Blocks": course_block_configs
-        },
+        "available_blocks": available_blocks,
         "user_active_blocks": active_user_managed_blocks(request.user, order_by_fields=("purchase_date",)),
     }
     return render(request, "booking/block_purchase.html", context)

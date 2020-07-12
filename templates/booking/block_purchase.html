@@ -18,8 +18,8 @@
       <div class="mb-2">
           <a class="btn btn-info btn-xs" href="{% url 'booking:shopping_basket' %}"><span>View cart <i class="fas fa-shopping-cart"></i></span></a>
       </div>
-
-        <table class="table table-sm">
+        {% if available_blocks %}
+            <table class="table table-sm">
               <thead>
                 <th style="width: 75%"></th>
                 <th style="width: 10%"></th>
@@ -68,6 +68,9 @@
                 {% endfor %}
               </tbody>
          </table>
+        {% else %}
+            <p>No blocks are available for purchase</p>
+        {% endif %}
     </div>
 
 {% endblock content %}
