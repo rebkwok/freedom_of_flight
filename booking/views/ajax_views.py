@@ -32,6 +32,7 @@ REQUESTED_ACTIONS = {
 def ajax_toggle_booking(request, event_id):
     user_id = request.POST["user_id"]
     ref = request.POST.get("ref", "events")
+
     if user_id == request.user.id:
         user = request.user
     else:
@@ -58,18 +59,14 @@ def ajax_toggle_booking(request, event_id):
 
     if requested_action in ["opened", "reopened"]:
 
-        if not has_available_block(user, event):
-            if ref == "bookings":
-                url = reverse('booking:bookings')
-            elif ref == "course":
-                url = reverse('booking:course_events', args=(event.course.slug,))
-            else:
-                url = reverse('booking:events', args=(event.event_type.track.slug,))
+        if event.course and requested_action == "opened":
+            # First time booking for a course event - redirect to book course
+            # rebookings can be done from events page
+            url = reverse('booking:course_events', args=(event.course.slug,))
+            return JsonResponse({"redirect": True, "url": url})
 
-            if event.course:
-                messages.error(request, "You do not have an active block for this course")
-            else:
-                messages.error(request, "You do not have an active block for this event")
+        if not has_available_block(user, event) and not event.course:
+            url = reverse("booking:dropin_block_purchase", args=(event.slug,))
             return JsonResponse({"redirect": True, "url": url})
 
         # OPENING/REOPENING
@@ -79,12 +76,6 @@ def ajax_toggle_booking(request, event_id):
             return HttpResponseBadRequest(
                 "Sorry, this event {}".format("has been cancelled" if event.cancelled else "is now full")
             )
-
-        if event.course and requested_action == "opened":
-            # First time booking for a course event - redirect to book course
-            # rebookings can be done from events page
-            url = reverse('booking:course_events', args=(event.course.slug,))
-            return JsonResponse({"redirect": True, "url": url})
 
         # Update/create the booking
         if existing_booking is None:
@@ -150,6 +141,17 @@ def ajax_toggle_booking(request, event_id):
     alert_message = {}
     alert_message['message_type'] = 'info' if requested_action == "cancelled" else 'success'
     alert_message['message'] = f"Booking has been {requested_action}"
+
+    if not has_available_block(user, booking.event) and ref != "course":
+        # We no longer have available blocks, redirect to the same page again to refresh buttons
+        # Ignore if we came from the course page
+        messages.success(request, f"{event}: {alert_message['message']}")
+        if ref == "bookings":
+            url = reverse("booking:bookings")
+        else:
+            url = reverse("booking:events", args=(event.event_type.track.slug,))
+        return JsonResponse({"redirect": True, "url": url})
+
     context = {
         "event": event,
         "alert_message": alert_message,

@@ -95,7 +95,7 @@
         {% block precontent %}{% endblock %}
 
         {% if messages %}
-          <div class="row" id="message-row">
+          <div class="row mt-2" id="message-row">
             <div class="col-12">
                 {% for message in messages %}
                 <div {% if message.tags and message.tags == 'error' %}

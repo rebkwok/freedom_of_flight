@@ -144,7 +144,7 @@ var processCourseBookingRequest = function()  {
     //The value of the "data-event_id" attribute.
     var course_id = $button_just_clicked_on.data('course_id');
     var user_id = $button_just_clicked_on.data('user_id');
-    var user_id = $button_just_clicked_on.data('ref');
+    var ref = $button_just_clicked_on.data('ref');
     var has_started = $button_just_clicked_on.data('has_started');
     var has_available_block = $button_just_clicked_on.data('has_available_block');
     var already_booked = $button_just_clicked_on.data('already_booked');
