@@ -209,7 +209,7 @@ MEDIA_ROOT = root('media')
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_USE_TLS = True
 EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_HOST_USER = 'freedomofflight.bookings@gmail.com'
+EMAIL_HOST_USER = 'freedomofflightbooking@gmail.com'
 EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', None)
 if EMAIL_HOST_PASSWORD is None:  # pragma: no cover
     print("No email host password provided!")
