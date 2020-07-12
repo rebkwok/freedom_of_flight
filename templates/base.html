@@ -43,7 +43,7 @@
           <span class="navbar-toggler-icon"></span>
         </button>
 
-        <div class="collapse navbar-collapse" id="navbarCollapse">
+        <l class="collapse navbar-collapse" id="navbarCollapse">
           <ul class="navbar-nav mr-auto">
             {% for track in tracks %}
             <li class="nav-item"><a class="nav-link" href="{% url 'booking:events' track.slug %}">{{ track.name }}</a></li>
@@ -76,7 +76,6 @@
                 </span></a>
             </li>
           {% else %}
-            <div class="welcome-menu">Not signed in</div>
             <li class="nav-item"><a class="nav-link" href="{% url 'account_login' %}?next={{request.get_full_path}}">Log In</a></li>
           {% endif %}
       </ul>
