@@ -441,7 +441,9 @@ def has_expired_disclaimer(user):
                     if not od.is_active
                 ]
             )
-        cache.set(key, has_expired_disclaimer, timeout=600)
+        if has_expired_disclaimer:
+            # Only set cache if we know the disclaimer has expired
+            cache.set(key, has_expired_disclaimer, timeout=600)
     else:
         has_expired_disclaimer = bool(cache.get(key))
     return has_expired_disclaimer
