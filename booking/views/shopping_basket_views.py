@@ -208,27 +208,26 @@ def ajax_checkout(request):
 
     # NOTE: invoice user will always be the request.user, not any attached sub-user
     # May be different to the user on the purchased blocks
-    try:
-        # check for an existing unpaid invoice with this user and amount
-        invoice = Invoice.objects.get(username=request.user.username, amount=Decimal(total), transaction_id__isnull=True)
-        # if it exists, check that the blocks are the same
-        invoice_blocks = invoice.blocks.all()
-        assert unpaid_blocks.count() == invoice.blocks.count()
-        for block in invoice_blocks:
-            assert block in unpaid_blocks
-    except (Invoice.DoesNotExist, AssertionError):
+    def _get_matching_invoice(invoices):
+        for invoice in invoices:
+            invoice_blocks = invoice.blocks.all()
+            if unpaid_blocks.count() == invoice.blocks.count():
+                if all(True for invoice_block in invoice_blocks if invoice_block in unpaid_blocks):
+                    return invoice
+
+    # check for an existing unpaid invoice with this user and amount
+    invoices = Invoice.objects.filter(username=request.user.username, amount=Decimal(total), transaction_id__isnull=True)
+    # if any exist, check for one where the blocks are the same
+    invoice = _get_matching_invoice(invoices)
+    if invoice is None:
         invoice = Invoice.objects.create(invoice_id=Invoice.generate_invoice_id(), amount=Decimal(total), username=request.user.username)
         for block in unpaid_blocks:
             block.invoice = invoice
             block.save()
-    except Invoice.MultipleObjectsReturned:
-        # This shouldn't happen, but in case we got more than one exact same invoice, take the first one
-        invoice = Invoice.objects.filter(username=request.user.username, amount=Decimal(total), transaction_id__isnull=True).first()
 
     # encrypted custom field so we can verify it on return from paypal
     paypal_form = get_paypal_form(request, invoice)
     paypal_form_html = render(request, "payments/includes/paypal_button.html", {"form": paypal_form})
-
     return JsonResponse(
         {
             "paypal_form_html": paypal_form_html.content.decode("utf-8"),
