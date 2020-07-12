@@ -39,9 +39,10 @@
                <h2 class="card-header">Accounts</h2>
                <div class="card-body">
                 <div class="card-text">
+                {% if user.is_student or user.is_manager %}
                    The following accounts are registered as student users:
                    <ul>
-                        <li>{% if user.is_student %}{{ user.first_name }} {{ user.last_name }} (main account) {% endif %}</li>
+                       <li>{% if user.is_student %}{{ user.first_name }} {{ user.last_name }} (main account) {% endif %}</li>
                        {% if user.is_manager %}
                             {% for managed_user in user.managed_users %}
                                 {% if managed_user.id != user.id %}
@@ -60,7 +61,8 @@
                                </li>
                                 {% endif %}
                            {% endfor %}
-                    </ul>
+                        </ul>
+                   {% endif %}
                    {% if user.is_manager %}
                         <div class="card-text"><a class="btn btn-xs btn-success btn-xs-wide" href="{% url 'accounts:register_child_user' %}">Add Managed Account</a></div>
                     {% endif %}
@@ -68,9 +70,9 @@
                    <div class="card-text">You do not manage accounts for other users.</div>
                    <div class="card-text"><a class="btn btn-xs btn-xs-wide btn-success" href="{% url 'accounts:update_profile' %}">Change</a></div>
                {% endif %}
-                    {% if not user.is_student %}You are not currently registered as a student.
-                        <div class="card-text"><a class="btn btn-xs btn-xs-wide btn-success" href="{% url 'accounts:update_profile' %}">Change</a></div>
-                    {% endif %}
+                {% if not user.is_student %}You are not currently registered as a student.
+                    <div class="card-text"><a class="btn btn-xs btn-xs-wide btn-success" href="{% url 'accounts:update_profile' %}">Change</a></div>
+                {% endif %}
                 </div>
            </div>
             <div class="card">
