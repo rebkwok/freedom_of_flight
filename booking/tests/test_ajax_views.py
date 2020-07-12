@@ -19,20 +19,16 @@ class BookingToggleAjaxViewTests(EventTestMixin, TestUsersMixin, TestCase):
 
     @classmethod
     def setUpTestData(cls):
-        super().setUpTestData()
+        cls.create_cls_tracks_and_event_types()
 
     def setUp(self):
         super().setUp()
         self.create_users()
+        self.create_events_and_course()
         self.make_data_privacy_agreement(self.student_user)
         self.make_data_privacy_agreement(self.manager_user)
         self.make_disclaimer(self.student_user)
         self.login(self.student_user)
-
-        # make sure these are reset for each test
-        self.floor_event_type.email_studio_when_booked = False
-        self.floor_event_type.allow_booking_cancellation = True
-        self.floor_event_type.save()
 
     def url(self, event_id):
         return reverse('booking:ajax_toggle_booking', args=[event_id])
@@ -315,11 +311,12 @@ class BookingAjaxCourseBookingViewTests(EventTestMixin, TestUsersMixin, TestCase
 
     @classmethod
     def setUpTestData(cls):
-        super().setUpTestData()
+        cls.create_cls_tracks_and_event_types()
 
     def setUp(self):
         super().setUp()
         self.create_users()
+        self.create_events_and_course()
         self.make_data_privacy_agreement(self.student_user)
         self.make_data_privacy_agreement(self.manager_user)
         self.make_disclaimer(self.student_user)
@@ -411,8 +408,13 @@ class BookingAjaxCourseBookingViewTests(EventTestMixin, TestUsersMixin, TestCase
 
 class WaitinglistToggleAjaxViewTests(EventTestMixin, TestUsersMixin, TestCase):
 
+    @classmethod
+    def setUpTestData(cls):
+        cls.create_cls_tracks_and_event_types()
+
     def setUp(self):
         self.create_users()
+        self.create_events_and_course()
         self.make_data_privacy_agreement(self.student_user)
         self.make_disclaimer(self.student_user)
         self.make_data_privacy_agreement(self.manager_user)

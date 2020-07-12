@@ -1,19 +1,17 @@
 import pytz
 import pytest
-import random
 
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 from decimal import Decimal
-from model_bakery import baker
 
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
-from django.test import TestCase, override_settings
+from django.test import TestCase
 from django.utils import timezone
 
 from accounts.models import CookiePolicy, DataPrivacyPolicy, DisclaimerContent, SignedDataPrivacy, \
-    OnlineDisclaimer, NonRegisteredDisclaimer, ArchivedDisclaimer, has_active_data_privacy_agreement, \
-    active_data_privacy_cache_key, has_active_disclaimer
+    NonRegisteredDisclaimer, ArchivedDisclaimer, has_active_data_privacy_agreement, \
+    active_data_privacy_cache_key
 
 from common.test_utils import make_disclaimer_content, TestUsersMixin, make_online_disclaimer, make_nonregistered_disclaimer
 

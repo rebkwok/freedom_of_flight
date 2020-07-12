@@ -6,20 +6,20 @@ from django.test import TestCase
 
 from booking.models import Booking
 
-from common.test_utils import make_disclaimer_content, make_online_disclaimer, TestUsersMixin, EventTestMixin
-
+from common.test_utils import TestUsersMixin, EventTestMixin
 
 
 class BookingListViewTests(EventTestMixin, TestUsersMixin, TestCase):
 
     @classmethod
     def setUpTestData(cls):
-        super().setUpTestData()
         cls.url = reverse('booking:bookings')
+        cls.create_cls_tracks_and_event_types()
         cls.past_aerial_event = baker.make_recipe("booking.past_event", event_type=cls.aerial_event_type)
 
     def setUp(self):
         self.create_users()
+        self.create_events_and_course()
         for user in [self.student_user, self.manager_user, self.child_user]:
             self.make_disclaimer(user)
             self.make_data_privacy_agreement(user)

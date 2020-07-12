@@ -13,21 +13,22 @@ from booking.models import (
     Course, Event, EventType, Block, Booking, BlockVoucher, Track, CourseType,
     DropInBlockConfig, CourseBlockConfig
 )
-from common.test_utils import make_disclaimer_content, make_online_disclaimer, EventTestMixin, TestUsersMixin
+from common.test_utils import EventTestMixin, TestUsersMixin
 
 now = timezone.now()
 
 
 class EventTests(EventTestMixin, TestCase):
 
+    @classmethod
+    def setUpTestData(cls):
+        cls.create_cls_tracks_and_event_types()
+
     def setUp(self):
+        self.create_events_and_course()
         self.event = self.aerial_events[0]
-        # Make sure these things are reset for each test
         self.event.max_participants = 2
-        self.event.cancellation_period = 24
         self.event.name = 'Test event'
-        self.event.start = timezone.now() + timedelta(days=3)
-        self.event.course = None
         self.event.save()
 
     def test_full_with_no_bookings(self):
@@ -116,9 +117,14 @@ class EventTests(EventTestMixin, TestCase):
 
 class BookingTests(EventTestMixin, TestUsersMixin, TestCase):
 
+    @classmethod
+    def setUpTestData(cls):
+        cls.create_cls_tracks_and_event_types()
+
     def setUp(self):
         super().setUp()
         self.create_users()
+        self.create_events_and_course()
         self.event = self.aerial_events[0]
         self.event.max_participants = 3
         self.event.start = datetime(2015, 1, 1, 18, 0, tzinfo=timezone.utc)
@@ -252,16 +258,13 @@ class CourseTypeTests(TestCase):
 class CourseTests(EventTestMixin, TestCase):
 
     def setUp(self):
-        self.course.course_type.number_of_events = 2
-        self.course.course_type.save()
-        self.course.max_participants = 2
-        self.course.save()
+        self.create_test_setup()
         self.event = self.aerial_events[0]
         self.event.course = self.course
         self.event.save()
 
     def test_str(self):
-        assert str(self.course) == f"{self.course.name} (aerial - 2)"
+        assert str(self.course) == f"{self.course.name} (aerial - 3)"
 
     def test_full(self):
         assert self.course.full is False
@@ -275,11 +278,7 @@ class CourseTests(EventTestMixin, TestCase):
         assert self.course.full is True
 
     def test_has_started(self):
-        # course has 2 events, which are in future
-
-        # Allow another one to be added
-        self.course.course_type.number_of_events = 3
-        self.course.course_type.save()
+        # course has 1 event already, which is in future
         assert self.course.has_started is False
         baker.make_recipe(
             "booking.past_event", event_type=self.course.course_type.event_type, course=self.course
@@ -288,6 +287,11 @@ class CourseTests(EventTestMixin, TestCase):
 
     def test_configured(self):
         # A course is configured if it has the right number of events on it
+        # Course allows 2 events, already has self.event
+        baker.make_recipe(
+            "booking.future_event", event_type=self.course.course_type.event_type, course=self.course,
+            _quantity=1
+        )
         assert self.course.is_configured() is True
         self.event.course = None
         self.event.save()

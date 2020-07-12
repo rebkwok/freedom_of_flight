@@ -132,8 +132,13 @@ class TestUsersMixin:
 
 
 class EventTestMixin:
+
+    def create_test_setup(self):
+        self.create_tracks_and_event_types()
+        self.create_events_and_course()
+    
     @classmethod
-    def setUpTestData(cls):
+    def create_cls_tracks_and_event_types(cls):
         cls.adult_track = baker.make(Track, name="Adults", default=True)
         cls.kids_track = baker.make(Track, name="Kids")
 
@@ -141,17 +146,27 @@ class EventTestMixin:
         cls.floor_event_type = baker.make(EventType, name="floor", track=cls.adult_track)
         cls.kids_aerial_event_type = baker.make(EventType, name="aerial", track=cls.kids_track)
         cls.kids_floor_event_type = baker.make(EventType, name="floor", track=cls.kids_track)
-
-        cls.aerial_events = baker.make_recipe("booking.future_event", event_type=cls.aerial_event_type,  _quantity=2)
-        cls.floor_events = baker.make_recipe("booking.future_event", event_type=cls.floor_event_type,  _quantity=3)
-        cls.kids_aerial_events = baker.make_recipe("booking.future_event", event_type=cls.kids_aerial_event_type,  _quantity=3)
-        cls.kids_floor_events = baker.make_recipe("booking.future_event", event_type=cls.kids_floor_event_type,  _quantity=3)
         cls.course_type = baker.make(CourseType, event_type=cls.aerial_event_type, number_of_events=3)
-        cls.course = baker.make(
-            Course, name="This month's aerial course", course_type=cls.course_type,
+        
+    def create_tracks_and_event_types(self):
+        self.adult_track = baker.make(Track, name="Adults", default=True)
+        self.kids_track = baker.make(Track, name="Kids")
+
+        self.aerial_event_type = baker.make(EventType, name="aerial", track=self.adult_track)
+        self.floor_event_type = baker.make(EventType, name="floor", track=self.adult_track)
+        self.kids_aerial_event_type = baker.make(EventType, name="aerial", track=self.kids_track)
+        self.kids_floor_event_type = baker.make(EventType, name="floor", track=self.kids_track)
+        self.course_type = baker.make(CourseType, event_type=self.aerial_event_type, number_of_events=3)
+
+    def create_events_and_course(self):
+        self.aerial_events = baker.make_recipe("booking.future_event", event_type=self.aerial_event_type,  _quantity=2)
+        self.floor_events = baker.make_recipe("booking.future_event", event_type=self.floor_event_type,  _quantity=3)
+        self.kids_aerial_events = baker.make_recipe("booking.future_event", event_type=self.kids_aerial_event_type,  _quantity=3)
+        self.kids_floor_events = baker.make_recipe("booking.future_event", event_type=self.kids_floor_event_type,  _quantity=3)
+        self.course = baker.make(
+            Course, name="This month's aerial course", course_type=self.course_type,
             max_participants=2, show_on_site=True
         )
-        cls.course_event = baker.make_recipe(
-            "booking.future_event", event_type=cls.aerial_event_type, course=cls.course,
-
+        self.course_event = baker.make_recipe(
+            "booking.future_event", event_type=self.aerial_event_type, course=self.course,
         )

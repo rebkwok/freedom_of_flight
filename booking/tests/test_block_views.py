@@ -1,13 +1,10 @@
-from datetime import datetime, timedelta
 from model_bakery import baker
 
-from django.conf import settings
 from django.urls import reverse
 from django.test import TestCase
-from django.utils import timezone
 
 from booking.models import Block, DropInBlockConfig, CourseBlockConfig, Course, Event, EventType
-from common.test_utils import make_disclaimer_content, make_online_disclaimer, TestUsersMixin
+from common.test_utils import TestUsersMixin
 
 
 class BlockPurchaseViewTests(TestUsersMixin, TestCase):

@@ -1,14 +1,13 @@
-from datetime import date, datetime, timedelta
+from datetime import datetime
 from model_bakery import baker
 
-from django.test import TestCase, override_settings
-from django.contrib.auth.models import User, Group
-from django.urls import reverse
+from django.test import TestCase
+from django.contrib.auth.models import User
 from django.utils import timezone
 
 from accounts.admin import CookiePolicyAdminForm, DataPrivacyPolicyAdminForm
-from accounts.forms import DataPrivacyAgreementForm, SignupForm, DisclaimerForm, NonRegisteredDisclaimerForm
-from accounts.models import CookiePolicy, DataPrivacyPolicy, NonRegisteredDisclaimer, OnlineDisclaimer
+from accounts.forms import DataPrivacyAgreementForm, SignupForm, DisclaimerForm
+from accounts.models import CookiePolicy, DataPrivacyPolicy
 from common.test_utils import (
     make_disclaimer_content, TestUsersMixin, make_online_disclaimer
 )

@@ -1,17 +1,13 @@
 from datetime import timedelta
 from model_bakery import baker
 
-from django.contrib.auth.models import User, Group
-from django.contrib.messages.storage.fallback import FallbackStorage
-from django.core import mail
+from django.contrib.auth.models import Group
 from django.core.cache import cache
 from django.urls import reverse
 from django.test import TestCase
 from django.utils import timezone
 
-from ..models import DataPrivacyPolicy, DisclaimerContent, OnlineDisclaimer, \
-    NonRegisteredDisclaimer, has_active_data_privacy_agreement
-from ..views import DisclaimerCreateView
+from ..models import DataPrivacyPolicy, OnlineDisclaimer, has_active_data_privacy_agreement
 from common.test_utils import (
     make_disclaimer_content, TestUsersMixin, make_online_disclaimer
 )

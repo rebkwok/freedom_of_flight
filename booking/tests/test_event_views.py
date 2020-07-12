@@ -6,29 +6,46 @@ from django.urls import reverse
 from django.test import TestCase
 from django.utils import timezone
 
-from bs4 import BeautifulSoup
-
 from accounts.models import DataPrivacyPolicy, SignedDataPrivacy
 from accounts.models import has_active_data_privacy_agreement
 
-from booking.models import Event, Booking, Course, Track, EventType
-from common.test_utils import make_disclaimer_content, make_online_disclaimer, TestUsersMixin, EventTestMixin
+from booking.models import Event, Booking, Track
+from common.test_utils import make_disclaimer_content, TestUsersMixin, EventTestMixin
 
 
 class EventListViewTests(EventTestMixin, TestUsersMixin, TestCase):
 
     @classmethod
     def setUpTestData(cls):
-        super().setUpTestData()
         cls.url = reverse('booking:schedule')
-        cls.adult_url = reverse('booking:events', args=(cls.adult_track.slug,))
-        cls.kids_url = reverse('booking:events', args=(cls.kids_track.slug,))
 
     def setUp(self):
         self.create_users()
+        self.create_test_setup()
+        self.adult_url = reverse('booking:events', args=(self.adult_track.slug,))
+        self.kids_url = reverse('booking:events', args=(self.kids_track.slug,))
         self.login(self.student_user)
         self.make_data_privacy_agreement(self.student_user)
         self.make_data_privacy_agreement(self.manager_user)
+
+    def test_schedule_no_tracks(self):
+        Track.objects.all().delete()
+        self.client.logout()
+        resp = self.client.get(self.url)
+        assert resp.content.decode("utf-8") == "No tracks created yet."
+
+    def test_schedule(self):
+        """
+        With no track, redirects to the default track
+        """
+        self.client.logout()
+        resp = self.client.get(self.url)
+        assert resp.status_code == 302
+        assert resp.url == self.adult_url
+
+        resp = self.client.get(self.url, follow=True)
+        assert len(sum(list(resp.context_data['events_by_date'].values()), [])) == 6
+        assert "Log in</a> to book</span>" in resp.rendered_content
 
     def test_schedule(self):
         """
@@ -299,11 +316,12 @@ class EventDetailViewTests(EventTestMixin, TestUsersMixin, TestCase):
 
     @classmethod
     def setUpTestData(cls):
-        super().setUpTestData()
-        cls.event = cls.aerial_events[0]
+        cls.create_cls_tracks_and_event_types()
 
     def setUp(self):
         self.create_users()
+        self.create_events_and_course()
+        self.event = self.aerial_events[0]
         self.login(self.student_user)
         self.make_data_privacy_agreement(self.student_user)
         self.make_data_privacy_agreement(self.manager_user)
@@ -336,15 +354,17 @@ class CourseListViewTests(EventTestMixin, TestUsersMixin, TestCase):
 
     @classmethod
     def setUpTestData(cls):
-        super().setUpTestData()
-        cls.course_event1 = baker.make_recipe(
-            "booking.future_event", event_type=cls.aerial_event_type, course=cls.course
-        )
-        cls.url = reverse("booking:course_events", args=(cls.course.slug,))
+        cls.create_cls_tracks_and_event_types()
 
     def setUp(self):
         self.create_users()
         self.login(self.student_user)
+        self.create_events_and_course()
+        self.course_event1 = baker.make_recipe(
+            "booking.future_event", event_type=self.aerial_event_type, course=self.course
+        )
+        self.url = reverse("booking:course_events", args=(self.course.slug,))
+
         self.make_data_privacy_agreement(self.student_user)
         self.make_data_privacy_agreement(self.manager_user)
 
