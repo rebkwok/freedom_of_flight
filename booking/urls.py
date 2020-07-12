@@ -4,7 +4,7 @@ from booking.views import (
     ajax_block_delete, ajax_course_booking, ajax_toggle_booking, ajax_toggle_waiting_list,
     CourseEventsListView, BookingListView, BlockListView,
     disclaimer_required, home,
-    EventListView, EventDetailView, placeholder,
+    EventListView, EventDetailView,
     permission_denied, dropin_block_purchase_view,
     course_block_purchase_view, block_purchase_view, ajax_course_block_purchase,
     ajax_dropin_block_purchase, shopping_basket, ajax_checkout
@@ -19,8 +19,6 @@ urlpatterns = [
     # MISC
     path('disclaimer-required/<int:user_id>/', disclaimer_required, name='disclaimer_required'),
     path('not-available/', permission_denied, name='permission_denied'),
-
-    path('placeholder/', placeholder, name='placeholder'),
 
     # EVENTS
     path('event/<slug>', EventDetailView.as_view(), name='event'),

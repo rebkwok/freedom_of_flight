@@ -169,10 +169,6 @@ def ajax_toggle_booking(request, event_id):
     )
 
 
-def placeholder(request):
-    return HttpResponse("Placeholder")
-
-
 @login_required
 @require_http_methods(['POST'])
 def ajax_toggle_waiting_list(request, event_id):

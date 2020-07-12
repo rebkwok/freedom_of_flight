@@ -2,20 +2,22 @@ from datetime import timedelta
 
 from django.core.paginator import Paginator
 from django.db.models import Count
-from django.shortcuts import get_object_or_404, HttpResponseRedirect, render
+from django.shortcuts import get_object_or_404, HttpResponseRedirect, HttpResponse
 from django.urls import reverse
 from django.utils import timezone
 from django.views.generic import ListView, DetailView
 
 
 from ..forms import AvailableUsersForm
-from ..models import Booking, Course, Event, Track, WaitingListUser
+from ..models import Course, Event, Track
 from ..utils import get_view_as_user
 from .views_utils import DataPolicyAgreementRequiredMixin
 
 
 def home(request):
     track = Track.get_default()
+    if track is None:
+        return HttpResponse("No tracks created yet.")
     return HttpResponseRedirect(reverse("booking:events", args=(track.slug,)))
 
 
