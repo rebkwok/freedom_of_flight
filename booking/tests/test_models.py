@@ -269,6 +269,7 @@ class CourseTests(EventTestMixin, TestCase):
     def test_full(self):
         assert self.course.full is False
         bookings = baker.make(Booking, event=self.event, _quantity=2)
+        baker.make(Booking, event=self.course_event, _quantity=2)
 
         assert self.course.full is True
         booking = bookings[0]

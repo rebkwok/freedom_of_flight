@@ -17,7 +17,10 @@
 {% elif view_as_user|can_book_or_cancel:event %}
     {% if not view_as_user|has_available_block:event %}
         {% if event.course %}
-            <div class="btn btn-xs btn-outline-success" href="#">Course details</div>
+             <div class="btn btn-xs btn-outline-success" href="#">
+                {% if user|has_course_booking:event %}Rebook{% else %}Course details{% endif %}
+                </div>
+
         {% else %}
             <div class="btn btn-xs btn-info" href="#"><i id="loader_{{ event.id }}"></i> Payment Options</div>
         {% endif %}

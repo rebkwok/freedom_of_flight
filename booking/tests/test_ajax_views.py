@@ -57,7 +57,7 @@ class BookingToggleAjaxViewTests(EventTestMixin, TestUsersMixin, TestCase):
         assert Booking.objects.exists() is False
         resp = self.client.post(self.url(self.aerial_events[0].id), data={"user_id": self.student_user.id})
         assert resp.status_code == 200
-        redirect_url = reverse('booking:events', args=(self.adult_track.slug,))
+        redirect_url = reverse('booking:dropin_block_purchase', args=(self.aerial_events[0].slug,))
         assert resp.json() == {"redirect": True, "url": redirect_url}
 
     def test_create_booking(self):

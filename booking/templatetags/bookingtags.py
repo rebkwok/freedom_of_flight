@@ -104,3 +104,8 @@ def can_book_or_cancel(user, event):
 @register.filter
 def has_open_or_cancelled_booking(user, event):
     return user.bookings.filter(event=event).exists()
+
+
+@register.filter
+def has_course_booking(user, event):
+    return user.bookings.filter(event=event).exists()
