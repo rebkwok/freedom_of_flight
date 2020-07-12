@@ -17,7 +17,7 @@ def paypal_return(request):
     pdt_obj, failed = process_pdt(request)
     context = {"failed": failed, "pdt_obj": pdt_obj}
     if not failed:
-        invoice = get_invoice_from_ipn_or_pdt(ipn_or_pdt, "PDT", raise_immediately=False)
+        invoice = get_invoice_from_ipn_or_pdt(pdt_obj, "PDT", raise_immediately=False)
         if invoice is not None:
             if invoice.transaction_id is None:
                 # not already processed by IPN, do it now
