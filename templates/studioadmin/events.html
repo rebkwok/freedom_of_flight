@@ -1,0 +1,79 @@
+{%  extends "studioadmin/base.html" %}
+
+{% load studioadmintags static %}
+
+{% block precontent %}
+    {%  include "studioadmin/includes/events_subnav.html" %}
+{% endblock %}
+
+{% block content %}
+
+<div class="col-12">
+    <nav>
+        <div class="nav nav-tabs" id="trackTabs" role="tablist">
+            {% for track_obj in track_events %}
+                <a class="nav-item nav-link {{ track_obj.index|get_active_class:tab }}" href="#tab{{ track_obj.index }}" data-toggle="tab">{{ track_obj.track }}</a>
+            {%  endfor %}
+        </div>
+    </nav>
+    <div class="tab-content">
+        {% for track_obj in track_events %}
+            <div class="tab-pane fade {{ track_obj.index|get_active_in_class:tab }}" id="tab{{ track_obj.index }}" role="tabpanel">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th scope="col">Name</th>
+                                <th scope="col">Course</th>
+                                <th scope="col">Start</th>
+                                <th scope="col">Duration</th>
+                                <th scope="col" class="text-center">Spaces</th>
+                                <th scope="col">Event Type</th>
+                                <th scope="col" class="text-center">Visible</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for event in track_obj.queryset %}
+                            <tr>
+                                <td>{{ event.name }}</td>
+                                <td>{% if event.course %}Yes{% endif %}</td>
+                                <td>{{ event.start|date:"D d M Y, H:i" }}</td>
+                                <td>{{ event.duration }} mins</td>
+                                <td class="text-center">{{ event.max_participants }}</td>
+                                <td>{{ event.event_type.name }}</td>
+                                {% if event.course %}
+                                    <td class="helptext">Set on course</td>
+                                {% else %}
+                                    <td class="text-center">
+                                          <span
+                                              id="visible-{{ event.id }}"
+                                              data-event_id="{{ event.id }}"
+                                              class="visible-btn"
+                                              >
+                                              {% include "studioadmin/includes/ajax_toggle_event_visible_btn.html" %}
+                                          </span>
+                                    </td>
+                                {% endif %}
+                                <td><div class="btn btn-sm btn-danger pt-0 pb-0"><a herf="#">Cancel</a></div></td>
+                            </tr>
+                        {%  endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% include 'studioadmin/includes/event_pagination.html' %}
+            </div>
+        {% endfor %}
+
+
+
+    </div> <!-- tab content -->
+</div>
+
+
+{% endblock content %}
+
+{% block extra_js %}
+<script type='text/javascript' src="{% static 'js/underscore.1.10.2-min.js' %}"></script>
+<script type='text/javascript' src="{% static 'studioadmin/js/events_ajax-v1.js' %}"></script>
+{% endblock %}

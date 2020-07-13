@@ -24,7 +24,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
 
     path('', include('booking.urls')),
-
+    path('studioadmin/', include('studioadmin.urls')),
     path('accounts/', include('allauth.urls')),
     path('accounts/', include('accounts.urls', namespace="accounts")),
     path('payments/ipn-paypal-notify/', include('paypal.standard.ipn.urls')),

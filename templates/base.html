@@ -40,7 +40,7 @@
         <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
           <span class="navbar-toggler-icon"></span>
         </button>
-
+      {% block navbar %}
         <div class="collapse navbar-collapse" id="navbarCollapse">
           <ul class="navbar-nav mr-auto">
             {% for track in tracks %}
@@ -56,7 +56,7 @@
               <li class="nav-item"><a class="nav-link" href="{% url 'accounts:profile' %}">My Account</a></li>
 
               {% if request.user.is_staff %}
-                <li><a class="nav-link" href="#">Admin</a></li>
+                <li><a class="nav-link" href="{% url 'studioadmin:registers' %}">Admin</a></li>
               {% endif %}
             {% endif %}
           </ul>
@@ -80,7 +80,7 @@
       </ul>
       </span>
       </div>
-
+      {% endblock %}
       </nav>
     </header>
 
