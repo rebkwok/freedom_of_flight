@@ -216,6 +216,7 @@ if EMAIL_HOST_PASSWORD is None:  # pragma: no cover
 EMAIL_PORT = 587
 DEFAULT_FROM_EMAIL = 'freedomofflightbooking@gmail.com'
 DEFAULT_STUDIO_EMAIL = 'freedomofflightaerial@gmail.com'
+SEND_ALL_STUDIO_EMAILS = env("SEND_ALL_STUDIO_EMAILS")
 SUPPORT_EMAIL = 'rebkwok@gmail.com'
 
 
@@ -274,6 +275,11 @@ if not env('HEROKU') and not env('TRAVIS'):  # pragma: no cover
                 'propagate': False,
             },
             'booking': {
+                'handlers': ['console', 'file_app', 'mail_admins'],
+                'level': 'INFO',
+                'propagate': False,
+            },
+            'payments': {
                 'handlers': ['console', 'file_app', 'mail_admins'],
                 'level': 'INFO',
                 'propagate': False,

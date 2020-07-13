@@ -43,10 +43,11 @@ def process_ipn(sender, **kwargs):
         else:
             # DO NOTHING, JUST SEND EMAILS SO WE CAN CHECK MANUALLY
             logger.info("IPN signal received with unexpecting status %s; invoice %s; transaction id %s", ipn_obj.payment_status, ipn_obj.invoice, ipn_obj.txn_id)
-            send_failed_payment_emails(ipn_obj, invoice)
+            send_failed_payment_emails(ipn_obj, error="IPN signal received with unexpecting status")
     except Exception as error:
+        logger.error(error)
         # If anything else went wrong
-        send_failed_payment_emails(ipn_obj)
+        send_failed_payment_emails(ipn_obj, error=error)
 
 
 def process_invalid_ipn(sender, **kwargs):

@@ -53,11 +53,11 @@ def send_processed_refund_emails(invoice):
     )
 
 
-def send_failed_payment_emails(ipn_or_pdt):
+def send_failed_payment_emails(ipn_or_pdt, error=None):
     # send email to support only for checking;
     send_mail(
         'WARNING: Something went wrong with a payment!',
-        get_template('payments/email/payment_error.txt').render({"ipn_or_pdt": ipn_or_pdt}),
+        get_template('payments/email/payment_error.txt').render({"ipn_or_pdt": ipn_or_pdt, "error": error}),
         settings.DEFAULT_FROM_EMAIL,
         [settings.SUPPORT_EMAIL],
         fail_silently=False

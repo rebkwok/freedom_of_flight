@@ -41,9 +41,11 @@ def paypal_return(request):
         else:
             # No invoice retrieved, fail
             failed = True
-            send_failed_payment_emails(pdt_obj)
+            send_failed_payment_emails(pdt_obj, error="No invoice on PDT on return from paypal")
     if not failed:
         return render(request, 'payments/valid_payment.html', context)
+
+    send_failed_payment_emails(pdt_obj, error="Failed status on PDT return from paypal")
     return render(request, 'payments/non_valid_payment.html', context)
 
 
