@@ -35,11 +35,11 @@
                     {% for available_block_config in blocklist %}
                     <tr {% if available_block_config in target_configs %}class="table-success"{% endif %}>
                         <td class="pl-2">
-                            <p>{{ available_block_config }}</p>
+                            <p><strong>{{ available_block_config }}</strong></p>
                             <p>{% if available_block_config.description %}{{ available_block_config.description }}{% endif %}</p>
                             <p>£{{ available_block_config.cost }} |
-                                {% if available_block_config.duration %} Expires after {{ available_block_config.duration }} weeks{% else %}Never expires {% endif %} |
-                                {{ available_block_config.size }} uses </p>
+                                {% if available_block_config.duration %} Expires after {{ available_block_config.duration }} week{{ available_block_config.duration|pluralize }}{% else %}Never expires {% endif %} |
+                                {{ available_block_config.size }} use{{ available_block_config.size|pluralize }} </p>
                             <p>
                                 {% active_block_info user_active_blocks available_block_config %}
                             </p>
