@@ -10,7 +10,7 @@ from django.views.generic import ListView, DetailView
 
 from ..forms import AvailableUsersForm
 from ..models import Course, Event, Track
-from ..utils import get_view_as_user
+from ..utils import get_view_as_user, has_available_course_block, get_user_booking_info
 from .views_utils import DataPolicyAgreementRequiredMixin
 
 
@@ -54,6 +54,7 @@ class EventListView(DataPolicyAgreementRequiredMixin, ListView):
         events_by_date = {}
         for event_info in event_ids_by_date:
             events_by_date.setdefault(event_info["start__date"], []).append(all_events.get(id=event_info["id"]))
+
         context["page_events"] = page_events
         context["events_by_date"] = events_by_date
         context['title'] = self.get_title()
@@ -62,19 +63,10 @@ class EventListView(DataPolicyAgreementRequiredMixin, ListView):
             # Add in the booked_events
             # All user bookings for events in this list view (may be cancelled)
             view_as_user = get_view_as_user(self.request)
-            user_bookings = {booking.event.id: booking for booking in view_as_user.bookings.filter(event__id__in=all_events)}
-            # Event ids for the open bookings the use has
-            booked_event_ids = [
-                event_id for event_id, booking in user_bookings.items() if booking.status == "OPEN" and booking.no_show == False
-            ]
-            cancelled_event_ids = [
-                event_id for event_id, booking in user_bookings.items() if booking.status == "CANCELLED" or booking.no_show == True
-            ]
-            waiting_list_event_ids = view_as_user.waitinglists.filter(event__in=all_events).values_list('event__id', flat=True)
-            context['user_bookings'] = user_bookings
-            context['booked_event_ids'] = booked_event_ids
-            context['cancelled_event_ids'] = cancelled_event_ids
-            context['waiting_list_event_ids'] = waiting_list_event_ids
+            user_booking_info = {
+                event.id: get_user_booking_info(view_as_user, event) for event in page_events.object_list
+            }
+            context["user_booking_info"] = user_booking_info
             context["available_users_form"] = AvailableUsersForm(request=self.request, view_as_user=view_as_user)
         return context
 
@@ -120,4 +112,5 @@ class CourseEventsListView(EventListView):
         if self.request.user.is_authenticated:
             view_as_user = get_view_as_user(self.request)
             context["already_booked"] = view_as_user.bookings.filter(event__course=course).exists()
+            context["has_available_course_block"] = has_available_course_block(view_as_user, course)
         return context

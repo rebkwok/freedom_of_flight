@@ -3,7 +3,7 @@ from django import template
 from ..models import WaitingListUser
 from ..utils import has_available_block as has_available_block_util
 from ..utils import has_available_course_block as has_available_course_block_util
-from ..utils import get_active_user_block, get_block_status
+from ..utils import get_active_user_block, get_block_status, user_can_book_or_cancel
 
 register = template.Library()
 
@@ -17,18 +17,18 @@ def has_available_course_block(user, course):
     return has_available_course_block_util(user, course)
 
 
-@register.filter
-def block_used(user, event):
-    block = get_active_user_block(user, event)
-    if event.course:
-        # Don't show the used/total for course blocks
-        if user.bookings.filter(event=event, status="OPEN", no_show=False).exists():
-            return f"Block used"
-        return f"Block available"
-
-    if user.bookings.filter(event=event, status="OPEN", no_show=False).exists():
-        return f"Block used"
-    return f"Block available"
+# @register.filter
+# def block_used(user, event):
+#     block = get_active_user_block(user, event)
+#     if event.course:
+#         # Don't show the used/total for course blocks
+#         if user.bookings.filter(event=event, status="OPEN", no_show=False).exists():
+#             return f"Block used"
+#         return f"Block available"
+#
+#     if user.bookings.filter(event=event, status="OPEN", no_show=False).exists():
+#         return f"Block used"
+#     return f"Block available"
 
 
 def get_block_info(block):
@@ -41,13 +41,13 @@ def get_block_info(block):
     else:
         return f"{base_text}; never expires</span>"
 
-@register.filter
-def block_info(user, event):
-    block = get_active_user_block(user, event)
-    if event.course:
-        # Don't show the used/total for course blocks
-        return f"<span class='helptext'>{block.block_config.identifier} </span>"
-    return get_block_info(block)
+# @register.filter
+# def block_info(user, event):
+#     block = get_active_user_block(user, event)
+#     if event.course:
+#         # Don't show the used/total for course blocks
+#         return f"<span class='helptext'>{block.block_config.identifier} </span>"
+#     return get_block_info(block)
 
 
 @register.filter
@@ -87,25 +87,20 @@ def block_expiry_text(block):
 
 @register.filter
 def can_book_or_cancel(user, event):
-    if event.cancelled:
-        return False
-    elif event.has_space:
-        return True
-    elif user.bookings.filter(event=event, status="OPEN", no_show=False):
-        # user has open booking
-        return True
-    elif event.course and user.bookings.filter(event=event):
-        # user has cancelled or no-show booking, but it's a course event
-        return True
-    else:
-        return False
+    return user_can_book_or_cancel(user, event)
+
+
+# @register.filter
+# def has_open_or_cancelled_booking(user, event):
+#     return user.bookings.filter(event=event).exists()
+
+
+# @register.filter
+# def has_course_booking(user, event):
+#     return user.bookings.filter(event=event).exists()
 
 
 @register.filter
-def has_open_or_cancelled_booking(user, event):
-    return user.bookings.filter(event=event).exists()
-
-
-@register.filter
-def has_course_booking(user, event):
-    return user.bookings.filter(event=event).exists()
+def lookup_dict(dictionary, key):
+    if dictionary:
+        return dictionary.get(key)

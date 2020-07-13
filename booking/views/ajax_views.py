@@ -12,7 +12,7 @@ from accounts.models import has_active_disclaimer
 from activitylog.models import ActivityLog
 
 from ..models import Booking, Block, Course, Event, WaitingListUser, DropInBlockConfig, CourseBlockConfig
-from ..utils import calculate_user_cart_total, has_available_block, get_active_user_block
+from ..utils import calculate_user_cart_total, has_available_block, get_active_user_block, get_user_booking_info
 from ..email_helpers import send_waiting_list_email, send_user_and_studio_emails
 from .views_utils import get_unpaid_user_managed_blocks
 
@@ -155,11 +155,10 @@ def ajax_toggle_booking(request, event_id):
     context = {
         "event": event,
         "alert_message": alert_message,
-        "just_booked": requested_action in ["opened", "reopened"],
-        "just_cancelled": requested_action == "cancelled"
+        "user_info": get_user_booking_info(user, event),
     }
     html = render(request, f"booking/includes/events_button.txt", context)
-    block_info_html = render(request, f"booking/includes/block_info.html", {"event": event})
+    block_info_html = render(request, f"booking/includes/block_info.html", context)
     event_availability_html = render(request, f"booking/includes/event_availability_badge.html", {"event": event})
     return JsonResponse(
         {
@@ -181,13 +180,15 @@ def ajax_toggle_waiting_list(request, event_id):
     try:
         waitinglistuser = WaitingListUser.objects.get(user_id=user_id, event=event)
         waitinglistuser.delete()
+        on_waiting_list = False
     except WaitingListUser.DoesNotExist:
         WaitingListUser.objects.create(user_id=user_id, event=event)
+        on_waiting_list = True
 
     return render(
         request,
         "booking/includes/waiting_list_button.html",
-        {'event': event}
+        {'event': event, "user_info": {"on_waiting_list": on_waiting_list}}
     )
 
 

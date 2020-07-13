@@ -1,8 +1,13 @@
 {% load bookingtags %}
 
-{% if view_as_user|has_available_block:event  %}
-    | <span class="helptext">{{ view_as_user|block_used:event }}</span>
-    <span data-toggle="tooltip" data-html="true" title="<span class='helptext'>{{ view_as_user|block_info:event }}</span>">
+{% if user_info.used_block  %}
+    | <span class="helptext">Block used</span>
+    <span data-toggle="tooltip" data-html="true" title="<span class='helptext'>{{ user_info.used_block|user_block_info }}</span>">
+      <i class="fas fa-info-circle"></i>
+    </span>
+{% elif user_info.has_available_block  %}
+    | <span class="helptext">Block available</span>
+    <span data-toggle="tooltip" data-html="true" title="<span class='helptext'>{{ user_info.available_block|user_block_info }}</span>">
       <i class="fas fa-info-circle"></i>
     </span>
 {% endif %}

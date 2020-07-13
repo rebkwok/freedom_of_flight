@@ -68,3 +68,38 @@ def calculate_user_cart_total(unpaid_blocks=None):
         else:
             return unpaid_block.block_config.cost
     return sum(_cost(block) for block in unpaid_blocks)
+
+
+def user_can_book_or_cancel(user, event):
+    if event.cancelled:
+        return False
+    elif event.has_space:
+        return True
+    elif user.bookings.filter(event=event, status="OPEN", no_show=False):
+        # user has open booking
+        return True
+    elif event.course and user.bookings.filter(event=event):
+        # user has cancelled or no-show booking, but it's a course event
+        return True
+    else:
+        return False
+
+def get_user_booking_info(user, event):
+    user_bookings = user.bookings.filter(event=event)
+    info = {
+        "has_available_block": has_available_block(user, event),
+        "has_booked": user_bookings.exists(),
+        "on_waiting_list": user.waitinglists.filter(event=event).exists(),
+        "can_book_or_cancel": user_can_book_or_cancel(user, event),
+        "available_block": get_active_user_block(user, event)
+    }
+    if event.course:
+        info.update({"has_available_course_block": has_available_course_block(user, event.course)})
+    if user_bookings.exists():
+        user_booking = user_bookings.first()
+        info.update({
+            "open": user_booking.status == "OPEN" and not user_booking.no_show,
+            "cancelled": user_booking.status == "CANCELLED" or   user_booking.no_show,
+            "used_block": user_booking.block,
+        })
+    return info

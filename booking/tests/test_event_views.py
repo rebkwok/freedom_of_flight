@@ -47,19 +47,6 @@ class EventListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         assert len(sum(list(resp.context_data['events_by_date'].values()), [])) == 6
         assert "Log in</a> to book</span>" in resp.rendered_content
 
-    def test_schedule(self):
-        """
-        With no track, redirects to the default track
-        """
-        self.client.logout()
-        resp = self.client.get(self.url)
-        assert resp.status_code == 302
-        assert resp.url == self.adult_url
-
-        resp = self.client.get(self.url, follow=True)
-        assert len(sum(list(resp.context_data['events_by_date'].values()), [])) == 6
-        assert "Log in</a> to book</span>" in resp.rendered_content
-
     def test_event_list_logged_in_no_data_protection_policy(self):
         DataPrivacyPolicy.objects.all().delete()
         SignedDataPrivacy.objects.all().delete()
@@ -114,53 +101,46 @@ class EventListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         """
         self.client.logout()
         resp = self.client.get(self.adult_url)
-        assert 'booked_event_ids' not in resp.context
+        assert 'user_booking_info' not in resp.context
 
         self.login(self.student_user)
         resp = self.client.get(self.adult_url)
-        assert 'booked_event_ids' in resp.context
+        assert 'user_booking_info' in resp.context
 
     def test_event_list_with_booked_events(self):
         """
         test that booked events are shown on listing
         """
-        resp = self.client.get(self.adult_url)
-        # check there are no booked events yet
-        assert len(resp.context_data['booked_event_ids']) == 0
-
         # create a booking for this user
         event = self.aerial_events[0]
         baker.make(Booking, user=self.student_user, event=event)
         resp = self.client.get(self.adult_url)
-        booked_events = [event for event in resp.context_data['booked_event_ids']]
-        assert len(booked_events) == 1
-        assert event.id in booked_events
+        user_booking_info = resp.context_data['user_booking_info']
+        booked = [event_id for event_id, user_info in user_booking_info.items() if user_info.get("open")]
+        assert len(booked) == 1
+        assert booked == [event.id]
 
     def test_event_list_with_booked_events_manager_user(self):
         """
         test that booked events are shown on listing
         """
         self.login(self.manager_user)
-        resp = self.client.get(self.kids_url)
-        # user is not a student, view as user set to child user
-
-        # check there are no booked events yet
-        assert len(resp.context_data['booked_event_ids']) == 0
-
         # create a booking for the managed user
         event = self.kids_aerial_events[0]
         baker.make(Booking, user=self.child_user, event=event)
         resp = self.client.get(self.kids_url)
-        booked_events = resp.context_data['booked_event_ids']
-        assert len(booked_events) == 1
-        assert event.id in booked_events
+        # user is not a student, view as user set to child user
+        user_booking_info = resp.context_data['user_booking_info']
+        booked = [event_id for event_id, user_info in user_booking_info.items() if user_info.get("open")]
+        assert len(booked) == 1
+        assert booked == [event.id]
 
     def test_event_list_booked_events_no_disclaimer(self):
         make_disclaimer_content()
         resp = self.client.get(self.adult_url)
         assert "Complete a disclaimer" in resp.rendered_content
 
-    def test_event_list_booked_events(self):
+    def test_event_list_user_booking_info(self):
         """
         test that booked events are shown on listing
         """
@@ -173,8 +153,37 @@ class EventListViewTests(EventTestMixin, TestUsersMixin, TestCase):
             )
 
         resp = self.client.get(self.adult_url)
-        booked_events = [event for event in resp.context_data['booked_event_ids']]
-        assert len(booked_events) == 2
+        user_booking_info = resp.context_data['user_booking_info']
+
+        # user booking info for every track event
+        assert len(user_booking_info) == Event.objects.filter(event_type__track=self.adult_track).count()
+        # make the aerial events a queryset
+        aerial_events = Event.objects.filter(id__in=[event.id for event in self.aerial_events])
+        for event_id, user_info in user_booking_info.items():
+            if event_id in aerial_events.values_list("id", flat=True):
+                assert user_info["has_booked"] is True
+                assert user_info["can_book_or_cancel"] is True
+                assert user_info["on_waiting_list"] is False
+                assert user_info["has_available_block"] is False
+                assert user_info["available_block"] is None
+                assert user_info["open"] is True
+                assert user_info["cancelled"] is False
+                assert user_info["used_block"] is not None
+            else:
+                assert user_info["has_booked"] is False
+                assert user_info["can_book_or_cancel"] is True
+                assert user_info["on_waiting_list"] is False
+                assert user_info["has_available_block"] is False
+                assert user_info["available_block"] is None
+                assert "open" not in user_info
+                assert "cancelled" not in user_info
+                assert "used_block" not in user_info
+
+            if Event.objects.get(id=event_id).course:
+                assert user_info["has_available_course_block"] is False
+            else:
+                assert "has_available_course_block" not in user_info
+
         # cancel button shown for the booked events
         assert 'Cancel' in resp.rendered_content
         # course details button shown for the unbooked course
@@ -209,12 +218,16 @@ class EventListViewTests(EventTestMixin, TestUsersMixin, TestCase):
 
         # manager is a student, so by default shows them as view_as_user
         resp = self.client.get(self.adult_url)
-        assert len(resp.context_data['booked_event_ids']) == 2
+        user_booking_info = resp.context_data['user_booking_info']
+        booked_count = sum([1 if user_info.get("open") else 0 for user_info in user_booking_info.values()])
+        assert booked_count == 2
 
         # post to change the user
         resp = self.client.post(self.adult_url, data={"view_as_user": self.child_user.id}, follow=True)
         assert self.client.session["user_id"] == self.child_user.id
-        assert len(resp.context_data['booked_event_ids']) == 0
+        user_booking_info = resp.context_data['user_booking_info']
+        booked_count = sum([1 if user_info.get("open") else 0 for user_info in user_booking_info.values()])
+        assert booked_count == 0
 
     def test_block_info(self):
         self.make_disclaimer(self.student_user)

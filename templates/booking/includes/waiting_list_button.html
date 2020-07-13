@@ -11,7 +11,7 @@
                 </a>
         {% endif %}
 {% else %}
-        {% if view_as_user|on_waiting_list:event %}
+        {% if user_info.on_waiting_list %}
         <a href="#" class="btn btn-xs btn-warning" id="leave_waiting_list_button">
                 <i id="loader_{{ event.id }}"></i> Leave waiting list
         </a>

@@ -52,9 +52,9 @@ var processBookingToggleRequest = function()  {
             open: function() {
               var contentText;
               if (!cancellation_allowed) {
-                  contentText = "Cancellation is not allowed; if you choose to cancel you will not receive andy credit back to your block or any refund.";
+                  contentText = "Cancellation is not allowed; if you choose to cancel you will not receive any credit back to your block or any refund.";
               } else {
-                  contentText = 'The allowed cancellation period has passed; if you choose to cancel you will not receive andy credit back to your block or any refund.';
+                  contentText = 'The allowed cancellation period has passed; if you choose to cancel you will not receive any credit back to your block or any refund.';
               }
               $(this).html(contentText + "<br>Please confirm you want to continue.");
             },
