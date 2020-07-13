@@ -5,7 +5,7 @@
 ACTION REQUIRED: CHECK STATUS OF REFUNDED ITEMS
 Payment refunded
 -----------------------------
-Invoice number: {{ invoice.id }}</p>
+Invoice number: {{ invoice.invoice_id }}</p>
 Paypal Transaction id: {{ invoice.transaction_id }}
 User: {{ user.first_name}} {{ user.last_name}}
 Purchased:

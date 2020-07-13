@@ -2,7 +2,7 @@
 
 {% block messagecontent %}
 <h2>Thank you for your payment.</h2>
-<p><strong>Invoice number:</strong> {{ invoice.id }}</p>
+<p><strong>Invoice number:</strong> {{ invoice.invoice_id }}</p>
 <p><strong>Paypal Transaction id:</strong> {{ invoice.transaction_id }}</p>
 <p><strong>User: {{ user.first_name}} {{ user.last_name}}</strong></p>
 <p><strong>Purchased:</strong>
