@@ -46,7 +46,8 @@
             {% for track in tracks %}
             <li class="nav-item"><a class="nav-link" href="{% url 'booking:events' track.slug %}">{{ track.name }}</a></li>
             {% endfor %}
-            <li><a class="nav-link" href="#">Gift Vouchers</a></li>
+              <li><a class="nav-link" href="#"><em>Gift Vouchers</em></a></li>
+              <li><a class="nav-link" href="#"><em>Store</em></a></li>
 
             {% if request.user.is_authenticated %}
               <li class="nav-item">
