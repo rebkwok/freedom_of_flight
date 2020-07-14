@@ -1,0 +1,60 @@
+{% extends "studioadmin/base.html" %}
+{% load static %}
+{% load bookingtags %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'booking/css/vanilla-notify.css' %}">
+<script type='text/javascript' src="{% static 'booking/js/vanilla-notify.min.js' %}"></script>
+{% endblock %}
+
+{% block precontent %}
+    {%  include "studioadmin/includes/events_subnav.html" %}
+{% endblock %}
+
+{% block content %}
+
+<div class="container">
+
+    <h2>Waiting List for {{ event }}</h2>
+    <p class="lead">(Currently {% if event.spaces_left %}not {% endif %} full)</p>
+
+            {% if waiting_list_users %}
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>Username</th>
+                                <th>Date joined</th>
+                                <th></th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for wluser in waiting_list_users %}
+                            <tr id="row-wluser-{{ wluser.id }}">
+                                <td>{{ wluser.user.first_name }} {{ wluser.user.last_name }}</td>
+                                <td>{{ wluser.user.username }}</td>
+                                <td>{{ wluser.date_joined }}</td>
+                                <td class="text-center wl-remove-btn"
+                                    data-wluser_id={{ wluser.id }}
+                                    data-event_id={{ event.id }}>
+                                    <span class="btn btn-outline-success">Remove</span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+            {% else %}
+                <p>There are no users on the waiting list.</p>
+            {% endif %}
+</div>
+
+
+{% endblock %}
+
+
+{% block extra_js %}
+<script type='text/javascript' src="{% static 'js/underscore.1.10.2-min.js' %}"></script>
+<script type='text/javascript' src="{% static 'studioadmin/js/waiting_list_ajax-v1.js' %}"></script>
+{% endblock %}

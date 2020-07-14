@@ -39,7 +39,9 @@
                                 <td>{{ event.duration }} mins</td>
                                 <td class="text-center">{{ event.max_participants }}</td>
                                 <td class="text-center">{{ event.bookings.count }}</td>
-                                <td></td>
+                                <td class="text-center">
+                                    <a href="{% url 'studioadmin:event_waiting_list' event.id %}">{{ event.waitinglistusers.count }}</a>
+                                </td>
                             </tr>
                         {%  endfor %}
                         </tbody>
