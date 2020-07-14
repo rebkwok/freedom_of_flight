@@ -23,7 +23,7 @@
                     <table class="table">
                         <thead>
                             <tr>
-                                <th scope="col">Name</th>
+                                <th scope="col"><br/><span class="helptext">Click for register</span></th>
                                 <th scope="col">Start</th>
                                 <th scope="col">Duration</th>
                                 <th scope="col" class="text-center">Spaces</th>
@@ -34,7 +34,7 @@
                         <tbody>
                         {% for event in track_obj.queryset %}
                             <tr>
-                                <td>{{ event.name }}</td>
+                                <td><a href="{% url 'studioadmin:register' event.id %}">{{ event.name }}</a></td>
                                 <td>{{ event.start|date:"D d M Y, H:i" }}</td>
                                 <td>{{ event.duration }} mins</td>
                                 <td class="text-center">{{ event.max_participants }}</td>

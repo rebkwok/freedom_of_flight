@@ -1,9 +1,10 @@
 from django.shortcuts import render
 from django.core.paginator import Paginator
+from django.shortcuts import get_object_or_404
 from django.views.generic import ListView
 from django.utils import timezone
 
-from booking.models import Event, Track
+from booking.models import Event, Track, DropInBlockConfig, CourseBlockConfig
 
 from braces.views import LoginRequiredMixin
 
@@ -15,7 +16,7 @@ class EventAdminListView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        return queryset.filter(start__gte=timezone.now().date())
+        return queryset.filter(start__gte=timezone.now().date()).order_by("start")
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -63,3 +64,32 @@ def ajax_toggle_event_visible(request, event_id):
     event.save()
 
     return render(request, "studioadmin/includes/ajax_toggle_event_visible_btn.html", {"event": event})
+
+
+# @login_required
+# @is_instructor_or_staff
+def register_view(request, event_id):
+    event = get_object_or_404(Event, pk=event_id)
+    # status_choice = request.GET.get('status_choice', 'OPEN')
+    # if status_choice == 'ALL':
+    #     bookings = event.bookings.all().order_by('date_booked')
+    # else:
+    #     bookings = event.bookings.filter(status=status_choice).order_by('date_booked')
+    #
+    # status_filter = StatusFilter(initial={'status_choice': status_choice})
+    bookings = event.bookings.all().order_by('date_booked')
+    template = 'studioadmin/register.html'
+
+    if event.course:
+        available_block_config = CourseBlockConfig.objects.filter(course_type=event.course.course_type).exists()
+    else:
+        available_block_config = DropInBlockConfig.objects.filter(event_type=event.event_type).exists()
+
+    return TemplateResponse(
+        request, template, {
+            'event': event, 'bookings': bookings, 'status_filter': status_filter,
+            'can_add_more': event.spaces_left > 0,
+            # 'status_choice': status_choice,
+            'available_block_type': available_block_type,
+        }
+    )

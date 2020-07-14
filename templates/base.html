@@ -65,7 +65,7 @@
         <ul class="nav navbar-nav mr-auto">
           {% if request.user.is_authenticated %}
            <li>
-              <a class="btn btn-info btn-sm mt-1" href="{% url 'booking:shopping_basket' %}">
+              <a class="btn btn-primary btn-sm mt-1" href="{% url 'booking:shopping_basket' %}">
                 <span><i class="fas fa-shopping-cart"></i> <span class="badge badge-light" id="cart_item_menu_count">{{ cart_item_count }}</span></span>
               </a>
             </li>
@@ -91,7 +91,7 @@
       <!--<h1 class="mt-5">Freedom of Flight Aerial Booking</h1>-->
 
         {% block body %}
-        {% block precontent %}{% endblock %}
+        {% block precontent %}<div class="container"><h1 class="pt-2">Freedom of Flight Aerial</h1></div>{% endblock %}
 
         {% if messages %}
           <div class="row mt-2" id="message-row">
@@ -112,7 +112,6 @@
             </div>
           </div>
         {% endif %}
-
             {% block content %}
                     <p>You need to define a content block!</p>
             {% endblock %}

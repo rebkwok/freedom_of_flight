@@ -182,6 +182,11 @@ def ajax_checkout(request):
     total = Decimal(request.POST.get("cart_total"))
     unpaid_blocks = get_unpaid_user_managed_blocks(request.user)
 
+    if not unpaid_blocks:
+        messages.warning(request, "Your cart is empty")
+        url = reverse("booking:shopping_basket")
+        return JsonResponse({"redirect": True, "url": url})
+
     # verify any vouchers on blocks
     for block in unpaid_blocks:
         if block.voucher:

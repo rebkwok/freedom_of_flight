@@ -69,7 +69,7 @@
                                 <span id="availability_{{ booking.event.id }}">{% include 'booking/includes/event_availability_badge.html' %}</span>
                             </span>
                             {% if booking.event.course and not course %}
-                                | <a href="{% url 'booking:course_events' booking.event.course.slug %}"><span class="badge badge-info">Course: {{ booking.event.course.name }}</span></a>
+                                | <a href="{% url 'booking:course_events' booking.event.course.slug %}"><span class="badge badge-course">Course: {{ booking.event.course.name }}</span></a>
                             {% endif %}
                             {% if user.is_authenticated %}
                                 <span id="block_info_{{booking.event.id}}">

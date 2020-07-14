@@ -93,7 +93,8 @@
 
 {% else %}
     <div class="col-12">
-    Your cart is empty
+    <p>Your cart is empty</p>
+    <p><a class="btn btn-xs btn-outline-primary" href="{% url 'booking:block_purchase' %}">Add items</a></p>
     </div>
 {% endif %}
 </div>

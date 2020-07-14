@@ -26,7 +26,7 @@
     <div class="btn btn-xs btn-success" href="#"><i id="loader_{{ event.id }}"></i> Rebook Drop-in</div>
 {% elif user_info.can_book_or_cancel %}
     {% if not user_info.has_available_block %}
-         <div class="btn btn-xs btn-info" href="#"><i id="loader_{{ event.id }}"></i> Payment Options</div>
+         <div class="btn btn-xs btn-outline-info" href="#"><i id="loader_{{ event.id }}"></i> Payment Options</div>
      {% else %}
          <div class="btn btn-xs btn-success" href="#"><i id="loader_{{ event.id }}"></i> Book Drop-in</div
     {% endif %}

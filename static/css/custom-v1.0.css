@@ -96,6 +96,13 @@ div#CookielawBanner {
   font-size: 75%;
 }
 
+@media only screen and (max-width: 768px) {
+  .btn-xs {
+    width: 105px;
+    padding-left: 1px;
+    padding-right: 1px;
+}
+
 .btn-xs-wide {
   width: 170px;
   font-size: 80%;
@@ -138,4 +145,17 @@ hr.tooltip-hr {
   margin-bottom: 0;
   border-top: 1px solid grey;
 
+}
+
+
+.badge-course {
+  font-weight: lighter;
+  background-color: darkslateblue;
+  color: white;
+}
+
+.badge-active-block {
+  font-weight: lighter;
+  background-color: darkorange;
+  color: white;
 }
