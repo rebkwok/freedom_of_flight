@@ -1,7 +1,7 @@
 from datetime import datetime
 import random
 
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Group
 from django.utils import timezone
 
 from model_bakery import baker
@@ -28,7 +28,7 @@ def make_disclaimer_content(**kwargs):
 def make_online_disclaimer(**kwargs):
     if "version" not in kwargs:
         kwargs["version"] = DisclaimerContent.current_version()
-    defaults={
+    defaults = {
         "health_questionnaire_responses": [],
         "terms_accepted": True,
         "emergency_contact_name": "test",
@@ -42,7 +42,7 @@ def make_online_disclaimer(**kwargs):
 def make_nonregistered_disclaimer(**kwargs):
     if "version" not in kwargs:
         kwargs["version"] = DisclaimerContent.current_version()
-    defaults={
+    defaults = {
         "first_name": "test",
         "last_name": "user",
         "email": "test@test.com",
@@ -63,13 +63,32 @@ def make_nonregistered_disclaimer(**kwargs):
 
 class TestUsersMixin:
 
-    def create_users(self):
+    def create_admin_users(self):
         self.staff_user = User.objects.create_user(
             username='staff@test.com', email='staff@test.com', password='test',
             first_name="Staff", last_name="User"
         )
         self.staff_user.is_staff = True
         self.staff_user.save()
+
+        self.instructor_user = User.objects.create_user(
+            username='instuctor@test.com', email='instuctor@test.com', password='test',
+            first_name="Instuctor", last_name="User"
+        )
+        instructor_group, _ = Group.objects.get_or_create(name="instructors")
+        self.instructor_user.groups.add(instructor_group)
+        UserProfile.objects.create(
+            user=self.staff_user, address="test", postcode="test",
+            date_of_birth=datetime(1990, 6, 7, tzinfo=timezone.utc), phone="123455",
+            student=False, manager=False
+        )
+        UserProfile.objects.create(
+            user=self.instructor_user, address="test", postcode="test",
+            date_of_birth=datetime(1990, 6, 7, tzinfo=timezone.utc), phone="123455",
+            student=False, manager=False
+        )
+
+    def create_users(self):
         self.student_user = User.objects.create_user(
             username='student@test.com', email='student@test.com', password='test',
             first_name="Student", last_name="User"
@@ -89,11 +108,6 @@ class TestUsersMixin:
         )
         self.child_user.set_unusable_password()
 
-        UserProfile.objects.create(
-            user=self.staff_user, address="test", postcode="test",
-            date_of_birth=datetime(1990, 6, 7, tzinfo=timezone.utc), phone="123455",
-            student=False, manager=False
-        )
         UserProfile.objects.create(
             user=self.student_user, address="test1", postcode="test1",
             date_of_birth=datetime(1980, 6, 7, tzinfo=timezone.utc), phone="123456",

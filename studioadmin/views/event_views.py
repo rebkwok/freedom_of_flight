@@ -22,14 +22,14 @@ from ..forms import AddRegisterBookingForm
 from .utils import is_instructor_or_staff, staff_required, StaffUserMixin, InstructorOrStaffUserMixin
 
 
-class EventAdminListView(LoginRequiredMixin, StaffUserMixin, ListView):
+class BaseEventAdminListView(ListView):
 
     model = Event
-    template_name = "studioadmin/events.html"
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        return queryset.filter(start__gte=timezone.now().date()).order_by("start")
+        start_of_today = timezone.now().replace(hour=0, minute=0, microsecond=0)
+        return queryset.filter(start__gte=start_of_today).order_by("start")
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -67,7 +67,11 @@ class EventAdminListView(LoginRequiredMixin, StaffUserMixin, ListView):
         return context
 
 
-class RegisterListView(EventAdminListView):
+class EventAdminListView(LoginRequiredMixin, StaffUserMixin, BaseEventAdminListView):
+    template_name = "studioadmin/events.html"
+
+
+class RegisterListView(LoginRequiredMixin, InstructorOrStaffUserMixin, BaseEventAdminListView):
     template_name = "studioadmin/registers.html"
 
 
@@ -83,21 +87,13 @@ def ajax_toggle_event_visible(request, event_id):
 @is_instructor_or_staff
 def register_view(request, event_id):
     event = get_object_or_404(Event, pk=event_id)
-    # status_choice = request.GET.get('status_choice', 'OPEN')
-    # if status_choice == 'ALL':
-    #     bookings = event.bookings.all().order_by('date_booked')
-    # else:
-    #     bookings = event.bookings.filter(status=status_choice).order_by('date_booked')
-    #
-    # status_filter = StatusFilter(initial={'status_choice': status_choice})
-    bookings = event.bookings.all().order_by('date_booked')
+    bookings = event.bookings.filter(status="OPEN").order_by('date_booked')
     template = 'studioadmin/register.html'
 
     return TemplateResponse(
         request, template, {
             'event': event, 'bookings': bookings,
             'can_add_more': event.spaces_left > 0,
-            # 'status_choice': status_choice,
         }
     )
 
@@ -150,7 +146,7 @@ def process_event_booking_updates(form, event, request):
         if booking.has_available_block:
             booking.block = active_block
         else:
-            messages.warning("User does not have a valid block for this event")
+            messages.warning(request, "User does not have a valid block for this event")
     booking.save()
 
     messages.success(request, f'Booking for {booking.event} has been {action}.')

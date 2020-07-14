@@ -165,13 +165,18 @@ hr.tooltip-hr {
   display: flex;
 }
 
-.btn.btn-attended, .btn.btn-noshow {
+.btn.btn-attended, .btn.btn-noshow, .btn-visible {
   padding-left: 5px;
   padding-right: 5px;
   line-height: 1.1;
   width: 3.7em;
   border-radius: 10px;
   border-color: dimgrey;
+}
+
+.btn-visible {
+  line-height: 0.8;
+  border-color: transparent;
 }
 
 .expired {
