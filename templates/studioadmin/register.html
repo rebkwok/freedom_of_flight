@@ -1,0 +1,116 @@
+{% extends "studioadmin/base.html" %}
+{% load static %}
+{% load accounttags bookingtags %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'booking/css/vanilla-notify.css' %}">
+<script type='text/javascript' src="{% static 'booking/js/vanilla-notify.min.js' %}"></script>
+{% endblock %}
+
+{% block precontent %}
+    {%  include "studioadmin/includes/events_subnav.html" %}
+{% endblock %}
+
+
+{% block content %}
+
+<div class="container">
+    <h2>Register for {{ event }}</h2>
+
+    {% if event.video_link %}
+    <h3><a href="{{ event.video_link }}">{{ event.video_link }}</a></h3>
+    {% endif %}
+
+    <div class="table-responsive">
+        <table class="table">
+            <tr class="compress">
+                <th scope="col" class="text-center"></th>
+                <th scope="col" >Attended</th>
+                <th scope="col" class="text-center" >Status</th>
+                <th scope="col" class="text-center">User</th>
+                <th scope="col" class="text-center">Disclaimer</th>
+                <th scope="col" class="text-center">Block</th>
+            </tr>
+
+            <!-- Modal -->
+            <div class="modal fade" id="RegisterBookingAddModal" tabindex="-1" role="dialog" aria-labelledby="RegisterBookingAddModalLabel"></div>
+            <!-- /.modal -->
+
+            {% for booking in bookings %}
+                <tr id='booking-row-{{ booking.id }}' class="compress{% if booking.no_show or booking.status == 'CANCELLED' %} expired{% endif %}">
+                    {% if status_choice == 'CANCELLED' %}
+                        <td></td>
+                        <td></td>
+                    {% else %}
+                        <td class="text-center">{{ forloop.counter }}.</td>
+                        <td>
+                            <div class="btn-group btn-group-sm" role="group">
+                              <button
+                                      id="booking-attended-{{ booking.id }}"
+                                      data-booking_id="{{ booking.id }}"
+                                      data-attendance="attended"
+                                      type="button"
+                                      class="btn btn-attended {% if booking.attended %}btn-success{% else %}btn-outline-secondary{% endif %}"
+                                      >Yes</button>
+                              <button
+                                      id="booking-noshow-{{ booking.id }}"
+                                      data-booking_id="{{ booking.id }}"
+                                      data-attendance="no-show"
+                                      type="button"
+                                      class="btn btn-noshow {% if booking.no_show %}btn-danger{% else %}btn-outline-secondary{% endif %}"
+                                      >No</button>
+                            </div>
+                        </td>
+                    {% endif %}
+                    <td id="booking-status-{{ booking.id }}">{{ booking.status }}</td>
+                    <td> {{ booking.user.first_name }} {{ booking.user.last_name }}</td>
+                    <td>
+                        {% if booking.user|has_disclaimer %}
+                            <a href="#" target="_blank"><span id="disclaimer" class="far fa-file-alt"></span></a>
+                        {% elif booking.user|has_expired_disclaimer %}
+                            <span class=helptext">(expired)</span>
+                        {% else %}
+                            <span id="disclaimer" class="fas fa-times"></span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if booking.block %}
+                            {{ booking.block.block_config }} <span class="helptext">(exp: {{ booking.block.expiry_date|date:"d M y" }})</span>
+                        {% else %}
+                            {% if booking.status != "CANCELLED" and not booking.user|has_available_block:booking.event %}WARNING: USER HAS NO ACTIVE BLOCK{% endif %}
+                        {% endif %}
+                    </td>
+
+                </tr>
+            {% endfor %}
+            <tr>
+                <td colspan="6">
+                    <a
+                        id="add-more-btn"
+                        class="bookingadd btn btn-success {% if not can_add_more %}disabled{% endif %}"
+                        href="#" data-form="{% url 'studioadmin:bookingregisteradd' event.id %}"
+                        title="add booking"
+                    >Add booking</a>
+                </td>
+            </tr>
+            {% if event.max_participants %}
+                <tr>
+                    <td colspan="6">
+                        Spaces left: <span id="spaces_left">{{ event.spaces_left }}</span> / {{ event.max_participants }}
+                    </td>
+                </tr>
+            {% endif %}
+
+        </table>
+    </div>
+</div>
+
+
+{% endblock content %}
+
+
+{% block extra_js %}
+<script type='text/javascript' src="{% static 'js/underscore.1.10.2-min.js' %}"></script>
+<script type='text/javascript' src="{% static 'js/jquery.form-4.3.0.min.js' %}"></script>
+<script type='text/javascript' src="{% static 'studioadmin/js/register_ajax-v1.js' %}"></script>
+{% endblock %}

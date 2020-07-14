@@ -1,0 +1,50 @@
+<div class="modal-dialog modal-md">
+    <div class="modal-content">
+        <form id="register-booking-add-form" method='post' class="form" role="form" action='{% url "studioadmin:bookingregisteradd" form_event.id %}'>
+
+            <div class="modal-header">
+                <h4 class="modal-title" id="RegisterBookingAddModalLabel">New booking for:<br/>{{ form_event }}</h4>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            </div>
+            <div class="container">
+                <div class="modal-body">
+                {% csrf_token %}
+                {{ form.non_field_errors }}
+                <div class="form-group">
+                    {% for field in form.visible_fields %}
+                         <div class="form-group">
+                         <label for='id_new_{{ field.name }}'>{{ field.label }}</label>
+                             {{ field }}
+
+                            {% if field.errors %}
+                                <div class="errorlist">
+                                    {% for error in field.errors %}
+                                        <span class="fa fa-exclamation-triangle"></span>{{ error|escape }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                    {% for field in form.hidden_fields %}
+                         <div style="display:none;">{{ field }}</div>
+                     {% endfor %}
+                </div>
+            </div>
+            <div class="modal-footer">
+                <input type="button" class="btn btn-sm btn-secondary" data-dismiss="modal" value="Cancel" />
+                <input type="submit" class="btn btn-sm btn-success" value="Save" />
+            </div>
+        </form>
+
+
+        <script>
+            var form_options = {
+                target: '#RegisterBookingAddModal',
+                success: function() { }
+            };
+
+            $('#register-booking-add-form').ajaxForm(form_options);
+        </script>
+        </div>
+    </div><!-- /.modal-content -->
+</div><!-- /.modal-dialog -->

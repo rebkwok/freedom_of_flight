@@ -160,3 +160,29 @@ hr.tooltip-hr {
   background-color: darkorange;
   color: white;
 }
+
+.btn-group {
+  display: flex;
+}
+
+.btn.btn-attended, .btn.btn-noshow {
+  padding-left: 5px;
+  padding-right: 5px;
+  line-height: 1.1;
+  width: 3.7em;
+  border-radius: 10px;
+  border-color: dimgrey;
+}
+
+.expired {
+  color: lightgrey;
+}
+.expired .btn-attended {
+  border-color: lightgrey;
+  color: lightgrey;
+}
+
+.expired .btn-noshow {
+  border-color: lightgrey;
+  color: palevioletred;
+}
