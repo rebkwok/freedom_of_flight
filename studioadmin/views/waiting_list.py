@@ -23,38 +23,17 @@ logger = logging.getLogger(__name__)
 def event_waiting_list_view(request, event_id):
     event = get_object_or_404(Event, id=event_id)
     waiting_list_users = WaitingListUser.objects.filter(event__id=event_id).order_by('user__username')
+    if waiting_list_users:
+        users_on_waiting_list_ids = waiting_list_users.values_list("user_id", flat=True)
+        # cleanup waiting list - remove any users with open bookings
+        bookings_for_wl_users = event.bookings.filter(status="OPEN", no_show="False", user_id__in=users_on_waiting_list_ids)
+        for booking in bookings_for_wl_users:
+            waiting_list_users.get(user_id=booking.user.id).delete()
 
     template = 'studioadmin/event_waiting_list.html'
 
-    # if request.method == 'POST' and 'remove_user' in request.POST:
-    #     remove_wluser_id = request.POST.getlist('remove_user')[0]
-    #     wl_user_to_remove = WaitingListUser.objects.get(id=remove_wluser_id)
-    #     waiting_list_users.exclude(id=remove_wluser_id)
-    #     user_to_remove = User.objects.get(id=wl_user_to_remove.user.id)
-    #     wl_user_to_remove.delete()
-    #
-    #     messages.success(
-    #         request,
-    #         "{} {} ({}) has been removed from the waiting list".format(
-    #             user_to_remove.first_name,
-    #             user_to_remove.last_name,
-    #             user_to_remove.username
-    #         )
-    #     )
-    #     ActivityLog.objects.create(
-    #         log="{} {} ({}) removed from the waiting list "
-    #             "by admin user {}".format(
-    #             user_to_remove.first_name,
-    #             user_to_remove.last_name,
-    #             user_to_remove.username,
-    #             request.user.username
-    #         )
-    #     )
-
     return TemplateResponse(
-        request, template, {
-            'waiting_list_users': waiting_list_users, 'event': event,
-        }
+        request, template, {'waiting_list_users': waiting_list_users, 'event': event,}
     )
 
 
