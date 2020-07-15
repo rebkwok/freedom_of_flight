@@ -57,6 +57,11 @@ class EventType(models.Model):
     Also defines some common fields
     """
     name = models.CharField(max_length=255)
+    label = models.CharField(
+        max_length=255,
+        default="class",
+        help_text='How an instance of this event type will be referred to, e.g. "class", "workshop"'
+    )
     description = models.TextField(help_text="Description", null=True, blank=True)
     track = models.ForeignKey(Track, on_delete=models.SET_NULL, null=True)
     contact_email = models.EmailField(default=settings.DEFAULT_STUDIO_EMAIL)
@@ -70,6 +75,11 @@ class EventType(models.Model):
 
     def __str__(self):
         return f"{self.name} - {self.track}"
+
+    def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
+        if self.label:
+            self.label = self.label.lower()
+        super().save()
 
 
 class CourseType(models.Model):

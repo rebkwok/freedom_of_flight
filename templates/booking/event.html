@@ -17,13 +17,15 @@
     {% if booking %}
         <div class="card bg-success text-white">
             <div class="card-body">
-                <p class="card-text">{% if booking.user == request.user %}You have{% else %}{{ booking.user.first_name }} {{ booking.user.last_name }} has{% endif %} booked for this event</p>
+                <p class="card-text">{% if booking.user == request.user %}You have{% else %}{{ booking.user.first_name }} {{ booking.user.last_name }} has{% endif %} booked for this
+                    {{ event.event_type.label }}</p>
             </div>
         </div>
     {% elif view_as_user|on_waiting_list:event %}
         <div class="card bg-warning">
             <div class="card-body">
-                <p class="card-text">{% if view_as_user == request.user %}You are{% else %}{{ view_as_user.first_name }} {{ view_as_user.last_name }} is{% endif %} on the waiting list for this event</p>
+                <p class="card-text">{% if view_as_user == request.user %}You are{% else %}{{ view_as_user.first_name }} {{ view_as_user.last_name }} is{% endif %} on the waiting list for this
+                    {{ event.event_type.label }}</p>
             </div>
         </div>
     {% endif %}
