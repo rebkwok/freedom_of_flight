@@ -5,6 +5,7 @@ from django.test import TestCase
 
 from booking.models import Booking, WaitingListUser
 from common.test_utils import TestUsersMixin
+from common.utils import full_name
 
 
 class WaitingListViewStudioAdminTests(TestUsersMixin, TestCase):
@@ -61,10 +62,23 @@ class WaitingListViewStudioAdminTests(TestUsersMixin, TestCase):
         ).exists() is False
 
     def test_ajax_remove_user_from_waiting_list(self):
-        pass
-
-    def test_ajax_remove_user_and_event_mismatch(self):
-        pass
+        self.login(self.staff_user)
+        wl_user = baker.make(WaitingListUser, event=self.event, user=self.student_user)
+        resp = self.client.post(self.ajax_remvove_url, data={"wluser_id": wl_user.id, "event_id": self.event.id}).json()
+        assert WaitingListUser.objects.filter(id=wl_user.id).exists() is False
+        assert "removed" in resp
+        assert resp["alert_msg"] == f"{full_name(self.student_user)} removed from waiting list"
 
     def test_ajax_remove_waitinglistuser_not_found(self):
-        pass
+        self.login(self.staff_user)
+        resp = self.client.post(self.ajax_remvove_url, data={"wluser_id": 1, "event_id": self.event.id})
+        assert resp.status_code == 400
+        assert resp.content.decode("utf-8") == "User is not on waiting list"
+
+    def test_ajax_remove_user_and_event_mismatch(self):
+        self.login(self.staff_user)
+        wl_user = baker.make(WaitingListUser, event=self.event, user=self.student_user)
+        resp = self.client.post(self.ajax_remvove_url, data={"wluser_id": wl_user.id, "event_id": 999})
+        assert WaitingListUser.objects.filter(id=wl_user.id).exists()
+        assert resp.status_code == 400
+        assert resp.content.decode("utf-8") == "User is not on waiting list"

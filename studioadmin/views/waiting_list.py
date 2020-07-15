@@ -1,16 +1,14 @@
 import logging
 
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.models import User
 
-from django.contrib import messages
 from django.http import HttpResponseBadRequest, JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.template.response import TemplateResponse
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404
 
 from booking.models import Event, WaitingListUser
-
+from common.utils import full_name
 from studioadmin.views.utils import is_instructor_or_staff
 from activitylog.models import ActivityLog
 
@@ -29,6 +27,9 @@ def event_waiting_list_view(request, event_id):
         bookings_for_wl_users = event.bookings.filter(status="OPEN", no_show="False", user_id__in=users_on_waiting_list_ids)
         for booking in bookings_for_wl_users:
             waiting_list_users.get(user_id=booking.user.id).delete()
+        if bookings_for_wl_users:
+            # refresh the queryset if we had to cleanup
+            waiting_list_users = WaitingListUser.objects.filter(event__id=event_id).order_by('user__username')
 
     template = 'studioadmin/event_waiting_list.html'
 
@@ -54,11 +55,11 @@ def ajax_remove_from_waiting_list(request):
                 f"by admin user {request.user.username}"
         )
     except WaitingListUser.DoesNotExist:
-        return HttpResponseBadRequest(f"User is not on waiting list")
+        return HttpResponseBadRequest("User is not on waiting list")
 
     return JsonResponse(
         {
             'removed': True,
-            "alert_msg": f"{user.first_name} {user.last_name} removed from waiting list"
+            "alert_msg": f"{full_name(user)} removed from waiting list"
          }
     )
