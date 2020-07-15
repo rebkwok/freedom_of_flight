@@ -28,6 +28,10 @@ body > .container {
   padding: 60px 5px 0;
 }
 
+#navbarSubNav > ul > li.nav-item.active > a {
+  color: blue;
+}
+
 .footer > .container {
   padding-right: 5px;
   padding-left: 5px;
