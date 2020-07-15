@@ -5,18 +5,19 @@ from studioadmin.views import (
     EventAdminListView, ajax_toggle_event_visible, RegisterListView, register_view,
     ajax_add_register_booking, ajax_toggle_attended,
     ajax_remove_from_waiting_list, event_waiting_list_view, cancel_event_view,
+    event_create_choice_view, EventCreateView, EventUpdateView
 )
 
 app_name = 'studioadmin'
 
 
 urlpatterns = [
-    # path('events/<slug:slug>/edit', EventAdminUpdateView.as_view(),
-    #     {'ev_type': 'event'}, name='edit_event'),
     path('events/', EventAdminListView.as_view(), name='events'),
     path('event/<slug>/cancel/', cancel_event_view, name='cancel_event'),
     path('ajax-toggle-event-visible/<int:event_id>/', ajax_toggle_event_visible, name="ajax_toggle_event_visible"),
-    # path('events/<slug:slug>/cancel', cancel_event_view, name='cancel_event'),
+    path('event/create/', event_create_choice_view, name="choose_event_type_to_create"),
+    path('event/<int:event_type_id>/create/', EventCreateView.as_view(), name="create_event"),
+    path('event/<slug>/update/', EventUpdateView.as_view(), name="update_event"),
 
     path('registers/', RegisterListView.as_view(), name='registers'),
     path('registers/<int:event_id>', register_view, name='register'),

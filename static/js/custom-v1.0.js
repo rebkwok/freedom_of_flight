@@ -58,41 +58,6 @@ jQuery(document).ready(function () {
         scrollInput: false,
     });
 
-    for(var i = 0; i < 5; i++) {
-        jQuery('#datepicker_startdate_' + i).datetimepicker({
-            format:'ddd DD MMM YYYY',
-            formatTime:'HH:mm',
-            timepicker: false,
-            minDate: 0,
-            closeOnDateSelect: true,
-            scrollMonth: false,
-            scrollTime: false,
-            scrollInput: false
-        });
-
-        jQuery('#datepicker_enddate_' + i).datetimepicker({
-            format:'ddd DD MMM YYYY',
-            formatTime:'HH:mm',
-            timepicker: false,
-            minDate: 0,
-            closeOnDateSelect: true,
-            scrollMonth: false,
-            scrollTime: false,
-            scrollInput: false
-        });
-    }
-
-    jQuery('#timepicker').datetimepicker({
-        format:'HH:mm',
-        formatTime:'HH:mm',
-        step: 5,
-        defaultTime: '19:00',
-        datepicker: false,
-        scrollMonth: false,
-        scrollTime: false,
-        scrollInput: false,
-    });
-
     jQuery('#dobdatepicker').datetimepicker({
         format:'DD MMM YYYY',
         formatTime:'HH:mm',
@@ -104,17 +69,18 @@ jQuery(document).ready(function () {
         scrollInput: false
     });
 
-    jQuery('#eventdatepicker').datetimepicker({
-        format:'DD MMM YYYY',
+    jQuery('#id_start').datetimepicker({
+        format:'DD MMM YYYY HH:mm',
         formatTime:'HH:mm',
-        timepicker: false,
+        formatDate:'DD MM YYYY',
         minDate: 0,
-        closeOnDateSelect: true,
+        step: 5,
+        defaultTime: '19:00',
         scrollMonth: false,
         scrollTime: false,
-        scrollInput: false
-    });
+        scrollInput: false,
 
+    });
 
     //http://tablesorter.com/docs/
     jQuery("#sortTable").tablesorter();

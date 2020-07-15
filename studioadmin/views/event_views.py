@@ -2,9 +2,10 @@ from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.paginator import Paginator
+from django import forms
 from django.template.response import TemplateResponse
 from django.shortcuts import get_object_or_404, render, HttpResponseRedirect
-from django.views.generic import ListView
+from django.views.generic import ListView, CreateView, UpdateView
 from django.utils import timezone
 from django.urls import reverse
 
@@ -12,8 +13,7 @@ from braces.views import LoginRequiredMixin
 
 from activitylog.models import ActivityLog
 from booking.email_helpers import send_bcc_emails
-from booking.models import Booking, Event, Track
-
+from booking.models import Booking, Event, Track, EventType
 
 from .utils import is_instructor_or_staff, staff_required, StaffUserMixin, InstructorOrStaffUserMixin
 
@@ -122,9 +122,9 @@ def cancel_event_view(request, slug):
             )
 
             if bookings_to_cancel:
-                message = 'Bookings cancelled and notification emails sent to students'
+                message = 'bookings cancelled and notification emails sent to students'
             else:
-                message = 'No open bookings'
+                message = 'no open bookings'
             course_message = " and removed from course" if event_is_part_of_course else ""
             messages.success(request, f'Event cancelled{course_message}; {message}')
             ActivityLog.objects.create(log=f"Event {event} cancelled by admin user {request.user}; {message}")
@@ -138,3 +138,84 @@ def cancel_event_view(request, slug):
         'no_shows': no_shows,
     }
     return TemplateResponse(request, 'studioadmin/cancel_event.html', context)
+
+
+@login_required
+@staff_required
+def event_create_choice_view(request):
+    event_types = EventType.objects.all()
+    return render(request, "studioadmin/event_create_choose_event_type.html", {"event_types": event_types})
+
+
+class EventCreateView(LoginRequiredMixin, StaffUserMixin, CreateView):
+    template_name = "studioadmin/event_create_update.html"
+    model = Event
+
+    fields = (
+        "name", "description", "start", "duration",
+        "max_participants",
+        "video_link",
+        "show_on_site",
+        "event_type"
+    )
+
+    def get_form(self, form_class=None):
+        form = super().get_form()
+        for name, field in form.fields.items():
+            if name == "event_type":
+                field.widget = forms.HiddenInput(attrs={"value": self.kwargs["event_type_id"]})
+            elif name == "show_on_site":
+                field.widget.attrs = {"class": "form-check-inline"}
+            elif name == "video_link" and not EventType.objects.get(id=self.kwargs["event_type_id"]).is_online:
+                field.widget = forms.HiddenInput()
+            else:
+                field.widget.attrs = {"class": "form-control"}
+                if name == "description":
+                    field.widget.attrs.update({"rows": 10})
+                if name == "start":
+                    field.widget.attrs.update({"autocomplete": "off"})
+                    field.widget.format = '%d %b %Y %H:%M'
+                    field.input_formats=['%d %b %Y %H:%M']
+        return form
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["creating"] = True
+        context["event_type"] = EventType.objects.get(id=self.kwargs["event_type_id"])
+        return context
+
+    def get_success_url(self):
+        return reverse("studioadmin:events")
+
+
+class EventUpdateView(LoginRequiredMixin, StaffUserMixin, UpdateView):
+    template_name = "studioadmin/event_create_update.html"
+    model = Event
+
+    fields = (
+        "event_type",
+        "name", "description", "start", "duration",
+        "max_participants",
+        "video_link",
+        "show_on_site",
+    )
+
+    def get_form(self, form_class=None):
+        form = super().get_form()
+        for name, field in form.fields.items():
+            if name == "show_on_site":
+                field.widget.attrs = {"class": "form-check-inline"}
+            elif name == "video_link" and not self.get_object().event_type.is_online:
+                field.widget = forms.HiddenInput()
+            else:
+                field.widget.attrs = {"class": "form-control"}
+                if name == "description":
+                    field.widget.attrs.update({"rows": 10})
+                if name == "start":
+                    field.widget.attrs.update({"autocomplete": "off"})
+                    field.widget.format = '%d %b %Y %H:%M'
+                    field.input_formats=['%d %b %Y %H:%M']
+        return form
+
+    def get_success_url(self):
+        return reverse("studioadmin:events")

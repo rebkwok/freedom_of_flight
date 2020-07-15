@@ -8,7 +8,7 @@
 
 {% block content %}
 
-<div class="col-12">
+<div class="container-fluid pb-2">
     <nav>
         <div class="nav nav-tabs" id="trackTabs" role="tablist">
             {% for track_obj in track_events %}
@@ -36,7 +36,7 @@
                         <tbody>
                         {% for event in track_obj.queryset %}
                             <tr {% if event.cancelled %}class="expired"{% endif %}>
-                                <td><a href="#">{{ event.name }}</a></td>
+                                <td><a href="{% url 'studioadmin:update_event' event.slug %}">{{ event.name }}</a></td>
                                 <td>{% if event.course %}Yes{% endif %}</td>
                                 <td>{{ event.start|date:"D d M Y, H:i" }}</td>
                                 <td>{{ event.duration }} mins</td>
