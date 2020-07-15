@@ -109,6 +109,63 @@ class EventAjaxMakeVisibleTests(TestUsersMixin, TestCase):
         self.client.post(self.url)
         assert self.event.show_on_site is False
 
+
+class CancelEventViewTests(EventTestMixin, TestUsersMixin, TestCase):
+
+    def setUp(self):
+        self.create_users()
+        self.create_admin_users()
+        self.create_test_setup()
+
+    def url(self, event):
+        return reverse("studioadmin:cancel_event", args=(event.slug,))
+
+    def test_only_staff_user_can_access(self):
+        url = self.url(self.aerial_events[0])
+        self.login(self.student_user)
+        resp = self.client.get(url)
+        assert resp.status_code == 302
+        assert resp.url == reverse("booking:permission_denied")
+
+        self.login(self.instructor_user)
+        resp = self.client.get(url)
+        assert resp.status_code == 302
+        assert resp.url == reverse("booking:permission_denied")
+
+        self.login(self.staff_user)
+        resp = self.client.get(url)
+        assert resp.status_code == 200
+
+    def test_list_open_bookings_on_event(self):
+        pass
+
+    def test_cancel_event_no_bookings(self):
+        # no bookings - event set to cancel, no emails sent
+        pass
+
+    def test_cancel_event_with_cancelled_bookings(self):
+        # event set to cancel
+        pass
+
+    def test_cancel_event_with_open_bookings(self):
+        # event set to cancel
+        # bookings set to cancelled
+        # blocks released from bookings
+        # emails sent to manager users
+        pass
+
+    def test_cancel_event_on_course(self):
+        # event set to cancel
+        # event removed from course
+        # bookings set to cancelled
+        # block released from bookings
+        # emails sent to manager users
+        pass
+
+    def test_cancel_event_with_open_bookings_email_message(self):
+        # additional optional email message
+        pass
+
 # class EventAdminUpdateViewTests(TestPermissionMixin, TestCase):
 #
 #     def setUp(self):

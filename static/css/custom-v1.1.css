@@ -182,6 +182,11 @@ hr.tooltip-hr {
 .expired {
   color: lightgrey;
 }
+
+.expired > td > a {
+  color: lightskyblue;
+}
+
 .expired .btn-attended {
   border-color: lightgrey;
   color: lightgrey;

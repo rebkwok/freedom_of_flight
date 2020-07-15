@@ -38,6 +38,20 @@ def send_waiting_list_email(event, waiting_list_users, host):
         )
 
 
+def send_bcc_emails(context, bcc_user_emails, subject, template_without_ext):
+    msg = EmailMultiAlternatives(
+        subject,
+        get_template(f"{template_without_ext}.txt").render(context),
+        settings.DEFAULT_FROM_EMAIL,
+        bcc=bcc_user_emails,
+    )
+    msg.attach_alternative(
+        get_template(f"{template_without_ext}.html").render(context),
+        "text/html"
+    )
+    msg.send(fail_silently=False)
+
+
 def send_user_and_studio_emails(context, user, send_to_studio, subjects, template_short_name):
     context.update({"studio_email": settings.DEFAULT_STUDIO_EMAIL})
     # send email to user

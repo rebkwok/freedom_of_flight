@@ -1,0 +1,10 @@
+{% extends 'email_base.html' %}
+
+
+{% block messagecontent %}
+
+{{ event }} has been cancelled.
+
+{{ additional_message|linebreaks }}
+
+{% endblock %}

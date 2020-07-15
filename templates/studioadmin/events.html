@@ -35,17 +35,20 @@
                         </thead>
                         <tbody>
                         {% for event in track_obj.queryset %}
-                            <tr>
+                            <tr {% if event.cancelled %}class="expired"{% endif %}>
                                 <td><a href="#">{{ event.name }}</a></td>
                                 <td>{% if event.course %}Yes{% endif %}</td>
                                 <td>{{ event.start|date:"D d M Y, H:i" }}</td>
                                 <td>{{ event.duration }} mins</td>
-                                <td class="text-center">{{ event.max_participants }}</td>
+                                <td class="text-center">{{ event.spaces_left }} {% if event.max_participants %}/ {{ event.max_participants }}{% endif %}</td>
                                 <td>{{ event.event_type.name }}</td>
                                 {% if event.course %}
                                     <td class="helptext">Set on course</td>
                                 {% else %}
                                     <td class="text-center">
+                                        {% if event.cancelled %}
+                                            <span class="btn btn-sm btn-visible btn-secondary disabled">No</span>
+                                        {% else %}
                                           <span
                                               id="visible-{{ event.id }}"
                                               data-event_id="{{ event.id }}"
@@ -53,9 +56,15 @@
                                               >
                                               {% include "studioadmin/includes/ajax_toggle_event_visible_btn.html" %}
                                           </span>
+                                        {% endif %}
                                     </td>
                                 {% endif %}
-                                <td><div class="btn btn-sm btn-danger pt-0 pb-0"><a herf="#">Cancel</a></div></td>
+                                <td>
+                                    {% if event.cancelled %}
+                                        Cancelled
+                                    {%  else %}
+                                        <a class="btn btn-sm btn-danger pt-0 pb-0" href="{% url 'studioadmin:cancel_event' event.slug %}">Cancel</a></td>
+                                    {% endif %}
                             </tr>
                         {%  endfor %}
                         </tbody>

@@ -1,24 +1,20 @@
-from datetime import timedelta
-
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.paginator import Paginator
-from django.http import HttpResponseBadRequest, JsonResponse, HttpResponse
 from django.template.response import TemplateResponse
-from django.template.loader import render_to_string
-from django.shortcuts import get_object_or_404, render
-from django.views.decorators.http import require_http_methods
+from django.shortcuts import get_object_or_404, render, HttpResponseRedirect
 from django.views.generic import ListView
 from django.utils import timezone
+from django.urls import reverse
 
 from braces.views import LoginRequiredMixin
 
 from activitylog.models import ActivityLog
-from booking.email_helpers import send_waiting_list_email
-from booking.models import Booking, Event, Track, WaitingListUser
-from booking.utils import get_active_user_block
+from booking.email_helpers import send_bcc_emails
+from booking.models import Booking, Event, Track
 
-from ..forms import AddRegisterBookingForm
+
 from .utils import is_instructor_or_staff, staff_required, StaffUserMixin, InstructorOrStaffUserMixin
 
 
@@ -71,10 +67,6 @@ class EventAdminListView(LoginRequiredMixin, StaffUserMixin, BaseEventAdminListV
     template_name = "studioadmin/events.html"
 
 
-class RegisterListView(LoginRequiredMixin, InstructorOrStaffUserMixin, BaseEventAdminListView):
-    template_name = "studioadmin/registers.html"
-
-
 def ajax_toggle_event_visible(request, event_id):
     event = Event.objects.get(id=event_id)
     event.show_on_site = not event.show_on_site
@@ -84,120 +76,65 @@ def ajax_toggle_event_visible(request, event_id):
 
 
 @login_required
-@is_instructor_or_staff
-def register_view(request, event_id):
-    event = get_object_or_404(Event, pk=event_id)
-    bookings = event.bookings.filter(status="OPEN").order_by('date_booked')
-    template = 'studioadmin/register.html'
+@staff_required
+def cancel_event_view(request, slug):
+    event = get_object_or_404(Event, slug=slug)
+    event_is_part_of_course = bool(event.course)
 
-    return TemplateResponse(
-        request, template, {
-            'event': event, 'bookings': bookings,
-            'can_add_more': event.spaces_left > 0,
-        }
-    )
+    open_bookings = Booking.objects.filter(event=event, status='OPEN', no_show=False)
+    no_shows = Booking.objects.filter(event=event, status='OPEN', no_show=True)
 
-
-@login_required
-@is_instructor_or_staff
-def ajax_add_register_booking(request, event_id):
-    event = get_object_or_404(Event, pk=event_id)
-    if request.method == 'GET':
-        form = AddRegisterBookingForm(event=event)
-
+    # Course event: cancel all bookings, no-show or open, since a course block is for the whole
+    # course, not a single event. We assume another event will be added to the course to compensate.
+    if event_is_part_of_course:
+        bookings_to_cancel = list(open_bookings) + list(no_shows)
     else:
-        form = AddRegisterBookingForm(request.POST, event=event)
-        if event.spaces_left > 0:
-            if form.is_valid():
-                process_event_booking_updates(form, event, request)
-                return HttpResponse(
-                    render_to_string(
-                        'studioadmin/includes/register-booking-add-success.html'
-                    )
-                )
-        else:
-            form.add_error(
-                '__all__',
-                'Event is now full, booking could not be created. '
-                'Please close this window and refresh register page.'
+        bookings_to_cancel = list(open_bookings)
+
+    if request.method == 'POST':
+        if 'confirm' in request.POST:
+            additional_message = request.POST["additional_message"]
+            event.cancelled = True
+            if event_is_part_of_course:
+                event.course = None
+            for booking in bookings_to_cancel:
+                booking.block = None
+                booking.status = "CANCELLED"
+                booking.save()
+            event.save()
+
+            # send email notification
+            ctx = {
+                'host': 'http://{}'.format(request.META.get('HTTP_HOST')),
+                'event': event,
+                'additional_message': additional_message,
+            }
+            # send emails to manager user if this is a child user booking
+            user_emails = [
+                booking.user.childuserprofile.parent_user_profile.user.email if hasattr(booking.user, "childuserprofile")
+                else booking.user.email for booking in bookings_to_cancel
+            ]
+            send_bcc_emails(
+                ctx,
+                user_emails,
+                subject=f'{settings.ACCOUNT_EMAIL_SUBJECT_PREFIX} {event} has been cancelled',
+                template_without_ext="studioadmin/email/event_cancelled"
             )
 
-    context = {'form_event': event, 'form': form}
-    return TemplateResponse(
-        request, 'studioadmin/includes/register-booking-add-modal.html', context
-    )
+            if bookings_to_cancel:
+                message = 'Bookings cancelled and notification emails sent to students'
+            else:
+                message = 'No open bookings'
+            course_message = " and removed from course" if event_is_part_of_course else ""
+            messages.success(request, f'Event cancelled{course_message}; {message}')
+            ActivityLog.objects.create(log=f"Event {event} cancelled by admin user {request.user}; {message}")
 
+        return HttpResponseRedirect(reverse('studioadmin:events'))
 
-def process_event_booking_updates(form, event, request):
-    user_id = int(form.cleaned_data['user'])
-    booking, created = Booking.objects.get_or_create(user_id=user_id, event=event)
-    if created:
-        action = 'opened'
-    elif booking.status == 'OPEN' and not booking.no_show:
-        messages.info(request, 'Open booking for this user already exists')
-        return
-    else:
-        booking.status = 'OPEN'
-        booking.no_show = False
-        action = 'reopened'
-
-    if not booking.block:  # reopened no-show could already have block
-        active_block = get_active_user_block(booking.user, booking.event)
-        if booking.has_available_block:
-            booking.block = active_block
-        else:
-            messages.warning(request, "User does not have a valid block for this event")
-    booking.save()
-
-    messages.success(request, f'Booking for {booking.event} has been {action}.')
-    ActivityLog.objects.create(
-        log=f'Booking id {booking.id} (user {booking.user.username}) for {booking.event} '
-            f'{action} by admin user {request.user.username}.'
-    )
-
-    try:
-        waiting_list_user = WaitingListUser.objects.get(user=booking.user,  event=booking.event)
-        waiting_list_user.delete()
-        ActivityLog.objects.create(
-            log='User {booking.user.username} has been removed from the waiting list for {booking.event}'
-        )
-    except WaitingListUser.DoesNotExist:
-        pass
-
-
-@login_required
-@is_instructor_or_staff
-@require_http_methods(['POST'])
-def ajax_toggle_attended(request, booking_id):
-    booking = get_object_or_404(Booking, pk=booking_id)
-    attendance = request.POST.get('attendance')
-    if not attendance or attendance not in ['attended', 'no-show']:
-        return HttpResponseBadRequest('No attendance data')
-
-    alert_msg = None
-    event_was_full = booking.event.spaces_left == 0
-    if attendance == 'attended':
-        if (booking.no_show or booking.status == 'CANCELLED') and booking.event.spaces_left == 0:
-            alert_msg = 'Event is now full, cannot reopen booking.'
-        else:
-            booking.status = 'OPEN'
-            booking.attended = True
-            booking.no_show = False
-    elif attendance == 'no-show':
-        booking.attended = False
-        booking.no_show = True
-    booking.save()
-
-    ActivityLog.objects.create(
-        log=f'User {booking.user.username} marked as {attendance} for {booking.event} '
-        f'by admin user {request.user.username}'
-    )
-
-    if event_was_full and attendance == 'no-show' and booking.event.start > (timezone.now() + timedelta(hours=1)):
-        # Only send waiting list emails if marking booking as no-show more than 1 hr before the event start
-        host = 'http://{}'.format(request.META.get('HTTP_HOST'))
-        waiting_list_users = WaitingListUser.objects.filter(event=booking.event)
-        send_waiting_list_email(booking.event, waiting_list_users, host)
-    return JsonResponse(
-        {'attended': booking.attended, "spaces_left": booking.event.spaces_left, 'alert_msg': alert_msg}
-    )
+    context = {
+        'event': event,
+        'event_is_part_of_course': event_is_part_of_course,
+        'bookings_to_cancel': bookings_to_cancel,
+        'no_shows': no_shows,
+    }
+    return TemplateResponse(request, 'studioadmin/cancel_event.html', context)

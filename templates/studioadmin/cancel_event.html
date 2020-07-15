@@ -1,0 +1,46 @@
+{%  extends "studioadmin/base.html" %}
+
+{% load static %}
+
+{% block precontent %}
+    {%  include "studioadmin/includes/events_subnav.html" %}
+{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid pb-1">
+
+    <h2>Cancelling {{ event }}</h2>
+
+    {%  if event_is_part_of_course %}
+        <p>
+            This class is part of a course and will be removed from the course when it is cancelled.  You will
+            need to manually add a replacement class to the course.
+        </p>
+    {% endif %}
+    {% if bookings_to_cancel %}
+        <p>The following students have bookings which will be cancelled:</p>
+        <ul>
+            {% for booking in bookings_to_cancel %}
+            <li>{{ booking.user.first_name }} {{ booking.user.last_name }}</li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>There are no open bookings for this event.</p>
+    {% endif %}
+
+    <form action="" method="post">{% csrf_token %}
+        <div class="form-group">
+        <label for="additional_message">Additional message to include in emails to students:</label><br/>
+        <textarea class="form-control" id="additional_message" rows="10" name="additional_message"/></textarea>
+        </div>
+        <div class="form-group">
+        <p><strong>Please confirm you want to cancel this event.</strong></p>
+        <input class="btn btn-success" type="submit" name="confirm" value="Yes, cancel this {{ event_type }}" />
+        <input class="btn btn-outline-dark" type="submit" name="cancel" value="No, take me back" />
+        </div>
+    </form>
+
+</div>
+
+{% endblock content %}
