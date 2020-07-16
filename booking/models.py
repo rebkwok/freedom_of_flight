@@ -96,16 +96,15 @@ class CourseType(models.Model):
 
 class Course(models.Model):
     """A collection of specific Events of the number and EventType as defined by the CourseType"""
-    name = models.CharField(max_length=255)
+    name = models.CharField(
+        max_length=255, help_text="A short identifier that will be displayed to users on the event list.  "
+    )
     description = models.TextField(blank=True, default="")
     course_type = models.ForeignKey(CourseType, on_delete=models.CASCADE)
     slug = AutoSlugField(populate_from=["name", "course_type"], max_length=40, unique=True)
     cancelled = models.BooleanField(default=False)
-    max_participants = models.PositiveIntegerField()
-    show_on_site = models.BooleanField(default=False)
-
-    class Meta:
-        unique_together = ("name", "course_type")
+    max_participants = models.PositiveIntegerField(help_text="Overrides any value set on individual linked events")
+    show_on_site = models.BooleanField(default=False, help_text="Overrides any value set on individual linked events")
 
     @property
     def full(self):
