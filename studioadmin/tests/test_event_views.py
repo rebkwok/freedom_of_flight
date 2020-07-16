@@ -6,6 +6,7 @@ from unittest.mock import patch
 from model_bakery import baker
 
 from django.conf import settings
+from django import forms
 from django.urls import reverse
 from django.core import mail
 from django.test import TestCase
@@ -294,34 +295,120 @@ class CancelEventViewTests(EventTestMixin, TestUsersMixin, TestCase):
         assert len(mail.outbox) == 1
         assert "This is an extra message." in mail.outbox[0].body
 
+    def test_cancel_event_with_open_bookings_emails_manager_user(self):
+        baker.make(Booking, event=self.event, user=self.student_user)
+        baker.make(Booking, event=self.event, user=self.child_user)
+        url = self.url(self.event)
+        self.login(self.staff_user)
+        self.client.post(
+            url, data={"confirm": "yes, confirm", "additional_message": ""}
+        )
+        assert sorted(mail.outbox[0].bcc) == sorted([self.student_user.email, self.manager_user.email])
 
-class EventCreateViewTests(TestUsersMixin, TestCase):
+
+class EventCreateViewTests(EventTestMixin, TestUsersMixin, TestCase):
+
+    def setUp(self):
+        self.create_users()
+        self.create_admin_users()
+        self.url = reverse("studioadmin:create_event", args=(self.aerial_event_type.id,))
+        self.login(self.staff_user)
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.create_cls_tracks_and_event_types()
+
+    def form_data(self):
+        return {
+            "name": "test",
+            "description": "",
+            "event_type": self.aerial_event_type.id,
+            "start": "10 Jul 2020 16:00",
+            "max_participants": 10,
+            "duration": 90,
+            "video_link": "",
+            "show_on_site": False
+        }
+
+    def test_only_staff(self):
+        self.login(self.student_user)
+        resp = self.client.get(self.url)
+        assert resp.status_code == 302
+        assert resp.url == reverse("booking:permission_denied")
+
+        self.login(self.instructor_user)
+        resp = self.client.get(self.url)
+        assert resp.status_code == 302
+        assert resp.url == reverse("booking:permission_denied")
+
+        self.login(self.staff_user)
+        resp = self.client.get(self.url)
+        assert resp.status_code == 200
 
     def test_create_event(self):
-        pass
-
-    def test_only_staff(self):
-        pass
+        assert Event.objects.exists() is False
+        self.client.post(self.url, data=self.form_data())
+        assert Event.objects.exists() is True
+        new_event = Event.objects.first()
+        assert new_event.name == "test"
 
     def test_redirects_to_events_list_on_save(self):
-        pass
+        resp = self.client.post(self.url, data=self.form_data())
+        assert resp.status_code == 302
+        assert resp.url == reverse("studioadmin:events")
 
-    def test_event_type_form_field_is_hidden(self):
-        pass
 
+class EventUpdateViewTests(EventTestMixin, TestUsersMixin, TestCase):
 
-class EventUpdateViewTests(TestUsersMixin, TestCase):
+    def setUp(self):
+        self.create_users()
+        self.create_admin_users()
+        self.event = baker.make_recipe("booking.future_event", event_type=self.aerial_event_type)
+        self.url = reverse("studioadmin:update_event", args=(self.event.slug,))
+        self.login(self.staff_user)
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.create_cls_tracks_and_event_types()
+
+    def form_data(self):
+        return {
+            "id": self.event.id,
+            "name": "test",
+            "description": "",
+            "event_type": self.aerial_event_type.id,
+            "start": "10 Jul 2020 16:00",
+            "max_participants": 10,
+            "duration": 90,
+            "video_link": "",
+            "show_on_site": False
+        }
+
+    def test_only_staff(self):
+        self.login(self.student_user)
+        resp = self.client.get(self.url)
+        assert resp.status_code == 302
+        assert resp.url == reverse("booking:permission_denied")
+
+        self.login(self.instructor_user)
+        resp = self.client.get(self.url)
+        assert resp.status_code == 302
+        assert resp.url == reverse("booking:permission_denied")
+
+        self.login(self.staff_user)
+        resp = self.client.get(self.url)
+        assert resp.status_code == 200
 
     def test_update_event(self):
-        pass
+        assert self.event.name != "test"
+        resp = self.client.post(self.url, data=self.form_data())
+        self.event.refresh_from_db()
+        assert self.event.name == "test"
 
-    def test_only_staff(self):
-        pass
-
-    def test_redirects_to_events_list_on_save(self):
-        pass
+        assert resp.status_code == 302
+        assert resp.url == reverse("studioadmin:events")
 
     def test_event_type_form_field_is_shown(self):
-        pass
-
-
+        resp = self.client.get(self.url)
+        form = resp.context_data["form"]
+        assert isinstance(form.fields["event_type"].widget, forms.Select)

@@ -15,6 +15,7 @@ from activitylog.models import ActivityLog
 from booking.email_helpers import send_bcc_emails
 from booking.models import Booking, Event, Track, EventType
 
+from ..forms import EventCreateForm, EventUpdateForm
 from .utils import is_instructor_or_staff, staff_required, StaffUserMixin, InstructorOrStaffUserMixin
 
 
@@ -150,33 +151,12 @@ def event_create_choice_view(request):
 class EventCreateView(LoginRequiredMixin, StaffUserMixin, CreateView):
     template_name = "studioadmin/event_create_update.html"
     model = Event
+    form_class = EventCreateForm
 
-    fields = (
-        "name", "description", "start", "duration",
-        "max_participants",
-        "video_link",
-        "show_on_site",
-        "event_type"
-    )
-
-    def get_form(self, form_class=None):
-        form = super().get_form()
-        for name, field in form.fields.items():
-            if name == "event_type":
-                field.widget = forms.HiddenInput(attrs={"value": self.kwargs["event_type_id"]})
-            elif name == "show_on_site":
-                field.widget.attrs = {"class": "form-check-inline"}
-            elif name == "video_link" and not EventType.objects.get(id=self.kwargs["event_type_id"]).is_online:
-                field.widget = forms.HiddenInput()
-            else:
-                field.widget.attrs = {"class": "form-control"}
-                if name == "description":
-                    field.widget.attrs.update({"rows": 10})
-                if name == "start":
-                    field.widget.attrs.update({"autocomplete": "off"})
-                    field.widget.format = '%d %b %Y %H:%M'
-                    field.input_formats=['%d %b %Y %H:%M']
-        return form
+    def get_form_kwargs(self, **kwargs):
+        form_kwargs = super().get_form_kwargs(**kwargs)
+        form_kwargs["event_type"] = EventType.objects.get(id=self.kwargs["event_type_id"])
+        return form_kwargs
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -191,31 +171,12 @@ class EventCreateView(LoginRequiredMixin, StaffUserMixin, CreateView):
 class EventUpdateView(LoginRequiredMixin, StaffUserMixin, UpdateView):
     template_name = "studioadmin/event_create_update.html"
     model = Event
+    form_class = EventUpdateForm
 
-    fields = (
-        "event_type",
-        "name", "description", "start", "duration",
-        "max_participants",
-        "video_link",
-        "show_on_site",
-    )
-
-    def get_form(self, form_class=None):
-        form = super().get_form()
-        for name, field in form.fields.items():
-            if name == "show_on_site":
-                field.widget.attrs = {"class": "form-check-inline"}
-            elif name == "video_link" and not self.get_object().event_type.is_online:
-                field.widget = forms.HiddenInput()
-            else:
-                field.widget.attrs = {"class": "form-control"}
-                if name == "description":
-                    field.widget.attrs.update({"rows": 10})
-                if name == "start":
-                    field.widget.attrs.update({"autocomplete": "off"})
-                    field.widget.format = '%d %b %Y %H:%M'
-                    field.input_formats=['%d %b %Y %H:%M']
-        return form
+    def get_form_kwargs(self, **kwargs):
+        form_kwargs = super().get_form_kwargs()
+        form_kwargs["event_type"] = self.get_object().event_type
+        return form_kwargs
 
     def get_success_url(self):
         return reverse("studioadmin:events")

@@ -2,6 +2,7 @@
 from django import forms
 from django.contrib.auth.models import User
 
+from booking.models import Event
 from booking.utils import has_available_block, has_available_course_block
 
 
@@ -27,3 +28,39 @@ class AddRegisterBookingForm(forms.Form):
             widget=forms.Select(
                 attrs={'id': 'id_new_user', 'class': 'form-control'})
         )
+
+
+class EventUpdateForm(forms.ModelForm):
+
+    class Meta:
+        model = Event
+        fields = (
+            "event_type",
+            "name", "description", "start", "duration",
+            "max_participants",
+            "video_link",
+            "show_on_site",
+        )
+
+    def __init__(self,*args, **kwargs):
+        self.event_type = kwargs.pop("event_type")
+        super().__init__(*args, **kwargs)
+        for name, field in self.fields.items():
+            if name == "show_on_site":
+                field.widget.attrs = {"class": "form-check-inline"}
+            elif name == "video_link" and not self.event_type.is_online:
+                field.widget = forms.HiddenInput()
+            else:
+                field.widget.attrs = {"class": "form-control"}
+                if name == "description":
+                    field.widget.attrs.update({"rows": 10})
+                if name == "start":
+                    field.widget.attrs.update({"autocomplete": "off"})
+                    field.widget.format = '%d %b %Y %H:%M'
+                    field.input_formats = ['%d %b %Y %H:%M']
+
+
+class EventCreateForm(EventUpdateForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["event_type"].widget = forms.HiddenInput(attrs={"value": self.event_type.id})
