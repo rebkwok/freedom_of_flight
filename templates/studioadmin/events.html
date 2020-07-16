@@ -31,6 +31,7 @@
                                 <th scope="col" class="text-center">Spaces</th>
                                 <th scope="col">Event Type</th>
                                 <th scope="col" class="text-center">Visible</th>
+                                <th scope="col">Clone</th>
                                 <th></th>
                             </tr>
                         </thead>
@@ -67,6 +68,7 @@
                                         {% endif %}
                                     </td>
                                 {% endif %}
+                                <td><a href="{% url 'studioadmin:clone_event' event.slug %}"><i class="far fa-clone"></i></a></td>
                                 <td>
                                     {% if event.cancelled %}
                                         Cancelled

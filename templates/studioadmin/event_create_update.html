@@ -14,12 +14,19 @@
         <h2>Track: {{ event.event_type.track }}</h2>
     {% endif %}
 
-    {% if creating %}
-    <p>If this {{ event_type.label }} is part of a course, create the events first, and then add them to the course.  Note that
-    max participants for an individual {{ event_type.label }} is overridden by the course settings.  Any value you
-    add here will be updated with the value from the course value when you add this {{ event_type.label }} to the course.</p>
-    <p>By default, a newly created {{ event_type.label }} is not visible on the booking site.  Make it visible on creation
+    {% if creating or cloning %}
+    <p>
+        If this {{ event_type.label }} is part of a course, it can be created first, and then add them to a new or already
+        created course course.  Note that max participants for an individual {{ event_type.label }} is overridden by the course
+        settings.  Any value you add here will be updated with the value from the course value when you add this {{ event_type.label }}
+        to the course.
+    </p>
+        <p>By default, a newly created {{ event_type.label }} is not visible on the booking site.  Make it visible on creation
         by ticking "show on site", or use the button on the event list page.</p>
+    {% endif %}
+
+    {% if form.errors %}
+        <p class="errorlist">Please correct the errors below:</p>
     {% endif %}
 
         <form method="post" action="">

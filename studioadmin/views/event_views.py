@@ -32,7 +32,6 @@ class BaseEventAdminListView(ListView):
         context = super().get_context_data(**kwargs)
         all_events = self.get_queryset()
 
-        # paginate each queryset
         track_id = self.request.GET.get('track')
         requested_track = None
         if track_id:
@@ -41,6 +40,7 @@ class BaseEventAdminListView(ListView):
             except Track.DoesNotExist:
                 pass
 
+        # paginate each queryset
         tab = self.request.GET.get('tab', 0)
         try:
             tab = int(tab)
@@ -160,6 +160,36 @@ def cancel_event_view(request, slug):
 def event_create_choice_view(request):
     event_types = EventType.objects.all()
     return render(request, "studioadmin/event_create_choose_event_type.html", {"event_types": event_types})
+
+
+@login_required
+@staff_required
+def clone_event(request, event_slug):
+    event = get_object_or_404(Event, slug=event_slug)
+
+    # TODO get page to ask about when to clone to
+    # Recurring same day/time each week, with end date
+    # Recurring: choose days and time
+    # Recurring on a single day - every X minutes from start date time till end time
+    # Or Specific date
+
+    # form = EventCreateForm(
+    #     event_type=event.event_type,
+    #     initial={
+    #         "event_type": event.event_type,
+    #         "name": event.name,
+    #         "description": event.description,
+    #         "start": event.start,
+    #         "max_participants": event.max_participants,
+    #         "duration": event.duration,
+    #         "show_on_site": False
+    #     }
+    # )
+    # return render(
+    #     request,
+    #     "studioadmin/event_create_update.html",
+    #     {"form": form, "cloning": True, "event_type": event.event_type}
+    # )
 
 
 class EventCreateUpdateMixin:
