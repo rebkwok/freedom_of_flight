@@ -50,6 +50,13 @@
         </div>
     </div>
 
+        {% if course.description %}
+            <div class="list-group mb-2">
+                <div class="list-group-item list-group-item-dark pt-1 pb-1">Details</div>
+                <div class="list-group-item pt-1 pb-1">{{ course.description }}</div>
+            </div>
+        {% endif %}
+
         {% for date, events in events_by_date.items %}
             <div class="list-group mb-2">
                 <div class="list-group-item list-group-item-dark pt-1 pb-1">{{ date|date:"D d M Y" }}</div>
@@ -121,7 +128,7 @@
                                 <span id="availability_{{ event.id }}">{% include 'booking/includes/event_availability_badge.html' %}</span>
                             </span>
                             {% if event.course and not course %}
-                                | <a href="{% url 'booking:course_events' event.course.slug %}"><span class="badge badge-course">Course: {{ event.course.name }}</span></a>
+                                | <a href="{% url 'booking:course_events' event.course.slug %}"><span class="badge badge-course">Course: {{ event.course.name|truncatechars:15 }}</span></a>
                             {% endif %}
                             {% if request.user.is_authenticated %}
                                 <span id="block_info_{{event.id}}">

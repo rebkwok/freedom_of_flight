@@ -33,7 +33,11 @@
                     <div id="list-item-{{ booking.event.id }}" class="list-group-item pt-1 pb-1 {% if booking.status == 'CANCELLED' or booking.no_show %}list-group-item-secondary text-secondary{% endif %}">
                         <a href="{% url 'booking:event' booking.event.slug %}">
                                 {{ booking.event.start|date:"H:i"  }} {{ booking.event.name }}
-                        </a> <em><span id="cancelled-text-{{ booking.event.id}}">{% if booking.status == 'CANCELLED' or booking.no_show %}You have cancelled this booking{% endif %}</span></em>
+                        </a> <em><span id="cancelled-text-{{ booking.event.id}}">
+                            {% if not booking.event.cancelled and booking.status == 'CANCELLED' or not booking.event.cancelled and booking.no_show %}
+                                You have cancelled this booking
+                            {% endif %}
+                            </span></em>
                             <span class="float-right">
 
                             {% if user|can_book_or_cancel:booking.event %}
@@ -69,7 +73,7 @@
                                 <span id="availability_{{ booking.event.id }}">{% include 'booking/includes/event_availability_badge.html' %}</span>
                             </span>
                             {% if booking.event.course and not course %}
-                                | <a href="{% url 'booking:course_events' booking.event.course.slug %}"><span class="badge badge-course">Course: {{ booking.event.course.name }}</span></a>
+                                | <a href="{% url 'booking:course_events' booking.event.course.slug %}"><span class="badge badge-course">Course: {{ booking.event.course.name|truncatechars:15 }}</span></a>
                             {% endif %}
                             {% if user.is_authenticated %}
                                 <span id="block_info_{{booking.event.id}}">

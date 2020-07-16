@@ -352,7 +352,7 @@ class EventDetailViewTests(EventTestMixin, TestUsersMixin, TestCase):
         url = reverse('booking:event', args=[self.event.slug])
         baker.make(Booking, event=self.event, user=self.student_user)
         resp = self.client.get(url)
-        assert "You have booked for this event" in resp.rendered_content
+        assert "You have booked for this class" in resp.rendered_content
 
     def test_with_booked_event_for_managed_user(self):
         #create a booking for this event and user
@@ -360,7 +360,7 @@ class EventDetailViewTests(EventTestMixin, TestUsersMixin, TestCase):
         url = reverse('booking:event', args=[self.event.slug])
         baker.make(Booking, event=self.event, user=self.child_user)
         resp = self.client.get(url)
-        assert f"{self.child_user.first_name} {self.child_user.last_name} has booked for this event" in resp.rendered_content
+        assert f"{self.child_user.first_name} {self.child_user.last_name} has booked for this class" in resp.rendered_content
 
 
 class CourseListViewTests(EventTestMixin, TestUsersMixin, TestCase):
