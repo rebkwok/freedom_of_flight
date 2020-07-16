@@ -355,7 +355,7 @@ class EventCreateViewTests(EventTestMixin, TestUsersMixin, TestCase):
     def test_redirects_to_events_list_on_save(self):
         resp = self.client.post(self.url, data=self.form_data())
         assert resp.status_code == 302
-        assert resp.url == reverse("studioadmin:events")
+        assert resp.url == reverse("studioadmin:events") + f"?track={self.aerial_event_type.track.id}"
 
 
 class EventUpdateViewTests(EventTestMixin, TestUsersMixin, TestCase):
@@ -406,7 +406,7 @@ class EventUpdateViewTests(EventTestMixin, TestUsersMixin, TestCase):
         assert self.event.name == "test"
 
         assert resp.status_code == 302
-        assert resp.url == reverse("studioadmin:events")
+        assert resp.url == reverse("studioadmin:events") + f"?track={self.aerial_event_type.track.id}"
 
     def test_event_type_form_field_is_shown(self):
         resp = self.client.get(self.url)

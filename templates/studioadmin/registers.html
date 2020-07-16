@@ -10,15 +10,16 @@
 
 <div class="container-fluid pb-2">
     <nav>
-        <div class="nav nav-tabs" id="trackTabs" role="tablist">
+        <div class="nav nav-tabs" id="eventsTrackTabs" role="tablist">
             {% for track_obj in track_events %}
-                <a class="nav-item nav-link {{ track_obj.index|get_active_class:tab }}" href="#tab{{ track_obj.index }}" data-toggle="tab">{{ track_obj.track }}</a>
+                <a class="nav-item nav-link {% get_active_tab_class track_obj.index tab %}"
+                   href="#tab{{ track_obj.index }}" data-toggle="tab">{{ track_obj.track }}</a>
             {%  endfor %}
         </div>
     </nav>
     <div class="tab-content">
         {% for track_obj in track_events %}
-            <div class="tab-pane fade {{ track_obj.index|get_active_in_class:tab }}" id="tab{{ track_obj.index }}" role="tabpanel">
+            <div class="tab-pane fade {% get_active_pane_class track_obj.index tab %}" id="tab{{ track_obj.index }}" role="tabpanel">
                 <div class="table-responsive">
                     <table class="table">
                         <thead>

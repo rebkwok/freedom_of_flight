@@ -251,8 +251,9 @@ class EventTypeTests(TestCase):
 class CourseTypeTests(TestCase):
 
     def test_str_class(self):
-        course_type = baker.make(CourseType, event_type__name="Aerial", number_of_events=3)
-        assert str(course_type) == 'Aerial - 3'
+        evtype = baker.make(EventType, name="Aerial", track__name="Kids classes")
+        course_type = baker.make(CourseType, event_type=evtype, number_of_events=3)
+        assert str(course_type) == 'Aerial - Kids classes - 3'
 
 
 class CourseTests(EventTestMixin, TestCase):
@@ -264,7 +265,7 @@ class CourseTests(EventTestMixin, TestCase):
         self.event.save()
 
     def test_str(self):
-        assert str(self.course) == f"{self.course.name} (aerial - 3)"
+        assert str(self.course) == f"{self.course.name} (aerial - Adults - 3)"
 
     def test_full(self):
         assert self.course.full is False

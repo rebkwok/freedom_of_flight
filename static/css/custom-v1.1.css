@@ -28,9 +28,38 @@ body > .container {
   padding: 60px 5px 0;
 }
 
-#navbarSubNav > ul > li.nav-item.active > a {
+#navbarEventsSubNavContainer {
+  background-color: #e3f2fd;
+}
+
+#navbarEventsSubNav > ul > li.nav-item.active > a {
   color: blue;
 }
+
+#navbarCoursesSubNavContainer {
+  background-color: #f0fff0;
+}
+
+#navbarCoursesSubNav > ul > li.nav-item.active > a {
+  color: green;
+}
+
+#eventsTrackTabs > a.nav-item.nav-link {
+  color: dimgrey;
+}
+
+#eventsTrackTabs > a.nav-item.nav-link.active {
+  color: blue;
+}
+
+#courseTrackTabs > a.nav-item.nav-link {
+  color: dimgrey;
+}
+
+#courseTrackTabs > a.nav-item.nav-link.active {
+  color: green;
+}
+
 
 .footer > .container {
   padding-right: 5px;
@@ -151,7 +180,6 @@ hr.tooltip-hr {
   border-top: 1px solid grey;
 
 }
-
 
 .badge-course {
   font-weight: lighter;

@@ -33,6 +33,14 @@ class BaseEventAdminListView(ListView):
         all_events = self.get_queryset()
 
         # paginate each queryset
+        track_id = self.request.GET.get('track')
+        requested_track = None
+        if track_id:
+            try:
+                requested_track = Track.objects.get(id=track_id)
+            except Track.DoesNotExist:
+                pass
+
         tab = self.request.GET.get('tab', 0)
         try:
             tab = int(tab)
@@ -60,6 +68,12 @@ class BaseEventAdminListView(ListView):
                     'track': track.name
                 }
                 track_events.append(track_obj)
+
+                if requested_track and requested_track == track:
+                    # we returned here from another view that was on a particular track, we want to set the
+                    # tab to that track
+                    context["active_tab"] = i
+
         context['track_events'] = track_events
         return context
 
@@ -130,7 +144,7 @@ def cancel_event_view(request, slug):
             messages.success(request, f'Event cancelled{course_message}; {message}')
             ActivityLog.objects.create(log=f"Event {event} cancelled by admin user {request.user}; {message}")
 
-        return HttpResponseRedirect(reverse('studioadmin:events'))
+        return HttpResponseRedirect(reverse('studioadmin:events') + f"?track={event.event_type.track_id}")
 
     context = {
         'event': event,
@@ -148,9 +162,20 @@ def event_create_choice_view(request):
     return render(request, "studioadmin/event_create_choose_event_type.html", {"event_types": event_types})
 
 
-class EventCreateView(LoginRequiredMixin, StaffUserMixin, CreateView):
+class EventCreateUpdateMixin:
     template_name = "studioadmin/event_create_update.html"
     model = Event
+
+    def form_valid(self, form):
+        form.save()
+        return HttpResponseRedirect(self.get_success_url(form.event_type.track_id))
+
+    def get_success_url(self, track_id):
+        return reverse('studioadmin:events') + f"?track={track_id}"
+
+
+class EventCreateView(LoginRequiredMixin, StaffUserMixin, EventCreateUpdateMixin, CreateView):
+
     form_class = EventCreateForm
 
     def get_form_kwargs(self, **kwargs):
@@ -164,19 +189,11 @@ class EventCreateView(LoginRequiredMixin, StaffUserMixin, CreateView):
         context["event_type"] = EventType.objects.get(id=self.kwargs["event_type_id"])
         return context
 
-    def get_success_url(self):
-        return reverse("studioadmin:events")
 
-
-class EventUpdateView(LoginRequiredMixin, StaffUserMixin, UpdateView):
-    template_name = "studioadmin/event_create_update.html"
-    model = Event
+class EventUpdateView(LoginRequiredMixin, StaffUserMixin, EventCreateUpdateMixin, UpdateView):
     form_class = EventUpdateForm
 
     def get_form_kwargs(self, **kwargs):
         form_kwargs = super().get_form_kwargs()
         form_kwargs["event_type"] = self.get_object().event_type
         return form_kwargs
-
-    def get_success_url(self):
-        return reverse("studioadmin:events")

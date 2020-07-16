@@ -91,7 +91,7 @@ class CourseType(models.Model):
     number_of_events = models.PositiveIntegerField(default=4)
 
     def __str__(self):
-        return f"{self.event_type.name} - {self.number_of_events}"
+        return f"{self.event_type} - {self.number_of_events}"
 
 
 class Course(models.Model):
