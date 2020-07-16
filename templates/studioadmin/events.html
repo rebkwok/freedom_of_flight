@@ -38,7 +38,14 @@
                         {% for event in track_obj.queryset %}
                             <tr {% if event.cancelled %}class="expired"{% endif %}>
                                 <td><a href="{% url 'studioadmin:update_event' event.slug %}">{{ event.name }}</a></td>
-                                <td>{% if event.course %}Yes{% endif %}</td>
+                                <td>
+                                    {% if event.course %}
+                                        <a href="{% url 'studioadmin:update_course' event.course.slug %}">
+                                            <div data-toggle="tooltip" data-placement="top" title="{{ event.course.name }}">
+                                            <i class="fas fa-external-link-alt"></i></div>
+                                        </a>
+                                    {% endif %}
+                                </td>
                                 <td>{{ event.start|date:"D d M Y, H:i" }}</td>
                                 <td>{{ event.duration }} mins</td>
                                 <td class="text-center">{{ event.spaces_left }} {% if event.max_participants %}/ {{ event.max_participants }}{% endif %}</td>

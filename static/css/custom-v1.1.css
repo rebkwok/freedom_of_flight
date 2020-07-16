@@ -228,3 +228,8 @@ hr.tooltip-hr {
   border-color: lightgrey;
   color: palevioletred;
 }
+
+.expired .badge-warning {
+  background-color: palegoldenrod;
+  color: lightgrey;
+}

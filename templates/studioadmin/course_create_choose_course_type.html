@@ -1,0 +1,16 @@
+{%  extends "studioadmin/base.html" %}
+
+{% block precontent %}
+    {%  include "studioadmin/includes/courses_subnav.html" %}
+{% endblock %}
+
+{% block content %}
+    <div class="container-fluid">
+    <h1>Choose the type of course to create:</h1>
+    {% for course_type in course_types %}
+        <p>{{ course_type.event_type.name }} - {{ course_type.number_of_events }} {{ course_type.event_type.label }} events ({{  course_type.event_type.track }})<a class="float-right btn btn-sm btn-outline-primary" href="{% url 'studioadmin:create_course' course_type.id %}">Select</a></p>
+        <hr/>
+    {% endfor %}
+    </div>
+{% endblock %}
+

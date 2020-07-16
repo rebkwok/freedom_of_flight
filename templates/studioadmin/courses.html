@@ -25,8 +25,8 @@
                             <tr>
                                 <th scope="col">Name<br/><span class="helptext">Click to edit</span></th>
                                 <th scope="col">Start (first event)</th>
-                                <th scope="col">Number of events</th>
-                                <th scope="col">Events configured</th>
+                                <th scope="col" class="text-center">Number of events</th>
+                                <th scope="col" class="text-center">Events configured</th>
                                 <th scope="col" class="text-center">Spaces</th>
                                 <th scope="col">Event Type</th>
                                 <th scope="col" class="text-center">Visible</th>
@@ -37,10 +37,19 @@
                         <tbody>
                         {% for course in track_obj.queryset %}
                             <tr {% if course.cancelled %}class="expired"{% endif %}>
-                                <td><a href="#">{{ course.name }}</a></td>
+                                <td><a href="{% url 'studioadmin:update_course' course.slug %}">{{ course.name }}</a></td>
                                 <td>{{ course.events.first.start|date:"D d M Y, H:i" }}</td>
-                                <td>{{ course.course_type.number_of_events }}</td>
-                                <td>{{ course.events.count }}</td>
+                                <td class="text-center">{{ course.course_type.number_of_events }}</td>
+                                <td class="text-center">
+                                        <div
+                                            class="badge badge-warning pr-2 pl-2"
+                                            data-toggle="tooltip"
+                                             data-placement="top"
+                                             data-html="true"
+                                             title="<ul class='helptext pl-0'>{% for event in course.events.all %}<li>{{ event }}</li>{% endfor %}</ul>">
+                                            {{ course.events.count }}
+                                        </div>
+                                </td>
                                 <td class="text-center">{% if course.events.exists %}{{ course.events.first.spaces_left }}{% else %}{{ course.max_participants }}{% endif %} {% if course.max_participants %}/ {{ course.max_participants }}{% endif %}</td>
                                 <td>{{ course.course_type.event_type.name }}</td>
                                 {% if event.course %}
@@ -65,7 +74,7 @@
                                     {% if course.cancelled %}
                                         Cancelled
                                     {%  else %}
-                                        <a class="btn btn-sm btn-danger pt-0 pb-0" href="#">Cancel</a></td>
+                                        <a class="btn btn-sm btn-danger pt-0 pb-0" href="{% url 'studioadmin:cancel_course' course.slug %}">Cancel</a></td>
                                     {% endif %}
                             </tr>
                         {%  endfor %}
@@ -86,6 +95,6 @@
 
 {% block extra_js %}
 <script type='text/javascript' src="{% static 'js/underscore.1.10.2-min.js' %}"></script>
-<script type='text/javascript' src="{% static 'studioadmin/js/events_ajax-v1.js' %}"></script>
+<script type='text/javascript' src="{% static 'studioadmin/js/courses_ajax-v1.js' %}"></script>
 {% endblock %}
 

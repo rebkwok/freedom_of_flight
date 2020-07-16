@@ -3,21 +3,18 @@
 {% load static %}
 
 {% block precontent %}
-    {%  include "studioadmin/includes/events_subnav.html" %}
+    {%  include "studioadmin/includes/courses_subnav.html" %}
 {% endblock %}
 
 {% block content %}
 
 <div class="container-fluid pb-1">
 
-    <h2>Cancelling {{ event }}</h2>
+    <h2>Cancelling {{ course }}</h2>
 
-    {%  if event_is_part_of_course %}
-        <p>
-            This class is part of a course and will be removed from the course when it is cancelled.  You will
-            need to manually add a replacement class to the course.
-        </p>
-    {% endif %}
+    <p>All events associated with this course will also be cancelled.
+        Any students booked on the course will have their block credited back.</p>
+
     {% if bookings_to_cancel %}
         <p>The following students have bookings which will be cancelled:</p>
         <ul>
@@ -26,7 +23,7 @@
             {% endfor %}
         </ul>
     {% else %}
-        <p>There are no open bookings for this {{ event.event_type.label }}.</p>
+        <p>There are no open bookings for this course.</p>
     {% endif %}
 
     <form action="" method="post">{% csrf_token %}
@@ -35,8 +32,8 @@
         <textarea class="form-control" id="additional_message" rows="10" name="additional_message"/></textarea>
         </div>
         <div class="form-group">
-        <p><strong>Please confirm you want to cancel this {{ event.event_type.label }}.</strong></p>
-        <input class="btn btn-success" type="submit" name="confirm" value="Yes, cancel {{ event_type.label }}" />
+        <p><strong>Please confirm you want to cancel this course.</strong></p>
+        <input class="btn btn-success" type="submit" name="confirm" value="Yes, cancel course" />
         <input class="btn btn-outline-dark" type="submit" name="cancel" value="No, take me back" />
         </div>
     </form>

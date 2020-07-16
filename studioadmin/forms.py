@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 from django import forms
 from django.contrib.auth.models import User
+from django.db.models import Q
+from django.utils import timezone
 
-from booking.models import Event
+from booking.models import Event, Course
 from booking.utils import has_available_block, has_available_course_block
 
 
@@ -40,6 +42,7 @@ class EventUpdateForm(forms.ModelForm):
             "max_participants",
             "video_link",
             "show_on_site",
+            "cancelled"
         )
 
     def __init__(self,*args, **kwargs):
@@ -50,6 +53,11 @@ class EventUpdateForm(forms.ModelForm):
                 field.widget.attrs = {"class": "form-check-inline"}
             elif name == "video_link" and not self.event_type.is_online:
                 field.widget = forms.HiddenInput()
+            elif name == "cancelled" and self.instance:
+                if self.instance.cancelled:
+                    field.widget.attrs = {"class": "form-check-inline"}
+                else:
+                    field.widget = forms.HiddenInput()
             else:
                 field.widget.attrs = {"class": "form-control"}
                 if name == "description":
@@ -64,3 +72,75 @@ class EventCreateForm(EventUpdateForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["event_type"].widget = forms.HiddenInput(attrs={"value": self.event_type.id})
+        self.fields["cancelled"].widget = forms.HiddenInput()
+
+
+def get_course_event_choices(course_type, instance_id=None):
+
+    def callable():
+        if instance_id is None:
+            queryset = Event.objects.filter(
+                event_type=course_type.event_type, start__gte=timezone.now(), cancelled=False, course__isnull=True
+            ).order_by('start')
+        else:
+            query = (
+                Q(event_type=course_type.event_type, start__gte=timezone.now(), cancelled=False, course__isnull=True) |
+                Q(course_id=instance_id)
+            )
+            queryset = Event.objects.filter(query).order_by('start')
+        EVENT_CHOICES = [(event.id, str(event)) for event in queryset]
+        return tuple(EVENT_CHOICES)
+
+    return callable
+
+
+class CourseUpdateForm(forms.ModelForm):
+
+    class Meta:
+        model = Course
+        fields = (
+            "course_type",
+            "name", "description",
+            "max_participants",
+            "show_on_site",
+            "cancelled"
+        )
+
+    def __init__(self,*args, **kwargs):
+        self.course_type = kwargs.pop("course_type")
+        super().__init__(*args, **kwargs)
+        for name, field in self.fields.items():
+            if name == "show_on_site":
+                field.widget.attrs = {"class": "form-check-inline"}
+            elif name == "cancelled" and self.instance:
+                if self.instance.cancelled:
+                    field.widget.attrs = {"class": "form-check-inline"}
+                else:
+                    field.widget = forms.HiddenInput()
+            else:
+                field.widget.attrs = {"class": "form-control"}
+                if name == "description":
+                    field.widget.attrs.update({"rows": 10})
+
+        self.fields["events"] = forms.MultipleChoiceField(
+            required=False,
+            choices=get_course_event_choices(self.course_type, self.instance.id),
+            widget=forms.SelectMultiple(attrs={"class": "form-control"})
+        )
+        if self.instance:
+            self.fields["events"].initial = [event.id for event in self.instance.events.all()]
+
+    def clean_events(self):
+        events = self.cleaned_data["events"]
+        if len(events) > self.course_type.number_of_events:
+            self.add_error("events", f"Too many events selected; select a maximum of {self.course_type.number_of_events}")
+        else:
+            return events
+
+
+class CourseCreateForm(CourseUpdateForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["course_type"].widget = forms.HiddenInput(attrs={"value": self.course_type.id})
+        self.fields["cancelled"].widget = forms.HiddenInput()
+

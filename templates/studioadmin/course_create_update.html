@@ -1,0 +1,36 @@
+{%  extends "studioadmin/base.html" %}
+
+{% block precontent %}
+    {%  include "studioadmin/includes/courses_subnav.html" %}
+{% endblock %}
+
+{% block content %}
+    <div class="container-fluid pb-2">
+    {% if creating %}
+    <h1>Creating new {{ course_type.event_type.name }} course</h1>
+    <h2>Track: {{ course_type.event_type.track }}</h2>
+    {% else %}
+        <h1>Updating course: {{ course.name }}</h1>
+        <h2>Track: {{ course.course_type.event_type.track }}</h2>
+    {% endif %}
+
+    {% if creating %}
+    <p>
+        You can create a course before or after its individual events have been created.
+    </p>
+    <p>By default, a newly created course is not visible on the booking site.  Make it visible on creation
+        by ticking "show on site", or use the button on the course list page.</p>
+    {% endif %}
+
+    {% if form.errors %}
+        <p class="errorlist">Please correct the errors below:</p>
+    {% endif %}
+        <form method="post" action="">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <input class="btn btn-primary" type="submit" value="Save">
+    </form>
+
+    </div>
+{% endblock %}
+

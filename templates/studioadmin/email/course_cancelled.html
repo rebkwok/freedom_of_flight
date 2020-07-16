@@ -1,0 +1,10 @@
+{% extends 'email_base.html' %}
+
+
+{% block messagecontent %}
+
+    <p>The course {{ course.name }} has been cancelled.</p>
+
+    <p>{{ additional_message|linebreaks }}</p>
+
+{% endblock %}
