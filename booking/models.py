@@ -118,6 +118,12 @@ class Course(models.Model):
     def has_started(self):
         return self.events.order_by("start").first().start < timezone.now()
 
+    @cached_property
+    def last_event_date(self):
+        last_event = self.events.order_by("start").last()
+        if last_event:
+            return last_event.start
+
     def is_configured(self):
         return self.events.count() == self.course_type.number_of_events
 

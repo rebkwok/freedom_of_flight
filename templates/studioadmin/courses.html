@@ -1,10 +1,91 @@
 {%  extends "studioadmin/base.html" %}
 
+{% load studioadmintags static %}
+
 {% block precontent %}
-    {%  include "studioadmin/includes/events_subnav.html" %}
+    {%  include "studioadmin/includes/courses_subnav.html" %}
 {% endblock %}
 
 {% block content %}
 
+<div class="container-fluid pb-2">
+    <nav>
+        <div class="nav nav-tabs" id="trackTabs" role="tablist">
+            {% for track_obj in track_courses %}
+                <a class="nav-item nav-link {{ track_obj.index|get_active_class:tab }}" href="#tab{{ track_obj.index }}" data-toggle="tab">{{ track_obj.track }}</a>
+            {%  endfor %}
+        </div>
+    </nav>
+    <div class="tab-content">
+        {% for track_obj in track_courses %}
+            <div class="tab-pane fade {{ track_obj.index|get_active_in_class:tab }}" id="tab{{ track_obj.index }}" role="tabpanel">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th scope="col">Name<br/><span class="helptext">Click to edit</span></th>
+                                <th scope="col">Start (first event)</th>
+                                <th scope="col">Number of events</th>
+                                <th scope="col">Events configured</th>
+                                <th scope="col" class="text-center">Spaces</th>
+                                <th scope="col">Event Type</th>
+                                <th scope="col" class="text-center">Visible</th>
+                                <th scope="col">Configured</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for course in track_obj.queryset %}
+                            <tr {% if course.cancelled %}class="expired"{% endif %}>
+                                <td><a href="#">{{ course.name }}</a></td>
+                                <td>{{ course.events.first.start|date:"D d M Y, H:i" }}</td>
+                                <td>{{ course.course_type.number_of_events }}</td>
+                                <td>{{ course.events.count }}</td>
+                                <td class="text-center">{% if course.events.exists %}{{ course.events.first.spaces_left }}{% else %}{{ course.max_participants }}{% endif %} {% if course.max_participants %}/ {{ course.max_participants }}{% endif %}</td>
+                                <td>{{ course.course_type.event_type.name }}</td>
+                                {% if event.course %}
+                                    <td class="helptext">Set on course</td>
+                                {% else %}
+                                    <td class="text-center">
+                                        {% if course.cancelled %}
+                                            <span class="btn btn-sm btn-visible btn-secondary disabled">No</span>
+                                        {% else %}
+                                          <span
+                                              id="visible-{{ course.id }}"
+                                              data-course_id="{{ course.id }}"
+                                              class="visible-btn"
+                                              >
+                                              {% include "studioadmin/includes/ajax_toggle_course_visible_btn.html" %}
+                                          </span>
+                                        {% endif %}
+                                    </td>
+                                {% endif %}
+                                <td class="text-center">{{ course.is_configured|yesno|title }}</td>
+                                <td>
+                                    {% if course.cancelled %}
+                                        Cancelled
+                                    {%  else %}
+                                        <a class="btn btn-sm btn-danger pt-0 pb-0" href="#">Cancel</a></td>
+                                    {% endif %}
+                            </tr>
+                        {%  endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% include 'studioadmin/includes/event_pagination.html' %}
+            </div>
+        {% endfor %}
+
+
+
+    </div> <!-- tab content -->
+</div>
+
+
+{% endblock content %}
+
+{% block extra_js %}
+<script type='text/javascript' src="{% static 'js/underscore.1.10.2-min.js' %}"></script>
+<script type='text/javascript' src="{% static 'studioadmin/js/events_ajax-v1.js' %}"></script>
 {% endblock %}
 

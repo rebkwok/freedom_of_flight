@@ -1,3 +1,4 @@
+from.course_views import CourseAdminListView
 from .event_views import (
     EventAdminListView, ajax_toggle_event_visible, cancel_event_view, EventCreateView,
     event_create_choice_view, EventUpdateView
