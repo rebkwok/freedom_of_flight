@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-
+from datetime import datetime
 from decimal import Decimal
 import logging
 import pytz
@@ -359,11 +359,7 @@ class Block(models.Model):
         return Decimal(float(self.block_config.cost) * percentage_to_pay).quantize(Decimal('.05'))
 
     def _get_end_of_day(self, input_datetime):
-        next_day = (input_datetime + timedelta(
-            days=1)).replace(
-            hour=0, minute=0, second=0, microsecond=0
-        )
-        end_of_day_utc = next_day - timedelta(seconds=1)
+        end_of_day_utc = datetime.combine(input_datetime, datetime.max.time())
         uktz = pytz.timezone('Europe/London')
         end_of_day_uk = end_of_day_utc.astimezone(uktz)
         utc_offset = end_of_day_uk.utcoffset()

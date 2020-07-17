@@ -1,0 +1,35 @@
+{%  extends "studioadmin/base.html" %}
+
+{% load crispy_forms_tags %}
+{% block precontent %}
+    {%  include "studioadmin/includes/events_subnav.html" %}
+{% endblock %}
+
+{% block content %}
+    <div class="container-fluid pb-2">
+    <h1>Cloning {{ event.event_type.label }}</h1>
+
+    <p class="lead">How do you want to clone this {{ event.event_type.label }}?</p>
+
+        {% if weekly_form.errors or daily_form.errors or single_form.errors %}
+            <p class="text-danger">Please correct the errors below</p>
+        {% endif %}
+
+        <form action="" method="post">
+            {% csrf_token %}
+            {% crispy weekly_form %}
+        </form>
+        <hr>
+        <form action="" method="post">
+            {% csrf_token %}
+            {% crispy daily_form %}
+        </form>
+        <hr>
+        <form action="" method="post">
+            {% csrf_token %}
+            {% crispy single_form %}
+        </form>
+
+    </div>
+{% endblock %}
+

@@ -8,7 +8,7 @@
 
 {% block content %}
 
-<div class="container-fluid pb-1">
+<div class="container-fluid pt-4 pb-1">
 
     <h2>Cancelling {{ event }}</h2>
 
@@ -18,28 +18,36 @@
             need to manually add a replacement class to the course.
         </p>
     {% endif %}
-    {% if bookings_to_cancel %}
-        <p>The following students have bookings which will be cancelled:</p>
-        <ul>
-            {% for booking in bookings_to_cancel %}
-            <li>{{ booking.user.first_name }} {{ booking.user.last_name }}</li>
-            {% endfor %}
-        </ul>
-    {% else %}
-        <p>There are no open bookings for this {{ event.event_type.label }}.</p>
-    {% endif %}
+    {% if any_bookings %}
+        {% if bookings_to_cancel %}
+            <p>The following students have bookings which will be cancelled:</p>
+            <ul>
+                {% for booking in bookings_to_cancel %}
+                <li>{{ booking.user.first_name }} {{ booking.user.last_name }}</li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>There are no open bookings for this {{ event.event_type.label }}.</p>
+        {% endif %}
 
-    <form action="" method="post">{% csrf_token %}
-        <div class="form-group">
-        <label for="additional_message">Additional message to include in emails to students:</label><br/>
-        <textarea class="form-control" id="additional_message" rows="10" name="additional_message"/></textarea>
-        </div>
-        <div class="form-group">
-        <p><strong>Please confirm you want to cancel this {{ event.event_type.label }}.</strong></p>
-        <input class="btn btn-success" type="submit" name="confirm" value="Yes, cancel {{ event_type.label }}" />
-        <input class="btn btn-outline-dark" type="submit" name="cancel" value="No, take me back" />
-        </div>
-    </form>
+        <form action="" method="post">{% csrf_token %}
+            <div class="form-group">
+            <label for="additional_message">Additional message to include in emails to students:</label><br/>
+            <textarea class="form-control" id="additional_message" rows="10" name="additional_message"/></textarea>
+            </div>
+            <div class="form-group">
+            <p><strong>Please confirm you want to cancel this {{ event.event_type.label }}.</strong></p>
+            <input class="btn btn-danger" type="submit" name="confirm" value="Yes, cancel {{ event_type.label }}" />
+            <input class="btn btn-outline-dark" type="submit" name="cancel" value="No, take me back" />
+            </div>
+        </form>
+    {% else %}
+        <p>No bookings have been made against this {{ event.event_type.label }}, it will be fully deleted.  Please confirm.</p>
+        <form action="" method="post">{% csrf_token %}
+            <input class="btn btn-danger" type="submit" name="confirm" value="Yes, delete {{ event.event_type.label }}" />
+            <input class="btn btn-outline-dark" type="submit" name="cancel" value="No, take me back" />
+        </form>
+    {% endif %}
 
 </div>
 

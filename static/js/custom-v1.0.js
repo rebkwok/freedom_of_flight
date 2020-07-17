@@ -1,10 +1,4 @@
 //http://xdsoft.net/jqplugins/datetimepicker/
-Date.parseDate = function( input, format ){
-  return moment(input,format).toDate();
-};
-Date.prototype.dateFormat = function( format ){
-  return moment(this).format(format);
-};
 
 jQuery(document).ready(function () {
 
@@ -14,73 +8,15 @@ jQuery(document).ready(function () {
     });
     $('a[href="' + location.pathname + '"]').closest('.nav-item').addClass('active');
 
-    // messages timeout after 10 sec
+    // messages timeout after 5 sec
     setTimeout(function() {
         $('#message-row').fadeOut('slow');
-    }, 2000); // <-- time in milliseconds, 1000 =  1 sec
+    }, 5000); // <-- time in milliseconds, 1000 =  1 sec
 
     $('[data-toggle="tooltip"]').tooltip();
 
 
     jQuery('form.dirty-check').areYouSure();
-
-    jQuery('#datetimepicker').datetimepicker({
-        format:'DD MMM YYYY HH:mm',
-        formatTime:'HH:mm',
-        formatDate:'DD MM YYYY',
-        minDate: 0,
-        step: 5,
-        defaultTime: '19:00',
-        scrollMonth: false,
-        scrollTime: false,
-        scrollInput: false,
-
-    });
-
-    jQuery('#datepicker').datetimepicker({
-        format:'DD MMM YYYY',
-        formatTime:'HH:mm',
-        timepicker: false,
-        minDate: 0,
-        closeOnDateSelect: true,
-        scrollMonth: false,
-        scrollTime: false,
-        scrollInput: false,
-    });
-
-    jQuery('.blockdatepicker').datetimepicker({
-        format:'DD MMM YYYY',
-        startDate: new Date(),
-        timepicker: false,
-        closeOnDateSelect: true,
-        scrollMonth: false,
-        scrollTime: false,
-        scrollInput: false,
-    });
-
-    jQuery('#dobdatepicker').datetimepicker({
-        format:'DD MMM YYYY',
-        formatTime:'HH:mm',
-        timepicker: false,
-        defaultDate: '1990/01/01',
-        closeOnDateSelect: true,
-        scrollMonth: false,
-        scrollTime: false,
-        scrollInput: false
-    });
-
-    jQuery('#id_start').datetimepicker({
-        format:'DD MMM YYYY HH:mm',
-        formatTime:'HH:mm',
-        formatDate:'DD MM YYYY',
-        minDate: 0,
-        step: 5,
-        defaultTime: '19:00',
-        scrollMonth: false,
-        scrollTime: false,
-        scrollInput: false,
-
-    });
 
     //http://tablesorter.com/docs/
     jQuery("#sortTable").tablesorter();

@@ -1,11 +1,24 @@
 # -*- coding: utf-8 -*-
+from datetime import datetime, date
 from django import forms
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.utils import timezone
 
+from crispy_forms.bootstrap import InlineCheckboxes, AppendedText
+from crispy_forms.helper import FormHelper
+from crispy_forms.layout import Layout, Submit, Row, Column, Field, Fieldset, Hidden, HTML
+
 from booking.models import Event, Course
 from booking.utils import has_available_block, has_available_course_block
+
+
+def validate_future_date(value):
+    now = timezone.now()
+    value_to_validate = value.date() if isinstance(value, datetime) else value
+    if value_to_validate < now.date():
+        raise ValidationError('Date must be in the future')
 
 
 def get_user_choices(event):
@@ -32,7 +45,7 @@ class AddRegisterBookingForm(forms.Form):
         )
 
 
-class EventUpdateForm(forms.ModelForm):
+class EventCreateUpdateForm(forms.ModelForm):
 
     class Meta:
         model = Event
@@ -48,31 +61,25 @@ class EventUpdateForm(forms.ModelForm):
     def __init__(self,*args, **kwargs):
         self.event_type = kwargs.pop("event_type")
         super().__init__(*args, **kwargs)
-        for name, field in self.fields.items():
-            if name == "show_on_site":
-                field.widget.attrs = {"class": "form-check-inline"}
-            elif name == "video_link" and not self.event_type.is_online:
-                field.widget = forms.HiddenInput()
-            elif name == "cancelled" and self.instance:
-                if self.instance.cancelled:
-                    field.widget.attrs = {"class": "form-check-inline"}
-                else:
-                    field.widget = forms.HiddenInput()
-            else:
-                field.widget.attrs = {"class": "form-control"}
-                if name == "description":
-                    field.widget.attrs.update({"rows": 10})
-                if name == "start":
-                    field.widget.attrs.update({"autocomplete": "off"})
-                    field.widget.format = '%d %b %Y %H:%M'
-                    field.input_formats = ['%d %b %Y %H:%M']
 
+        self.fields["start"].widget.format = '%d-%b-%Y %H:%M'
+        self.fields["start"].input_formats = ['%d-%b-%Y %H:%M']
 
-class EventCreateForm(EventUpdateForm):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields["event_type"].widget = forms.HiddenInput(attrs={"value": self.event_type.id})
-        self.fields["cancelled"].widget = forms.HiddenInput()
+        self.helper = FormHelper()
+        self.helper.layout = Layout(
+            "event_type" if self.instance.id else Hidden("event_type", self.event_type.id),
+            "name",
+            Field("description", rows=10),
+            AppendedText(
+                "start", "<i id='id_start_open' class='far fa-calendar'></i>", autocomplete="off",
+            ),
+            Field("duration", type="integer"),
+            Field("max_participants", type="integer"),
+            "video_link" if self.event_type.is_online else Hidden("cancelled", ""),
+            "show_on_site",
+            "cancelled" if self.instance.id and self.instance.cancelled else Hidden("cancelled", False),
+            Submit('submit', 'Save')
+        )
 
 
 def get_course_event_choices(course_type, instance_id=None):
@@ -144,3 +151,131 @@ class CourseCreateForm(CourseUpdateForm):
         self.fields["course_type"].widget = forms.HiddenInput(attrs={"value": self.course_type.id})
         self.fields["cancelled"].widget = forms.HiddenInput()
 
+
+class CloneEventWeeklyForm(forms.Form):
+    recurring_weekly_weekdays = forms.MultipleChoiceField(
+        widget=forms.CheckboxSelectMultiple(attrs={"class": "form-check-input"},),
+        choices=(
+            (0, "Mon"), (1, "Tue"), (2, "Wed"), (3, "Thu"), (4, "Fri"), (5, "Sat"), (6, "Sun")
+        ),
+        label="Days",
+        required=True
+    )
+    recurring_weekly_time = forms.TimeField(
+        required=True, label="Time",
+        widget=forms.TimeInput(attrs={"autocomplete": "off"}, format='%H:%M'), input_formats=['%H:%M']
+    )
+    recurring_weekly_start = forms.DateField(
+        required=True, label="Start date",
+        widget=forms.DateInput(attrs={"autocomplete": "off"}, format='%d-%b-%Y'), input_formats=['%d-%b-%Y'],
+        validators=(validate_future_date,)
+    )
+    recurring_weekly_end = forms.DateField(
+        required=True, label="End date",
+        widget=forms.DateInput(attrs={"autocomplete": "off"}, format='%d-%b-%Y'), input_formats=['%d-%b-%Y'],
+        validators=(validate_future_date,)
+    )
+
+    def __init__(self, *args, **kwargs):
+        event = kwargs.pop("event")
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.layout = Layout(
+            Fieldset(
+                "Recurring on the same day(s) each week:",
+                InlineCheckboxes('recurring_weekly_weekdays'),
+                Row(
+                    Column(
+                        AppendedText('recurring_weekly_time', '<i id="id_recurring_weekly_time_open" class="far fa-clock"></i>'),
+                        css_class='form-group col-12 col-md-4'
+                    ),
+                    Column(
+                        AppendedText('recurring_weekly_start', "<i id='id_recurring_weekly_start_open' class='far fa-calendar'></i>"),
+                        css_class='form-group col-6 col-md-4'
+                    ),
+                    Column(
+                        AppendedText('recurring_weekly_end', "<i id='id_recurring_weekly_end_open' class='far fa-calendar'></i>"),
+                        css_class='form-group col-6 col-md-4'
+                    ),
+                ),
+                Submit('submit', f'Clone weekly recurring {event.event_type.label}')
+            )
+        )
+
+    def clean(self):
+        if not self.errors:
+            if self.cleaned_data["recurring_weekly_start"] > self.cleaned_data["recurring_weekly_end"]:
+                self.add_error("recurring_weekly_end", "End date must be after start date")
+        return super().clean()
+
+
+class CloneEventDailyIntervalsForm(forms.Form):
+    recurring_daily_date = forms.DateField(
+        required=True, label="Date",
+        widget=forms.DateInput(attrs={"autocomplete": "off"}, format='%d-%b-%Y'), input_formats=['%d-%b-%Y'],
+        validators=(validate_future_date,)
+    )
+    recurring_daily_interval = forms.IntegerField(required=True, label="Interval", min_value=0)
+    recurring_daily_starttime = forms.TimeField(
+        required=True, label="Start time",
+        widget=forms.TimeInput(attrs={"autocomplete": "off"}, format='%H:%M'), input_formats=['%H:%M']
+    )
+    recurring_daily_endtime = forms.TimeField(
+        required=True, label="End time",
+        widget=forms.TimeInput(attrs={"autocomplete": "off"}, format='%H:%M'), input_formats=['%H:%M']
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.layout = Layout(
+            Fieldset(
+                "Recurring on a single day at regular intervals:",
+                Row(
+                    Column(
+                        AppendedText('recurring_daily_date',
+                                     "<i id='id_recurring_daily_date_open' class='far fa-calendar'></i>"),
+                        css_class='form-group col-12 col-md-12'
+                    ),
+                    Column(AppendedText('recurring_daily_interval', 'mins'), css_class='form-group col-12 col-md-4'),
+
+                    Column(
+                        AppendedText('recurring_daily_starttime',
+                                     '<i id="id_recurring_daily_starttime_open" class="far fa-clock"></i>'),
+                        css_class='form-group col-6 col-md-4'
+                    ),
+                    Column(
+                        AppendedText('recurring_daily_endtime',
+                                     '<i id="id_recurring_daily_endtime_open" class="far fa-clock"></i>'),
+                        css_class='form-group col-6 col-md-4'
+                    ),
+                ),
+                Submit('submit', f'Clone at recurring intervals')
+            ),
+        )
+
+    def clean(self):
+        if self.cleaned_data["recurring_daily_starttime"] > self.cleaned_data["recurring_daily_endtime"]:
+            self.add_error("recurring_daily_endtime", "End time must be after start time")
+        return super().clean()
+
+
+class CloneSingleEventForm(forms.Form):
+
+    recurring_once_datetime = forms.DateTimeField(
+        required=True, label="Date and time",
+        widget=forms.DateTimeInput(attrs={"autocomplete": "off"}, format='%d-%b-%Y %H:%M'),
+        input_formats=['%d-%b-%Y %H:%M'],
+        validators=(validate_future_date,)
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.layout = Layout(
+            Fieldset(
+                "Recurring once at a specific date and time:",
+                AppendedText('recurring_once_datetime', "<i id='id_recurring_once_datetime_open' class='far fa-calendar'></i>"),
+                Submit('submit', 'Clone once')
+            ),
+        )

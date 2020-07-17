@@ -94,8 +94,7 @@
         {% block precontent %}<div class="container"><h1 class="pt-2">Freedom of Flight Aerial</h1></div>{% endblock %}
 
         {% if messages %}
-          <div class="row mt-2" id="message-row">
-            <div class="col-12">
+          <div class="container mt-2" id="message-row">
                 {% for message in messages %}
                 <div {% if message.tags and message.tags == 'error' %}
                             class="message alert alert-danger alert-dismissible"
@@ -109,7 +108,6 @@
                         {{ message }}
                     {% endif %}</div>
                 {% endfor %}
-            </div>
           </div>
         {% endif %}
             {% block content %}
@@ -162,6 +160,7 @@
     <script src="{% static 'js/js.cookie-2.2.1.min.js' %}"></script>
     <script src="{% static 'booking/js/jquery.rememberscroll.js' %}"></script>
     <script src="{% static 'js/custom-v1.0.js' %}"></script>
+    <script src="{% static 'js/datetimepickers-v1.0.js' %}"></script>
 
     {% block extra_js %}{% endblock %}
 
