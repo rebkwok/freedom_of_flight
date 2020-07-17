@@ -162,7 +162,6 @@ def clone_event_daily(request, event, target_date, start_time, end_time, interva
             cloned_times.append(event_start)
         event_start = event_start + timedelta(minutes=interval)
 
-    import ipdb; ipdb.set_trace()
     if cloned_times:
         messages.success(
             request,
