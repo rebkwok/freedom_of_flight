@@ -165,15 +165,15 @@ class CancelEventViewTests(EventTestMixin, TestUsersMixin, TestCase):
         assert len(resp.context_data["bookings_to_cancel"]) == 7
 
     def test_cancel_event_no_bookings(self):
-        # no bookings - event set to cancel, no emails sent
+        # no bookings - event deleted, no emails sent
+        event_id = self.event.id
         url = self.url(self.event)
         self.login(self.staff_user)
         resp = self.client.post(
             url, data={"confirm": "yes, confirm", "additional_message": ""}, follow=True
         )
-        self.event.refresh_from_db()
-        assert self.event.cancelled
-        assert "Event cancelled; no open bookings" in resp.rendered_content
+        assert Event.objects.filter(id=event_id).exists() is False
+        assert "Event deleted" in resp.rendered_content
         assert len(mail.outbox) == 0
 
     def test_cancel_event_with_cancelled_bookings(self):
@@ -323,7 +323,7 @@ class EventCreateViewTests(EventTestMixin, TestUsersMixin, TestCase):
             "name": "test",
             "description": "",
             "event_type": self.aerial_event_type.id,
-            "start": "10 Jul 2020 16:00",
+            "start": "10-Jul-2020 16:00",
             "max_participants": 10,
             "duration": 90,
             "video_link": "",
@@ -347,7 +347,7 @@ class EventCreateViewTests(EventTestMixin, TestUsersMixin, TestCase):
 
     def test_create_event(self):
         assert Event.objects.exists() is False
-        self.client.post(self.url, data=self.form_data())
+        resp = self.client.post(self.url, data=self.form_data())
         assert Event.objects.exists() is True
         new_event = Event.objects.first()
         assert new_event.name == "test"
@@ -377,7 +377,7 @@ class EventUpdateViewTests(EventTestMixin, TestUsersMixin, TestCase):
             "name": "test",
             "description": "",
             "event_type": self.aerial_event_type.id,
-            "start": "10 Jul 2020 16:00",
+            "start": "10-Jul-2020 16:00",
             "max_participants": 10,
             "duration": 90,
             "video_link": "",

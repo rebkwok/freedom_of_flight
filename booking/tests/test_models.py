@@ -439,7 +439,9 @@ class BlockTests(TestUsersMixin, TestCase):
         """
         self.dropin_block.manual_expiry_date = datetime(2015, 3, 1, 15, 45, tzinfo=timezone.utc)
         self.dropin_block.save()
-        assert self.dropin_block.get_expiry_date() == datetime(2015, 3, 1, 23, 59, 59, tzinfo=timezone.utc)
+        assert self.dropin_block.get_expiry_date() == datetime.combine(
+            datetime(2015, 3, 1, tzinfo=timezone.utc).date(), datetime.max.time()
+        )
 
     @patch('booking.models.timezone.now')
     def test_block_purchase_date_reset_on_paid(self, mock_now):
