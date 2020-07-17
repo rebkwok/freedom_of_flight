@@ -44,6 +44,14 @@ body > .container {
   color: green;
 }
 
+#navbarTimetableSubNavContainer {
+  background-color: #fdfae3;
+}
+
+#navbarTimetableSubNav > ul > li.nav-item.active > a {
+  color: orange;
+}
+
 #eventsTrackTabs > a.nav-item.nav-link {
   color: dimgrey;
 }
@@ -57,7 +65,15 @@ body > .container {
 }
 
 #courseTrackTabs > a.nav-item.nav-link.active {
-  color: green;
+  color: orange;
+}
+
+#timetableTrackTabs > a.nav-item.nav-link {
+  color: dimgrey;
+}
+
+#timetableTrackTabs > a.nav-item.nav-link.active {
+  color: blue;
 }
 
 

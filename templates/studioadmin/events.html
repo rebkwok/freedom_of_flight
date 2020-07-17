@@ -17,6 +17,7 @@
             {%  endfor %}
         </div>
     </nav>
+{% if track_events %}
     <div class="tab-content">
         {% for track_obj in track_events %}
             <div class="tab-pane fade {% get_active_pane_class track_obj.index tab %}" id="tab{{ track_obj.index }}" role="tabpanel">
@@ -83,10 +84,10 @@
             {% include 'studioadmin/includes/event_pagination.html' %}
             </div>
         {% endfor %}
-
-
-
     </div> <!-- tab content -->
+{% else %}
+<p>No events created yet</p>
+{% endif %}
 </div>
 
 

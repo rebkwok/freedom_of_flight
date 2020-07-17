@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -24,7 +26,7 @@ class BaseEventAdminListView(ListView):
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        start_of_today = timezone.now().replace(hour=0, minute=0, microsecond=0)
+        start_of_today = datetime.combine(timezone.now().date(), datetime.min.time(), tzinfo=timezone.utc)
         return queryset.filter(start__gte=start_of_today).order_by("start")
 
     def get_context_data(self, **kwargs):

@@ -1,0 +1,65 @@
+{%  extends "studioadmin/base.html" %}
+
+{% load studioadmintags static %}
+
+{% block precontent %}
+    {%  include "studioadmin/includes/timetable_subnav.html" %}
+{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid pb-2">
+    <nav>
+        <div class="nav nav-tabs" id="timetableTrackTabs" role="tablist">
+            {% for track_obj in track_sessions %}
+                <a class="nav-item nav-link {% get_active_tab_class track_obj.index tab %}"
+                   href="#tab{{ track_obj.index }}" data-toggle="tab">{{ track_obj.track }}</a>
+            {%  endfor %}
+        </div>
+    </nav>
+
+{% if track_sessions %}
+    <div class="tab-content">
+        {% for track_obj in track_sessions %}
+            <div class="tab-pane fade {% get_active_pane_class track_obj.index tab %}" id="tab{{ track_obj.index }}" role="tabpanel">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th scope="col">Name<br/><span class="helptext">Click to edit</span></th>
+                                <th scope="col">Day</th>
+                                <th scope="col">Time</th>
+                                <th scope="col">Duration</th>
+                                <th scope="col" class="text-center">Max Participants</th>
+                                <th scope="col">Event Type</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for session in track_obj.queryset %}
+                            <tr>
+                                <td><a href="#">{{ session.name }}</a></td>
+                                <td>{{ session.day }}</td>
+                                <td>{{ session.time }}</td>
+                                <td>{{ session.duration }} mins</td>
+                                <td class="text-center">{{ event.max_participants }}</td>
+                                <td>{{ event.event_type.name }}</td>
+                                <td><a class="btn btn-sm btn-danger pt-0 pb-0" href="#">Delete</a></td>
+                            </tr>
+                        {%  endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% include 'studioadmin/includes/event_pagination.html' %}
+            </div>
+        {% endfor %}
+
+    </div> <!-- tab content -->
+{% else %}
+    <p>No sessions created yet</p>
+{% endif %}
+</div>
+
+
+{% endblock content %}
+

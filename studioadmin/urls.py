@@ -7,7 +7,8 @@ from studioadmin.views import (
     ajax_remove_from_waiting_list, event_waiting_list_view, cancel_event_view,
     event_create_choice_view, EventCreateView, EventUpdateView, clone_event,
     CourseAdminListView, course_create_choice_view, CourseCreateView, CourseUpdateView,
-    ajax_toggle_course_visible, cancel_course_view
+    ajax_toggle_course_visible, cancel_course_view,
+    TimetableSessionListView
 )
 
 app_name = 'studioadmin'
@@ -21,6 +22,8 @@ urlpatterns = [
     path('event/<slug:event_slug>/clone/', clone_event, name="clone_event"),
     path('event/<int:event_type_id>/create/', EventCreateView.as_view(), name="create_event"),
     path('event/<slug>/update/', EventUpdateView.as_view(), name="update_event"),
+
+    path('timetable/', TimetableSessionListView.as_view(), name='timetable'),
 
     path('courses/', CourseAdminListView.as_view(), name='courses'),
     path('course/<slug>/cancel/', cancel_course_view, name='cancel_course'),
