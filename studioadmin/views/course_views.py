@@ -99,7 +99,7 @@ def ajax_toggle_course_visible(request, course_id):
 def cancel_course_view(request, slug):
     course = get_object_or_404(Course, slug=slug)
     bookings_to_cancel = Booking.objects.filter(event__in=course.events.all())
-
+    bookings_to_cancel_users = bookings_to_cancel.distinct("user")
     if request.method == 'POST':
         if 'confirm' in request.POST:
             additional_message = request.POST["additional_message"]
@@ -120,10 +120,10 @@ def cancel_course_view(request, slug):
                 'additional_message': additional_message,
             }
             # send emails to manager user if this is a child user booking
-            user_emails = [
+            user_emails = {
                 booking.user.childuserprofile.parent_user_profile.user.email if hasattr(booking.user, "childuserprofile")
                 else booking.user.email for booking in bookings_to_cancel
-            ]
+            }
             send_bcc_emails(
                 ctx,
                 user_emails,
@@ -142,7 +142,7 @@ def cancel_course_view(request, slug):
 
     context = {
         'course': course,
-        'bookings_to_cancel': bookings_to_cancel,
+        'bookings_to_cancel_users': bookings_to_cancel_users,
     }
     return TemplateResponse(request, 'studioadmin/cancel_course.html', context)
 

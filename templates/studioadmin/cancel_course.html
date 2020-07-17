@@ -15,11 +15,11 @@
     <p>All events associated with this course will also be cancelled.
         Any students booked on the course will have their block credited back.</p>
 
-    {% if bookings_to_cancel %}
+    {% if bookings_to_cancel_users %}
         <p>The following students have bookings which will be cancelled:</p>
         <ul>
-            {% for booking in bookings_to_cancel %}
-            <li>{{ booking.user.first_name }} {{ booking.user.last_name }}</li>
+            {% for booking_user in bookings_to_cancel_users %}
+            <li>{{ booking_user.first_name }} {{ booking_user.last_name }}</li>
             {% endfor %}
         </ul>
     {% else %}
