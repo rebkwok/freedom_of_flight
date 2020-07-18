@@ -1,20 +1,20 @@
 {% extends 'base.html' %}
 {% load accounttags %}
 
+{% block precontent %}
+    {{ block.super }}
+    {% include 'accounts/includes/account_nav.html' %}
+{% endblock %}
+
 {% block content %}
 
-<div class="container">
-
-    {% include 'accounts/includes/account_nav.html' %}
-
-           <h1 class="mt-5">Register a managed user account</h1>
-            <form class="dirty-check" action="" method="post">
-            {% csrf_token %}
-            {{ form.as_p }}
-            <input type="submit" class="btn btn-success mt-3" value="Register and proceed to disclaimer form">
-            </form>
+   <h1 class="mt-5">Register a managed user account</h1>
+    <form class="dirty-check" action="" method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <input type="submit" class="btn btn-success mt-3" value="Register and proceed to disclaimer form">
+    </form>
 
 
-            </div>
 {% endblock content %}
 

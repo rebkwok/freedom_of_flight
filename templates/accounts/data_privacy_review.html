@@ -2,7 +2,6 @@
 {% load static %}
 
 {% block content %}
-    <div class="container">
     <h1>Data Privacy Policy</h1>
 
         <p>Please review our {% if update_needed %}updated {% endif %}data privacy policy before proceeding.</p>
@@ -28,7 +27,6 @@
             <input type="hidden" name="next_url" value={{ form.next_url }}/>
             <input class="btn btn-success" type="submit" value="Submit" />
         </form>
-    </div>
 {% endblock content %}
 
 {% block footer_class %}{% endblock %}

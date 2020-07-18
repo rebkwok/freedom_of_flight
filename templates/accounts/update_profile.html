@@ -1,14 +1,16 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block content %}
-<div class="container">
-        {% include 'accounts/includes/account_nav.html' %}
+{% block precontent %}
+    {{ block.super }}
+    {% include 'accounts/includes/account_nav.html' %}
+{% endblock %}
 
-            <div>
-                <h1>Edit Your Account Profile</h1>
-            </div>
-                <form action="" method="post">{% csrf_token %}
+{% block content %}
+    <div>
+        <h1>Edit Your Account Profile</h1>
+    </div>
+    <form action="" method="post">{% csrf_token %}
                     {% csrf_token %}
                       {{ form.non_field_errors }}
                             {% for field in form %}
@@ -40,7 +42,4 @@
                     <input class="btn btn-success" type="submit" value="Update" />
                     <a href="{% url 'accounts:profile' %}"><div class="btn btn-warning">Cancel</div></a>
                 </form>
-
-</div>
-
 {% endblock content %}

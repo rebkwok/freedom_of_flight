@@ -7,7 +7,6 @@
 {% endblock %}
 
 {% block content %}
-    <div class="container-fluid pb-2">
     {% if creating %}
     <h1>Creating new {{ event_type.name }}</h1>
     <h2>Track: {{ event_type.track }}</h2>
@@ -36,6 +35,5 @@
         {% crispy form %}
         </form>
 
-    </div>
 {% endblock %}
 

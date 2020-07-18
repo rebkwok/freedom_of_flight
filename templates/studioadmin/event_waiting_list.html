@@ -12,8 +12,6 @@
 
 {% block content %}
 
-<div class="container pb-2">
-
     <h2>Waiting List for {{ event }}</h2>
     <p class="lead">(Currently {% if event.spaces_left %}not {% endif %} full)</p>
 
@@ -47,8 +45,6 @@
             {% else %}
                 <p>There are no students on the waiting list.</p>
             {% endif %}
-</div>
-
 
 {% endblock %}
 

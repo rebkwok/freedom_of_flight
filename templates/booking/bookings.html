@@ -6,13 +6,14 @@
 {% include 'common/includes/ajax_head.html' %}
 {% endblock %}
 
-{% block content %}
-
+{% block precontent %}
+    {{ block.super }}
     {% include 'accounts/includes/account_nav.html' %}
+{% endblock %}
 
+{% block content %}
 <div id="confirm-dialog"></div></div>
 
-<div class="container">
     <form class="form-inline" method="post">
         {% csrf_token %}
         {{ available_users_form }}
@@ -121,7 +122,6 @@
         <p>No active bookings.</p>
     {% endif %}
 
-</div>
 {% endblock content %}
 
 

@@ -5,12 +5,10 @@
 {% endblock %}
 
 {% block content %}
-    <div class="container-fluid">
     <h1>Choose the type of event to create:</h1>
     {% for event_type in event_types %}
         <p>{{ event_type }} <a class="float-right btn btn-sm btn-outline-primary" href="{% url 'studioadmin:create_event' event_type.id %}">Select</a></p>
         <hr/>
     {% endfor %}
-    </div>
 {% endblock %}
 

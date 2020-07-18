@@ -6,7 +6,6 @@
 {% endblock %}
 
 {% block content %}
-    <div class="container-fluid pb-2">
     <h1>Cloning {{ event.event_type.label }}</h1>
 
     <p class="lead">How do you want to clone this {{ event.event_type.label }}?</p>
@@ -30,6 +29,5 @@
             {% crispy single_form %}
         </form>
 
-    </div>
 {% endblock %}
 

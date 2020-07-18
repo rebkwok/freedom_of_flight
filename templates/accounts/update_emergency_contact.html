@@ -1,11 +1,12 @@
 {% extends 'base.html' %}
 {% load accounttags %}
 
-{% block content %}
-
-<div class="container">
-
+{% block precontent %}
+    {{ block.super }}
     {% include 'accounts/includes/account_nav.html' %}
+{% endblock %}
+
+{% block content %}
 
     <div>
         {% if disclaimer_user == request.user %}
@@ -33,5 +34,4 @@
             <div><input class="btn btn-success" type="submit" value="Submit" /></div>
        </form>
 
-</div>
 {% endblock %}

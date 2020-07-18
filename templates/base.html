@@ -91,16 +91,16 @@
     </header>
 
     <!-- Begin page content -->
-    <main role="main" class="container">
+    <main role="main" class="container-fluid">
     {% cookielaw_banner %}
 
       <!--<h1 class="mt-5">Freedom of Flight Aerial Booking</h1>-->
 
         {% block body %}
-        {% block precontent %}<div class="container"><h1 class="pt-2">Freedom of Flight Aerial</h1></div>{% endblock %}
+        {% block precontent %}<div class="container-fluid"><h1 class="pt-2">Freedom of Flight Aerial</h1></div>{% endblock %}
 
         {% if messages %}
-          <div class="container mt-2" id="message-row">
+          <div class="container-fluid mt-2" id="message-row">
                 {% for message in messages %}
                 <div {% if message.tags and message.tags == 'error' %}
                             class="message alert alert-danger alert-dismissible"
@@ -116,14 +116,16 @@
                 {% endfor %}
           </div>
         {% endif %}
-            {% block content %}
-                    <p>You need to define a content block!</p>
-            {% endblock %}
+        <div class="container-fluid pb-2">
+        {% block content %}
+                <p>You need to define a content block!</p>
         {% endblock %}
+        </div>
+    {% endblock %}
     </main>
 
     <footer class="footer">
-      <div class="container">
+      <div class="container-fluid">
         <span class="text-muted">
           <div>
           <span class="float-left">
