@@ -124,7 +124,7 @@ def ajax_toggle_attended(request, booking_id):
     event_was_full = booking.event.spaces_left == 0
     if attendance == 'attended':
         if (booking.no_show or booking.status == 'CANCELLED') and booking.event.spaces_left == 0:
-            alert_msg = 'Event is now full, cannot reopen booking.'
+            alert_msg = f'{booking.event.event_type.label.title()} is now full, cannot reopen booking.'
         else:
             booking.status = 'OPEN'
             booking.attended = True
