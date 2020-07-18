@@ -68,16 +68,18 @@ class CloneEventTests(EventTestMixin, TestUsersMixin, TestCase):
     @patch("studioadmin.forms.timezone")
     def test_clone_single_event_already_exists(self, mock_tz):
         mock_tz.now.return_value = datetime(2020, 1, 1, tzinfo=timezone.utc)
-        event = baker.make_recipe(
+        # make another event with the same name and event type, and the date we're about to try to clone to
+        baker.make_recipe(
             "booking.future_event", name="Original event",  event_type=self.aerial_event_type,
             start=datetime(2020, 4, 4, 10, 0, tzinfo=timezone.utc)
         )
+        assert Event.objects.filter(name="Original event").count() == 2
         data = {
             "recurring_once_datetime": "04-Apr-2020 10:00",
             "submit": "Clone once"
         }
         resp = self.client.post(self.url, data, follow=True)
-        assert Event.objects.filter(name="Original event").count() == 1
+        assert Event.objects.filter(name="Original event").count() == 2
         assert "Class not cloned; a duplicate with this name and start already exists" in resp.rendered_content
 
     @patch("studioadmin.forms.timezone")
@@ -103,8 +105,8 @@ class CloneEventTests(EventTestMixin, TestUsersMixin, TestCase):
         self.client.post(self.url, data)
         cloned_events = Event.objects.filter(name="Original event").exclude(id=self.event.id).order_by("start")
         # Mondays in July - 6th, 13th, 20th, 27th
-        dates = [cloned_events.start.date() for cloned_event in cloned_events]
-        times = {cloned_events.start.time() for cloned_event in cloned_events}
+        dates = [cloned_event.start.date() for cloned_event in cloned_events]
+        times = {cloned_event.start.time() for cloned_event in cloned_events}
         assert dates == [date(2020, 7, 6), date(2020, 7, 13), date(2020, 7, 20), date(2020, 7, 27)]
         assert times == {time(10, 0)}
 
@@ -121,8 +123,8 @@ class CloneEventTests(EventTestMixin, TestUsersMixin, TestCase):
         resp = self.client.post(self.url, data)
         cloned_events = Event.objects.filter(name="Original event").exclude(id=self.event.id).order_by("start")
         # Fridays in July - 17th, 24th, 31st - make events on inclusive start/end dates
-        dates = [cloned_events.start.date() for cloned_event in cloned_events]
-        times = {cloned_events.start.time() for cloned_event in cloned_events}
+        dates = [cloned_event.start.date() for cloned_event in cloned_events]
+        times = {cloned_event.start.time() for cloned_event in cloned_events}
         assert dates == [date(2020, 7, 17), date(2020, 7, 24), date(2020, 7, 31)]
         assert times == {time(10, 0)}
 
@@ -137,8 +139,8 @@ class CloneEventTests(EventTestMixin, TestUsersMixin, TestCase):
             "submit": "Clone weekly recurring class",
         }
         resp = self.client.post(self.url, data)
-        form = resp.rendered_content["form"]
-        assert form.errors == {"recurring_weekly_start": "Date must be in the future"}
+        form = resp.context_data["weekly_form"]
+        assert form.errors == {"recurring_weekly_start": ["Date must be in the future"]}
 
         data = {
             "recurring_weekly_start": "12-Jul-2020",
@@ -148,8 +150,8 @@ class CloneEventTests(EventTestMixin, TestUsersMixin, TestCase):
             "submit": "Clone weekly recurring class",
         }
         resp = self.client.post(self.url, data)
-        form = resp.rendered_content["form"]
-        assert form.errors == {"recurring_weekly_end": "Date must be in the future"}
+        form = resp.context_data["weekly_form"]
+        assert form.errors == {"recurring_weekly_end": ["Date must be in the future"]}
 
         data = {
             "recurring_weekly_start": "01-Aug-2020",
@@ -159,8 +161,8 @@ class CloneEventTests(EventTestMixin, TestUsersMixin, TestCase):
             "submit": "Clone weekly recurring class",
         }
         resp = self.client.post(self.url, data)
-        form = resp.rendered_content["form"]
-        assert form.errors == {"recurring_weekly_end": "End date must be after start date"}
+        form = resp.context_data["weekly_form"]
+        assert form.errors == {"recurring_weekly_end": ["End date must be after start date"]}
 
     @patch("studioadmin.forms.timezone")
     def test_clone_weekly_recurring_event_multiple_days(self, mock_tz):
@@ -174,10 +176,10 @@ class CloneEventTests(EventTestMixin, TestUsersMixin, TestCase):
         }
         self.client.post(self.url, data)
         cloned_events = Event.objects.filter(name="Original event").exclude(id=self.event.id).order_by("start")
-        # Wed and Sun in July - 1st, 5th, 8th, 12th, 15th, 19th, 22nd, 26th
-        dates = [cloned_events.start.date() for cloned_event in cloned_events]
-        times = {cloned_events.start.time() for cloned_event in cloned_events}
-        assert dates == [date(2020, day, 17) for day in [1, 5, 8, 12, 15, 19, 22, 26]]
+        # Wed and Sun in July - 1st, 5th, 8th, 12th, 15th, 19th, 22nd, 26th, 29th
+        dates = [cloned_event.start.date() for cloned_event in cloned_events]
+        times = {cloned_event.start.time() for cloned_event in cloned_events}
+        assert dates == [date(2020, 7, day) for day in [1, 5, 8, 12, 15, 19, 22, 26, 29]]
         assert times == {time(10, 0)}
 
     @patch("studioadmin.forms.timezone")
@@ -192,8 +194,8 @@ class CloneEventTests(EventTestMixin, TestUsersMixin, TestCase):
         }
         self.client.post(self.url, data)
         cloned_events = Event.objects.filter(name="Original event").exclude(id=self.event.id).order_by("start")
-        dates = {cloned_events.start.date() for cloned_event in cloned_events}
-        times = {cloned_events.start.time() for cloned_event in cloned_events}
+        dates = {cloned_event.start.date() for cloned_event in cloned_events}
+        times = {cloned_event.start.time() for cloned_event in cloned_events}
         assert dates == {date(2020, 7, 1)}
         assert times == {time(10, 0), time(10, 20), time(10, 40), time(11, 0), time(11, 20), time(11, 40), time(12, 00)}
 
@@ -209,8 +211,8 @@ class CloneEventTests(EventTestMixin, TestUsersMixin, TestCase):
         }
         self.client.post(self.url, data)
         cloned_events = Event.objects.filter(name="Original event").exclude(id=self.event.id).order_by("start")
-        dates = {cloned_events.start.date() for cloned_event in cloned_events}
-        times = {cloned_events.start.time() for cloned_event in cloned_events}
+        dates = {cloned_event.start.date() for cloned_event in cloned_events}
+        times = {cloned_event.start.time() for cloned_event in cloned_events}
         assert dates == {date(2020, 7, 1)}
         assert times == {time(10, 0), time(10, 10), time(10, 20), time(10, 30)}
 
@@ -225,8 +227,8 @@ class CloneEventTests(EventTestMixin, TestUsersMixin, TestCase):
             "submit": "Clone at recurring intervals",
         }
         resp = self.client.post(self.url, data)
-        form = resp.rendered_content["form"]
-        assert form.errors == {"recurring_daily_date": "Date must be in the future"}
+        form = resp.context_data["daily_form"]
+        assert form.errors == {"recurring_daily_date": ["Date must be in the future"]}
 
         data = {
             "recurring_daily_date": "01-Aug-2020",
@@ -236,5 +238,5 @@ class CloneEventTests(EventTestMixin, TestUsersMixin, TestCase):
             "submit": "Clone at recurring intervals",
         }
         resp = self.client.post(self.url, data)
-        form = resp.rendered_content["form"]
-        assert form.errors == {"recurring_daily_endtime": "End time must be after start time"}
+        form = resp.context_data["daily_form"]
+        assert form.errors == {"recurring_daily_endtime": ["End time must be after start time"]}
