@@ -3,8 +3,7 @@
 {% load bookingtags %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="{% static 'booking/css/vanilla-notify.css' %}">
-<script type='text/javascript' src="{% static 'booking/js/vanilla-notify.min.js' %}"></script>
+{% include 'common/includes/ajax_head.html' %}
 {% endblock %}
 
 {% block precontent %}
@@ -55,6 +54,5 @@
 
 
 {% block extra_js %}
-<script type='text/javascript' src="{% static 'js/underscore.1.10.2-min.js' %}"></script>
 <script type='text/javascript' src="{% static 'studioadmin/js/waiting_list_ajax-v1.js' %}"></script>
 {% endblock %}

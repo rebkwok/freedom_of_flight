@@ -1,4 +1,5 @@
+{% load email_obfuscator %}
 ------------------------------------
 FREEDOM OF FLIGHT AERIAL
 http://www.freedomofflightaerial.com
-{{ studio_email }}
+{{ studio_email|obfuscate }}

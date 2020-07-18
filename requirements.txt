@@ -7,6 +7,7 @@ django-classy-tags==1.0.0  # for cookie-law
 django-cookie-law==2.0.3
 django-crispy-forms==1.9.1
 django-debug-toolbar==2.0
+django-email-obfuscator==0.1.5
 django-environ==0.4.5
 django-extensions==2.2.8
 django-migration-testcase==0.0.15

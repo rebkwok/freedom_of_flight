@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% load bookingtags static %}
+{% load bookingtags static email_obfuscator %}
 
 
 {% block content %}
@@ -11,7 +11,7 @@
         <div class="card-header"><h1>Not Valid Payment</h1></div>
         <div class="card-body">
             <p class="card-text">
-                Something went wrong!  Please check your PayPal records and contact <a href="mailto:{{ studio_email }}">{{ studio_email }}</a> for further information.
+                Something went wrong!  Please check your PayPal records and contact {{ studio_email|obfuscate_mailto }} for further information.
             </p>
         </div>
     </div>

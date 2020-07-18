@@ -1,2 +1,4 @@
-Please do not reply to this email.  For queries please contact <a href="mailto:{{ studio_email }}">{{ studio_email }}</a>.
+{% load email_obfuscator %}
+
+Please do not reply to this email.  For queries please contact {{ studio_email|obfuscate }}.
 <hr>

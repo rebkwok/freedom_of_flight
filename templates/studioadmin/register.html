@@ -3,8 +3,7 @@
 {% load accounttags bookingtags %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="{% static 'booking/css/vanilla-notify.css' %}">
-<script type='text/javascript' src="{% static 'booking/js/vanilla-notify.min.js' %}"></script>
+{% include 'common/includes/ajax_head.html' %}
 {% endblock %}
 
 {% block precontent %}
@@ -110,7 +109,11 @@
 
 
 {% block extra_js %}
-<script type='text/javascript' src="{% static 'js/underscore.1.10.2-min.js' %}"></script>
-<script type='text/javascript' src="{% static 'js/jquery.form-4.3.0.min.js' %}"></script>
+{# Load from local if in dev mode (debug on) and not specifically set #}
+{% if use_cdn %}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.form/4.3.0/jquery.form.min.js" integrity="sha512-YUkaLm+KJ5lQXDBdqBqk7EVhJAdxRnVdT2vtCzwPHSweCzyMgYV/tgGF4/dCyqtCC2eCphz0lRQgatGVdfR0ww==" crossorigin="anonymous"></script>
+{% else %}
+    <script type='text/javascript' src="{% static 'js/jquery.form-4.3.0.min.js' %}"></script>
+{% endif %}
 <script type='text/javascript' src="{% static 'studioadmin/js/register_ajax-v1.js' %}"></script>
 {% endblock %}

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static email_obfuscator %}
 
 {% block content %}
 
@@ -13,8 +13,7 @@
     </p>
 
 
-    <p>For further information, please contact
-        <a href="mailto:{{ studio_email }}">{{ studio_email }}</a>.</p>
+    <p>For further information, please contact {{ studio_email|obfuscate_mailto }}.</p>
 
     <p>View our full data privacy policy <a href="{% url 'accounts:data_privacy_policy' %}">here.</a></p>
 

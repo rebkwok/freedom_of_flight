@@ -1,2 +1,3 @@
-Please do not reply to this email.  For queries please contact {{ studio_email }}.
+{% load email_obfuscator %}
+Please do not reply to this email.  For queries please contact {{ studio_email|obfuscate }}.
 --------------------------------------------------------------------------------------------------------------------

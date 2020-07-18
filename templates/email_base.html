@@ -1,3 +1,5 @@
+{% load email_obfuscator %}
+
 <html>
 <body>
 
@@ -17,7 +19,7 @@
         </div>
         <div class="col-12" style="font-family: sans-serif; padding-top: 1em;">
             FREEDOM OF FLIGHT AERIAL<br />
-            {{ studio_email }}
+            {{ studio_email|obfuscate }}
         </div>
     </div>
 </div>

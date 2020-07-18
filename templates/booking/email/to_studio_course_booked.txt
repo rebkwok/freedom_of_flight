@@ -1,6 +1,5 @@
 {% extends 'email_base.txt' %}
 
-
 {% block messagecontent %}
 
 {{ manager_user.first_name }} {{ manager_user.last_name }} has just booked a course: {{ course }} (for {{ course_user.first_name }} {{ course_user.last_name }} ).

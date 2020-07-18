@@ -25,7 +25,8 @@ env = environ.Env(
     USE_MAILCATCHER=(bool, False),
     TRAVIS=(bool, False),
     HEROKU=(bool, False),
-    LOCAL=(bool, False)
+    LOCAL=(bool, False),
+    USE_CDN=(bool, False),
 )
 
 
@@ -43,6 +44,7 @@ if SECRET_KEY is None:  # pragma: no cover
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env('DEBUG')
+USE_CDN = env('USE_CDN')
 # when env variable is changed it will be a string, not bool
 if str(DEBUG).lower() in ['true', 'on']:  # pragma: no cover
     DEBUG = True
@@ -86,6 +88,7 @@ INSTALLED_APPS = [
     'paypal.standard.ipn',
     'paypal.standard.pdt',
     'payments',
+    'email_obfuscator',
 ]
 
 MIDDLEWARE = [

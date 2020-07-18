@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load accounttags %}
+{% load accounttags email_obfuscator %}
 
 {% block content %}
 
@@ -22,15 +22,13 @@
                         {% endif %}
                     </div>
                    <div class="col-12">
-                       <p>If you have any additional questions or concerns about the data you have provided, please contact
-                        <a href="mailto:{{ studio_email }}">{{ studio_email }}</a>.</p>
+                       <p>If you have any additional questions or concerns about the data you have provided, please contact {{ studio_email|obfuscate_mailto }}.</p>
                    </div>
                 {% else %}
 
                    {% include 'accounts/disclaimer_form_content.html' %}
                    <div class="col-12">
-                       <p>If you have any additional questions or concerns, please contact
-                        <a href="mailto:{{ studio_email }}">{{ studio_email }}</a>.</p>
+                       <p>If you have any additional questions or concerns, please contact {{ studio_email|obfuscate_mailto }}.</p>
                    </div>
 
                 {% endif %}
