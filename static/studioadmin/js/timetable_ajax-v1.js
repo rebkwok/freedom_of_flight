@@ -40,14 +40,14 @@ const processDeleteTimetableSession = function()  {
        }
 
        if (result.alert_msg) {
-        vNotify.success({text:result.alert_msg, position: 'bottomRight'});
+        vNotify.error({text:result.alert_msg, position: 'bottomRight'});
       }
 
    };
 
    $.ajax(
        {
-          url: '/studioadmin/timetable-session/delete/' ,
+          url: '/studioadmin/timetable/session/' + timetable_session_id + '/delete/' ,
           type: "POST",
           dataType: 'json',
           success: processResult,

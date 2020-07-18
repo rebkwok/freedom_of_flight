@@ -12,6 +12,7 @@ from crispy_forms.layout import Layout, Submit, Row, Column, Field, Fieldset, Hi
 
 from booking.models import Event, Course
 from booking.utils import has_available_block, has_available_course_block
+from timetable.models import TimetableSession
 
 
 def validate_future_date(value):
@@ -78,6 +79,38 @@ class EventCreateUpdateForm(forms.ModelForm):
             "video_link" if self.event_type.is_online else Hidden("cancelled", ""),
             "show_on_site",
             "cancelled" if self.instance.id and self.instance.cancelled else Hidden("cancelled", False),
+            Submit('submit', 'Save')
+        )
+
+
+class TimetableSessionCreateUpdateForm(forms.ModelForm):
+
+    class Meta:
+        model = TimetableSession
+        fields = (
+            "event_type",
+            "name", "description", "day", "time", "duration",
+            "max_participants",
+        )
+
+    def __init__(self, *args, **kwargs):
+        self.event_type = kwargs.pop("event_type")
+        super().__init__(*args, **kwargs)
+
+        self.fields["time"].widget.format = '%H:%M'
+        self.fields["time"].input_formats = ['%H:%M']
+
+        self.helper = FormHelper()
+        self.helper.layout = Layout(
+            "event_type" if self.instance.id else Hidden("event_type", self.event_type.id),
+            "name",
+            Field("description", rows=10),
+            "day",
+            AppendedText(
+                "time", "<i id='id_time_open' class='far fa-clock'></i>", autocomplete="off",
+            ),
+            Field("duration", type="integer"),
+            Field("max_participants", type="integer"),
             Submit('submit', 'Save')
         )
 

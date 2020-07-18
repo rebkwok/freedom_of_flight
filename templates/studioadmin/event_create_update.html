@@ -15,7 +15,7 @@
         <h2>Track: {{ event.event_type.track }}</h2>
     {% endif %}
 
-    {% if creating or cloning %}
+    {% if creating %}
     <p>
         If this {{ event_type.label }} is part of a course, it can be created first, and then add them to a new or already
         created course course.  Note that max participants for an individual {{ event_type.label }} is overridden by the course

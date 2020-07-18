@@ -1,0 +1,28 @@
+{%  extends "studioadmin/base.html" %}
+
+{% load crispy_forms_tags %}
+
+{% block precontent %}
+    {%  include "studioadmin/includes/timetable_subnav.html" %}
+{% endblock %}
+
+{% block content %}
+    {% if creating %}
+    <h1>Creating new {{ event_type.name }} timetable session</h1>
+    <h2>Track: {{ event_type.track }}</h2>
+    {% else %}
+        <h1>Updating {{ timetable_session.event_type.label }}: {{ timetable_session.name }} - {{ timetable_session.get_day_name }}, {{ timetable_session.time }}</h1>
+        <h2>Track: {{ timetable_session.event_type.track }}</h2>
+    {% endif %}
+
+    {% if form.errors %}
+        <p class="errorlist">Please correct the errors below:</p>
+    {% endif %}
+
+        <form method="post" action="">
+        {% csrf_token %}
+        {% crispy form %}
+        </form>
+
+{% endblock %}
+

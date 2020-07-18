@@ -31,11 +31,7 @@ class AccountFormMixin:
             )
         )
         self.fields["date_of_birth"] = forms.DateField(
-            widget=forms.DateInput(
-                attrs={'class': "form-control", 'id': 'dobdatepicker', "autocomplete": "off"},
-                format='%d %b %Y',
-            ),
-            input_formats=['%d %b %Y']
+            widget=forms.DateInput(attrs={"autocomplete": "off"}, format='%d-%b-%Y'), input_formats=['%d-%b-%Y'],
         )
         self.fields["address"] = forms.CharField(widget=forms.TextInput(attrs={'class': 'form-control'}))
         self.fields["postcode"] = forms.CharField(max_length=10, widget=forms.TextInput(attrs={'class': 'form-control'}))
@@ -221,19 +217,18 @@ class NonRegisteredDisclaimerForm(DisclaimerForm):
             'first_name': forms.TextInput(attrs={'class': 'form-control'}),
             'last_name': forms.TextInput(attrs={'class': 'form-control'}),
             'email': forms.EmailInput(attrs={'class': 'form-control'}),
-            'date_of_birth': forms.DateInput(attrs={'class': "form-control",'id': 'dobdatepicker',},format='%d %b %Y'),
-            'event_date': forms.DateInput(attrs={'class': "form-control",'id': 'eventdatepicker',}, format='%d %b %Y'),
+            'date_of_birth': forms.DateInput(attrs={'class': "form-control"}, format='%d-%b-%Y'),
+            'event_date': forms.DateInput(attrs={'class': "form-control"}, format='%d-%b-%Y'),
             'address': forms.TextInput(attrs={'class': 'form-control'}),
             'postcode': forms.TextInput(attrs={'class': 'form-control'}),
             'phone': forms.TextInput(attrs={'class': 'form-control'}),
         })
 
-
     def __init__(self, *args, **kwargs):
         kwargs['user'] = None
         super().__init__(*args, **kwargs)
         del self.fields['password']
-        self.fields['event_date'].input_formats = ['%d %b %Y']
+        self.fields['event_date'].input_formats = ['%d-%b-%Y']
         self.fields['event_date'].help_text = "Please enter the date of the " \
                                               "event you will be attending.  This will help us " \
                                               "retrieve your disclaimer on the day."

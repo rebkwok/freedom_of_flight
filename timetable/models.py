@@ -23,5 +23,8 @@ class TimetableSession(models.Model):
     description = models.TextField(blank=True, default="")
     max_participants = models.PositiveIntegerField(default=10)
 
+    def get_day_name(self):
+        return dict(self.DAY_CHOICES)[self.day]
+
     def __str__(self):
         return f"{dict(self.DAY_CHOICES)[self.day]} - {self.time.strftime('%H:%M')} - {self.name}"

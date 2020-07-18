@@ -1,0 +1,14 @@
+{%  extends "studioadmin/base.html" %}
+
+{% block precontent %}
+    {%  include "studioadmin/includes/timetable_subnav.html" %}
+{% endblock %}
+
+{% block content %}
+    <h1>Choose the type of timetable session to create:</h1>
+    {% for event_type in event_types %}
+        <p>{{ event_type }} <a class="float-right btn btn-sm btn-outline-primary" href="{% url 'studioadmin:create_timetable_session' event_type.id %}">Select</a></p>
+        <hr/>
+    {% endfor %}
+{% endblock %}
+

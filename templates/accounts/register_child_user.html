@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load accounttags %}
+{% load accounttags crispy_forms_tags %}
 
 {% block precontent %}
     {{ block.super }}
@@ -11,7 +11,7 @@
    <h1 class="mt-5">Register a managed user account</h1>
     <form class="dirty-check" action="" method="post">
     {% csrf_token %}
-    {{ form.as_p }}
+    {{ form|crispy }}
     <input type="submit" class="btn btn-success mt-3" value="Register and proceed to disclaimer form">
     </form>
 

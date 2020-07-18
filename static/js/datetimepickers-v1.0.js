@@ -1,4 +1,5 @@
 //http://xdsoft.net/jqplugins/datetimepicker/
+
 Date.parseDate = function( input, format ){
   return moment(input,format).toDate();
 };
@@ -8,45 +9,22 @@ Date.prototype.dateFormat = function( format ){
 
 jQuery(document).ready(function () {
 
-    jQuery('#datetimepicker').datetimepicker({
-        format:'DD MMM YYYY HH:mm',
-        formatTime:'HH:mm',
-        formatDate:'DD MM YYYY',
-        minDate: 0,
-        step: 5,
-        defaultTime: '19:00',
-        scrollMonth: false,
-        scrollTime: false,
-        scrollInput: false,
-
-    });
-
-    jQuery('#datepicker').datetimepicker({
-        format:'DD MMM YYYY',
-        formatTime:'HH:mm',
-        timepicker: false,
-        minDate: 0,
-        closeOnDateSelect: true,
-        scrollMonth: false,
-        scrollTime: false,
-        scrollInput: false,
-    });
-
-    jQuery('.blockdatepicker').datetimepicker({
-        format:'DD MMM YYYY',
-        startDate: new Date(),
+    // REGISTRATION AND DISCLAIMERS
+    jQuery('#id_event_date').datetimepicker({
+        format:'d-M-Y',
+        formatDate:'d-M-Y',
         timepicker: false,
         closeOnDateSelect: true,
         scrollMonth: false,
         scrollTime: false,
-        scrollInput: false,
+        scrollInput: false
     });
 
-    jQuery('#dobdatepicker').datetimepicker({
-        format:'DD MMM YYYY',
-        formatTime:'HH:mm',
+    jQuery('#id_date_of_birth').datetimepicker({
+        format:'d-M-Y',
+        formatDate:'d-M-Y',
         timepicker: false,
-        defaultDate: '1990/01/01',
+        defaultDate:'01-Jan-1990',
         closeOnDateSelect: true,
         scrollMonth: false,
         scrollTime: false,
@@ -55,9 +33,9 @@ jQuery(document).ready(function () {
 
     // STUDIOADMIN EVENT CREATE/UPDATE FORM
     jQuery('#id_start').datetimepicker({
-        format:'DD-MMM-YYYY HH:mm',
-        formatTime:'HH:mm',
-        formatDate:'DD-MMM-YYYY',
+        format:'d-M-Y H:i',
+        formatTime:'H:i',
+        formatDate:'d-M-Y',
         minDate: 0,
         step: 5,
         defaultTime: '19:00',
@@ -72,8 +50,8 @@ jQuery(document).ready(function () {
     // STUDIOADMIN CLONE FORM
     jQuery('#id_recurring_weekly_time').datetimepicker({
         datepicker:false,
-        format:'HH:mm',
-        formatTime:'HH:mm',
+        format:'H:i',
+        formatTime:'H:i',
         step:5,
         scrollTime: false,
         scrollInput: false,
@@ -83,8 +61,8 @@ jQuery(document).ready(function () {
     });
 
     jQuery('#id_recurring_weekly_start').datetimepicker({
-        format:'DD-MMM-YYYY',
-        formatDate:'DD-MMM-YYYY',
+        format:'d-M-Y',
+        formatDate:'d-M-Y',
         timepicker: false,
         minDate: 0,
         step: 5,
@@ -97,8 +75,8 @@ jQuery(document).ready(function () {
     });
 
     jQuery('#id_recurring_weekly_end').datetimepicker({
-        format:'DD-MMM-YYYY',
-        formatDate:'DD-MMM-YYYY',
+        format:'d-M-Y',
+        formatDate:'d-M-Y',
         timepicker: false,
         minDate: 0,
         step: 5,
@@ -111,8 +89,8 @@ jQuery(document).ready(function () {
     });
 
     jQuery('#id_recurring_daily_date').datetimepicker({
-        format:'DD-MMM-YYYY',
-        formatDate:'DD-MMM-YYYY',
+        format:'d-M-Y',
+        formatDate:'d-M-Y',
         timepicker: false,
         minDate: 0,
         step: 5,
@@ -126,8 +104,7 @@ jQuery(document).ready(function () {
 
     jQuery('#id_recurring_daily_starttime').datetimepicker({
         datepicker:false,
-        format:'HH:mm',
-        formatTime:'HH:mm',
+        format:'H:i',
         step:5,
         scrollTime: false,
         scrollInput: false,
@@ -138,8 +115,7 @@ jQuery(document).ready(function () {
 
     jQuery('#id_recurring_daily_endtime').datetimepicker({
         datepicker:false,
-        format:'HH:mm',
-        formatTime:'HH:mm',
+        format:'H:i',
         step:5,
         scrollTime: false,
         scrollInput: false,
@@ -149,9 +125,9 @@ jQuery(document).ready(function () {
     });
 
     jQuery('#id_recurring_once_datetime').datetimepicker({
-        format:'DD-MMM-YYYY HH:mm',
-        formatTime:'HH:mm',
-        formatDate:'DD-MMM-YYYY',
+        format:'d-M-Y H:i',
+        formatTime:'H:i',
+        formatDate:'d-M-Y',
         minDate: 0,
         step: 5,
         defaultTime: '19:00',
@@ -163,4 +139,13 @@ jQuery(document).ready(function () {
         $('#id_recurring_once_datetime').datetimepicker('show');
     });
 
+    // TIMETABLE SESSION CREATE/UPDATE
+    jQuery('#id_time').datetimepicker({
+        datepicker:false,
+        format:'H:i',
+        step:5,
+    });
+    $('#id_time_open').click(function(){
+        $('#id_time').datetimepicker('show');
+    });
 });

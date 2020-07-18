@@ -4,6 +4,7 @@ from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.paginator import Paginator
+from django.http import HttpResponseBadRequest, JsonResponse, HttpResponse
 from django.template.response import TemplateResponse
 from django.shortcuts import get_object_or_404, render, HttpResponseRedirect
 from django.views.generic import ListView, CreateView, UpdateView
@@ -17,8 +18,9 @@ from booking.email_helpers import send_bcc_emails
 from booking.models import Booking, Event, Track, EventType
 from timetable.models import TimetableSession
 
-from ..forms import EventCreateUpdateForm
+from ..forms import TimetableSessionCreateUpdateForm
 from .utils import is_instructor_or_staff, staff_required, StaffUserMixin, InstructorOrStaffUserMixin
+from .event_views import EventCreateView, EventUpdateView
 
 
 class TimetableSessionListView(ListView):
@@ -79,43 +81,37 @@ class TimetableSessionListView(ListView):
         return context
 
 
+def ajax_timetable_session_delete(request, timetable_session_id):
+    timetable_session = TimetableSession.objects.get(id=timetable_session_id)
+    name, weekday, time = timetable_session.name, timetable_session.get_day_name(), timetable_session.time
+    timetable_session.delete()
+    ActivityLog.objects.create(
+        log=f"Timetable session {timetable_session_id} for {name} on {weekday} {time.strftime('%H:%M')} deleted"
+    )
+    return JsonResponse({"deleted": True, "alert_msg": "Timetable session deleted"})
+
+
 @login_required
 @staff_required
 def timetable_session_create_choice_view(request):
     event_types = EventType.objects.all()
-    return render(request, "studioadmin/timetable_session_create_choose_event_type.html", {"event_types": event_types})
+    return render(request, "studioadmin/timetable_create_choose_event_type.html", {"event_types": event_types})
 
 
-# class EventCreateUpdateMixin:
-#     template_name = "studioadmin/event_create_update.html"
-#     model = Event
-#     form_class = EventCreateUpdateForm
-#
-#     def form_valid(self, form):
-#         form.save()
-#         return HttpResponseRedirect(self.get_success_url(form.event_type.track_id))
-#
-#     def get_success_url(self, track_id):
-#         return reverse('studioadmin:events') + f"?track={track_id}"
-#
-#
-# class EventCreateView(LoginRequiredMixin, StaffUserMixin, EventCreateUpdateMixin, CreateView):
-#
-#     def get_form_kwargs(self, **kwargs):
-#         form_kwargs = super().get_form_kwargs(**kwargs)
-#         form_kwargs["event_type"] = EventType.objects.get(id=self.kwargs["event_type_id"])
-#         return form_kwargs
-#
-#     def get_context_data(self, **kwargs):
-#         context = super().get_context_data(**kwargs)
-#         context["creating"] = True
-#         context["event_type"] = EventType.objects.get(id=self.kwargs["event_type_id"])
-#         return context
-#
-#
-# class EventUpdateView(LoginRequiredMixin, StaffUserMixin, EventCreateUpdateMixin, UpdateView):
-#
-#     def get_form_kwargs(self, **kwargs):
-#         form_kwargs = super().get_form_kwargs()
-#         form_kwargs["event_type"] = self.get_object().event_type
-#         return form_kwargs
+class TimetableSessionCreateView(EventCreateView):
+    template_name = "studioadmin/timetable_session_create_update.html"
+    model = TimetableSession
+    form_class = TimetableSessionCreateUpdateForm
+
+    def get_success_url(self, track_id):
+        return reverse('studioadmin:timetable') + f"?track={track_id}"
+
+
+class TimetableSessionUpdateView(EventUpdateView):
+    template_name = "studioadmin/timetable_session_create_update.html"
+    model = TimetableSession
+    form_class = TimetableSessionCreateUpdateForm
+    context_object_name = "timetable_session"
+
+    def get_success_url(self, track_id):
+        return reverse('studioadmin:timetable') + f"?track={track_id}"

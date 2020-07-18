@@ -25,7 +25,7 @@
     <div class="tab-content">
         {% for track_obj in track_sessions %}
             <div class="tab-pane fade {% get_active_pane_class track_obj.index tab %}" id="tab{{ track_obj.index }}" role="tabpanel">
-                <span class="table-responsive">
+                <div class="table-responsive">
                     <table class="table">
                         <thead>
                             <tr>
@@ -41,7 +41,7 @@
                         <tbody>
                         {% for session in track_obj.queryset %}
                             <tr id="row-timetable-session-{{ session.id }}">
-                                <td><a href="#">{{ session.name }}</a></td>
+                                <td><a href="{% url 'studioadmin:update_timetable_session' session.id %}">{{ session.name }}</a></td>
                                 <td>{{ session.day }}</td>
                                 <td>{{ session.time }}</td>
                                 <td>{{ session.duration }} mins</td>
@@ -49,7 +49,7 @@
                                 <td>{{ session.event_type.name }}</td>
                                 <td>
                                     <span
-                                            class=".timetable-session-delete-btn"
+                                            class="timetable-session-delete-btn"
                                             data-timetable_session_id={{ session.id }}
                                     >
                                         <span class="btn btn-sm btn-danger pt-0 pb-0">Delete</span>
@@ -60,8 +60,8 @@
                         </tbody>
                     </table>
                 </div>
-            {% include 'studioadmin/includes/event_pagination.html' %}
             </div>
+            {% include 'studioadmin/includes/event_pagination.html' %}
         {% endfor %}
 
     </div> <!-- tab content -->
