@@ -44,8 +44,9 @@ class CourseAdminListView(LoginRequiredMixin, StaffUserMixin, ListView):
         requested_track = None
         if track_id:
             try:
+                track_id = int(track_id)
                 requested_track = Track.objects.get(id=track_id)
-            except Track.DoesNotExist:
+            except (ValueError, Track.DoesNotExist):
                 pass
 
         # paginate each queryset
@@ -62,7 +63,7 @@ class CourseAdminListView(LoginRequiredMixin, StaffUserMixin, ListView):
         for i, track in enumerate(tracks):
             track_qs = [course for course in all_courses if course.course_type.event_type.track == track]
             if track_qs:
-                # Don't add the location tab if there are no events to display
+                # Don't add the track tab if there are no events to display
                 track_paginator = Paginator(track_qs, 20)
                 if "tab" in self.request.GET and tab == i:
                     page = self.request.GET.get('page', 1)

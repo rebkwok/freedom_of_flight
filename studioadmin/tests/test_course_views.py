@@ -69,6 +69,18 @@ class CourseAdminListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         assert track_events[0]["track"] == "Adults"
         assert len(track_events[0]["queryset"].object_list) == Course.objects.count()
 
+    def test_events_with_track_param(self):
+        self.login(self.staff_user)
+        resp = self.client.get(self.url + f"?track={self.adult_track.id}")
+        track_events = resp.context_data["track_courses"]
+        assert track_events[0]["track"] == "Adults"
+        assert resp.context_data["active_tab"] == 0
+
+        resp = self.client.get(self.url + "?track=invalid-id")
+        track_events = resp.context_data["track_courses"]
+        assert track_events[0]["track"] == "Adults"
+        assert "active_tab" not in resp.context_data
+
     def test_pagination(self):
         baker.make(Course, course_type=self.course_type, _quantity=20)
         self.login(self.staff_user)
@@ -77,6 +89,12 @@ class CourseAdminListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         assert len(resp.context_data["track_courses"][0]["queryset"].object_list) == 20
         paginator = resp.context_data['track_courses'][0]["queryset"]
         self.assertEqual(paginator.number, 1)
+
+        # invalid tab, defaults to tab 0
+        resp = self.client.get(self.url + '?page=2&tab=foo')
+        assert len(resp.context_data["track_courses"][0]["queryset"].object_list) == 1
+        paginator = resp.context_data['track_courses'][0]["queryset"]
+        self.assertEqual(paginator.number, 2)
 
         resp = self.client.get(self.url + '?page=2&tab=0')
         assert len(resp.context_data["track_courses"][0]["queryset"].object_list) == 1
@@ -95,20 +113,25 @@ class CourseAdminListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         assert paginator.number == 1
 
 
-class EventAjaxMakeVisibleTests(TestUsersMixin, TestCase):
+class CourseAjaxMakeVisibleTests(TestUsersMixin, TestCase):
 
     def setUp(self):
         self.create_admin_users()
         self.course = baker.make(Course, course_type__number_of_events=2, show_on_site=False)
-        self.events = baker.make_recipe("booking.future_event", course=self.course, show_on_site=False, _quantity=2)
+        self.events = baker.make_recipe(
+            "booking.future_event", event_type=self.course.course_type.event_type, course=self.course,
+            show_on_site=False, _quantity=2
+        )
         self.url = reverse("studioadmin:ajax_toggle_course_visible", args=(self.course.id,))
 
-    def toggle_visible(self):
+    def test_toggle_visible(self):
         self.login(self.staff_user)
         assert self.course.show_on_site is False
         self.client.post(self.url)
+        self.course.refresh_from_db()
         assert self.course.show_on_site is True
         for event in self.events:
+            event.refresh_from_db()
             assert event.show_on_site is True
 
 

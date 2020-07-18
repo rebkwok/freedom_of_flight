@@ -71,6 +71,16 @@ class EventAdminListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         assert track_events[1]["track"] == "Kids"
         assert len(track_events[1]["queryset"].object_list) == Event.objects.filter(event_type__track=self.kids_track).count()
 
+    def test_events_with_track_param(self):
+        self.login(self.staff_user)
+        resp = self.client.get(self.url + f"?track={self.kids_track.id}")
+        track_events = resp.context_data["track_events"]
+        assert track_events[1]["track"] == "Kids"
+        assert resp.context_data["active_tab"] == 1
+
+        resp = self.client.get(self.url + "?track=invalid-id")
+        assert "active_tab" not in resp.context_data
+
     def test_pagination(self):
         baker.make_recipe('booking.future_event', event_type__track=self.adult_track, _quantity=20)
         self.login(self.staff_user)
@@ -96,18 +106,37 @@ class EventAdminListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         paginator = resp.context_data['track_events'][0]["queryset"]
         assert paginator.number == 1
 
+    def test_pagination_with_tab(self):
+        baker.make_recipe('booking.future_event', event_type__track=self.adult_track, _quantity=20)
+        baker.make_recipe('booking.future_event', event_type__track=self.kids_track, _quantity=20)
+        self.login(self.staff_user)
+
+        resp = self.client.get(self.url + '?page=2&tab=1')  # get page 2 for the kids track tab
+        assert len(resp.context_data["track_events"][0]["queryset"].object_list) == 20
+        assert resp.context_data["track_events"][1]["track"] == "Kids"
+        assert len(resp.context_data["track_events"][1]["queryset"].object_list) == 6
+
+        resp = self.client.get(self.url + '?page=2&tab=3')  # invalid tab returns page 1 for all
+        assert len(resp.context_data["track_events"][0]["queryset"].object_list) == 20
+        assert len(resp.context_data["track_events"][1]["queryset"].object_list) == 20
+
+        resp = self.client.get(self.url + '?page=2&tab=foo')  # invalid tab defaults to tab 0
+        assert len(resp.context_data["track_events"][0]["queryset"].object_list) == 6
+        assert len(resp.context_data["track_events"][1]["queryset"].object_list) == 20
+
 
 class EventAjaxMakeVisibleTests(TestUsersMixin, TestCase):
 
     def setUp(self):
         self.create_admin_users()
-        self.event = baker.make_recipe("booking.future__event")
+        self.event = baker.make_recipe("booking.future_event")
         self.url = reverse("studioadmin:ajax_toggle_event_visible", args=(self.event.id,))
 
-    def toggle_visible(self):
+    def test_toggle_visible(self):
         self.login(self.staff_user)
         assert self.event.show_on_site is True
         self.client.post(self.url)
+        self.event.refresh_from_db()
         assert self.event.show_on_site is False
 
 

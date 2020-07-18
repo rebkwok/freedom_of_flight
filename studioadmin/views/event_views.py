@@ -37,8 +37,9 @@ class BaseEventAdminListView(ListView):
         requested_track = None
         if track_id:
             try:
+                track_id = int(track_id)
                 requested_track = Track.objects.get(id=track_id)
-            except Track.DoesNotExist:
+            except (ValueError, Track.DoesNotExist):
                 pass
 
         # paginate each queryset
@@ -52,10 +53,11 @@ class BaseEventAdminListView(ListView):
 
         tracks = Track.objects.all()
         track_events = []
+
         for i, track in enumerate(tracks):
             track_qs = all_events.filter(event_type__track=track)
             if track_qs:
-                # Don't add the location tab if there are no events to display
+                # Don't add the track tab if there are no events to display
                 track_paginator = Paginator(track_qs, 20)
                 if "tab" in self.request.GET and tab == i:
                     page = self.request.GET.get('page', 1)

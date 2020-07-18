@@ -240,3 +240,39 @@ class CloneEventTests(EventTestMixin, TestUsersMixin, TestCase):
         resp = self.client.post(self.url, data)
         form = resp.context_data["daily_form"]
         assert form.errors == {"recurring_daily_endtime": ["End time must be after start time"]}
+
+    @patch("studioadmin.forms.timezone")
+    def test_clone_with_no_valid_form(self, mock_tz):
+        mock_tz.now.return_value = datetime(2020, 4, 1, tzinfo=timezone.utc)
+        data = {
+            "recurring_daily_date": "01-Mar-2020",
+            "recurring_daily_interval": "20",
+            "recurring_daily_starttime": "10:00",
+            "recurring_daily_endtime": "12:00",
+            "submit": "Unknown submission button",
+        }
+        resp = self.client.post(self.url, data)
+        # renders the same page again
+        assert resp.status_code == 200
+
+    @patch("studioadmin.forms.timezone")
+    def test_clone_ignores_other_form_fields(self, mock_tz):
+        mock_tz.now.return_value = datetime(2020, 4, 1, tzinfo=timezone.utc)
+        data = {
+            "recurring_daily_date": "01-Apr-2020",
+            "recurring_daily_interval": "30",
+            "recurring_daily_starttime": "10:00",
+            "recurring_daily_endtime": "10:30",
+            "recurring_weekly_start": "01-Jul-2020",
+            "recurring_weekly_end": "31-Jul-2020",
+            "recurring_weekly_time": "10:00",
+            "recurring_weekly_weekdays": [2, 6],
+            "recurring_once_datetime": "04-Apr-2020 10:00",
+            "submit": "Clone at recurring intervals",
+        }
+        self.client.post(self.url, data)
+        cloned_events = Event.objects.filter(name="Original event").exclude(id=self.event.id).order_by("start")
+        dates = {cloned_event.start.date() for cloned_event in cloned_events}
+        times = {cloned_event.start.time() for cloned_event in cloned_events}
+        assert dates == {date(2020, 4, 1)}
+        assert times == {time(10, 0), time(10, 30)}
