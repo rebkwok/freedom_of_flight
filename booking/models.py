@@ -360,6 +360,7 @@ class Block(models.Model):
 
     def _get_end_of_day(self, input_datetime):
         end_of_day_utc = datetime.combine(input_datetime, datetime.max.time())
+        end_of_day_utc = end_of_day_utc.replace(tzinfo=timezone.utc)
         uktz = pytz.timezone('Europe/London')
         end_of_day_uk = end_of_day_utc.astimezone(uktz)
         utc_offset = end_of_day_uk.utcoffset()
