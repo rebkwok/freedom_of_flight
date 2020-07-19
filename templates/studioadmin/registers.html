@@ -20,7 +20,7 @@
         {% for track_obj in track_events %}
             <div class="tab-pane fade {% get_active_pane_class track_obj.index tab %}" id="tab{{ track_obj.index }}" role="tabpanel">
                 <div class="table-responsive">
-                    <table class="table">
+                    <table class="table table-sm">
                         <thead>
                             <tr>
                                 <th scope="col"><br/><span class="helptext">Click for register</span></th>
@@ -32,17 +32,20 @@
                             </tr>
                         </thead>
                         <tbody>
-                        {% for event in track_obj.queryset %}
-                            <tr>
-                                <td><a href="{% url 'studioadmin:register' event.id %}">{{ event.name }}</a></td>
-                                <td>{{ event.start|date:"D d M Y, H:i" }}</td>
-                                <td>{{ event.duration }} mins</td>
-                                <td class="text-center">{{ event.max_participants }}</td>
-                                <td class="text-center">{{ event.bookings.count }}</td>
-                                <td class="text-center">
-                                    <a href="{% url 'studioadmin:event_waiting_list' event.id %}">{{ event.waitinglistusers.count }}</a>
-                                </td>
-                            </tr>
+                        {% for event_date, events in track_obj.queryset_by_date.items %}
+                            <tr class="table-secondary"><td colspan="9">{{ event_date|date:"D d M Y" }}</td></tr>
+                            {% for event in events %}
+                                <tr>
+                                    <td><a href="{% url 'studioadmin:register' event.id %}">{{ event.name }}</a></td>
+                                    <td>{{ event.start|date:"D d M Y, H:i" }}</td>
+                                    <td>{{ event.duration }} mins</td>
+                                    <td class="text-center">{{ event.max_participants }}</td>
+                                    <td class="text-center">{{ event.bookings.count }}</td>
+                                    <td class="text-center">
+                                        <a href="{% url 'studioadmin:event_waiting_list' event.id %}">{{ event.waitinglistusers.count }}</a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
                         {%  endfor %}
                         </tbody>
                     </table>

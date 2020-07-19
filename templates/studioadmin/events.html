@@ -20,25 +20,27 @@
         {% for track_obj in track_events %}
             <div class="tab-pane fade {% get_active_pane_class track_obj.index tab %}" id="tab{{ track_obj.index }}" role="tabpanel">
                 <div class="table-responsive">
-                    <table class="table">
+                    <table class="table table-sm">
                         <thead>
                             <tr>
                                 <th scope="col">Name<br/><span class="helptext">Click to edit</span></th>
-                                <th scope="col">Course</th>
-                                <th scope="col">Start</th>
-                                <th scope="col">Duration</th>
+                                <th scope="col" class="text-center">Course</th>
+                                <th scope="col">Time</th>
+                                <th scope="col" class="text-center">Duration</th>
                                 <th scope="col" class="text-center">Spaces</th>
                                 <th scope="col">Event Type</th>
                                 <th scope="col" class="text-center">Visible</th>
-                                <th scope="col">Clone</th>
-                                <th></th>
+                                <th scope="col" class="text-center"></th>
+                                <th class="text-center"></th>
                             </tr>
                         </thead>
                         <tbody>
-                        {% for event in track_obj.queryset %}
+                        {% for event_date, events in track_obj.queryset_by_date.items %}
+                            <tr class="table-secondary"><td colspan="9">{{ event_date|date:"D d M Y" }}</td></tr>
+                            {% for event in events %}
                             <tr {% if event.cancelled %}class="expired"{% endif %}>
                                 <td><a href="{% url 'studioadmin:update_event' event.slug %}">{{ event.name }}</a></td>
-                                <td>
+                                <td class="text-center">
                                     {% if event.course %}
                                         <a href="{% url 'studioadmin:update_course' event.course.slug %}">
                                             <div data-toggle="tooltip" data-placement="top" title="{{ event.course.name }}">
@@ -46,12 +48,12 @@
                                         </a>
                                     {% endif %}
                                 </td>
-                                <td>{{ event.start|date:"D d M Y, H:i" }}</td>
-                                <td>{{ event.duration }} mins</td>
+                                <td>{{ event.start|date:"H:i" }}</td>
+                                <td class="text-center">{{ event.duration }} mins</td>
                                 <td class="text-center">{{ event.spaces_left }} {% if event.max_participants %}/ {{ event.max_participants }}{% endif %}</td>
                                 <td>{{ event.event_type.name }}</td>
                                 {% if event.course %}
-                                    <td class="helptext">Set on course</td>
+                                    <td class="helptext text-center">Set on course</td>
                                 {% else %}
                                     <td class="text-center">
                                         {% if event.cancelled %}
@@ -67,8 +69,8 @@
                                         {% endif %}
                                     </td>
                                 {% endif %}
-                                <td><a href="{% url 'studioadmin:clone_event' event.slug %}"><i class="far fa-clone"></i></a></td>
-                                <td>
+                                <td class="pr-0 pl-1 text-center"><a href="{% url 'studioadmin:clone_event' event.slug %}"><i class="far fa-clone"></i></a></td>
+                                <td class="pr-0 pl-1 text-center">
                                     {% if event.cancelled %}
                                         Cancelled
                                     {%  else %}
@@ -76,6 +78,7 @@
                                     {% endif %}
                             </tr>
                         {%  endfor %}
+                        {% endfor %}
                         </tbody>
                     </table>
                 </div>

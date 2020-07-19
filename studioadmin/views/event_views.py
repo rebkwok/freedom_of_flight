@@ -4,6 +4,7 @@ from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.paginator import Paginator
+from django.db.models import Count
 from django.template.response import TemplateResponse
 from django.shortcuts import get_object_or_404, render, HttpResponseRedirect
 from django.views.generic import ListView, CreateView, UpdateView
@@ -56,6 +57,13 @@ class BaseEventAdminListView(ListView):
 
         for i, track in enumerate(tracks):
             track_qs = all_events.filter(event_type__track=track)
+            # group by date before pagination
+            event_ids_by_date = track_qs.values('start__date').annotate(count=Count('id')).values('start__date', 'id')
+            events_by_date = {}
+            for event_info in event_ids_by_date:
+                events_by_date.setdefault(event_info["start__date"], []).append(all_events.get(id=event_info["id"]))
+
+
             if track_qs:
                 # Don't add the track tab if there are no events to display
                 track_paginator = Paginator(track_qs, 20)
@@ -68,6 +76,7 @@ class BaseEventAdminListView(ListView):
                 track_obj = {
                     'index': i,
                     'queryset': queryset,
+                    'queryset_by_date': events_by_date,
                     'track': track.name
                 }
                 track_events.append(track_obj)

@@ -65,7 +65,7 @@ body > .container-fluid {
 }
 
 #courseTrackTabs > a.nav-item.nav-link.active {
-  color: orange;
+  color: green;
 }
 
 #timetableTrackTabs > a.nav-item.nav-link {
@@ -73,7 +73,7 @@ body > .container-fluid {
 }
 
 #timetableTrackTabs > a.nav-item.nav-link.active {
-  color: blue;
+  color: orange;
 }
 
 
