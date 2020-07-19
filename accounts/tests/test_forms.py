@@ -20,7 +20,7 @@ class SignUpFormTests(TestUsersMixin, TestCase):
         'address': 'test',
         'postcode': 'test',
         'phone': '1234',
-        'date_of_birth': '01 Jan 1990',
+        'date_of_birth': '01-Jan-1990',
         "student": True,
         "manager": False,
         'data_privacy_confirmation' : True

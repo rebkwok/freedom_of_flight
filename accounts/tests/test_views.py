@@ -38,7 +38,7 @@ class ProfileUpdateViewTests(TestUsersMixin, TestCase):
                 "address": self.student_user.userprofile.address,
                 "postcode": self.student_user.userprofile.address,
                 "phone": self.student_user.userprofile.address,
-                "date_of_birth": "15 Jun 1976",
+                "date_of_birth": "15-Jun-1976",
                 "student": True,
                 "manager": False,
             }
@@ -81,7 +81,7 @@ class DisclaimerCreateViewTests(TestUsersMixin, TestCase):
             form=[{"label": "test", "type": "text"}]
         )
         self.form_data = {
-            "date_of_birth": '01 Jan 1990', 'address': '1 test st',
+            "date_of_birth": '01-Jan-1990', 'address': '1 test st',
             'postcode': 'TEST1', 'home_phone': '123445', 'mobile_phone': '124566',
             'emergency_contact_name': 'test1',
             'emergency_contact_relationship': 'mother',
