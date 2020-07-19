@@ -38,7 +38,6 @@ jQuery(document).ready(function () {
         formatDate:'d-M-Y',
         minDate: 0,
         step: 5,
-        defaultTime: '19:00',
         scrollMonth: false,
         scrollTime: false,
         scrollInput: false,
@@ -52,6 +51,7 @@ jQuery(document).ready(function () {
         datepicker:false,
         format:'H:i',
         formatTime:'H:i',
+        closeOnDateSelect: true,
         step:5,
         scrollTime: false,
         scrollInput: false,
@@ -66,6 +66,7 @@ jQuery(document).ready(function () {
         timepicker: false,
         minDate: 0,
         step: 5,
+        closeOnDateSelect: true,
         scrollMonth: false,
         scrollTime: false,
         scrollInput: false,
@@ -80,6 +81,7 @@ jQuery(document).ready(function () {
         timepicker: false,
         minDate: 0,
         step: 5,
+        closeOnDateSelect: true,
         scrollMonth: false,
         scrollTime: false,
         scrollInput: false,
@@ -94,6 +96,7 @@ jQuery(document).ready(function () {
         timepicker: false,
         minDate: 0,
         step: 5,
+        closeOnDateSelect: true,
         scrollMonth: false,
         scrollTime: false,
         scrollInput: false,
@@ -106,6 +109,7 @@ jQuery(document).ready(function () {
         datepicker:false,
         format:'H:i',
         step:5,
+        closeOnDateSelect: true,
         scrollTime: false,
         scrollInput: false,
     });
@@ -117,6 +121,7 @@ jQuery(document).ready(function () {
         datepicker:false,
         format:'H:i',
         step:5,
+        closeOnDateSelect: true,
         scrollTime: false,
         scrollInput: false,
     });
@@ -130,7 +135,6 @@ jQuery(document).ready(function () {
         formatDate:'d-M-Y',
         minDate: 0,
         step: 5,
-        defaultTime: '19:00',
         scrollMonth: false,
         scrollTime: false,
         scrollInput: false,
@@ -142,10 +146,48 @@ jQuery(document).ready(function () {
     // TIMETABLE SESSION CREATE/UPDATE
     jQuery('#id_time').datetimepicker({
         datepicker:false,
+        closeOnDateSelect: true,
         format:'H:i',
         step:5,
     });
     $('#id_time_open').click(function(){
         $('#id_time').datetimepicker('show');
     });
+
+    // TIMETABLE UPLOAD
+    jQuery('.upload_start').each(
+        function (index) {
+            console.log("adding datepicker for id_start_date_" + index);
+            $('#id_start_date_' + index).datetimepicker({
+        format:'d-M-Y',
+        formatDate:'d-M-Y',
+        timepicker: false,
+        minDate: 0,
+        step: 5,
+        closeOnDateSelect: true,
+        scrollMonth: false,
+        scrollTime: false,
+        scrollInput: false,
+    });
+            $('#id_start_date_' + index + '_open').click(function(){
+                $('#id_start_date_' + index).datetimepicker('show');
+            });
+
+            $('#id_end_date_' + index).datetimepicker({
+        format:'d-M-Y',
+        formatDate:'d-M-Y',
+        timepicker: false,
+        minDate: 0,
+        step: 5,
+        closeOnDateSelect: true,
+        scrollMonth: false,
+        scrollTime: false,
+        scrollInput: false,
+    });
+            $('#id_end_date_' + index + '_open').click(function(){
+                $('#id_end_date_' + index).datetimepicker('show');
+            });
+        }
+    )
+
 });

@@ -12,8 +12,9 @@ from django.utils import timezone
 from activitylog.models import ActivityLog
 from booking.models import Event
 from common.utils import full_name
+from timetable.models import TimetableSession
 
-from ..forms import CloneEventWeeklyForm, CloneEventDailyIntervalsForm, CloneSingleEventForm
+from ..forms import CloneEventWeeklyForm, CloneEventDailyIntervalsForm, CloneSingleEventForm, CloneTimetableSessionForm
 from .utils import staff_required
 
 
@@ -27,7 +28,7 @@ def clone_event(request, event_slug):
     weekly_form = CloneEventWeeklyForm(
         event=event,
         initial={
-            "recurring_weekly_weekdays": event.start.weekday(),
+            "recurring_weekly_weekdays": [event.start.weekday()],
             "recurring_weekly_time": event.start.time(),
         }
     )
@@ -130,6 +131,10 @@ def clone_event_weekly(request, event, weekdays, start, end, time):
             f"{event.event_type.label.title()} was cloned to the following dates: "
             f"{', '.join([cloned.start.strftime('%d-%b-%Y, %H:%M') for cloned in cloned_events])}"
         )
+        ActivityLog.objects.create(
+            log=f"Event id {event.id} cloned to {', '.join([str(cloned.id) for cloned in cloned_events])} "
+                f"by admin user {full_name(request.user)}"
+        )
     else:
         messages.warning(request, "Nothing to clone")
 
@@ -168,6 +173,10 @@ def clone_event_daily(request, event, target_date, start_time, end_time, interva
             f"{event.event_type.label.title()} was cloned to the following times on {target_date.strftime('%d-%b-%Y')}: "
             f"{', '.join([cloned_time.strftime('%H:%M') for cloned_time in cloned_times])}"
         )
+        ActivityLog.objects.create(
+            log=f"Event id {event.id} cloned to {', '.join([cloned_time.strftime('%H:%M') for cloned_time in cloned_times])} "
+                f"on {target_date.strftime('%d-%b-%Y')} by admin user {full_name(request.user)}"
+        )
     else:
         messages.warning(request, "Nothing to clone")
 
@@ -198,3 +207,69 @@ def clone_single_event(request, event, start_datetime):
         ActivityLog.objects.create(
             log=f"Event id {event.id} cloned to {cloned_event.id} by admin user {full_name(request.user)}"
         )
+
+
+@login_required
+@staff_required
+def clone_timetable_session_view(request, session_id):
+    timetable_session = get_object_or_404(TimetableSession, pk=session_id)
+    form = CloneTimetableSessionForm(
+        initial={
+            "name": timetable_session.name,
+        }
+    )
+    if request.method == "POST":
+        # Determine which form was submitted
+        form = CloneTimetableSessionForm(request.POST)
+
+        # check the submitted form is valid and create the requested events
+        # redirect to timetable page with the correct track_id query param
+        if form.is_valid():
+            days = form.cleaned_data["days"]
+            time = form.cleaned_data["time"]
+            name = form.cleaned_data["name"]
+            clone_timetable_session(request, timetable_session, days, time, name)
+            return HttpResponseRedirect(reverse("studioadmin:timetable") + f"?track={timetable_session.event_type.track_id}")
+
+    return TemplateResponse(
+        request, "studioadmin/clone_timetable_session.html", {"timetable_session": timetable_session, "form": form}
+    )
+
+
+def clone_timetable_session(request, timetable_session, days, time, name):
+    existing = []
+    cloned = []
+    name = name or timetable_session.name
+    for day in days:
+        if TimetableSession.objects.filter(
+                name=name, day=day, time=time, event_type=timetable_session.event_type
+        ):
+            existing.append(dict(TimetableSession.DAY_CHOICES)[day])
+
+        else:
+            cloned_session = timetable_session
+            cloned_session.id = None
+            # set the day, time and name
+            cloned_session.day = day
+            cloned_session.time = time
+            cloned_session.name = name
+            cloned_session.save()
+            cloned.append(cloned_session)
+
+    if cloned:
+        messages.success(
+            request,
+            f"{timetable_session.event_type.label.title()} was cloned to {cloned_session.name} on "
+            f"{', '.join([cloned_session.get_day_name() for cloned_session in cloned])}, {time.strftime('%H:%M')}"
+        )
+        ActivityLog.objects.create(
+            log=f"Timetable session id {timetable_session.id} cloned to ids "
+                f"{', '.join(str(cloned_session.id) for cloned_session in cloned)} by admin user {full_name(request.user)}"
+        )
+    if existing:
+        messages.error(
+            request,
+            f"Session with name {timetable_session.name} at {timetable_session.time.strftime('%H:%M')} already exists "
+            f"for the requested day(s) ({', '.join(existing)})."
+        )
+

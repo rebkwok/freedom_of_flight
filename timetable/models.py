@@ -1,4 +1,3 @@
-from django.conf import settings
 from django.db import models
 
 from booking.models import EventType
@@ -27,4 +26,4 @@ class TimetableSession(models.Model):
         return dict(self.DAY_CHOICES)[self.day]
 
     def __str__(self):
-        return f"{dict(self.DAY_CHOICES)[self.day]} - {self.time.strftime('%H:%M')} - {self.name}"
+        return f"{self.get_day_name()} - {self.time.strftime('%H:%M')} - {self.name}"

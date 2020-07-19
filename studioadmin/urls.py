@@ -9,7 +9,8 @@ from studioadmin.views import (
     CourseAdminListView, course_create_choice_view, CourseCreateView, CourseUpdateView,
     ajax_toggle_course_visible, cancel_course_view,
     TimetableSessionListView, ajax_timetable_session_delete, timetable_session_create_choice_view,
-    TimetableSessionCreateView, TimetableSessionUpdateView
+    TimetableSessionCreateView, TimetableSessionUpdateView, clone_timetable_session_view,
+    upload_timetable_view
 )
 
 app_name = 'studioadmin'
@@ -29,6 +30,8 @@ urlpatterns = [
     path('timetable/session/create/', timetable_session_create_choice_view, name="choose_event_type_timetable_session_to_create"),
     path('timetable/session/<int:event_type_id>/create/', TimetableSessionCreateView.as_view(), name="create_timetable_session"),
     path('timetable/session/<int:pk>/update/', TimetableSessionUpdateView.as_view(), name="update_timetable_session"),
+    path('timetable/session/<int:session_id>/clone/', clone_timetable_session_view, name="clone_timetable_session"),
+    path('timetable/upload/', upload_timetable_view, name="upload_timetable"),
 
     path('courses/', CourseAdminListView.as_view(), name='courses'),
     path('course/<slug>/cancel/', cancel_course_view, name='cancel_course'),

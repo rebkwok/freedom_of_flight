@@ -1,4 +1,4 @@
-from datetime import datetime, date, time
+from datetime import datetime, date, time, timedelta
 from unittest.mock import patch
 
 from model_bakery import baker
@@ -46,6 +46,18 @@ class CloneEventTests(EventTestMixin, TestUsersMixin, TestCase):
         self.login(self.staff_user)
         resp = self.client.get(self.url)
         assert resp.status_code == 200
+
+    def test_inital(self):
+        resp = self.client.get(self.url)
+        # single clone sets date to event date + one week
+        assert resp.context_data["single_form"].initial == {
+            "recurring_once_datetime": self.event.start + timedelta(days=7)
+        }
+        assert resp.context_data["daily_form"].initial == {}
+        assert resp.context_data["weekly_form"].initial == {
+            "recurring_weekly_weekdays": [self.event.start.weekday()],
+            "recurring_weekly_time": self.event.start.time()
+        }
 
     @patch("studioadmin.forms.timezone")
     def test_clone_single_event(self, mock_tz):

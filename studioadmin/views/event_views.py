@@ -63,7 +63,6 @@ class BaseEventAdminListView(ListView):
             for event_info in event_ids_by_date:
                 events_by_date.setdefault(event_info["start__date"], []).append(all_events.get(id=event_info["id"]))
 
-
             if track_qs:
                 # Don't add the track tab if there are no events to display
                 track_paginator = Paginator(track_qs, 20)

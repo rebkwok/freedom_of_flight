@@ -1,18 +1,12 @@
 # -*- coding: utf-8 -*-
-from datetime import timedelta
-
-from unittest.mock import patch
-
 from model_bakery import baker
 
-from django.conf import settings
 from django import forms
 from django.urls import reverse
 from django.core import mail
 from django.test import TestCase
-from django.utils import timezone
 
-from booking.models import Block, Event, Booking
+from booking.models import Event, Booking, EventType
 from common.test_utils import TestUsersMixin, EventTestMixin
 
 
@@ -333,6 +327,41 @@ class CancelEventViewTests(EventTestMixin, TestUsersMixin, TestCase):
             url, data={"confirm": "yes, confirm", "additional_message": ""}
         )
         assert sorted(mail.outbox[0].bcc) == sorted([self.student_user.email, self.manager_user.email])
+
+
+class ChooseEventTypeToCreateTests(EventTestMixin, TestUsersMixin, TestCase):
+
+    def setUp(self):
+        self.create_users()
+        self.create_admin_users()
+        self.url = reverse("studioadmin:choose_event_type_to_create")
+        self.login(self.staff_user)
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.create_cls_tracks_and_event_types()
+
+    def test_only_staff(self):
+        self.login(self.student_user)
+        resp = self.client.get(self.url)
+        assert resp.status_code == 302
+        assert resp.url == reverse("booking:permission_denied")
+
+        self.login(self.instructor_user)
+        resp = self.client.get(self.url)
+        assert resp.status_code == 302
+        assert resp.url == reverse("booking:permission_denied")
+
+        self.login(self.staff_user)
+        resp = self.client.get(self.url)
+        assert resp.status_code == 200
+
+    def test_event_types_in_context(self):
+        resp = self.client.get(self.url)
+        context_event_type_ids = sorted(et.id for et in resp.context["event_types"])
+        expected_event_type_ids = sorted(et.id for et in EventType.objects.all())
+        assert len(context_event_type_ids) == 4
+        assert context_event_type_ids == expected_event_type_ids
 
 
 class EventCreateViewTests(EventTestMixin, TestUsersMixin, TestCase):

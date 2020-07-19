@@ -1,9 +1,9 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
-from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.paginator import Paginator
+from django.db.models import Count
 from django.http import HttpResponseBadRequest, JsonResponse, HttpResponse
 from django.template.response import TemplateResponse
 from django.shortcuts import get_object_or_404, render, HttpResponseRedirect
@@ -14,16 +14,16 @@ from django.urls import reverse
 from braces.views import LoginRequiredMixin
 
 from activitylog.models import ActivityLog
-from booking.email_helpers import send_bcc_emails
 from booking.models import Booking, Event, Track, EventType
+from common.utils import full_name
 from timetable.models import TimetableSession
 
-from ..forms import TimetableSessionCreateUpdateForm
+from ..forms import TimetableSessionCreateUpdateForm, UploadTimetableForm
 from .utils import is_instructor_or_staff, staff_required, StaffUserMixin, InstructorOrStaffUserMixin
 from .event_views import EventCreateView, EventUpdateView
 
 
-class TimetableSessionListView(ListView):
+class TimetableSessionListView(LoginRequiredMixin, StaffUserMixin, ListView):
 
     model = TimetableSession
     template_name = "studioadmin/timetable.html"
@@ -39,8 +39,9 @@ class TimetableSessionListView(ListView):
         requested_track = None
         if track_id:
             try:
+                track_id = int(track_id)
                 requested_track = Track.objects.get(id=track_id)
-            except Track.DoesNotExist:
+            except (ValueError, Track.DoesNotExist):
                 pass
 
         # paginate each queryset
@@ -49,25 +50,33 @@ class TimetableSessionListView(ListView):
             tab = int(tab)
         except ValueError:  # value error if tab is not an integer, default to 0
             tab = 0
-
         context['tab'] = str(tab)
 
         tracks = Track.objects.all()
         track_sessions = []
+
+        day_names = dict(TimetableSession.DAY_CHOICES)
         for i, track in enumerate(tracks):
             track_qs = all_sessions.filter(event_type__track=track)
             if track_qs:
-                # Don't add the location tab if there are no events to display
+                # group the session before paginating
+                session_ids_by_day = track_qs.values('day').annotate(count=Count('id')).values('day', 'id')
+
+                # Don't add the track tab if there are no sessions to display
                 track_paginator = Paginator(track_qs, 20)
                 if "tab" in self.request.GET and tab == i:
                     page = self.request.GET.get('page', 1)
                 else:
                     page = 1
                 queryset = track_paginator.get_page(page)
+                queryset_by_day = {}
+                for session_item in session_ids_by_day:
+                    queryset_by_day.setdefault(day_names[session_item["day"]], []).append(track_qs.get(id=session_item["id"]))
 
                 track_obj = {
                     'index': i,
                     'queryset': queryset,
+                    'queryset_by_day': queryset_by_day,
                     'track': track.name
                 }
                 track_sessions.append(track_obj)
@@ -115,3 +124,99 @@ class TimetableSessionUpdateView(EventUpdateView):
 
     def get_success_url(self, track_id):
         return reverse('studioadmin:timetable') + f"?track={track_id}"
+
+
+def get_context(request):
+    tab = request.GET.get('tab', 0)
+    try:
+        tab = int(tab)
+    except ValueError:  # value error if tab is not an integer, default to 0
+        tab = 0
+    context = {'tab': str(tab)}
+    tracks = Track.objects.all()
+    track_sessions = []
+    track_index = 0
+    # Don't use enumerate for the track index, because we want to be able to tell the index from the
+    # number of tracks.  If we don't include a track because it has no sessions, we don't want the index
+    # counter to increment
+    for track in tracks:
+        if TimetableSession.objects.filter(event_type__track=track).exists():
+            form = UploadTimetableForm(track=track, track_index=track_index)
+            track_obj = {
+                'index': track_index,
+                'form': form,
+                'track': track.name
+            }
+            track_sessions.append(track_obj)
+            track_index += 1
+    context["track_sessions"] = track_sessions
+    return context
+
+
+@login_required
+@staff_required
+def upload_timetable_view(request):
+    context = get_context(request)
+    if request.method == "POST":
+        track_index = int(request.POST.get("track_index"))
+        track = Track.objects.get(id=int(request.POST.get("track")))
+        form = UploadTimetableForm(request.POST, track=track, track_index=track_index)
+        if form.is_valid():
+            uploaded, existing = upload_timetable(
+                request, track, form.cleaned_data["start_date"], form.cleaned_data["end_date"],
+                form.cleaned_data[f"sessions_{track_index}"], form.cleaned_data["show_on_site"]
+            )
+            if uploaded:
+                messages.success(
+                    request, f"Timetable uploaded: {len(uploaded)} new events created")
+            if existing:
+                messages.info(
+                    request, f"Timetable upload omitted {len(existing)} events which would have duplicated existing"
+                             f"events with the same name, date and event type"
+                )
+            return HttpResponseRedirect(reverse("studioadmin:events") + f"?track={track.id}")
+        else:
+            for track_session in context["track_sessions"]:
+                if track_session["track"] == track.name:
+                    track_session["form"] = UploadTimetableForm(
+                        request.POST, track=track, track_index=track_session["index"]
+                    )
+                    # make sure the tab is set to the one we're on if we're returning errors
+                    context["tab"] = track_session["index"]
+
+    return TemplateResponse(request, "studioadmin/upload_timetable.html", context)
+
+
+def upload_timetable(request, track, start_date, end_date, session_ids, show_on_site):
+    created_events = []
+    existing_events = []
+
+    uploading_date = start_date
+    while uploading_date <= end_date:
+        sessions_to_create = TimetableSession.objects.filter(day=uploading_date.weekday(), id__in=session_ids)
+        for session in sessions_to_create:
+            event_start = datetime.combine(uploading_date, session.time)
+            event_start = event_start.replace(tzinfo=timezone.utc)
+            uploaded_event, created = Event.objects.get_or_create(
+                name=session.name,
+                event_type=session.event_type,
+                start=event_start,
+                defaults={
+                    "description": session.description,
+                    "max_participants": session.max_participants,
+                    "show_on_site": show_on_site
+                }
+            )
+            if created:
+                created_events.append(uploaded_event)
+            else:
+                existing_events.append(uploaded_event)
+        uploading_date = uploading_date + timedelta(days=1)
+
+    if created_events:
+        ActivityLog.objects.create(
+            log=f"Timetable uploaded for {start_date.strftime('%d-%B-%y')} to {end_date.strftime('%d-%B-%y')}"
+                f"for track {track.name} by admin user {full_name(request.user)}"
+        )
+
+    return created_events, existing_events

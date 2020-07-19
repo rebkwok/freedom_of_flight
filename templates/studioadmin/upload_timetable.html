@@ -1,0 +1,43 @@
+{%  extends "studioadmin/base.html" %}
+
+{% load crispy_forms_tags studioadmintags static %}
+{% block precontent %}
+    {%  include "studioadmin/includes/timetable_subnav.html" %}
+{% endblock %}
+
+{% block content %}
+{% if track_sessions %}
+
+    <h1>Upload timetable</h1>
+    <p>
+        Upload timetable sessions to events.  Events with duplicate names and start date/time will be ignored.
+    </p>
+    <nav>
+        <div class="nav nav-tabs" id="timetableTrackTabs" role="tablist">
+            {% for track_obj in track_sessions %}
+                <a class="nav-item nav-link {% get_active_tab_class track_obj.index tab %}"
+                   href="#tab{{ track_obj.index }}" data-toggle="tab">{{ track_obj.track }}</a>
+            {%  endfor %}
+        </div>
+    </nav>
+
+    <div class="tab-content pt-4">
+        {% for track_obj in track_sessions %}
+            <div class="tab-pane fade {% get_active_pane_class track_obj.index tab %}" id="tab{{ track_obj.index }}" role="tabpanel">
+                {% if track_obj.form.errors %}
+                    <p class="text-danger">Please correct the errors below</p>
+                {% endif %}
+
+                <form action="" method="post">
+                    {% csrf_token %}
+                    {% crispy track_obj.form %}
+                </form>
+            </div>
+        {% endfor %}
+
+    </div> <!-- tab content -->
+{% else %}
+    <p>No sessions created yet</p>
+{% endif %}
+
+{% endblock %}

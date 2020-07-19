@@ -1,4 +1,4 @@
-from .cloning_views import clone_event
+from .cloning_views import clone_event, clone_timetable_session_view
 from .course_views import (
     CourseAdminListView, course_create_choice_view, CourseCreateView, CourseUpdateView,
     ajax_toggle_course_visible, cancel_course_view
@@ -10,6 +10,6 @@ from .event_views import (
 from .register_views import RegisterListView, register_view, ajax_add_register_booking, ajax_toggle_attended
 from .timetable_views import (
     TimetableSessionListView, ajax_timetable_session_delete, TimetableSessionCreateView, TimetableSessionUpdateView,
-    timetable_session_create_choice_view
+    timetable_session_create_choice_view, upload_timetable_view
 )
 from .waiting_list import ajax_remove_from_waiting_list, event_waiting_list_view

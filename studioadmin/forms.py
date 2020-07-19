@@ -312,3 +312,101 @@ class CloneSingleEventForm(forms.Form):
                 Submit('submit', 'Clone once')
             ),
         )
+
+
+class CloneTimetableSessionForm(forms.Form):
+    days = forms.MultipleChoiceField(
+        widget=forms.CheckboxSelectMultiple(attrs={"class": "form-check-input"},),
+        choices=TimetableSession.DAY_CHOICES,
+        label="Days",
+        required=True
+    )
+    time = forms.TimeField(
+        required=True, label="Time",
+        widget=forms.TimeInput(attrs={"autocomplete": "off"}, format='%H:%M'), input_formats=['%H:%M']
+    )
+    name = forms.CharField(required=False)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.layout = Layout(
+            InlineCheckboxes('days'),
+            AppendedText('time', '<i id="id_recurring_weekly_time_open" class="far fa-clock"></i>'),
+            "name",
+            Submit('submit', f'Clone timetable session')
+        )
+
+
+def get_session_choices(track):
+    def callable():
+        sessions = TimetableSession.objects.filter(event_type__track=track).order_by("day", "time")
+        return tuple([(tsession.id, tsession) for tsession in sessions])
+    return callable
+
+
+class UploadTimetableForm(forms.Form):
+    track = forms.IntegerField()
+    track_index = forms.IntegerField()
+    show_on_site = forms.BooleanField(initial=False, required=False, help_text="Make all uploaded sessions immediately visible to students")
+    start_date = forms.DateField(
+        required=True, label="Start date",
+        widget=forms.DateInput(attrs={"autocomplete": "off"}, format='%d-%b-%Y'), input_formats=['%d-%b-%Y'],
+        validators=(validate_future_date,)
+    )
+    end_date = forms.DateField(
+        required=True, label="End date",
+        widget=forms.DateInput(attrs={"autocomplete": "off"}, format='%d-%b-%Y'), input_formats=['%d-%b-%Y'],
+        validators=(validate_future_date,)
+    )
+
+    def __init__(self, *args, **kwargs):
+        track = kwargs.pop("track")
+        track_index = kwargs.pop("track_index")
+        super().__init__(*args, **kwargs)
+        # This form is duplicated for each track tab, so we need the ids to be unique.  They should all be
+        # appended with the track index
+        for field_name, field in self.fields.items():
+            field.widget.attrs.update({"id": f"id_{field_name}_{track_index}"})
+        # Need to name the sessions field with the track index, otherwise it's option checkboxes will still be
+        # named the same way as all other tracks
+        # Do this after updating the ids for other fields, since it'll get the right id anyway
+        self.fields[f"sessions_{track_index}"] = forms.MultipleChoiceField(
+            widget=forms.CheckboxSelectMultiple(attrs={"class": "form-check-input"}, ),
+            choices=get_session_choices(track),
+            required=True,
+            label="Choose sessions to upload:"
+        )
+        self.fields[f"sessions_{track_index}"].initial = [choice[0] for choice in self.fields[f"sessions_{track_index}"].choices]
+        self.fields["start_date"].widget.attrs.update({"class": "upload_start"})
+
+        self.helper = FormHelper()
+        self.helper.layout = Layout(
+            Hidden("track", track.id),
+            Hidden("track_index", track_index),
+            f'sessions_{track_index}',
+            Row(
+                Column(
+                    AppendedText(
+                        "start_date",
+                        f"<i id='id_start_date_{track_index}_open' class='start_date_open far fa-calendar'></i>"
+                    ),
+                    css_class='form-group col-6 col-md-4'
+                ),
+                Column(
+                    AppendedText(
+                        'end_date',
+                        f"<i id='id_end_date_{track_index}_open' class='end_date_open far fa-calendar'></i>"
+                    ),
+                    css_class='form-group col-6 col-md-4'
+                ),
+            ),
+            "show_on_site",
+            Submit('submit', f'Upload selected sessions')
+        )
+
+    def clean(self):
+        if not self.errors:
+            if self.cleaned_data["start_date"] > self.cleaned_data["end_date"]:
+                self.add_error("end_date", "End date must be after start date")
+        return super().clean()
