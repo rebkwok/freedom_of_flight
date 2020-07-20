@@ -1,11 +1,14 @@
 # -*- coding: utf-8 -*-
+from datetime import datetime, date, time
 from model_bakery import baker
+from unittest.mock import patch
 
 from django import forms
 from django.urls import reverse
 from django.test import TestCase
+from django.utils import timezone
 
-from booking.models import EventType
+from booking.models import Event, EventType, Track
 from common.test_utils import TestUsersMixin, EventTestMixin
 from timetable.models import TimetableSession
 
@@ -210,6 +213,7 @@ class TimetableUploadViewTests(EventTestMixin, TestUsersMixin, TestCase):
     def setUp(self):
         self.create_users()
         self.create_admin_users()
+        self.create_events_and_course()
         self.url = reverse("studioadmin:upload_timetable")
         self.login(self.staff_user)
 
@@ -235,13 +239,110 @@ class TimetableUploadViewTests(EventTestMixin, TestUsersMixin, TestCase):
     def test_separate_forms_per_track(self):
         # track form fields are labelled with track index
         # tracks with no events are omitted
-        pass
+        baker.make(TimetableSession, event_type__track=self.adult_track, _quantity=2)
+        baker.make(Track, name="unknown_track")
+        baker.make(TimetableSession, event_type__track=self.kids_track, _quantity=2)
+        resp = self.client.get(self.url)
+        assert len(resp.context_data["track_sessions"]) == 2
+        adult_track, kids_track = resp.context_data["track_sessions"]
+        assert adult_track["track"] == "Adults"
+        assert adult_track["index"] == 0
+        assert kids_track["track"] == "Kids"
+        assert kids_track["index"] == 1
+        assert f"sessions_0" in adult_track["form"].fields
+        assert f"sessions_1" in kids_track["form"].fields
 
-    def test_upload_timetable_for_correct_track(self):
-        pass
+    @patch("studioadmin.forms.timezone")
+    def test_upload_timetable_for_correct_track(self, mock_tz):
+        mock_tz.now.return_value = datetime(2020, 7, 1, tzinfo=timezone.utc)
+        baker.make(TimetableSession, event_type__track=self.adult_track, _quantity=2)
+        kids_session1 = baker.make(
+            TimetableSession, event_type__track=self.kids_track, day=1, time=time(10, 0),
+            name="test"
+        )
+        kids_session2 = baker.make(
+            TimetableSession, event_type__track=self.kids_track, day=3, time=time(12, 30),
+            max_participants=30
+        )
+        assert Event.objects.filter(event_type__track=self.adult_track).count() == 6
+        assert Event.objects.filter(event_type__track=self.kids_track).count() == 6
+        existing_ids = list(Event.objects.filter(event_type__track=self.kids_track).values_list("id", flat=True))
+        data = {
+            "track": self.kids_track.id,
+            "track_index": 1,
+            "sessions_1": [kids_session1.id, kids_session2.id],
+            "show_on_site": False,
+            "start_date": "07-Jul-2020",
+            "end_date": "21-Jul-2020"
+        }
+        # uploading session1 on Tues, session2 on Thurs between 7th and 21st Jul 2020
+        # expected uploaded dates = Tues 7th, 14th, 21st and Thurs 9th, 16th
+        self.client.post(self.url, data=data)
+        assert Event.objects.filter(event_type__track=self.kids_track).count() == 11
+        assert Event.objects.filter(event_type__track=self.adult_track).count() == 6
+        uploaded_events = Event.objects.filter(event_type__track=self.kids_track).exclude(id__in=existing_ids)
+        tues_uploaded_events = uploaded_events.filter(start__time=time(10, 0)).order_by("start")
+        thurs_uploaded_events = uploaded_events.filter(start__time=time(12, 30)).order_by("start")
+        assert [event.start.date() for event in tues_uploaded_events] == [date(2020, 7, 7), date(2020, 7, 14), date(2020, 7, 21)]
+        assert [event.start.date() for event in thurs_uploaded_events] == [date(2020, 7, 9), date(2020, 7, 16)]
+        for event in uploaded_events:
+            assert event.show_on_site is False
+        for event in tues_uploaded_events:
+            assert event.name == "test"
+        for event in thurs_uploaded_events:
+            assert event.max_participants == 30
 
-    def test_upload_timetable_existing_events(self):
-        pass
+    @patch("studioadmin.forms.timezone")
+    def test_upload_timetable_existing_events(self, mock_tz):
+        mock_tz.now.return_value = datetime(2020, 1, 1, tzinfo=timezone.utc)
+        tsession = baker.make(
+            TimetableSession, event_type=self.aerial_event_type, day=0, time=time(10, 0), name="test"
+        )
+        # an event that will clash with the upload
+        event = baker.make(Event, event_type=self.aerial_event_type, name="test", start=datetime(2020, 2, 3, 10, 0, tzinfo=timezone.utc))
+        assert Event.objects.filter(event_type=self.aerial_event_type).count() == 4
+        assert Event.objects.filter(event_type=self.aerial_event_type, name="test").count() == 1
+        data = {
+            "track": self.adult_track.id,
+            "track_index": 0,
+            "sessions_0": [tsession.id],
+            "show_on_site": False,
+            "start_date": "01-Feb-2020",
+            "end_date": "15-Feb-2020"
+        }
+        self.client.post(self.url, data=data)
+        # uploading session on Mon, between 1st and 15th Feb 2020
+        # expected uploaded dates = Mon 3rd (duplicate), 10th
+        # only one created
+        assert Event.objects.filter(event_type=self.aerial_event_type).count() == 5
+        uploaded = Event.objects.latest("id")
+        test_events = Event.objects.filter(event_type=self.aerial_event_type, name="test")
+        assert test_events.count() == 2
+        assert sorted([test_event.id for test_event in test_events]) == sorted([event.id, uploaded.id])
 
-    def test_upload_timetable_subset_of_sessions(self):
-        pass
+    @patch("studioadmin.forms.timezone")
+    def test_upload_timetable_subset_of_sessions(self, mock_tz):
+        mock_tz.now.return_value = datetime(2020, 1, 1, tzinfo=timezone.utc)
+        tsession = baker.make(
+            TimetableSession, event_type=self.aerial_event_type, day=0, time=time(10, 0), name="test"
+        )
+        baker.make(
+            TimetableSession, event_type=self.aerial_event_type, day=3, time=time(10, 0), name="test1"
+        )
+        assert Event.objects.filter(event_type=self.aerial_event_type).count() == 3
+        assert Event.objects.filter(event_type=self.aerial_event_type, name="test").exists() is False
+        data = {
+            "track": self.adult_track.id,
+            "track_index": 0,
+            "sessions_0": [tsession.id],
+            "show_on_site": False,
+            "start_date": "01-Feb-2020",
+            "end_date": "15-Feb-2020"
+        }
+        self.client.post(self.url, data=data)
+        # uploading only 1 of the 2 sessions on Mon, between 1st and 15th Feb 2020
+        assert Event.objects.filter(event_type=self.aerial_event_type).count() == 5
+        test_events = Event.objects.filter(event_type=self.aerial_event_type, name="test")
+        assert test_events.count() == 2
+        for test_event in test_events:
+            assert test_event.start.weekday() == 0
