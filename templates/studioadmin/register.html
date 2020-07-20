@@ -23,7 +23,7 @@
         <table class="table">
             <tr class="compress">
                 <th scope="col" class="text-center"></th>
-                <th scope="col" >Attended</th>
+                <th scope="col" class="text-center">Attended</th>
                 <th scope="col" class="text-center" >Status</th>
                 <th scope="col" class="text-center">User</th>
                 <th scope="col" class="text-center">Disclaimer</th>
@@ -60,9 +60,9 @@
                             </div>
                         </td>
                     {% endif %}
-                    <td id="booking-status-{{ booking.id }}">{{ booking.status }}</td>
-                    <td> {{ booking.user.first_name }} {{ booking.user.last_name }}</td>
-                    <td>
+                    <td class="text-center" id="booking-status-{{ booking.id }}">{{ booking.status }}</td>
+                    <td class="text-center"> {{ booking.user.first_name }} {{ booking.user.last_name }}</td>
+                    <td class="text-center">
                         {% if booking.user|has_disclaimer %}
                             <a href="#" target="_blank"><span id="disclaimer" class="far fa-file-alt"></span></a>
                         {% elif booking.user|has_expired_disclaimer %}
@@ -71,7 +71,7 @@
                             <span id="disclaimer" class="fas fa-times"></span>
                         {% endif %}
                     </td>
-                    <td>
+                    <td class="text-center">
                         {% if booking.block %}
                             {{ booking.block.block_config }} <span class="helptext">(exp: {{ booking.block.expiry_date|date:"d M y" }})</span>
                         {% else %}

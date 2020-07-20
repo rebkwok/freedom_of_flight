@@ -217,7 +217,7 @@ hr.tooltip-hr {
   padding-left: 5px;
   padding-right: 5px;
   line-height: 1.1;
-  width: 3.7em;
+  width: 1.5em;
   border-radius: 10px;
   border-color: dimgrey;
 }
@@ -248,4 +248,11 @@ hr.tooltip-hr {
 .expired .badge-warning {
   background-color: palegoldenrod;
   color: lightgrey;
+}
+
+.table-divider > td {
+  border-bottom: solid 1px lightgray;
+  border-top: solid 1px lightgray;
+  padding-top: 0;
+  padding-bottom: 0;
 }

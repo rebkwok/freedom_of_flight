@@ -12,6 +12,11 @@
 
 {% block content %}
 
+    <h1>Timetable sessions</h1>
+    <p>
+        Create a set of sessions that occur on a regular weekly basis.  These can be uploaded in bulk as scheduled events.
+    </p>
+
     <nav>
         <div class="nav nav-tabs" id="timetableTrackTabs" role="tablist">
             {% for track_obj in track_sessions %}
@@ -40,7 +45,7 @@
                         </thead>
                         <tbody>
                         {% for day, sessions in track_obj.queryset_by_day.items %}
-                            <tr class="table-secondary"><td colspan="7">{{ day }}</td>
+                            <tr class="table-secondary table-divider"><td colspan="7">{{ day }}</td>
                             {% for session in sessions %}
                                 <tr id="row-timetable-session-{{ session.id }}">
                                 <td><a href="{% url 'studioadmin:update_timetable_session' session.id %}">{{ session.name }}</a></td>
