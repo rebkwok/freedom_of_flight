@@ -38,13 +38,17 @@ def send_waiting_list_email(event, waiting_list_users, host):
         )
 
 
-def send_bcc_emails(context, bcc_user_emails, subject, template_without_ext):
+def send_bcc_emails(context, bcc_user_emails, subject, template_without_ext, reply_to=None, cc=False):
     msg = EmailMultiAlternatives(
         subject,
         get_template(f"{template_without_ext}.txt").render(context),
         settings.DEFAULT_FROM_EMAIL,
         bcc=bcc_user_emails,
     )
+    if reply_to:
+        msg.reply_to = reply_to
+    if cc:
+        msg.cc = [reply_to]
     msg.attach_alternative(
         get_template(f"{template_without_ext}.html").render(context),
         "text/html"

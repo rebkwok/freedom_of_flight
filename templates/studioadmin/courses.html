@@ -30,6 +30,7 @@
                                 <th scope="col" class="text-center">Visible</th>
                                 <th scope="col">Configured</th>
                                 <th></th>
+                                <th></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -72,8 +73,14 @@
                                     {% if course.cancelled %}
                                         Cancelled
                                     {%  else %}
-                                        <a class="btn btn-sm btn-danger pt-0 pb-0" href="{% url 'studioadmin:cancel_course' course.slug %}">Cancel</a></td>
+                                        <a class="btn btn-sm btn-danger pt-0 pb-0" href="{% url 'studioadmin:cancel_course' course.slug %}">Cancel</a>
                                     {% endif %}
+                                </td>
+                                <td>
+                                    {% if course.events.first.bookings.exists %}
+                                    <a href="{% url 'studioadmin:email_course_users' course.slug %}"><i class="far fa-envelope"></i></a>
+                                    {% endif %}
+                                </td>
                             </tr>
                         {%  endfor %}
                         </tbody>

@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from django.conf import settings
 from datetime import datetime, date
 from django import forms
 from django.contrib.auth.models import User
@@ -11,7 +12,7 @@ from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Button, Layout, Submit, Row, Column, Field, Fieldset, Hidden, HTML
 
 from booking.models import Event, Course
-from booking.utils import has_available_block, has_available_course_block
+from common.utils import full_name
 from timetable.models import TimetableSession
 
 
@@ -411,3 +412,56 @@ class UploadTimetableForm(forms.Form):
             if self.cleaned_data["start_date"] > self.cleaned_data["end_date"]:
                 self.add_error("end_date", "End date must be after start date")
         return super().clean()
+
+
+class EmailUsersForm(forms.Form):
+    message = forms.CharField(widget=forms.Textarea())
+    reply_to_email = forms.EmailField(initial=settings.DEFAULT_STUDIO_EMAIL)
+    cc = forms.BooleanField(initial=False, label="Send a copy to me", required=False)
+    subject = forms.CharField()
+
+    def __init__(self, *args, **kwargs):
+        event = kwargs.pop("event", None)
+        course = kwargs.pop("course", None)
+        super().__init__(*args, **kwargs)
+        target = "event" if event else "course"
+        if course:
+            event = course.events.first()
+        bookings = event.bookings.filter(status="OPEN", no_show=False)
+        cancelled_bookings = event.bookings.filter(Q(status="CANCELLED") | Q(no_show=True))
+
+        if bookings:
+            self.fields["open_bookings"] = forms.MultipleChoiceField(
+                widget=forms.CheckboxSelectMultiple(attrs={"class": "form-check-input"}),
+                choices=((booking.id, full_name(booking.user)) for booking in bookings),
+                required=False,
+                label=f"The following students have open bookings on this {target}.",
+                initial=[booking.id for booking in bookings],
+            )
+        if cancelled_bookings:
+            self.fields["cancelled_bookings"] = forms.MultipleChoiceField(
+                widget=forms.CheckboxSelectMultiple(attrs={"class": "form-check-input"}),
+                choices=((booking.id, full_name(booking.user)) for booking in cancelled_bookings),
+                required=False,
+                label=f"The following students have cancelled bookings on this {target}.",
+            )
+        self.fields["subject"].initial = event if target == "event" else course.name
+
+        self.helper = FormHelper()
+        self.helper.layout = Layout(
+            HTML(
+                "<div class='helptext pt-0 mt-0 mb-2'>For child/dependent users, the email will be sent to the main user account</div>"
+            ),
+            f'open_bookings',
+            f'cancelled_bookings',
+            "subject",
+            "reply_to_email",
+            "cc",
+            Field("message", rows=15),
+            Submit('submit', f'Send email')
+        )
+
+    def clean(self):
+        if not (self.cleaned_data["open_bookings"] or self.cleaned_data["cancelled_bookings"]):
+            self.add_error("open_bookings", "Select at least one student to email")
+            self.add_error("cancelled_bookings", "Select at least one student to email")

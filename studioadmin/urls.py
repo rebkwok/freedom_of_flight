@@ -10,7 +10,7 @@ from studioadmin.views import (
     ajax_toggle_course_visible, cancel_course_view,
     TimetableSessionListView, ajax_timetable_session_delete, timetable_session_create_choice_view,
     TimetableSessionCreateView, TimetableSessionUpdateView, clone_timetable_session_view,
-    upload_timetable_view
+    upload_timetable_view, email_event_users_view, email_course_users_view
 )
 
 app_name = 'studioadmin'
@@ -24,6 +24,7 @@ urlpatterns = [
     path('event/<slug:event_slug>/clone/', clone_event, name="clone_event"),
     path('event/<int:event_type_id>/create/', EventCreateView.as_view(), name="create_event"),
     path('event/<slug>/update/', EventUpdateView.as_view(), name="update_event"),
+    path('event/<event_slug>/email-students/', email_event_users_view, name="email_event_users"),
 
     path('timetable/', TimetableSessionListView.as_view(), name='timetable'),
     path('timetable/session/<int:timetable_session_id>/delete/', ajax_timetable_session_delete, name="ajax_timetable_session_delete"),
@@ -39,6 +40,7 @@ urlpatterns = [
     path('course/create/', course_create_choice_view, name="choose_course_type_to_create"),
     path('course/<int:course_type_id>/create/', CourseCreateView.as_view(), name="create_course"),
     path('course/<slug>/update/', CourseUpdateView.as_view(), name="update_course"),
+    path('course/<course_slug>/email-students/', email_course_users_view, name="email_course_users"),
 
     path('registers/', RegisterListView.as_view(), name='registers'),
     path('registers/<int:event_id>', register_view, name='register'),

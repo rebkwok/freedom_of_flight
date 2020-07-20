@@ -32,11 +32,12 @@
                                 <th scope="col" class="text-center">Visible</th>
                                 <th scope="col" class="text-center"></th>
                                 <th class="text-center"></th>
+                                <th class="text-center"></th>
                             </tr>
                         </thead>
                         <tbody>
                         {% for event_date, events in track_obj.queryset_by_date.items %}
-                            <tr class="table-secondary table-divider"><td colspan="9">{{ event_date|date:"D d M Y" }}</></td></tr>
+                            <tr class="table-secondary table-divider"><td colspan="10">{{ event_date|date:"D d M Y" }}</></td></tr>
                             {% for event in events %}
                             <tr {% if event.cancelled %}class="expired"{% endif %}>
                                 <td><a href="{% url 'studioadmin:update_event' event.slug %}">{{ event.name }}</a></td>
@@ -74,8 +75,14 @@
                                     {% if event.cancelled %}
                                         Cancelled
                                     {%  else %}
-                                        <a class="btn btn-sm btn-danger pt-0 pb-0" href="{% url 'studioadmin:cancel_event' event.slug %}">Cancel</a></td>
+                                        <a class="btn btn-sm btn-danger pt-0 pb-0" href="{% url 'studioadmin:cancel_event' event.slug %}">Cancel</a>
                                     {% endif %}
+                                </td>
+                                <td>
+                                    {% if event.bookings.exists %}
+                                    <a href="{% url 'studioadmin:email_event_users' event.slug %}"><i class="far fa-envelope"></i></a>
+                                    {% endif %}
+                                </td>
                             </tr>
                         {%  endfor %}
                         {% endfor %}

@@ -1,0 +1,22 @@
+{%  extends "studioadmin/base.html" %}
+
+{% load crispy_forms_tags %}
+{% block precontent %}
+    {%  include "studioadmin/includes/events_subnav.html" %}
+{% endblock %}
+
+{% block content %}
+    <h1>Email students for: {{ event }}</h1>
+
+        <h4>Choose students to email</h4>
+        {% if form.errors %}
+            <p class="text-danger">Please correct the errors below</p>
+        {% endif %}
+
+        <form action="" method="post">
+            {% csrf_token %}
+            {% crispy form %}
+        </form>
+
+{% endblock %}
+

@@ -223,6 +223,7 @@ hr.tooltip-hr {
 }
 
 .btn-visible {
+  width: 3em;
   line-height: 0.8;
   border-color: transparent;
 }

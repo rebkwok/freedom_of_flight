@@ -1,5 +1,3 @@
 {% include "accounts/email/do_not_reply.txt" %}
-
 {% block messagecontent %}{% endblock %}
-
 {% include "accounts/email/footer.txt" %}
