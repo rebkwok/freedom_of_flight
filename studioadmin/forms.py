@@ -8,7 +8,7 @@ from django.utils import timezone
 
 from crispy_forms.bootstrap import InlineCheckboxes, AppendedText
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Layout, Submit, Row, Column, Field, Fieldset, Hidden, HTML
+from crispy_forms.layout import Button, Layout, Submit, Row, Column, Field, Fieldset, Hidden, HTML
 
 from booking.models import Event, Course
 from booking.utils import has_available_block, has_available_course_block
@@ -385,6 +385,7 @@ class UploadTimetableForm(forms.Form):
             Hidden("track", track.id),
             Hidden("track_index", track_index),
             f'sessions_{track_index}',
+            Button(f'Toggle All {track_index}', "Select/Deselect All", css_class="btn btn-sm btn-outline-primary mb-4"),
             Row(
                 Column(
                     AppendedText(

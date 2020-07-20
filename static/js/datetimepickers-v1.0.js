@@ -157,33 +157,32 @@ jQuery(document).ready(function () {
     // TIMETABLE UPLOAD
     jQuery('.upload_start').each(
         function (index) {
-            console.log("adding datepicker for id_start_date_" + index);
             $('#id_start_date_' + index).datetimepicker({
-        format:'d-M-Y',
-        formatDate:'d-M-Y',
-        timepicker: false,
-        minDate: 0,
-        step: 5,
-        closeOnDateSelect: true,
-        scrollMonth: false,
-        scrollTime: false,
-        scrollInput: false,
-    });
+                format:'d-M-Y',
+                formatDate:'d-M-Y',
+                timepicker: false,
+                minDate: 0,
+                step: 5,
+                closeOnDateSelect: true,
+                scrollMonth: false,
+                scrollTime: false,
+                scrollInput: false,
+            });
             $('#id_start_date_' + index + '_open').click(function(){
                 $('#id_start_date_' + index).datetimepicker('show');
             });
 
             $('#id_end_date_' + index).datetimepicker({
-        format:'d-M-Y',
-        formatDate:'d-M-Y',
-        timepicker: false,
-        minDate: 0,
-        step: 5,
-        closeOnDateSelect: true,
-        scrollMonth: false,
-        scrollTime: false,
-        scrollInput: false,
-    });
+                format:'d-M-Y',
+                formatDate:'d-M-Y',
+                timepicker: false,
+                minDate: 0,
+                step: 5,
+                closeOnDateSelect: true,
+                scrollMonth: false,
+                scrollTime: false,
+                scrollInput: false,
+            });
             $('#id_end_date_' + index + '_open').click(function(){
                 $('#id_end_date_' + index).datetimepicker('show');
             });
