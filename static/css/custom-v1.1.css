@@ -28,12 +28,36 @@ body > .container-fluid {
   padding: 60px 25px 0 25px;
 }
 
+.fixed-top.fixed-top-subnav {
+  top: 60px;
+}
+
+.fixed-top.fixed-top-accounts-subnav {
+  top: 120px;
+}
+
+div.subnav {
+  padding-bottom: 60px;
+}
+
 #navbarEventsSubNavContainer {
   background-color: #e3f2fd;
 }
 
 #navbarEventsSubNav > ul > li.nav-item.active > a {
   color: blue;
+}
+
+#navbarCoursesSubNavContainer {
+  background-color: #f0fff0;
+}
+
+#navbarSiteConfigSubNavContainer {
+  background-color: #f7edfa;
+}
+
+#navbarSiteConfigSubNav > ul > li.nav-item.active > a {
+  color: purple;
 }
 
 #navbarCoursesSubNavContainer {
@@ -256,4 +280,11 @@ hr.tooltip-hr {
   border-top: solid 1px lightgray;
   padding-top: 0;
   padding-bottom: 0;
+}
+
+div.anchor {
+  display: block;
+  position: relative;
+  top: -100px;
+  visibility: hidden;
 }

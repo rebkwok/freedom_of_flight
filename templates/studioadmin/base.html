@@ -3,12 +3,13 @@
 {% block navbar %}
     <div class="collapse navbar-collapse" id="navbarCollapse">
         <ul class="navbar-nav mr-auto">
-            <li class="nav-item"><a class="nav-link" href="#">Site Configuration</a></li>
+            <li class="nav-item"><a class="nav-link" href="{% url 'studioadmin:tracks' %}">Site Configuration</a></li>
             <li class="nav-item"><a class="nav-link" href="{% url 'studioadmin:events' %}">Events</a></li>
             <li class="nav-item"><a class="nav-link" href="{% url 'studioadmin:courses' %}">Courses</a></li>
             <li class="nav-item"><a class="nav-link" href="{% url 'studioadmin:timetable' %}">Timetable</a></li>
             <li class="nav-item"><a class="nav-link" href="#">Students</a></li>
             <li class="nav-item"><a class="nav-link" href="#">Vouchers</a></li>
+            <li class="nav-item"><a class="nav-link" href="{% url 'studioadmin:help' %}">Help</a></li>
         </ul>
 
       <span class="float-right">

@@ -1,0 +1,124 @@
+{%  extends "studioadmin/base.html" %}
+
+{% load static %}
+
+{% block precontent %}
+    {%  include "studioadmin/includes/help_subnav.html" %}
+{% endblock %}
+
+{% block content %}
+    <div class="container-fluid pt-3">
+    <div class="anchor" id="definitions"> anchor</div>
+    <h1 class="mt-4">Definitions</h1>
+
+    <h2>Tracks</h2>
+    <p>
+        Tracks represent categories of events that will be grouped together on the booking site.
+        Each event type is associated with a single track (although event types can have the same names - e.g. an
+        "aerial class" event type on the Adults track is different to an "aerial class" event type on the Kids track.
+
+    <p>Events in each track will be shown on a different page.  Tracks with no scheduled events will not be visible on the site.</p>
+        For example, you might have a track for Adults classes, Youth classes, Workshops, Parties etc.  As tracks
+        will be displayed as menu options, it's best to try to choose concise descriptive names for them.
+    </p>
+    <p>
+        Choose one "default" track, which will be the landing page for the site.
+    </p>
+
+    <h2>Event Types</h2>
+    <p>
+    Event Types define general characteristics about an event, such as the number of participants and cancellation period.
+    Scheduled events for particular days and times are generated from Event Types and will share those characteristics.  An
+    Event Type must be associated with one Track.
+    </p>
+    <p>
+    Event Types are used to define pricing for events, and can be associated with multiple Credit Block.
+    For example, you might create an Aerial Class event type, in the Adult Classes track.  You can then set up
+    multiple Credit Blocks attached to this event type to allow students to purchase credit in blocks of 1, 4 or 8 classes.
+    </p>
+
+    <h2>Events</h2>
+    <p>
+    An Event is a single, scheduled event, which has a specific date and time, and which students can book into.
+    </p>
+
+    <h2>Course Types</h2>
+    <p>
+        Course Types define the outline of a Course, and hold the Event Type and the number of events in the course.
+        They can be associated with Credit Blocks for courses, which will only allow students to book for classes in
+        one course.
+    </p>
+
+    <h2>Courses</h2>
+    <p>
+        A course is a collection of scheduled events.  It is associated with a Course Type, which defines the number of events
+        in the course and, by association with Credit Blocks, pricing for the course.
+    </p>
+    <p>
+        Students will initially book for a course and will be booked into all of its events.  They can choose to
+        cancel from individual events, but won't be given credit back to their credit block to use for other events
+        not in that course (although they will be able to re-book for the course event).
+    </p>
+
+    <h2>Credit Blocks</h2>
+    <p>
+        Credit blocks define pricing and come in two varieties
+        <ul>
+            <li>Drop In Credit Blocks which can be used for a number of events of a specific event type with a fixed time period</li>
+            <li>Course Credit Blocks which can be used for a single course of a specifc course type</li>
+        </ul>
+    </p>
+
+    <div class="anchor" id="scheduling">Scheduling anchor</div>
+    <h1>Creating Scheduled Events</h1>
+    <p>
+        There are a number of ways to create scheduled events, once your tracks, event types and course types
+        are set up.
+        <ol>
+            <li>Go to Events > Add Event to create a one-off event</li>
+            <li>Clone an already created event</li>
+            <li>Create a timetable of weekly sessions to bulk upload</li>
+        </ol>
+    </p>
+
+    <h2>Cloning Events</h2>
+    <p>
+        This lets you set up an event once, and then duplicate it many times.  From the Events page, click the <i class="far fa-clone"></i> icon
+        to clone an event.  You can select from options to clone
+        the event at recurring days/times every week, at recurring intervals on a specific date, or as a single specific
+        date and time.
+    </p>
+
+    <h2>Timetabled Sessions and Upload</h2>
+    <p>
+        Timetabled Sessions are similar to Events, but have a day of the week and time rather than a specific dates.
+        Once set up, you can choose the dates you want to upload the entire timetable at once.
+        Timetabled sessions can also be cloned, if you're creating multiple similar sessions.
+    </p>
+
+    <p>
+        Note that uploaded, clones and newly created events are not immediately visible on the site by default.
+        They can be switched to visible on the Events list page when you're happy with them.
+    </p>
+
+    <div class="anchor" id="managing">anchor</div>
+    <h1>Managing Events</h1>
+    <h2>Cancelling</h2>
+    <p>
+        If necessary, you can cancel an event from the Events page using the "Cancel" buttons.  You will be asked for
+        confirmation first, and students booked into the event will be emailed notification (plus and optional
+        message that you can add during on the cancellation page).
+    </p>
+
+    <h2>Contacting Students</h2>
+    <p>From the Events and Courses pages, you also have the option to email students booked into an event/course.
+        Click the <i class="far fa-envelope"></i> icon for the event you want to to email.
+    </p>
+
+    <h2>Registers</h2>
+    <p>Registers give you a list of booked students for each event, with buttons to mark students as attended or
+        not attended.  Note that students who cancel after the cancellation period are marked as booked but
+        not attended and will be visible (greyed out) on the registers.
+    </p>
+    </div>
+{% endblock content %}
