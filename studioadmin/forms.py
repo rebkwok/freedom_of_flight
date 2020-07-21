@@ -426,25 +426,25 @@ class EmailUsersForm(forms.Form):
         super().__init__(*args, **kwargs)
         target = "event" if event else "course"
         if course:
-            event = course.events.first()
-        bookings = event.bookings.filter(status="OPEN", no_show=False)
-        cancelled_bookings = event.bookings.filter(Q(status="CANCELLED") | Q(no_show=True))
+            # flattened list of all bookings
+            bookings = sum([list(event.bookings.all()) for event in course.events.all()], [])
+            cancelled_bookings = []
+        else:
+            bookings = event.bookings.filter(status="OPEN", no_show=False)
+            cancelled_bookings = event.bookings.filter(Q(status="CANCELLED") | Q(no_show=True))
+        choices = [
+            # a set for the first bunch of choices, because courses will have duplicates
+            *{(booking.user.id, f"{full_name(booking.user)}") for booking in bookings},
+            *((booking.user.id, f"{full_name(booking.user)} (cancelled)") for booking in cancelled_bookings)
+       ]
+        self.fields["students"] = forms.MultipleChoiceField(
+            widget=forms.CheckboxSelectMultiple(attrs={"class": "form-check-input"}),
+            choices=choices,
+            required=False,
+            label=f"The following students have booked for this {target}.",
+            initial=[booking.user.id for booking in bookings],
+        )
 
-        if bookings:
-            self.fields["open_bookings"] = forms.MultipleChoiceField(
-                widget=forms.CheckboxSelectMultiple(attrs={"class": "form-check-input"}),
-                choices=((booking.id, full_name(booking.user)) for booking in bookings),
-                required=False,
-                label=f"The following students have open bookings on this {target}.",
-                initial=[booking.id for booking in bookings],
-            )
-        if cancelled_bookings:
-            self.fields["cancelled_bookings"] = forms.MultipleChoiceField(
-                widget=forms.CheckboxSelectMultiple(attrs={"class": "form-check-input"}),
-                choices=((booking.id, full_name(booking.user)) for booking in cancelled_bookings),
-                required=False,
-                label=f"The following students have cancelled bookings on this {target}.",
-            )
         self.fields["subject"].initial = event if target == "event" else course.name
 
         self.helper = FormHelper()
@@ -452,8 +452,7 @@ class EmailUsersForm(forms.Form):
             HTML(
                 "<div class='helptext pt-0 mt-0 mb-2'>For child/dependent users, the email will be sent to the main user account</div>"
             ),
-            f'open_bookings',
-            f'cancelled_bookings',
+            'students',
             "subject",
             "reply_to_email",
             "cc",
@@ -462,6 +461,5 @@ class EmailUsersForm(forms.Form):
         )
 
     def clean(self):
-        if not (self.cleaned_data["open_bookings"] or self.cleaned_data["cancelled_bookings"]):
-            self.add_error("open_bookings", "Select at least one student to email")
-            self.add_error("cancelled_bookings", "Select at least one student to email")
+        if not self.cleaned_data["students"]:
+            self.add_error("students", "Select at least one student to email")
