@@ -442,7 +442,7 @@ class EmailUsersForm(forms.Form):
             choices=choices,
             required=False,
             label=f"The following students have booked for this {target}.",
-            initial=[booking.user.id for booking in bookings],
+            initial={booking.user.id for booking in bookings},
         )
 
         self.fields["subject"].initial = event if target == "event" else course.name
@@ -461,5 +461,5 @@ class EmailUsersForm(forms.Form):
         )
 
     def clean(self):
-        if not self.cleaned_data["students"]:
+        if not self.cleaned_data.get("students"):
             self.add_error("students", "Select at least one student to email")

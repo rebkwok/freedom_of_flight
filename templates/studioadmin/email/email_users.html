@@ -1,6 +1,6 @@
 {% extends 'email_base.html' %}
 
-
+{% block donotreply %}{% endblock %}
 {% block messagecontent %}
 
     <p>{{ message|linebreaks }}</p>

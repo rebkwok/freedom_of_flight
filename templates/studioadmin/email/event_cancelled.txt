@@ -1,10 +1,6 @@
 {% extends 'email_base.txt' %}
-
-
 {% block messagecontent %}
-
 {{ event }} has been cancelled.
 
 {{ additional_message|linebreaks }}
-
 {% endblock %}
