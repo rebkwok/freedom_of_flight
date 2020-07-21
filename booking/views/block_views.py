@@ -54,9 +54,9 @@ def dropin_block_purchase_view(request, event_slug):
 
     available_blocks = {}
     if dropin_block_configs:
-        available_blocks.update({"Drop-in Blocks": dropin_block_configs})
+        available_blocks.update({"Drop-in Credit Blocks": dropin_block_configs})
     if course_block_configs:
-        available_blocks.update({"Course Blocks": course_block_configs})
+        available_blocks.update({"Course Credit Blocks": course_block_configs})
 
     context = {
         "available_blocks": available_blocks,
@@ -79,9 +79,9 @@ def course_block_purchase_view(request, course_slug):
 
     available_blocks = {}
     if course_block_configs:
-        available_blocks.update({"Course Blocks": course_block_configs})
+        available_blocks.update({"Course Credit Blocks": course_block_configs})
     if dropin_block_configs:
-        available_blocks.update({"Drop-in Blocks": dropin_block_configs})
+        available_blocks.update({"Drop-in Credit Blocks": dropin_block_configs})
 
     context = {
         "available_blocks": available_blocks,
@@ -100,9 +100,9 @@ def block_purchase_view(request):
     course_block_configs = CourseBlockConfig.objects.filter(active=True)
     available_blocks = {}
     if dropin_block_configs:
-        available_blocks.update({"Drop-in Blocks": dropin_block_configs})
+        available_blocks.update({"Drop-in Credit Blocks": dropin_block_configs})
     if course_block_configs:
-        available_blocks.update({"Course Blocks": course_block_configs})
+        available_blocks.update({"Course Credit Blocks": course_block_configs})
     context = {
         "available_blocks": available_blocks,
         "user_active_blocks": active_user_managed_blocks(request.user, order_by_fields=("purchase_date",)),

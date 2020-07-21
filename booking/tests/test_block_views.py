@@ -31,19 +31,19 @@ class BlockPurchaseViewTests(TestUsersMixin, TestCase):
 
     def test_list_active_block_configs(self):
         resp = self.client.get(self.url)
-        assert list(resp.context["available_blocks"].keys()) == ["Drop-in Blocks", "Course Blocks"]
-        assert [bc.id for bc in resp.context["available_blocks"]["Drop-in Blocks"]] == [self.activeconfig.id]
-        assert [cc.id for cc in resp.context["available_blocks"]["Course Blocks"]] == [self.courseconfig.id]
+        assert list(resp.context["available_blocks"].keys()) == ["Drop-in Credit Blocks", "Course Credit Blocks"]
+        assert [bc.id for bc in resp.context["available_blocks"]["Drop-in Credit Blocks"]] == [self.activeconfig.id]
+        assert [cc.id for cc in resp.context["available_blocks"]["Course Credit Blocks"]] == [self.courseconfig.id]
         assert resp.context["user_active_blocks"] == []
 
     def test_course_purchase_view_shows_target_configs_at_start(self):
         course = baker.make(Course, course_type=self.courseconfig.course_type, show_on_site=True)
         url = reverse("booking:course_block_purchase", args=(course.slug,))
         resp = self.client.get(url)
-        # course blocks shown first
-        assert list(resp.context["available_blocks"].keys()) == ["Course Blocks", "Drop-in Blocks"]
-        assert [bc.id for bc in resp.context["available_blocks"]["Drop-in Blocks"]] == [self.activeconfig.id]
-        assert [cc.id for cc in resp.context["available_blocks"]["Course Blocks"]] == [self.courseconfig.id]
+        # Course Credit Blocks shown first
+        assert list(resp.context["available_blocks"].keys()) == ["Course Credit Blocks", "Drop-in Credit Blocks"]
+        assert [bc.id for bc in resp.context["available_blocks"]["Drop-in Credit Blocks"]] == [self.activeconfig.id]
+        assert [cc.id for cc in resp.context["available_blocks"]["Course Credit Blocks"]] == [self.courseconfig.id]
         assert resp.context["user_active_blocks"] == []
         assert resp.context["related_item"] == course
         assert resp.context["target_configs"] == [self.courseconfig]
@@ -53,9 +53,9 @@ class BlockPurchaseViewTests(TestUsersMixin, TestCase):
         url = reverse("booking:dropin_block_purchase", args=(event.slug,))
         resp = self.client.get(url)
         # dropin blocks shown first
-        assert list(resp.context["available_blocks"].keys()) == ["Drop-in Blocks", "Course Blocks"]
-        assert [bc.id for bc in resp.context["available_blocks"]["Drop-in Blocks"]] == [self.activeconfig.id]
-        assert [cc.id for cc in resp.context["available_blocks"]["Course Blocks"]] == [self.courseconfig.id]
+        assert list(resp.context["available_blocks"].keys()) == ["Drop-in Credit Blocks", "Course Credit Blocks"]
+        assert [bc.id for bc in resp.context["available_blocks"]["Drop-in Credit Blocks"]] == [self.activeconfig.id]
+        assert [cc.id for cc in resp.context["available_blocks"]["Course Credit Blocks"]] == [self.courseconfig.id]
         assert resp.context["user_active_blocks"] == []
         assert resp.context["related_item"] == event
         assert resp.context["target_configs"] == [self.activeconfig]
@@ -65,9 +65,9 @@ class BlockPurchaseViewTests(TestUsersMixin, TestCase):
         # unpaid, not shown
         baker.make(Block, user=self.student_user, dropin_block_config=self.activeconfig)
         resp = self.client.get(self.url)
-        assert list(resp.context["available_blocks"].keys()) == ["Drop-in Blocks", "Course Blocks"]
-        assert [bc.id for bc in resp.context["available_blocks"]["Drop-in Blocks"]] == [self.activeconfig.id]
-        assert [cc.id for cc in resp.context["available_blocks"]["Course Blocks"]] == [self.courseconfig.id]
+        assert list(resp.context["available_blocks"].keys()) == ["Drop-in Credit Blocks", "Course Credit Blocks"]
+        assert [bc.id for bc in resp.context["available_blocks"]["Drop-in Credit Blocks"]] == [self.activeconfig.id]
+        assert [cc.id for cc in resp.context["available_blocks"]["Course Credit Blocks"]] == [self.courseconfig.id]
         assert resp.context["user_active_blocks"] == [block]
 
     def test_user_and_managed_user_blocks_in_context(self):
@@ -75,9 +75,9 @@ class BlockPurchaseViewTests(TestUsersMixin, TestCase):
         block1 = baker.make(Block, user=self.child_user, dropin_block_config=self.activeconfig, paid=True)
         block2 = baker.make(Block, user=self.manager_user, dropin_block_config=self.activeconfig, paid=True)
         resp = self.client.get(self.url)
-        assert list(resp.context["available_blocks"].keys()) == ["Drop-in Blocks", "Course Blocks"]
-        assert [bc.id for bc in resp.context["available_blocks"]["Drop-in Blocks"]] == [self.activeconfig.id]
-        assert [cc.id for cc in resp.context["available_blocks"]["Course Blocks"]] == [self.courseconfig.id]
+        assert list(resp.context["available_blocks"].keys()) == ["Drop-in Credit Blocks", "Course Credit Blocks"]
+        assert [bc.id for bc in resp.context["available_blocks"]["Drop-in Credit Blocks"]] == [self.activeconfig.id]
+        assert [cc.id for cc in resp.context["available_blocks"]["Course Credit Blocks"]] == [self.courseconfig.id]
         assert sorted([block.id for block in resp.context["user_active_blocks"]]) == sorted([block1.id, block2.id])
 
     def test_active_block_info(self):
@@ -85,7 +85,7 @@ class BlockPurchaseViewTests(TestUsersMixin, TestCase):
             Block, user=self.student_user, dropin_block_config=self.activeconfig, paid=True
         )
         resp = self.client.get(self.url)
-        assert "You have active blocks" in resp.content.decode("utf-8")
+        assert "You have active credit blocks" in resp.content.decode("utf-8")
         assert f"Student User: {self.activeconfig.identifier} ({self.activeconfig.size}/{self.activeconfig.size} remaining); not started" in resp.content.decode("utf-8")
 
 
