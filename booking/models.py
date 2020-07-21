@@ -49,6 +49,11 @@ class Track(models.Model):
             except Track.DoesNotExist:
                 return None
 
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        if self.default:
+            Track.objects.all().exclude(id=self.id).update(default=False)
+
 
 class EventType(models.Model):
     """
@@ -63,7 +68,7 @@ class EventType(models.Model):
         help_text='How an instance of this event type will be referred to, e.g. "class", "workshop"'
     )
     description = models.TextField(help_text="Description", null=True, blank=True)
-    track = models.ForeignKey(Track, on_delete=models.SET_NULL, null=True)
+    track = models.ForeignKey(Track, on_delete=models.SET_NULL, null=True, related_name="event_types")
     contact_email = models.EmailField(default=settings.DEFAULT_STUDIO_EMAIL)
     cancellation_period = models.PositiveIntegerField(default=24)
     email_studio_when_booked = models.BooleanField(default=False)

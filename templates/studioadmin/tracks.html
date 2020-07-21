@@ -1,0 +1,82 @@
+{%  extends "studioadmin/base.html" %}
+
+{% load studioadmintags static %}
+
+{% block precontent %}
+    {%  include "studioadmin/includes/site_config_subnav.html" %}
+{% endblock %}
+
+{% block content %}
+    <h1>Tracks</h1>
+    <p>
+        Tracks represent categories of events that will be grouped together on the booking site.
+    </p>
+
+{% if tracks %}
+        <table class="table table-sm">
+            <thead>
+                <tr>
+                    <th>Name<br/><span class="helptext">Click to edit</span></th>
+                    <th>Event Types</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+
+            <!-- Modals -->
+            <div class="modal fade" id="EditTrackModal" tabindex="-1" role="dialog" aria-labelledby="EditTrackModalLabel"></div>
+            <div class="modal fade" id="AddTrackModal" tabindex="-1" role="dialog" aria-labelledby="AddTrackModalLabel"></div>
+            <!-- /.modal -->
+
+            {% for track in tracks %}
+                <tr {% if track.default %}class="table-success"{% endif %}>
+                    <td>
+                        <a
+                        id="edit-track-btn"
+                        class="edit-track"
+                        href="#" data-form="{% url 'studioadmin:edit_track' track.slug %}"
+                        title="edit track"
+                    >{{ track.name }}</a>
+                    </td>
+                    <td>
+                        {% for event_type in track.event_types.all %}
+                            {{ event_type.name }}<br/>
+                        {% endfor %}
+                    </td>
+                    <td>
+                        <a href="{% url 'studioadmin:toggle_track_default' track.id %}" class="btn btn-sm btn-visible {% if track.default %}btn-success{% else %}btn-dark{% endif %}">
+                          {{ track.default|yesno|title}}
+                        </a>
+                    </td>
+                </tr>
+            {% endfor %}
+            <tr>
+                <td colspan="3">
+                    <a
+                        id="add-track-btn"
+                        class="add-track"
+                        href="#" data-form="{% url 'studioadmin:add_track' %}"
+                        title="add track"
+                    ><div class="btn btn-success">Add new track</div></a>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+
+{% else %}
+    <p>No tracks created yet</p>
+{% endif %}
+
+
+{% endblock content %}
+
+
+{% block extra_js %}
+{# Load from local if in dev mode (debug on) and not specifically set #}
+{% if use_cdn %}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.form/4.3.0/jquery.form.min.js" integrity="sha512-YUkaLm+KJ5lQXDBdqBqk7EVhJAdxRnVdT2vtCzwPHSweCzyMgYV/tgGF4/dCyqtCC2eCphz0lRQgatGVdfR0ww==" crossorigin="anonymous"></script>
+{% else %}
+    <script type='text/javascript' src="{% static 'js/jquery.form-4.3.0.min.js' %}"></script>
+{% endif %}
+<script type='text/javascript' src="{% static 'studioadmin/js/tracks_ajax-v1.js' %}"></script>
+{% endblock %}

@@ -2,6 +2,7 @@ from django.urls import path, re_path
 from django.views.generic import RedirectView
 from django.views.i18n import JavaScriptCatalog
 from studioadmin.views import (
+    help,
     EventAdminListView, ajax_toggle_event_visible, RegisterListView, register_view,
     ajax_add_register_booking, ajax_toggle_attended,
     ajax_remove_from_waiting_list, event_waiting_list_view, cancel_event_view,
@@ -10,7 +11,8 @@ from studioadmin.views import (
     ajax_toggle_course_visible, cancel_course_view,
     TimetableSessionListView, ajax_timetable_session_delete, timetable_session_create_choice_view,
     TimetableSessionCreateView, TimetableSessionUpdateView, clone_timetable_session_view,
-    upload_timetable_view, email_event_users_view, email_course_users_view
+    upload_timetable_view, email_event_users_view, email_course_users_view,
+    TrackCreateView, TrackListView, TrackUpdateView, EventTypeListView, toggle_track_default
 )
 
 app_name = 'studioadmin'
@@ -49,6 +51,13 @@ urlpatterns = [
 
     path('waiting-list/<int:event_id>/', event_waiting_list_view, name="event_waiting_list"),
     path('waiting-list/remove/', ajax_remove_from_waiting_list, name="ajax_remove_from_waiting_list"),
+
+    path('site-config/tracks/', TrackListView.as_view(), name="tracks"),
+    path('site-config/track/<track_id>/toggle-default/', toggle_track_default, name="toggle_track_default"),
+    path('site-config/track/<slug>/edit/', TrackUpdateView.as_view(), name="edit_track"),
+    path('site-config/track/add/', TrackCreateView.as_view(), name="add_track"),
+
+    path('help/', help, name="help"),
 
     # path('jsi18n/', JavaScriptCatalog.as_view(), name='jsi18n'),
     path('', RedirectView.as_view(url='/studioadmin/registers/', permanent=True)),
