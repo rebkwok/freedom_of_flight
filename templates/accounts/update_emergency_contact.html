@@ -10,9 +10,9 @@
 
     <div>
         {% if disclaimer_user == request.user %}
-        <h1>Edit Your Emergency Contact Information</h1>
+        <h2>Edit Your Emergency Contact Information</h2>
         {% else %}
-        <h1>Edit Emergency Contact Information for {{ disclaimer_user.first_name }} {{ disclaimer_user.last_name }}</h1>
+        <h2>Edit Emergency Contact Information for {{ disclaimer_user.first_name }} {{ disclaimer_user.last_name }}</h2>
         {% endif %}
     </div>
     {% if form.errors %}

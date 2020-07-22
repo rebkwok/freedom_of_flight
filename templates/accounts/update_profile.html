@@ -1,14 +1,9 @@
-{% extends 'base.html' %}
+{% extends 'account/base.html' %}
 {% load static %}
-
-{% block precontent %}
-    {{ block.super }}
-    {% include 'accounts/includes/account_nav.html' %}
-{% endblock %}
 
 {% block content %}
     <div>
-        <h1>Edit Your Account Profile</h1>
+        <h2>Edit Your Account Profile</h2>
     </div>
     <form action="" method="post">{% csrf_token %}
                     {% csrf_token %}

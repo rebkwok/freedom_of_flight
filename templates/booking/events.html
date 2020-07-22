@@ -8,14 +8,14 @@
 
 {% block content %}
 
-<div id="confirm-dialog"></div></div>
+<div id="confirm-dialog"></div>
 
-        <form class="form-inline pt-3" method="post">
-            {% csrf_token %}
-            {{ available_users_form }}
-        </form>
+    <h2 class="mt-1">{{ title }}</h2>
 
-    <h1 class="mt-3">{{ title }}</h1>
+    <form class="form-inline pb-3" method="post">
+        {% csrf_token %}
+        {{ available_users_form }}
+    </form>
 
     <div class="row">
         <div class="col-12">

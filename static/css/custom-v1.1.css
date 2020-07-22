@@ -24,8 +24,29 @@ body {
 -------------------------------------------------- */
 /* Not required for template or sticky footer method. */
 
+@media only screen and (max-width: 768px) {
+  h1 {
+    font-size: xx-large;
+  }
+  h2 {
+    font-size: x-large;
+  }
+  h3 {
+    font-size: larger;
+  }
+  h4 {
+    font-size: large;
+  }
+
+}
 body > .container-fluid {
   padding: 60px 25px 0 25px;
+}
+
+/* offset by footer*/
+body > main > div.container-fluid.content-block {
+  padding-bottom: 5px;
+  margin-bottom: 40px;
 }
 
 .fixed-top.fixed-top-subnav {
@@ -38,6 +59,9 @@ body > .container-fluid {
 
 div.subnav {
   padding-bottom: 60px;
+}
+div.accounts-subnav {
+  padding-bottom: 10px;
 }
 
 #navbarEventsSubNavContainer {
@@ -175,6 +199,11 @@ div#CookielawBanner {
     padding-left: 1px;
     padding-right: 1px;
   }
+}
+
+.btn-xs-wider {
+  width: 130px;
+  font-size: 80%;
 }
 
 .btn-xs-wide {

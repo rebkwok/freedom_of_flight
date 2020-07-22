@@ -94,8 +94,6 @@
     <main role="main" class="container-fluid">
     {% cookielaw_banner %}
 
-      <!--<h1 class="mt-5">Freedom of Flight Aerial Booking</h1>-->
-
         {% block body %}
         {% block precontent %}<div class="container-fluid"><h1 class="pt-2">Freedom of Flight Aerial</h1></div>{% endblock %}
 
@@ -116,7 +114,7 @@
                 {% endfor %}
           </div>
         {% endif %}
-        <div class="container-fluid pb-2">
+        <div class="container-fluid content-block">
         {% block content %}
                 <p>You need to define a content block!</p>
         {% endblock %}
