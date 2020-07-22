@@ -14,10 +14,7 @@ def staff_required(func):
         else:
             user_is_staff = request.user.is_staff
             # cache for 30 mins
-            cache.set(
-                'user_%s_is_staff' % str(request.user.id), user_is_staff, 1800
-            )
-
+            cache.set('user_%s_is_staff' % str(request.user.id), user_is_staff, 1800)
         if user_is_staff:
             return func(request, *args, **kwargs)
         else:
@@ -27,18 +24,13 @@ def staff_required(func):
 
 def is_instructor_or_staff(func):
     def decorator(request, *args, **kwargs):
-        cached_is_instructor_or_staff = cache.get(
-            'user_%s_is_instructor_or_staff' % str(request.user.id)
-        )
+        cached_is_instructor_or_staff = cache.get('user_%s_is_instructor_or_staff' % str(request.user.id))
         if cached_is_instructor_or_staff is not None:
             user_is_instructor_or_staff = bool(cached_is_instructor_or_staff)
         else:
             group, _ = Group.objects.get_or_create(name='instructors')
             user_is_instructor_or_staff = request.user.is_staff or group in request.user.groups.all()
-            cache.set(
-                'user_%s_is_instructor_or_staff' % str(request.user.id),
-                user_is_instructor_or_staff, 1800
-            )
+            cache.set('user_%s_is_instructor_or_staff' % str(request.user.id), user_is_instructor_or_staff, 1800)
 
         if user_is_instructor_or_staff:
             return func(request, *args, **kwargs)
@@ -54,31 +46,21 @@ class StaffUserMixin:
             user_is_staff = bool(cached_is_staff)
         else:
             user_is_staff = self.request.user.is_staff
-            cache.set(
-                'user_%s_is_staff' % str(request.user.id), user_is_staff, 1800
-            )
+            cache.set('user_%s_is_staff' % str(request.user.id), user_is_staff, 1800)
         if not user_is_staff:
             return HttpResponseRedirect(reverse('booking:permission_denied'))
-        return super(StaffUserMixin, self).dispatch(request, *args, **kwargs)
+        return super().dispatch(request, *args, **kwargs)
 
 
 class InstructorOrStaffUserMixin:
     def dispatch(self, request, *args, **kwargs):
-        cached_is_instructor_or_staff = cache.get(
-            'user_%s_is_instructor_or_staff' % str(request.user.id)
-        )
+        cached_is_instructor_or_staff = cache.get('user_%s_is_instructor_or_staff' % str(request.user.id))
         if cached_is_instructor_or_staff is not None:
             user_is_instructor_or_staff = bool(cached_is_instructor_or_staff)
         else:
-            group = Group.objects.get(name='instructors')
-            user_is_instructor_or_staff = self.request.user.is_staff or \
-                        group in self.request.user.groups.all()
-            cache.set(
-                'user_%s_is_instructor_or_staff' % str(request.user.id),
-                user_is_instructor_or_staff, 1800
-            )
+            group, _ = Group.objects.get_or_create(name='instructors')
+            user_is_instructor_or_staff = self.request.user.is_staff or group in self.request.user.groups.all()
+            cache.set('user_%s_is_instructor_or_staff' % str(request.user.id), user_is_instructor_or_staff, 1800)
         if user_is_instructor_or_staff:
-            return super(
-                InstructorOrStaffUserMixin, self
-            ).dispatch(request, *args, **kwargs)
+            return super().dispatch(request, *args, **kwargs)
         return HttpResponseRedirect(reverse('booking:permission_denied'))
