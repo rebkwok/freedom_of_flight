@@ -24,6 +24,10 @@ body {
 -------------------------------------------------- */
 /* Not required for template or sticky footer method. */
 
+body > .container-fluid {
+  padding: 60px 25px 0 25px;
+}
+
 @media only screen and (max-width: 768px) {
   h1 {
     font-size: xx-large;
@@ -37,10 +41,11 @@ body {
   h4 {
     font-size: large;
   }
+  body > .container-fluid {
+    padding-right: 5px;
+    padding-left: 5px;
+  }
 
-}
-body > .container-fluid {
-  padding: 60px 25px 0 25px;
 }
 
 /* offset by footer*/
@@ -248,6 +253,11 @@ hr.tooltip-hr {
   margin-bottom: 0;
   border-top: 1px solid grey;
 
+}
+
+.tooltip-inner {
+  text-align: left;
+  max-width: 300px;
 }
 
 .badge-course {

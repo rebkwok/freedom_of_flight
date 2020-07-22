@@ -1,0 +1,14 @@
+{% load bookingtags %}
+
+    <span data-toggle="tooltip" data-html="true"
+          title="<span class='align-left'>
+        {{ event.event_type.name }}<br/>
+        Availability: {% if event.full %}Full{% else %}{{ event.spaces_left }}{% endif %}<br/>
+        {% if user_info.used_block  %}
+        Credit block used: {{ user_info.used_block|user_block_info }}
+        {% elif user_info.has_available_block  %}
+        Credit block available: {{ user_info.available_block|user_block_info }}
+        {% endif %}
+        </span>">
+      <small><i class="text-secondary fas fa-info-circle"></i></small>
+    </span>

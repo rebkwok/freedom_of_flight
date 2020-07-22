@@ -13,7 +13,7 @@ jQuery(document).ready(function () {
     }, 5000); // <-- time in milliseconds, 1000 =  1 sec
 
     $('[data-toggle="tooltip"]').tooltip();
-
+    $('[data-toggle="popover"]').popover()
 
     jQuery('form.dirty-check').areYouSure();
 

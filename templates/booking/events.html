@@ -58,11 +58,12 @@
                         <div class="list-group-item pt-1 pb-1">
 
                         <span id="booked_tick_{{ event.id }}" {% if not user_info.open %}class="hidden"{% endif %}>
-                        <i class="fas fa-check-circle"></i>
+                        <i class="text-success fas fa-check-circle"></i>
                         </span>
-                        <a href="{% url 'booking:event' event.slug %}">
-                                {{ event.start|date:"H:i"  }} {{ event.name }}
-                        </a>
+                        <a href="{% url 'booking:event' event.slug %}"> {{ event.start|date:"H:i"  }} {{ event.name }}</a>
+                            <span class="d-inline-block d-sm-none" id="event_info_xs_{{event.id}}">
+                            {% include 'booking/includes/event_info_xs.html' %}
+                            </span>
                         {% if request.user.is_authenticated %}
                             {% if view_as_user|has_disclaimer %}
                                 {% if event.is_past %}
@@ -116,18 +117,7 @@
                             <span class="helptext float-right"><a href="{% url 'account_login' %}?next={{request.get_full_path}}">Log in</a> to book</span>
                         {% endif %}
                         <div>
-                            <span class="helptext">{{event.event_type.name}}</span>
-                            <span class="helptext"> | Availability:
-                                <span id="availability_{{ event.id }}">{% include 'booking/includes/event_availability_badge.html' %}</span>
-                            </span>
-                            {% if event.course and not course %}
-                                | <a href="{% url 'booking:course_events' event.course.slug %}"><span class="badge badge-course">Course: {{ event.course.name|truncatechars:15 }}</span></a>
-                            {% endif %}
-                            {% if request.user.is_authenticated %}
-                                <span id="block_info_{{event.id}}">
-                                    {% include 'booking/includes/block_info.html' %}
-                                </span>
-                            {% endif %}
+                            {% include 'booking/includes/events_info.html' %}
                         </div>
                     </div>
                     {%  endwith %}

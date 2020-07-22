@@ -6,7 +6,8 @@ from django.contrib.auth.models import User
 from django.http import HttpResponseBadRequest, JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.urls import reverse
-from django.shortcuts import get_object_or_404, render, HttpResponse
+from django.shortcuts import get_object_or_404, render
+from django.template.loader import render_to_string
 
 from accounts.models import has_active_disclaimer
 from activitylog.models import ActivityLog
@@ -151,20 +152,22 @@ def ajax_toggle_booking(request, event_id):
         else:
             url = reverse("booking:events", args=(event.event_type.track.slug,))
         return JsonResponse({"redirect": True, "url": url})
-
+    user_info = get_user_booking_info(user, event)
     context = {
         "event": event,
         "alert_message": alert_message,
         "user_info": get_user_booking_info(user, event),
     }
-    html = render(request, f"booking/includes/events_button.txt", context)
-    block_info_html = render(request, f"booking/includes/block_info.html", context)
-    event_availability_html = render(request, f"booking/includes/event_availability_badge.html", {"event": event})
+    html = render_to_string(f"booking/includes/events_button.txt", context, request)
+    block_info_html = render_to_string(f"booking/includes/block_info.html", context, request)
+    event_availability_html = render_to_string(f"booking/includes/event_availability_badge.html", {"event": event}, request)
+    event_info_xs_html = render_to_string('booking/includes/event_info_xs.html', {"event": event, "user_info": user_info}, request)
     return JsonResponse(
         {
-            "html": html.content.decode("utf-8"),
-            "block_info_html": block_info_html.content.decode("utf-8"),
-            "event_availability_html": event_availability_html.content.decode("utf-8"),
+            "html": html,
+            "block_info_html": block_info_html,
+            "event_availability_html": event_availability_html,
+            "event_info_xs_html": event_info_xs_html,
             "just_cancelled": requested_action == "cancelled",
         }
     )

@@ -1,3 +1,4 @@
+from django.template.loader import render_to_string
 from django import template
 
 from ..models import WaitingListUser
@@ -21,7 +22,7 @@ def get_block_info(block):
     used, total = get_block_status(block)
     base_text = f"<span class='helptext'>{block.user.first_name} {block.user.last_name}: {block.block_config.identifier} ({total - used}/{total} remaining)"
     if block.expiry_date:
-        return f"{base_text}; expires {block.expiry_date.strftime('%d %b %y')}</span>"
+        return f"{base_text}; expires {block.expiry_date.strftime('%d-%b-%y')}</span>"
     elif block.block_config.duration:
         return f"{base_text}; not started</span>"
     else:
@@ -55,7 +56,7 @@ def on_waiting_list(user, event):
 @register.filter
 def block_expiry_text(block):
     if block.expiry_date:
-        return f"Expires {block.expiry_date.strftime('%d %b %y')}"
+        return f"Expires {block.expiry_date.strftime('%d-%b-%y')}"
     elif block.block_config.duration:
         # Don't show the used/total for course blocks
         return "Not started yet"

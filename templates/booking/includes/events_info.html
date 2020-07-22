@@ -1,0 +1,20 @@
+<span class="d-none d-sm-block">
+    <span class="helptext">{{event.event_type.name}}</span>
+    <span class="helptext"> | Availability:
+        <span id="availability_{{ event.id }}">{% include 'booking/includes/event_availability_badge.html' %}</span>
+    </span>
+    {% if event.course and not course %}
+        | <a href="{% url 'booking:course_events' event.course.slug %}"><span class="badge badge-course">Course: {{ event.course.name|truncatechars:15 }}</span></a>
+    {% endif %}
+    {% if request.user.is_authenticated %}
+        <span id="block_info_{{event.id}}">
+        {% include 'booking/includes/block_info.html' %}
+        </span>
+    {% endif %}
+</span>
+
+<span class="d-block d-sm-none">
+    {% if event.course and not course %}
+        <a href="{% url 'booking:course_events' event.course.slug %}"><span class="badge badge-course">Course: {{ event.course.name|truncatechars:15 }}</span></a>
+    {% endif %}
+</span>

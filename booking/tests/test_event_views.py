@@ -247,7 +247,7 @@ class EventListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         block.save()
         baker.make(Booking, block=block, event=self.aerial_events[0])
         resp = self.client.get(self.adult_url)
-        assert f"(9/10 remaining); expires {(self.aerial_events[0].start + timedelta(14)).strftime('%d %b %y')}" in resp.rendered_content
+        assert f"(9/10 remaining); expires {(self.aerial_events[0].start + timedelta(14)).strftime('%d-%b-%y')}" in resp.rendered_content
         block.delete()
 
         baker.make_recipe(

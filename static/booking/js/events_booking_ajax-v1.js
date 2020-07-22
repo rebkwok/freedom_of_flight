@@ -93,6 +93,7 @@ var processBookingToggleRequest = function()  {
             $('#book_' + event_id).html(result.html);
             $('#block_info_' + event_id).html(result.block_info_html);
             $('#availability_' + event_id).html(result.event_availability_html);
+            $('#event_info_xs_' + event_id).html(result.event_info_xs_html);
               if (result.just_cancelled) {
                 $('#booked_tick_' + event_id).hide();
                 $('#cancelled-text-' + event_id).text("You have cancelled this booking")  ;
@@ -299,6 +300,11 @@ $(document).ready(function()  {
   $('.ajax_events_btn').click(_.debounce(processBookingToggleRequest, MILLS_TO_IGNORE, true));
   $('.ajax_course_events_btn').click(_.debounce(processCourseBookingRequest, MILLS_TO_IGNORE, true));
   $('.ajax_events_waiting_list_btn').click(_.debounce(toggleWaitingList, MILLS_TO_IGNORE, true));
+
+  $( ".event_info_popover" ).on('click', 'a', function( event ) {
+    console.log("Clicked the popover");
+});
+
   /*
     Warning: Placing the true parameter outside of the debounce call:
 
