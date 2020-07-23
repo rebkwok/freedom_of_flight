@@ -50,7 +50,9 @@ def active_block_info(user_active_blocks, block_config):
 
 @register.filter
 def on_waiting_list(user, event):
-    return WaitingListUser.objects.filter(user=user, event=event).exists()
+    if user.is_authenticated:
+        return WaitingListUser.objects.filter(user=user, event=event).exists()
+    return False
 
 
 @register.filter
