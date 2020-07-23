@@ -13,7 +13,8 @@ from studioadmin.views import (
     TimetableSessionCreateView, TimetableSessionUpdateView, clone_timetable_session_view,
     upload_timetable_view, email_event_users_view, email_course_users_view,
     TrackCreateView, TrackListView, TrackUpdateView, EventTypeListView, toggle_track_default,
-    choose_track_for_event_type, EventTypeCreateView, EventTypeUpdateView, event_type_delete_view
+    choose_track_for_event_type, EventTypeCreateView, EventTypeUpdateView, event_type_delete_view,
+    CourseTypeListView, CourseTypeCreateView, CourseTypeUpdateView, course_type_delete_view,
 )
 
 app_name = 'studioadmin'
@@ -53,15 +54,22 @@ urlpatterns = [
     path('waiting-list/<int:event_id>/', event_waiting_list_view, name="event_waiting_list"),
     path('waiting-list/remove/', ajax_remove_from_waiting_list, name="ajax_remove_from_waiting_list"),
 
+    # tracks
     path('site-config/tracks/', TrackListView.as_view(), name="tracks"),
     path('site-config/track/<int:track_id>/toggle-default/', toggle_track_default, name="toggle_track_default"),
     path('site-config/track/<slug>/edit/', TrackUpdateView.as_view(), name="edit_track"),
     path('site-config/track/add/', TrackCreateView.as_view(), name="add_track"),
+    # event_types
     path('site-config/event-types/', EventTypeListView.as_view(), name="event_types"),
     path('site-config/event-type/add/', choose_track_for_event_type, name="choose_track_for_event_type"),
     path('site-config/event-type/<int:track_id>/add/', EventTypeCreateView.as_view(), name="add_event_type"),
     path('site-config/event-type/<int:pk>/update/', EventTypeUpdateView.as_view(), name="edit_event_type"),
     path('site-config/event-type/<int:event_type_id>/delete/', event_type_delete_view, name="delete_event_type"),
+    # course types
+    path('site-config/course-types/', CourseTypeListView.as_view(), name="course_types"),
+    path('site-config/course-type/add/', CourseTypeCreateView.as_view(), name="add_course_type"),
+    path('site-config/course-type/<int:pk>/update/', CourseTypeUpdateView.as_view(), name="edit_course_type"),
+    path('site-config/course-type/<int:course_type_id>/delete/', course_type_delete_view, name="delete_course_type"),
 
     path('help/', help, name="help"),
 

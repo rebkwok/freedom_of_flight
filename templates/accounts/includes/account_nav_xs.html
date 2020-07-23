@@ -1,7 +1,10 @@
+{% load accounttags %}
+
 <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
 Account
 </a>
 <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+ <span class="dropdown-item helptext">Logged in as {{ request.user|full_name }}</span>
   <a class="dropdown-item" href="{% url 'accounts:profile' %}">Profile</a>
   <a class="dropdown-item" href="{% url 'booking:bookings' %}">Bookings</a>
   <a class="dropdown-item" href="{% url 'booking:blocks' %}">Credit Blocks</a>

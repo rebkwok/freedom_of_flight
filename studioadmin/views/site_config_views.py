@@ -147,5 +147,45 @@ def choose_track_for_event_type(request):
 
 class CourseTypeListView(LoginRequiredMixin, StaffUserMixin, ListView):
     template_name = "studioadmin/course_types.html"
-    model = Track
+    model = CourseType
+    context_object_name = "course_types"
+
+
+class CourseTypeCreateView(LoginRequiredMixin, StaffUserMixin, CreateView):
+    template_name = "studioadmin/includes/course-type-add-modal.html"
+    model = CourseType
+    fields = ("event_type", "number_of_events")
+
+    def form_valid(self, form):
+        course_type = form.save()
+        ActivityLog.objects.create(
+            log=f"Course Type id {course_type.id} ({course_type}) created by admin user {full_name(self.request.user)}"
+        )
+        return HttpResponse(render_to_string('studioadmin/includes/modal-success.html'))
+
+
+class CourseTypeUpdateView(LoginRequiredMixin, StaffUserMixin, UpdateView):
+    template_name = "studioadmin/includes/course-type-edit-modal.html"
+    model = CourseType
+    fields = ("event_type", "number_of_events")
+
+    def form_valid(self, form):
+        course_type = form.save()
+        ActivityLog.objects.create(
+            log=f"Course Type id {course_type.id} ({course_type}) updated by admin user {full_name(self.request.user)}"
+        )
+        return HttpResponse(render_to_string('studioadmin/includes/modal-success.html'))
+
+
+@login_required
+@staff_required
+def course_type_delete_view(request, course_type_id):
+    course_type = get_object_or_404(CourseType, pk=course_type_id)
+    if course_type.course_set.exists():
+        return HttpResponseBadRequest("Can't delete course type; it has linked courses")
+    ActivityLog.objects.create(
+        log=f"Event type {course_type} (id {course_type_id}) deleted by admin user {full_name(request.user)}"
+    )
+    course_type.delete()
+    return JsonResponse({"deleted": True, "alert_msg": "Course type deleted"})
 

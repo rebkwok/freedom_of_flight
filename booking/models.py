@@ -120,6 +120,9 @@ class CourseType(models.Model):
     event_type = models.ForeignKey(EventType, on_delete=models.CASCADE)
     number_of_events = models.PositiveIntegerField(default=4)
 
+    class Meta:
+        unique_together = ("event_type", "number_of_events")
+
     def __str__(self):
         return f"{self.event_type} - {self.number_of_events}"
 
