@@ -52,15 +52,21 @@
             {% for track in tracks %}
             <li class="nav-item"><a class="nav-link" href="{% url 'booking:events' track.slug %}">{{ track.name }}</a></li>
             {% endfor %}
-              <li><a class="nav-link" href="#"><em>Gift Vouchers</em></a></li>
-              <li><a class="nav-link" href="#"><em>Store</em></a></li>
-
-            {% if request.user.is_authenticated %}
-              <li class="nav-item">
-                <a class="nav-link" href="{% url 'booking:block_purchase' %}">Credit Blocks</a>
+              <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" href="#" id="navbarShopDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                  Shop
+                </a>
+                <div class="dropdown-menu" aria-labelledby="navbarShopDropdown">
+                    {% if request.user.is_authenticated %}
+                    <a class="dropdown-item" href="{% url 'booking:block_purchase' %}">Credit Blocks</a>
+                    {% endif %}
+                  <a class="dropdown-item" href="#"><em>Gift Vouchers</em></a>
+                  <a class="dropdown-item" href="#"><em>Merchandise</em></a>
+                </div>
               </li>
-              <li class="nav-item"><a class="nav-link" href="{% url 'accounts:profile' %}">My Account</a></li>
-
+            {% if request.user.is_authenticated %}
+                <li class="nav-item d-none d-lg-block"><a class="nav-link" href="{% url 'accounts:profile' %}">Account</a></li>
+                <li class="nav-item dropdown d-block d-lg-none">{% include "accounts/includes/account_nav_xs.html" %}</li>
               {% if request.user.is_staff %}
                 <li><a class="nav-link" href="{% url 'studioadmin:registers' %}">Admin</a></li>
               {% endif %}

@@ -1,9 +1,14 @@
 {%  extends "studioadmin/base.html" %}
 
 {% load crispy_forms_tags %}
-{% block precontent %}
-    {%  include "studioadmin/includes/timetable_subnav.html" %}
+
+{% block subnav-xs %}
+    {%  include "studioadmin/includes/navs/xs/timetable_subnav.html" %}
 {% endblock %}
+{% block precontent %}
+    {%  include "studioadmin/includes/navs/timetable_subnav.html" %}
+{% endblock %}
+
 
 {% block content %}
     <h1>Cloning timetable session: {{ timetable_session.name }} - {{ timetable_session.get_day_name }} {{ timetable_session.time }}</h1>

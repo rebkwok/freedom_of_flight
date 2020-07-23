@@ -1,5 +1,7 @@
 {%  extends "studioadmin/base.html" %}
 
+{% load crispy_forms_tags %}
+
 {% block precontent %}
     {%  include "studioadmin/includes/courses_subnav.html" %}
 {% endblock %}
@@ -26,7 +28,7 @@
     {% endif %}
         <form method="post" action="">
         {% csrf_token %}
-        {{ form.as_p }}
+        {{ form|crispy }}
         <input class="btn btn-primary" type="submit" value="Save">
     </form>
 

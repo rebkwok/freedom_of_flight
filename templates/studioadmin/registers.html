@@ -2,8 +2,11 @@
 
 {% load studioadmintags static %}
 
+{% block subnav-xs %}
+    {%  include "studioadmin/includes/navs/xs/events_subnav.html" %}
+{% endblock %}
 {% block precontent %}
-    {%  include "studioadmin/includes/events_subnav.html" %}
+    {%  include "studioadmin/includes/navs/events_subnav.html" %}
 {% endblock %}
 
 {% block content %}
@@ -25,8 +28,7 @@
                         <thead>
                             <tr>
                                 <th scope="col"><br/><span class="helptext">Click for register</span></th>
-                                <th scope="col">Start</th>
-                                <th scope="col">Duration</th>
+                                <th scope="col">Time</th>
                                 <th scope="col" class="text-center">Spaces</th>
                                 <th scope="col" class="text-center">Bookings</th>
                                 <th scope="col" class="text-center">Waiting List</th>
@@ -38,8 +40,7 @@
                             {% for event in events %}
                                 <tr>
                                     <td><a href="{% url 'studioadmin:register' event.id %}">{{ event.name }}</a></td>
-                                    <td>{{ event.start|date:"D d M Y, H:i" }}</td>
-                                    <td>{{ event.duration }} mins</td>
+                                    <td>{{ event.start|date:"H:i" }}</td>
                                     <td class="text-center">{{ event.max_participants }}</td>
                                     <td class="text-center">{{ event.bookings.count }}</td>
                                     <td class="text-center">

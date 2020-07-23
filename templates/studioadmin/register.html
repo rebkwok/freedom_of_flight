@@ -6,8 +6,11 @@
 {% include 'common/includes/ajax_head.html' %}
 {% endblock %}
 
+{% block subnav-xs %}
+    {%  include "studioadmin/includes/navs/xs/events_subnav.html" %}
+{% endblock %}
 {% block precontent %}
-    {%  include "studioadmin/includes/events_subnav.html" %}
+    {%  include "studioadmin/includes/navs/events_subnav.html" %}
 {% endblock %}
 
 

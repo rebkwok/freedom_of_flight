@@ -3,13 +3,12 @@
 {% load static %}
 
 {% block precontent %}
-    {%  include "studioadmin/includes/help_subnav.html" %}
+    {%  include "studioadmin/includes/navs/help_subnav.html" %}
 {% endblock %}
 
 {% block content %}
-    <div class="container-fluid pt-3">
     <div class="anchor" id="definitions"> anchor</div>
-    <h1 class="mt-4">Definitions</h1>
+    <h1 class="mt-1">Definitions</h1>
 
     <h2>Tracks</h2>
     <p>
@@ -120,5 +119,4 @@
         not attended.  Note that students who cancel after the cancellation period are marked as booked but
         not attended and will be visible (greyed out) on the registers.
     </p>
-    </div>
 {% endblock content %}

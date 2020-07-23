@@ -1,0 +1,13 @@
+<a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+Account
+</a>
+<div class="dropdown-menu" aria-labelledby="navbarDropdown">
+  <a class="dropdown-item" href="{% url 'accounts:profile' %}">Profile</a>
+  <a class="dropdown-item" href="{% url 'booking:bookings' %}">Bookings</a>
+  <a class="dropdown-item" href="{% url 'booking:blocks' %}">Credit Blocks</a>
+  <a class="dropdown-item" href="#"><em>Booking History</em></a>
+  <a class="dropdown-item" href="#"><em>Payment History</em></a>
+  <a class="dropdown-item" href="{% url 'account_change_password' %}">Change password</a>
+  <a class="dropdown-item" href="{% url 'account_logout' %}">Log out</a>
+</div>
+

@@ -1,0 +1,31 @@
+{%  extends "studioadmin/base.html" %}
+
+{% load crispy_forms_tags %}
+
+{% block subnav-xs %}
+    {%  include "studioadmin/includes/navs/xs/site_config_subnav.html" %}
+{% endblock %}
+{% block precontent %}
+    {%  include "studioadmin/includes/navs/site_config_subnav.html" %}
+{% endblock %}
+
+{% block content %}
+    {% if creating %}
+    <h1>Creating new event type</h1>
+    <h2>Track: {{ track }}</h2>
+    {% else %}
+        <h1>Updating {{ form.instance.label }}: {{ form.instance.name }}</h1>
+        <h2>Track: {{ form.instance.track }}</h2>
+    {% endif %}
+
+    {% if form.errors %}
+        <p class="errorlist">Please correct the errors below:</p>
+    {% endif %}
+
+        <form method="post" action="">
+        {% csrf_token %}
+        {% crispy form %}
+        </form>
+
+{% endblock %}
+

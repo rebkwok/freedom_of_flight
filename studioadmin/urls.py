@@ -12,7 +12,8 @@ from studioadmin.views import (
     TimetableSessionListView, ajax_timetable_session_delete, timetable_session_create_choice_view,
     TimetableSessionCreateView, TimetableSessionUpdateView, clone_timetable_session_view,
     upload_timetable_view, email_event_users_view, email_course_users_view,
-    TrackCreateView, TrackListView, TrackUpdateView, EventTypeListView, toggle_track_default
+    TrackCreateView, TrackListView, TrackUpdateView, EventTypeListView, toggle_track_default,
+    choose_track_for_event_type, EventTypeCreateView, EventTypeUpdateView, event_type_delete_view
 )
 
 app_name = 'studioadmin'
@@ -53,9 +54,14 @@ urlpatterns = [
     path('waiting-list/remove/', ajax_remove_from_waiting_list, name="ajax_remove_from_waiting_list"),
 
     path('site-config/tracks/', TrackListView.as_view(), name="tracks"),
-    path('site-config/track/<track_id>/toggle-default/', toggle_track_default, name="toggle_track_default"),
+    path('site-config/track/<int:track_id>/toggle-default/', toggle_track_default, name="toggle_track_default"),
     path('site-config/track/<slug>/edit/', TrackUpdateView.as_view(), name="edit_track"),
     path('site-config/track/add/', TrackCreateView.as_view(), name="add_track"),
+    path('site-config/event-types/', EventTypeListView.as_view(), name="event_types"),
+    path('site-config/event-type/add/', choose_track_for_event_type, name="choose_track_for_event_type"),
+    path('site-config/event-type/<int:track_id>/add/', EventTypeCreateView.as_view(), name="add_event_type"),
+    path('site-config/event-type/<int:pk>/update/', EventTypeUpdateView.as_view(), name="edit_event_type"),
+    path('site-config/event-type/<int:event_type_id>/delete/', event_type_delete_view, name="delete_event_type"),
 
     path('help/', help, name="help"),
 

@@ -12,6 +12,7 @@ from django.core.exceptions import ValidationError
 from django.urls import reverse
 from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
+from django.template.defaultfilters import pluralize
 from django.utils import timezone
 from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
@@ -27,6 +28,14 @@ from payments.models import Invoice
 from .utils import has_available_block as has_available_block_util
 
 logger = logging.getLogger(__name__)
+
+COMMON_LABEL_PLURALS = {
+    "class": "es",
+    "workshop": "s",
+    "event": "s",
+    "party": "y,ies",
+    "private": "s",
+}
 
 
 class Track(models.Model):
@@ -67,6 +76,12 @@ class EventType(models.Model):
         default="class",
         help_text='How an instance of this event type will be referred to, e.g. "class", "workshop"'
     )
+    plural_suffix = models.CharField(
+        max_length=10, default="es",
+        help_text="A suffix to pluralize the label. E.g. 'es' for class -> classes.  If the label does not "
+                  "pluralise with a simple suffix, enter single and plural suffixes separated by a comma, e.g. "
+                  "'y,ies' for party -> parties"
+    )
     description = models.TextField(help_text="Description", null=True, blank=True)
     track = models.ForeignKey(Track, on_delete=models.SET_NULL, null=True, related_name="event_types")
     contact_email = models.EmailField(default=settings.DEFAULT_STUDIO_EMAIL)
@@ -81,9 +96,19 @@ class EventType(models.Model):
     def __str__(self):
         return f"{self.name} - {self.track}"
 
+    @property
+    def pluralized_label(self):
+        suffix = self.plural_suffix.split(',')
+        if len(suffix) == 2:
+            plural_label = self.label.replace(suffix[0], suffix[1])
+        else:
+            plural_label = self.label + suffix[0]
+        return plural_label
+
     def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
-        if self.label:
-            self.label = self.label.lower()
+        self.label = self.label.lower()
+        self.plural_suffix = self.plural_suffix.lower().replace(" ", "")
+        self.plural_suffix = COMMON_LABEL_PLURALS.get(self.label.split()[-1], self.plural_suffix)
         super().save()
 
 

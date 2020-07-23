@@ -1,0 +1,88 @@
+{%  extends "studioadmin/base.html" %}
+
+{% load studioadmintags static %}
+
+{% block extra_head %}
+{% include 'common/includes/ajax_head.html' %}
+{% endblock %}
+
+{% block subnav-xs %}
+    {%  include "studioadmin/includes/navs/xs/site_config_subnav.html" %}
+{% endblock %}
+{% block precontent %}
+    {%  include "studioadmin/includes/navs/site_config_subnav.html" %}
+{% endblock %}
+
+{% block content %}
+    <h2>Event Types</h2>
+    <p>
+        Create an event type for each distinct set of events.  Typically events with the same track and pricing
+        stucture would be grouped under the same event type.
+    </p>
+    <p>
+        Note that if you change an event type, the changes will apply to any current and past events already
+        assigned to it.
+    </p>
+
+{% if event_types %}
+    <div class="container-fluid">
+        <table class="table table-sm">
+            <thead>
+                <tr>
+                    <th>Name<br/><span class="helptext">Click to edit</span></th>
+                    <th>Track</th>
+                    <th class="text-center">Cancellation Period</th>
+                    <th class="text-center">Delete<br/><span class="helptext">(if no linked events)</span></th>
+                </tr>
+            </thead>
+            <tbody>
+
+            <!-- Modals -->
+            <div class="modal fade" id="AddEventTypeModal" tabindex="-1" role="dialog" aria-labelledby="AddTrackModalLabel"></div>
+            <!-- /.modal -->
+
+            {% for event_type in event_types %}
+                <tr id="row-event-type-{{ event_type.id }}">
+                    <td><a href="{% url 'studioadmin:edit_event_type' event_type.id %}">{{ event_type.name }}</a></td>
+                    <td>{{ event_type.track }}</td>
+                    <td class="text-center">{{ event_type.cancellation_period }} hrs</td>
+                    <td class="text-center">{% if not event_type.event_set.exists %}
+                        <div
+                            class="event-type-delete-btn"
+                            data-event_type_id="{{ event_type.id }}"
+                        >
+                            <span class="btn btn-sm btn-danger pt-0 pb-0"><i class="far fa-trash-alt"></i></span>
+                        </div>
+                    {% endif %}</td>
+                </tr>
+            {% endfor %}
+            <tr>
+                <td colspan="5">
+                    <a
+                        id="add-event-type-btn"
+                        class="add-event-type"
+                        href="#"
+                        data-form="{% url 'studioadmin:choose_track_for_event_type' %}"
+                        title="add event type"
+                    ><div class="btn btn-success">Add new event type</div></a>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+</div>
+{% else %}
+    <p>No tracks created yet</p>
+{% endif %}
+
+{% endblock content %}
+
+
+{% block extra_js %}
+{# Load from local if in dev mode (debug on) and not specifically set #}
+{% if use_cdn %}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.form/4.3.0/jquery.form.min.js" integrity="sha512-YUkaLm+KJ5lQXDBdqBqk7EVhJAdxRnVdT2vtCzwPHSweCzyMgYV/tgGF4/dCyqtCC2eCphz0lRQgatGVdfR0ww==" crossorigin="anonymous"></script>
+{% else %}
+    <script type='text/javascript' src="{% static 'js/jquery.form-4.3.0.min.js' %}"></script>
+{% endif %}
+<script type='text/javascript' src="{% static 'studioadmin/js/event_type_ajax-v1.js' %}"></script>
+{% endblock %}

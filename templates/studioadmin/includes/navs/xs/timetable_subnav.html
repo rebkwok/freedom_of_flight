@@ -1,0 +1,11 @@
+{#smallest size - dropdown within main nav#}
+<li class="nav-item dropdown d-block d-sm-none">
+    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+      Timetable Options
+    </a>
+    <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+      <a class="dropdown-item" href="{% url 'studioadmin:choose_event_type_timetable_session_to_create' %}">Add session</a>
+      <a class="dropdown-item" href="{% url 'studioadmin:timetable' %}">View/Edit</a>
+      <a class="dropdown-item" href="{% url 'studioadmin:upload_timetable' %}">Upload</a>
+    </div>
+</li>

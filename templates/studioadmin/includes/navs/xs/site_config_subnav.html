@@ -1,0 +1,12 @@
+{#smallest size - dropdown within main nav#}
+<li class="nav-item dropdown d-block d-sm-none">
+    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+      Site Configuration Options
+    </a>
+    <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+      <a class="dropdown-item" href="{% url 'studioadmin:tracks' %}">Tracks</a>
+      <a class="dropdown-item" href="{% url 'studioadmin:event_types' %}">Event Types</a>
+      <a class="dropdown-item" href="#">Course Types</a>
+      <a class="dropdown-item" href="#">Credit Blocks</a>
+    </div>
+  </li>

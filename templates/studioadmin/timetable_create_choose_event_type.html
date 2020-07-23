@@ -1,7 +1,10 @@
 {%  extends "studioadmin/base.html" %}
 
+{% block subnav-xs %}
+    {%  include "studioadmin/includes/navs/xs/timetable_subnav.html" %}
+{% endblock %}
 {% block precontent %}
-    {%  include "studioadmin/includes/timetable_subnav.html" %}
+    {%  include "studioadmin/includes/navs/timetable_subnav.html" %}
 {% endblock %}
 
 {% block content %}

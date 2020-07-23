@@ -2,8 +2,11 @@
 
 {% load static %}
 
+{% block subnav-xs %}
+    {%  include "studioadmin/includes/navs/xs/courses_subnav.html" %}
+{% endblock %}
 {% block precontent %}
-    {%  include "studioadmin/includes/courses_subnav.html" %}
+    {%  include "studioadmin/includes/navs/courses_subnav.html" %}
 {% endblock %}
 
 {% block content %}

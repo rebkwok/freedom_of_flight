@@ -1,8 +1,11 @@
 {%  extends "studioadmin/base.html" %}
 
 {% load crispy_forms_tags %}
+{% block subnav-xs %}
+    {%  include "studioadmin/includes/navs/xs/events_subnav.html" %}
+{% endblock %}
 {% block precontent %}
-    {%  include "studioadmin/includes/events_subnav.html" %}
+    {%  include "studioadmin/includes/navs/events_subnav.html" %}
 {% endblock %}
 
 {% block content %}

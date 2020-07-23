@@ -1,0 +1,33 @@
+{% load crispy_forms_tags %}
+<div class="modal-dialog modal-md">
+    <div class="modal-content">
+        <form id="add-track-form" method='post' class="form" role="form" action='{% url "studioadmin:choose_track_for_event_type" %}'>
+
+            <div class="modal-header">
+                <h4 class="modal-title" id="AddTrackModalLabel">New Event Type</h4>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            </div>
+            <div class="container-fluid">
+                <div class="modal-body">
+                {% csrf_token %}
+                {{ form|crispy }}
+                </div>
+            </div>
+            <div class="modal-footer">
+                <input type="button" class="btn btn-sm btn-secondary" data-dismiss="modal" value="Cancel" />
+                <input type="submit" class="btn btn-sm btn-success" value="Select" />
+            </div>
+        </form>
+
+
+        <script>
+            var form_options = {
+                target: '#AddEventTypeModal',
+                success: function() { }
+            };
+
+            $('#add-event_type-form').ajaxForm(form_options);
+        </script>
+        </div>
+    </div><!-- /.modal-content -->
+</div><!-- /.modal-dialog -->

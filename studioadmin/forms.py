@@ -11,7 +11,7 @@ from crispy_forms.bootstrap import InlineCheckboxes, AppendedText
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Button, Layout, Submit, Row, Column, Field, Fieldset, Hidden, HTML
 
-from booking.models import Event, Course
+from booking.models import Event, Course, EventType, COMMON_LABEL_PLURALS
 from common.utils import full_name
 from timetable.models import TimetableSession
 
@@ -66,7 +66,7 @@ class EventCreateUpdateForm(forms.ModelForm):
 
         self.fields["start"].widget.format = '%d-%b-%Y %H:%M'
         self.fields["start"].input_formats = ['%d-%b-%Y %H:%M']
-
+        self.fields["description"].initial = self.event_type.description
         self.helper = FormHelper()
         self.helper.layout = Layout(
             "event_type" if self.instance.id else Hidden("event_type", self.event_type.id),
@@ -100,6 +100,7 @@ class TimetableSessionCreateUpdateForm(forms.ModelForm):
 
         self.fields["time"].widget.format = '%H:%M'
         self.fields["time"].input_formats = ['%H:%M']
+        self.fields["description"].initial = self.event_type.description
 
         self.helper = FormHelper()
         self.helper.layout = Layout(
@@ -166,15 +167,18 @@ class CourseUpdateForm(forms.ModelForm):
         self.fields["events"] = forms.MultipleChoiceField(
             required=False,
             choices=get_course_event_choices(self.course_type, self.instance.id),
-            widget=forms.SelectMultiple(attrs={"class": "form-control"})
+            widget=forms.SelectMultiple(attrs={"class": "form-control"}),
+            help_text="Select one or more (ctrl/cmd+click to select multiple)",
+            label=f"Add {self.course_type.event_type.pluralized_label} to this course"
         )
+
         if self.instance:
             self.fields["events"].initial = [event.id for event in self.instance.events.all()]
 
     def clean_events(self):
         events = self.cleaned_data["events"]
         if len(events) > self.course_type.number_of_events:
-            self.add_error("events", f"Too many events selected; select a maximum of {self.course_type.number_of_events}")
+            self.add_error("events", f"Too many {self.course_type.event_type.pluralized_label} selected; select a maximum of {self.course_type.number_of_events}")
         else:
             return events
 
@@ -463,3 +467,48 @@ class EmailUsersForm(forms.Form):
     def clean(self):
         if not self.cleaned_data.get("students"):
             self.add_error("students", "Select at least one student to email")
+
+
+class EventTypeForm(forms.ModelForm):
+    class Meta:
+        model = EventType
+        fields = (
+            "track", "name", "label", "plural_suffix", "description", "cancellation_period", "email_studio_when_booked",
+            "allow_booking_cancellation", "is_online"
+        )
+
+    def __init__(self, *args, **kwargs):
+        track = kwargs.pop("track", None)
+        super().__init__(*args, **kwargs)
+        self.fields["description"].help_text = "Optional: this will be used to populate the description field " \
+                                               "on events and timetable sessions (but it can be added/edited " \
+                                               "for individual events/sessions too)"
+        self.fields["plural_suffix"] = forms.ChoiceField(
+            choices=sorted({(value, value) for value in COMMON_LABEL_PLURALS.values()}), required=False,
+            label="Common options:"
+        )
+        self.fields["other_plural_suffix"] = forms.CharField(required=False, label="Or enter a custom suffix:")
+
+        self.helper = FormHelper()
+        self.helper.layout = Layout(
+            Hidden("track", track) if track is not None else "track",
+            "name",
+            "label",
+            HTML(
+                """
+                How do we pluralise the label?<br/>
+                <span class='helptext text-secondary'>Enter a suffix to pluralize the label. E.g. 'es' (class -> classes), or for plurals 
+                that aren't simple suffixes, a single and plural suffix separated by a comma, e.g. 'y,ies' (party -> parties)</span>
+                """
+            ),
+            Row(
+                Column("plural_suffix", css_class="col-6"),
+                Column("other_plural_suffix", css_class="col-6"),
+            ),
+            "description",
+            AppendedText('cancellation_period', 'hrs'),
+            "email_studio_when_booked",
+            "allow_booking_cancellation",
+            "is_online",
+            Submit('submit', f'Save')
+        )

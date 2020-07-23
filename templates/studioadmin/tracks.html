@@ -2,8 +2,11 @@
 
 {% load studioadmintags static %}
 
+{% block subnav-xs %}
+    {%  include "studioadmin/includes/navs/xs/site_config_subnav.html" %}
+{% endblock %}
 {% block precontent %}
-    {%  include "studioadmin/includes/site_config_subnav.html" %}
+    {%  include "studioadmin/includes/navs/site_config_subnav.html" %}
 {% endblock %}
 
 {% block content %}

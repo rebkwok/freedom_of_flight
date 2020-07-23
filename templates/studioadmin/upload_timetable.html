@@ -1,8 +1,11 @@
 {%  extends "studioadmin/base.html" %}
 
 {% load crispy_forms_tags studioadmintags static %}
+{% block subnav-xs %}
+    {%  include "studioadmin/includes/navs/xs/timetable_subnav.html" %}
+{% endblock %}
 {% block precontent %}
-    {%  include "studioadmin/includes/timetable_subnav.html" %}
+    {%  include "studioadmin/includes/navs/timetable_subnav.html" %}
 {% endblock %}
 
 {% block content %}

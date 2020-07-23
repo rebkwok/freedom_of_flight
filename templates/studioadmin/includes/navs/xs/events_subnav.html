@@ -1,0 +1,11 @@
+{#smallest size - dropdown within main nav#}
+<li class="nav-item dropdown d-block d-sm-none">
+    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+      Events Options
+    </a>
+    <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+      <a class="dropdown-item" href="{% url 'studioadmin:choose_event_type_to_create' %}">Add event</a>
+      <a class="dropdown-item" href="{% url 'studioadmin:events' %}">View/Edit</a>
+      <a class="dropdown-item" href="{% url 'studioadmin:registers' %}">Registers</a>
+    </div>
+  </li>
