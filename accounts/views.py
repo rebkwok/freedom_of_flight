@@ -102,7 +102,6 @@ class ChildUserCreateView(LoginRequiredMixin, CreateView):
         return reverse('accounts:disclaimer_form', args=(child_user_id,))
 
 
-
 class DisclaimerContactUpdateView(LoginRequiredMixin, UpdateView):
 
     model = OnlineDisclaimer

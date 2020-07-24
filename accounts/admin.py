@@ -1,10 +1,12 @@
 from decimal import Decimal
+import json
 from math import floor
 
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import User
 from django import forms
+from django.utils.html import mark_safe, format_html
 
 from accounts.models import OnlineDisclaimer, DisclaimerContent, ArchivedDisclaimer, \
     CookiePolicy, DataPrivacyPolicy, SignedDataPrivacy, NonRegisteredDisclaimer, UserProfile, ChildUserProfile
@@ -16,20 +18,55 @@ class OnlineDisclaimerAdmin(admin.ModelAdmin):
         'user',
         'emergency_contact_name',
         'emergency_contact_relationship', 'emergency_contact_phone',
-        'health_questionnaire_responses',
+        'health_questionnaire',
         'date', 'date_updated', 'terms_accepted', 'version'
     )
+    fields = readonly_fields
 
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def health_questionnaire(self, obj):
+        responses = []
+        for question, response in obj.health_questionnaire_responses.items():
+            if isinstance(response, list):
+                response = ", ".join(response)
+            responses.append(f"<strong>{question}</strong><br/>{response}")
+        return format_html(mark_safe("<br/>".join(responses)))
 
 class NonRegisteredDisclaimerAdmin(admin.ModelAdmin):
 
     readonly_fields = (
         'first_name', 'last_name', 'email', 'date', 'date_of_birth', 'address', 'postcode', 'phone',
         'emergency_contact_name',
-        'emergency_contact_relationship', 'emergency_contact_phone', 'health_questionnaire_responses',
+        'emergency_contact_relationship', 'emergency_contact_phone', 'health_questionnaire',
         'terms_accepted',
         'version'
     )
+    fields = readonly_fields
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def health_questionnaire(self, obj):
+        responses = []
+        for question, response in obj.health_questionnaire_responses.items():
+            if isinstance(response, list):
+                response = ", ".join(response)
+            responses.append(f"<strong>{question}</strong><br/>{response}")
+        return format_html(mark_safe("<br/>".join(responses)))
 
 
 class PolicyAdminFormMixin:
@@ -104,10 +141,11 @@ class DisclaimerContentAdminForm(forms.ModelForm):
 
         # check content has changed
         current_content = DisclaimerContent.current()
-        if current_content and current_content.disclaimer_terms == new_disclaimer_terms and current_content.form == new_health_questionnaire:
-            self.add_error(
-                None, 'No changes made from previous version; new version must update disclaimer content'
-            )
+        if current_content and current_content.disclaimer_terms == new_disclaimer_terms:
+            if current_content.form == json.loads(new_health_questionnaire):
+                self.add_error(
+                    None, 'No changes made from previous version; new version must update disclaimer content'
+                )
 
     class Meta:
         model = DisclaimerContent

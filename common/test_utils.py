@@ -9,7 +9,7 @@ from model_bakery import baker
 from accounts.models import (
     DisclaimerContent, has_active_data_privacy_agreement, DataPrivacyPolicy,
     SignedDataPrivacy, OnlineDisclaimer, has_active_disclaimer, NonRegisteredDisclaimer,
-    UserProfile, ChildUserProfile
+    UserProfile, ChildUserProfile, ArchivedDisclaimer
 )
 from booking.models import Event, EventType, Course, CourseType, Track
 
@@ -59,6 +59,27 @@ def make_nonregistered_disclaimer(**kwargs):
     }
     data = {**defaults, **kwargs}
     return NonRegisteredDisclaimer.objects.create(**data)
+
+
+def make_archived_disclaimer(**kwargs):
+    if "version" not in kwargs:
+        kwargs["version"] = DisclaimerContent.current_version()
+    defaults = {
+        "name": "Test User",
+        "address": "test",
+        "postcode": "test",
+        "date_of_birth": datetime(1990, 6, 7, tzinfo=timezone.utc),
+        "date_archived": timezone.now().date(),
+        "event_date": None,
+        "phone": "123455",
+        "health_questionnaire_responses": [],
+        "terms_accepted": True,
+        "emergency_contact_name": "test",
+        "emergency_contact_relationship": "test",
+        "emergency_contact_phone": "123",
+    }
+    data = {**defaults, **kwargs}
+    return ArchivedDisclaimer.objects.create(**data)
 
 
 class TestUsersMixin:
