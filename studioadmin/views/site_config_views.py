@@ -18,7 +18,7 @@ from braces.views import LoginRequiredMixin
 
 from activitylog.models import ActivityLog
 from booking.email_helpers import send_bcc_emails
-from booking.models import Booking, Event, Track, EventType, CourseType
+from booking.models import Booking, Event, Track, EventType, CourseType, DropInBlockConfig, CourseBlockConfig
 from common.utils import full_name
 
 from ..forms import EventTypeForm
@@ -189,3 +189,38 @@ def course_type_delete_view(request, course_type_id):
     course_type.delete()
     return JsonResponse({"deleted": True, "alert_msg": "Course type deleted"})
 
+
+@login_required
+@staff_required
+def block_config_list_view(request):
+    dropin_block_configs = DropInBlockConfig.objects.all().order_by("active")
+    course_block_configs = CourseBlockConfig.objects.all().order_by("active")
+    context = {
+        "dropin_block_configs": dropin_block_configs,
+        "course_block_configs": course_block_configs,
+    }
+    return render(request, "studioadmin/credit_blocks.html", context)
+
+
+def toggle_active_block_config(request):
+    pass
+
+
+def choose_event_or_course_type_for_block_config(request):
+    pass
+
+
+def delete_dropin_block_config(request, block_config_id):
+    block_config = get_object_or_404(DropInBlockConfig, id=block_config_id)
+
+
+def delete_course_block_config(request, block_config_id):
+    block_config = get_object_or_404(CourseBlockConfig, id=block_config_id)
+
+
+class BlockConfigCreateView(LoginRequiredMixin, StaffUserMixin, CreateView):
+    pass
+
+
+class BlockConfigUpdateView(LoginRequiredMixin, StaffUserMixin, UpdateView):
+    pass
