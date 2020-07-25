@@ -1,0 +1,36 @@
+{%  extends "studioadmin/base.html" %}
+
+{% load studioadmintags static %}
+
+{% block subnav-xs %}
+    {%  include "studioadmin/includes/navs/xs/policies_subnav.html" %}
+{% endblock %}
+{% block precontent %}
+    {%  include "studioadmin/includes/navs/policies_subnav.html" %}
+{% endblock %}
+
+{% block content %}
+    <h1>Disclaimer Versions</h1>
+    <p>Click to view content.  Note: only draft versions can be edited</p>
+    <div class="mb-3"><a class="btn btn-sm btn-success" href="{% url 'studioadmin:add_disclaimer_content' %}">Add a new version</a></div>
+
+{% if disclaimer_contents %}
+    <ul>
+    {% for disclaimer_content in disclaimer_contents %}
+        <li>{% if disclaimer_content.version == current_version %}
+            <span class="badge badge-pill badge-success">current</span>
+            {% endif %}
+            <a href="{% url 'studioadmin:disclaimer_content' disclaimer_content.version %}">Version {{ disclaimer_content.version }}</a> - issued {{ disclaimer_content.issue_date|date:"d-M-Y H:i" }}
+
+            {% if disclaimer_content.is_draft %}
+                <a class="badge badge-primary p-1 pt-0 pb-0" href="{% url 'studioadmin:edit_disclaimer_content' disclaimer_content.version %}">Edit draft</a>
+            {% endif %}
+        </li>
+    {% endfor %}
+    </ul>
+{% else %}
+    <p>No polcies created yet</p>
+{% endif %}
+
+
+{% endblock content %}

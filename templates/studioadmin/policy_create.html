@@ -1,0 +1,35 @@
+{% extends "studioadmin/base.html" %}
+{% load studioadmintags static crispy_forms_tags %}
+
+{% block subnav-xs %}
+    {%  include "studioadmin/includes/navs/xs/policies_subnav.html" %}
+{% endblock %}
+{% block precontent %}
+    {%  include "studioadmin/includes/navs/policies_subnav.html" %}
+{% endblock %}
+
+{% block content %}
+
+        <h2>New {{ policy_type }} Version</h2>
+
+        <p>
+            Use this form to update the terms of online policies.
+        </p>
+
+    {%  if policy_type == "Data Privacy Policy" %}
+        <p>
+            <span class="form-error">
+                Note that once a new version is created, all signed policies will be expired and students will be required to sign/re-sign the latest version.
+            </span>
+        </p>
+    {% endif %}
+
+        <form method="post" action="" class="dirty-check">
+            {% csrf_token %}
+            {{ form|crispy }}
+            <input type="submit" class="btn btn-sm btn-success" value="Save"/>
+            <a class="btn btn-sm btn-dark" href="{{request.META.HTTP_REFERER}}">Back</a>
+        </form>
+    </div>
+
+{% endblock %}

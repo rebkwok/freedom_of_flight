@@ -90,6 +90,7 @@ class CookiePolicy(models.Model):
     issue_date = models.DateTimeField(default=timezone.now)
 
     class Meta:
+        ordering = ("-version",)
         verbose_name_plural = "Cookie Policies"
 
     @classmethod
@@ -130,6 +131,7 @@ class DataPrivacyPolicy(models.Model):
     issue_date = models.DateTimeField(default=timezone.now)
 
     class Meta:
+        ordering = ("-version",)
         verbose_name_plural = "Data Privacy Policies"
 
     @classmethod
@@ -210,6 +212,9 @@ class DisclaimerContent(models.Model):
 
     form = FormField(verbose_name="health questionnaire", null=True, blank=True)
     is_draft = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ("-version",)
 
     @classmethod
     def current_version(cls):

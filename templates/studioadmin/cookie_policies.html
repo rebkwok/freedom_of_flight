@@ -1,0 +1,27 @@
+{%  extends "studioadmin/base.html" %}
+
+{% load studioadmintags static %}
+
+{% block subnav-xs %}
+    {%  include "studioadmin/includes/navs/xs/policies_subnav.html" %}
+{% endblock %}
+{% block precontent %}
+    {%  include "studioadmin/includes/navs/policies_subnav.html" %}
+{% endblock %}
+
+{% block content %}
+    <h1>Cookie Policies</h1>
+    <p>Click to view content.</p>
+    <div class="mb-3"><a class="btn btn-sm btn-success" href="{% url 'studioadmin:add_cookie_policy' %}">Add a new version</a></div>
+{% if policies %}
+    <ul>
+    {% for policy in policies %}
+        <li><a href="{% url 'studioadmin:cookie_policy' policy.version %}">{{ policy }}</a> - issued {{ policy.issue_date|date:"d-M-Y H:i" }}</li>
+    {% endfor %}
+    </ul>
+{% else %}
+    <p>No polcies created yet</p>
+{% endif %}
+
+
+{% endblock content %}

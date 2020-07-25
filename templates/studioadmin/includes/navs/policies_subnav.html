@@ -1,0 +1,19 @@
+{#larger sizes sub navbar#}
+<div class="subnav d-none d-md-block">
+<nav class="navbar fixed-top fixed-top-subnav navbar-expand navbar-light" id="navbarPoliciesSubNavContainer">
+  <a class="navbar-brand" href="#">ADMIN: Policies</a>
+  <div class="collapse navbar-collapse" id="navbarPoliciesSubNav">
+    <ul class="navbar-nav">
+        <li class="nav-item">
+          <a class="nav-link" href="{% url 'studioadmin:disclaimer_contents' %}">Disclaimers</a>
+      </li>
+      <li class="nav-item">
+          <a class="nav-link" href="{% url 'studioadmin:cookie_policies' %}">Cookie Policies</a>
+      </li>
+      <li class="nav-item">
+          <a class="nav-link" href="{% url 'studioadmin:data_privacy_policies' %}">Data Privacy Policies</a>
+      </li>
+    </ul>
+  </div>
+</nav>
+</div>

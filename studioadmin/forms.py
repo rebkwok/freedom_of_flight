@@ -1,17 +1,24 @@
 # -*- coding: utf-8 -*-
+from decimal import Decimal
+import json
+from math import floor
+
 from django.conf import settings
 from datetime import datetime, date
 from django import forms
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.db.models import Q
+from django.shortcuts import reverse
 from django.utils import timezone
 
-from crispy_forms.bootstrap import InlineCheckboxes, AppendedText
+from crispy_forms.bootstrap import InlineCheckboxes, AppendedText, PrependedText
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Button, Layout, Submit, Row, Column, Field, Fieldset, Hidden, HTML
 
-from booking.models import Event, Course, EventType, COMMON_LABEL_PLURALS
+from accounts.admin import CookiePolicyAdminForm, DataPrivacyPolicyAdminForm, DisclaimerContentAdminForm
+from accounts.models import DisclaimerContent
+from booking.models import Event, Course, EventType, COMMON_LABEL_PLURALS, DropInBlockConfig, CourseBlockConfig
 from common.utils import full_name
 from timetable.models import TimetableSession
 
@@ -512,3 +519,91 @@ class EventTypeForm(forms.ModelForm):
             "is_online",
             Submit('submit', f'Save')
         )
+
+
+class DropInBlockConfigForm(forms.ModelForm):
+    class Meta:
+        model = DropInBlockConfig
+        fields = ("event_type", "identifier", "description", "size", "duration", "cost", "active")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["event_type"].help_text = "Each credit block is associated with a single event type and will be valid " \
+                                              "for the number of events you select, for events of that event type only."
+        self.fields["description"].help_text = "This will be displayed to users when purchasing credit blocks."
+        self.fields["identifier"].help_text = "A short name for the credit block"
+        self.fields["active"].help_text = "Active credit blocks are available for purchase by users and will be displayed " \
+                                          "on the credit block purchase page."
+        self.helper = FormHelper()
+        back_url = reverse('studioadmin:block_configs')
+        self.helper.layout = Layout(
+            "event_type",
+            "identifier",
+            "description",
+            "size",
+            "duration",
+            PrependedText('cost', '£'),
+            "active",
+            Submit('submit', f'Save', css_class="btn btn-success"),
+            HTML(f'<a class="btn btn-outline-dark" href="{back_url}">Back</a>')
+        )
+
+
+class CourseBlockConfigForm(forms.ModelForm):
+    class Meta:
+        model = CourseBlockConfig
+        fields = ("course_type", "identifier", "description", "duration", "cost", "active")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["course_type"].help_text = "Each course credit block is associated with a single course type which " \
+                                               "defines the event type and number of events and in the course."
+        self.fields["description"].help_text = "This will be displayed to users when purchasing credit blocks."
+        self.fields["identifier"].help_text = "A short name for the credit block"
+        self.fields["active"].help_text = "Active credit blocks are available for purchase by users and will be displayed " \
+                                          "on the credit block purchase page."
+        self.helper = FormHelper()
+        back_url = reverse('studioadmin:block_configs')
+        self.helper.layout = Layout(
+            "course_type",
+            "identifier",
+            "description",
+            "duration",
+            PrependedText('cost', '£'),
+            "active",
+            Submit('submit', f'Save', css_class="btn btn-success"),
+            HTML(f'<a class="btn btn-outline-dark" href="{back_url}">Back</a>')
+        )
+
+
+class StudioadminDisclaimerContentForm(DisclaimerContentAdminForm):
+
+    def __init__(self, *args, **kwargs):
+        same_as_published = kwargs.pop("same_as_published", False)
+        super().__init__(*args, **kwargs)
+
+        self.helper = FormHelper()
+        back_url = reverse('studioadmin:disclaimer_contents')
+        self.helper.layout = Layout(
+            "disclaimer_terms",
+            HTML(
+                """
+                <h4>Health Questionnaire</h4>
+                <div class="helptext">Hover over each question to edit or remove.  To change the question type, you'll need to add a 
+                new one.  Select from various question types in the right hand menu.</div>
+                <div class="helptext">If you choose a question type with options (Select, Checkbox group, Radio Group), the two fields for 
+                each option represent the value stored in the database and the label shown to users. Enter the same value
+                in each field.</div>
+                """
+            ),
+            "form",
+            "version",
+            Submit('save_draft', 'Save as draft', css_class="btn btn-primary"),
+            Submit('publish', 'Publish', css_class="btn btn-success"),
+            Submit('reset', 'Reset to latest published version', css_class="btn btn-secondary") if not same_as_published else '',
+            HTML(f'<a class="btn btn-outline-dark" href="{back_url}">Back</a>')
+        )
+
+    class Meta:
+        model = DisclaimerContent
+        fields = ("disclaimer_terms", "version", "form")

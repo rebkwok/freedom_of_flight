@@ -1,0 +1,38 @@
+{%  extends "studioadmin/base.html" %}
+
+{% load studioadmintags static %}
+
+{% block subnav-xs %}
+    {%  include "studioadmin/includes/navs/xs/policies_subnav.html" %}
+{% endblock %}
+{% block precontent %}
+    {%  include "studioadmin/includes/navs/policies_subnav.html" %}
+{% endblock %}
+
+{% block content %}
+    <h1>Disclaimer - Version {{ disclaimer_content.version }} ({{ disclaimer_content.status }})</h1>
+    <h3>Issue Date: {{ disclaimer_content.issue_date|date:"d-M-Y H:i" }}</h3>
+
+    <h2>Terms:</h2>
+    <p>{{ disclaimer_content.disclaimer_terms|linebreaks }}</p>
+
+    <h2>Health Questionnaire</h2>
+    <ul>
+    {% for question in disclaimer_content.form %}
+        <li>{{ question.label }} {% if question.required %}(required){% endif %}
+            {% if question.values|length > 1 and question.values.0.label %}
+                <br/>Choices:
+                <ul>
+                    {% for value in question.values %}
+                        {% if value.label %}
+                            <li>{{ value.label }}</li>
+                        {% endif %}
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        </li>
+    {% endfor %}
+    </ul>
+    </p>
+
+{% endblock content %}

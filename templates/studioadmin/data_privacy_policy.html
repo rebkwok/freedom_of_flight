@@ -1,0 +1,18 @@
+{%  extends "studioadmin/base.html" %}
+
+{% load studioadmintags static %}
+
+{% block subnav-xs %}
+    {%  include "studioadmin/includes/navs/xs/policies_subnav.html" %}
+{% endblock %}
+{% block precontent %}
+    {%  include "studioadmin/includes/navs/policies_subnav.html" %}
+{% endblock %}
+
+{% block content %}
+    <h1>Data Privacy Policy - Version {{ policy.version }}</h1>
+    <h3>Issue Date: {{ policy.issue_date|date:"d-M-Y H:i" }}</h3>
+
+    <p>{{ policy.content|linebreaks }}</p>
+    
+{% endblock content %}

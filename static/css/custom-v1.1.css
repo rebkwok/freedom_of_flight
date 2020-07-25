@@ -106,6 +106,14 @@ div.accounts-subnav {
   color: orange;
 }
 
+#navbarPoliciesSubNavContainer {
+  background-color: #fff0f1;
+}
+
+#navbarPoliciesSubNav > ul > li.nav-item.active > a {
+  color: darkred;
+}
+
 #eventsTrackTabs > a.nav-item.nav-link {
   color: dimgrey;
 }

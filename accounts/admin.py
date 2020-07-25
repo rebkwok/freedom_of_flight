@@ -86,6 +86,16 @@ class PolicyAdminFormMixin:
             else:
                 self.fields['version'].initial = 1.0
 
+    def clean_version(self):
+        # blank is OK, it'll get auto-generated to the next major version
+        form_version = self.cleaned_data.get("version")
+        if form_version:
+            current_version = self.PolicyModel.current_version()
+            if form_version <= current_version:
+                self.add_error("version", "Must increment previous version")
+                return
+        return form_version
+
     def clean(self):
         new_content = self.cleaned_data.get('content')
 

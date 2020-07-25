@@ -6,6 +6,8 @@ from .models import Block, Track, Event
 from .utils import get_view_as_user
 
 def booking(request):
+    timezone.activate("Europe/London")
+
     # Only show tracks that have upcoming events (that are visible and not cancelled)
     tracks_with_events = Event.objects.filter(
         start__gt=timezone.now() - timedelta(minutes=15), show_on_site=True, cancelled=False

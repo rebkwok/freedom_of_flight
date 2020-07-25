@@ -1,28 +1,22 @@
-from datetime import datetime
-
 from django import forms
-from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.core.paginator import Paginator
-from django.db.models import Count
 from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
 from django.template.loader import render_to_string
 from django.template.response import TemplateResponse
 from django.shortcuts import get_object_or_404, render, HttpResponseRedirect
+from django.views.decorators.http import require_http_methods
 from django.views.generic import ListView, CreateView, UpdateView
-from django.utils import timezone
 from django.urls import reverse
 
 from braces.views import LoginRequiredMixin
 
 from activitylog.models import ActivityLog
-from booking.email_helpers import send_bcc_emails
-from booking.models import Booking, Event, Track, EventType, CourseType, DropInBlockConfig, CourseBlockConfig
+from booking.models import Track, EventType, CourseType, DropInBlockConfig, CourseBlockConfig
 from common.utils import full_name
 
-from ..forms import EventTypeForm
-from .utils import is_instructor_or_staff, staff_required, StaffUserMixin, InstructorOrStaffUserMixin
+from ..forms import EventTypeForm, CourseBlockConfigForm, DropInBlockConfigForm
+from .utils import staff_required, StaffUserMixin
 
 
 def help(request):
@@ -196,31 +190,110 @@ def block_config_list_view(request):
     dropin_block_configs = DropInBlockConfig.objects.all().order_by("active")
     course_block_configs = CourseBlockConfig.objects.all().order_by("active")
     context = {
-        "dropin_block_configs": dropin_block_configs,
-        "course_block_configs": course_block_configs,
+        "block_config_groups": {
+            "Drop-in Credit Blocks": dropin_block_configs,
+            "Course Credit Blocks": course_block_configs,
+        }
     }
     return render(request, "studioadmin/credit_blocks.html", context)
 
 
-def toggle_active_block_config(request):
-    pass
+BLOCK_CONFIG_MAPPING = {
+        "course": {"model": CourseBlockConfig,"form": CourseBlockConfigForm, "label": "Course"},
+        "dropin": {"model": DropInBlockConfig,"form": DropInBlockConfigForm, "label": "Drop-in"}
+    }
 
 
-def choose_event_or_course_type_for_block_config(request):
-    pass
+@require_http_methods(['POST'])
+def ajax_toggle_block_config_active(request):
+    block_config_type = request.POST["block_config_type"]
+    block_config_id = request.POST["block_config_id"]
+    block_config = get_object_or_404(BLOCK_CONFIG_MAPPING[block_config_type]["model"], pk=block_config_id)
+    block_config.active = not block_config.active
+    block_config.save()
+    ActivityLog.objects.create(
+        log=f"{block_config_type.title()} credit block '{block_config.identifier}' "
+            f"set to {'active' if block_config.active else 'not active'} by admin user {full_name(request.user)}"
+    )
+    return render(request, "studioadmin/includes/ajax_toggle_block_config_active_btn.html", {"block_config": block_config})
 
 
-def delete_dropin_block_config(request, block_config_id):
-    block_config = get_object_or_404(DropInBlockConfig, id=block_config_id)
+def block_config_delete_view(request, block_config_id):
+    block_config_type = request.POST["block_config_type"]
+    block_config = get_object_or_404(BLOCK_CONFIG_MAPPING[block_config_type]["model"], pk=block_config_id)
+    if block_config.block_set.exists():
+        return HttpResponseBadRequest("Cannot delete credit block; blocks have already been purchased/created")
+    ActivityLog.objects.create(
+        log=f"{block_config_type.title()} credit block {block_config.identifier} (id {block_config_id}) deleted by admin user {full_name(request.user)}"
+    )
+    block_config.delete()
+    return JsonResponse({"deleted": True, "alert_msg": "Credit block deleted"})
 
 
-def delete_course_block_config(request, block_config_id):
-    block_config = get_object_or_404(CourseBlockConfig, id=block_config_id)
+def choose_block_config_type(request):
+    if request.method == "POST":
+        if "dropin" in request.POST:
+            return HttpResponseRedirect(reverse("studioadmin:add_dropin_block_config"))
+        elif "course" in request.POST:
+            return HttpResponseRedirect(reverse("studioadmin:add_course_block_config"))
+    return render(request, "studioadmin/includes/block-config-add-modal.html")
 
 
-class BlockConfigCreateView(LoginRequiredMixin, StaffUserMixin, CreateView):
-    pass
+class DropInBlockConfigCreateView(CreateView):
+    model = DropInBlockConfig
+    template_name = "studioadmin/block_config_create_update.html"
+    form_class = DropInBlockConfigForm
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["creating"] = True
+        context["block_config_type"] = "Drop-in"
+        return context
+
+    def get_success_url(self):
+        return reverse("studioadmin:block_configs")
+
+
+class CourseBlockConfigCreateView(LoginRequiredMixin, StaffUserMixin, CreateView):
+    model = CourseBlockConfig
+    template_name = "studioadmin/block_config_create_update.html"
+    form_class = CourseBlockConfigForm
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["creating"] = True
+        context["block_config_type"] = "Course"
+        return context
+
+    def get_success_url(self):
+        return reverse("studioadmin:block_configs")
 
 
 class BlockConfigUpdateView(LoginRequiredMixin, StaffUserMixin, UpdateView):
-    pass
+    template_name = "studioadmin/block_config_create_update.html"
+    fields = "__all__"
+
+    def dispatch(self, request, *args, **kwargs):
+        self.block_config_type = self.kwargs["block_config_type"]
+        self.block_config_id = self.kwargs["block_config_id"]
+        self.model = BLOCK_CONFIG_MAPPING[self.block_config_type]["model"]
+        return super(BlockConfigUpdateView, self).dispatch(request, *args, **kwargs)
+
+    def get_form_class(self):
+        super().get_form_class()
+        return BLOCK_CONFIG_MAPPING[self.block_config_type]["form"]
+
+    def get_object(self, queryset=None):
+        return get_object_or_404(BLOCK_CONFIG_MAPPING[self.block_config_type]["model"], pk=self.block_config_id)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["block_config_type"] = BLOCK_CONFIG_MAPPING[self.block_config_type]["label"]
+        return context
+
+    def form_valid(self, form):
+        form.save()
+        return HttpResponseRedirect(self.get_success_url())
+
+    def get_success_url(self):
+        return reverse("studioadmin:block_configs")

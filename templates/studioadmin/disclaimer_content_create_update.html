@@ -1,0 +1,44 @@
+{% extends "studioadmin/base.html" %}
+{% load studioadmintags static crispy_forms_tags %}
+
+{% block subnav-xs %}
+    {%  include "studioadmin/includes/navs/xs/policies_subnav.html" %}
+{% endblock %}
+{% block precontent %}
+    {%  include "studioadmin/includes/navs/policies_subnav.html" %}
+{% endblock %}
+
+{% block content %}
+
+        <h2>{% if disclaimer_content %}Editing Draft Version {{ disclaimer_content.version }}{% else %}New Disclaimer Version{% endif %}</h2>
+
+        <p>
+            Use this form to update the terms of online disclaimers.  {% if not disclaimer_content %}Fields are autofilled with the current (published) disclaimer content.{% endif %}
+            You can save as draft and review/edit the content from the <a href="{% url 'studioadmin:disclaimer_contents' %}">list page</a>.
+            Disclaimer content cannot be edited once published.
+        </p>
+
+        <p>
+            <span class="form-error">
+                Note that once a new version is published, all signed disclaimers will be expired and students will be required to sign/re-sign the latest published version.
+            </span>
+        </p>
+
+        {% if form_errors %}
+            <div class="errorlist">
+                Please correct the following errors:
+                <ul>
+                    {% for field, error in form_errors.items %}
+                        <li>{% if field != "__all__" %}{{ field }}: {% endif %}{{ error }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+
+        <form method="post" action="" class="dirty-check">
+            {% csrf_token %}
+            {% crispy form %}
+        </form>
+    </div>
+
+{% endblock %}

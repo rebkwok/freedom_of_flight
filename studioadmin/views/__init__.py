@@ -7,10 +7,17 @@ from .event_views import (
     EventAdminListView, ajax_toggle_event_visible, cancel_event_view, EventCreateView,
     event_create_choice_view, EventUpdateView
 )
+from .policy_views import (
+    CookiePolicyListView, DataPrivacyPolicyListView, DisclaimerContentListView,
+    CookiePolicyDetailView, DataPrivacyPolicyDetailView, DisclaimerContentDetailView,
+    DisclaimerContentCreateView, DisclaimerContentUpdateView, CookiePolicyCreateView, DataPrivacyPolicyCreateView
+)
 from .site_config_views import (
     TrackCreateView, TrackListView, TrackUpdateView, EventTypeListView, toggle_track_default, help,
     choose_track_for_event_type, EventTypeCreateView, EventTypeUpdateView, event_type_delete_view,
-    CourseTypeListView, CourseTypeCreateView, CourseTypeUpdateView, course_type_delete_view
+    CourseTypeListView, CourseTypeCreateView, CourseTypeUpdateView, course_type_delete_view,
+    block_config_list_view, ajax_toggle_block_config_active, block_config_delete_view, choose_block_config_type,
+    DropInBlockConfigCreateView, CourseBlockConfigCreateView, BlockConfigUpdateView
 )
 from .register_views import RegisterListView, register_view, ajax_add_register_booking, ajax_toggle_attended
 from .timetable_views import (

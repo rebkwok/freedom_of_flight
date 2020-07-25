@@ -18,83 +18,77 @@
     <p>
         Credit Blocks set up payment plans available for events and courses.
     </p>
+    <p>Note that a credit block can only be deleted if no purchases have been made yet.</p>
 
-{% if not dropin_block_configs and not course_block_configs %}
-    <p>No credit blocks created yet</p>
-{% else %}
+    {% if not block_config_groups %}
+        <p>No credit blocks created yet</p>
+    {% else %}
+        <!-- Modals -->
+        <div class="modal fade" id="AddBlockConfigModal" tabindex="-1" role="dialog" aria-labelledby="AddBlockConfigModalLabel"></div>
+        <!-- /.modal -->
 
-    <table class="table table-sm">
+        <table class="table table-sm">
             <thead>
                 <tr>
-                    <th></th>
-                    <th>Event Type</th>
-                    <th># Events</th>
+                    <th>Identifier<br/><span class="helptext">Click to edit</span></th>
+                    <th>Active</th>
+                    <th>Size</th>
+                    <th>Duration (weeks)</th>
+                    <th>Cost</th>
                     <th></th>
                 </tr>
             </thead>
             <tbody>
-
-        {% if dropin_block_configs %}
-            <tr class="table-secondary">
-                <td colspan="4">Drop-in Credit Blocks</td>
-            </tr>
-
-            {% for block_config in dropin_block_configs %}
-                <tr id="row-dropin-block-config-{{ block_config.id }}">
-                    <td></td>>
-                    <td></td>
-                    <td></td>>
-                    <td class="text-center">
-                        {% if not block_config.blocks.exists %}
-                            <div
-                                class="dropin-block-config-delete-btn"
-                                data-dropin_block_config_id="{{ block_config.id }}"
-                            >
-                                <span class="btn btn-sm btn-danger pt-0 pb-0"><i class="far fa-trash-alt"></i></span>
-                            </div>
-                        {% endif %}
-                    </td>
+            {% for title, block_configs in block_config_groups.items %}
+                <tr class="table-secondary">
+                    <td colspan="6">{{ title }}</td>
                 </tr>
+                {% for block_config in block_configs %}
+                    <tr id="row-{{ block_config.block_config_type }}-{{ block_config.id }}">
+                        <td><a href="{% url 'studioadmin:edit_block_config' block_config.block_config_type block_config.id %}">{{ block_config.identifier }}</a></td>
+                        <td>
+                            <span
+                              id="active-{{ block_config.block_config_type }}-{{ block_config.id }}"
+                              data-block_config_type={{ block_config.block_config_type }}
+                              data-block_config_id={{ block_config.id }}
+                              class="active-btn"
+                              >
+                              {% include "studioadmin/includes/ajax_toggle_block_config_active_btn.html" %}
+                            </span>
+                        </td>
+                        <td>{{ block_config.size }}</td>
+                        <td>{{ block_config.duration }}</td>
+                        <th>£{{ block_config.cost }}</th>
+                        <td class="text-center">
+                            {% if not block_config.block_set.exists %}
+                                <div
+                                    class="block-config-delete-btn"
+                                    data-block_config_type={{ block_config.block_config_type }}
+                                    data-block_config_id="{{ block_config.id }}"
+                                >
+                                    <span class="btn btn-sm btn-danger pt-0 pb-0"><i class="far fa-trash-alt"></i></span>
+                                </div>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
             {% endfor %}
-        {% endif %}
-        {% if dropin_block_configs %}
-            <tr class="table-secondary">
-                <td colspan="4">Course Credit Blocks</td>
-            </tr>
-
-            {% for block_config in course_block_configs %}
-                <tr id="row-course-block-config-{{ block_config.id }}">
-                    <td></td>>
-                    <td></td>
-                    <td></td>>
-                    <td class="text-center">
-                        {% if not block_config.blocks.exists %}
-                            <div
-                                class="course-block-config-delete-btn"
-                                data-course_block_config_id="{{ block_config.id }}"
-                            >
-                                <span class="btn btn-sm btn-danger pt-0 pb-0"><i class="far fa-trash-alt"></i></span>
-                            </div>
-                        {% endif %}
-                    </td>
-                </tr>
-            {% endfor %}
-        {% endif %}
         <tr>
-            <td colspan="4">
-                <a href="#"><div class="btn btn-success">Add new credit block</div></a>
+            <td colspan="6">
+                <a
+                        id="add-block-config-btn"
+                        class="add-block-config"
+                        href="#" data-form="{% url 'studioadmin:choose_block_config_type' %}"
+                        title="add credit block"
+                    ><div class="btn btn-success">Add new credit block</div></a>
             </td>
         </tr>
             </tbody>
+
         </table>
+    {% endif %}
 
-
-{% endif %}
-
-
-
-
-{% endblock content %}
+{% endblock %}
 
 
 {% block extra_js %}
@@ -104,5 +98,5 @@
 {% else %}
     <script type='text/javascript' src="{% static 'js/jquery.form-4.3.0.min.js' %}"></script>
 {% endif %}
-<script type='text/javascript' src="{% static 'studioadmin/js/course_types_ajax-v1.js' %}"></script>
+<script type='text/javascript' src="{% static 'studioadmin/js/block_config_ajax-v1.js' %}"></script>
 {% endblock %}

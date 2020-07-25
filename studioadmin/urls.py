@@ -15,6 +15,11 @@ from studioadmin.views import (
     TrackCreateView, TrackListView, TrackUpdateView, EventTypeListView, toggle_track_default,
     choose_track_for_event_type, EventTypeCreateView, EventTypeUpdateView, event_type_delete_view,
     CourseTypeListView, CourseTypeCreateView, CourseTypeUpdateView, course_type_delete_view,
+    block_config_list_view, ajax_toggle_block_config_active, block_config_delete_view, choose_block_config_type,
+    DropInBlockConfigCreateView, CourseBlockConfigCreateView, BlockConfigUpdateView,
+    CookiePolicyListView, DataPrivacyPolicyListView, DisclaimerContentListView,
+    CookiePolicyDetailView, DataPrivacyPolicyDetailView, DisclaimerContentDetailView,
+    DisclaimerContentCreateView, DisclaimerContentUpdateView, CookiePolicyCreateView, DataPrivacyPolicyCreateView,
 )
 
 app_name = 'studioadmin'
@@ -70,7 +75,31 @@ urlpatterns = [
     path('site-config/course-type/add/', CourseTypeCreateView.as_view(), name="add_course_type"),
     path('site-config/course-type/<int:pk>/update/', CourseTypeUpdateView.as_view(), name="edit_course_type"),
     path('site-config/course-type/<int:course_type_id>/delete/', course_type_delete_view, name="delete_course_type"),
+    # block configs
+    path('site-config/credit-blocks/', block_config_list_view, name="block_configs"),
+    path('site-config/ajax-toggle-credit-block-active/', ajax_toggle_block_config_active, name="ajax_toggle_block_config_active"),
+    path('site-config/credit-block/<int:block_config_id>/delete/', block_config_delete_view, name="delete_block_config"),
+    path('site-config/credit-block/create/', choose_block_config_type, name="choose_block_config_type"),
+    path('site-config/credit-block/drop-in/create/', DropInBlockConfigCreateView.as_view(), name="add_dropin_block_config"),
+    path('site-config/credit-block/course/create/', CourseBlockConfigCreateView.as_view(), name="add_course_block_config"),
+    path('site-config/credit-block/<block_config_type>/<int:block_config_id>/update/', BlockConfigUpdateView.as_view(), name="edit_block_config"),
+    # policies
+    path('policies/cookie-policies/', CookiePolicyListView.as_view(), name="cookie_policies"),
+    path('policies/data-privacy-policies/', DataPrivacyPolicyListView.as_view(), name="data_privacy_policies"),
+    path('policies/disclaimer-versions/', DisclaimerContentListView.as_view(), name="disclaimer_contents"),
+    re_path('^policies/cookie-policy/(?P<version>\d+\.\d+)/$', CookiePolicyDetailView.as_view(), name="cookie_policy"),
+    path('policies/cookie-policy/new/', CookiePolicyCreateView.as_view(), name='add_cookie_policy'),
+    re_path('^policies/data-privacy-policy/(?P<version>\d+\.\d+)/$', DataPrivacyPolicyDetailView.as_view(), name="data_privacy_policy"),
+    path('policies/data-privacy-policy/new/', DataPrivacyPolicyCreateView.as_view(), name='add_data_privacy_policy'),
+    re_path('^policies/disclaimer-versions/(?P<version>\d+\.\d+)/$', DisclaimerContentDetailView.as_view(), name="disclaimer_content"),
+    path(
+        'policies/disclaimer-version/new/', DisclaimerContentCreateView.as_view(), name='add_disclaimer_content'
+    ),
+    re_path(
+        r'^policies/disclaimer-version/edit/(?P<version>\d+\.\d+)/$', DisclaimerContentUpdateView.as_view(), name='edit_disclaimer_content'
+    ),
 
+    # help
     path('help/', help, name="help"),
 
     # path('jsi18n/', JavaScriptCatalog.as_view(), name='jsi18n'),

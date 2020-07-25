@@ -1,0 +1,22 @@
+{% load crispy_forms_tags %}
+<div class="modal-dialog modal-md">
+    <div class="modal-content">
+        <form id="add-block-config-form" method='post' class="form" role="form" action='{% url "studioadmin:choose_block_config_type" %}'>
+
+            <div class="modal-header">
+                <h4 class="modal-title" id="AddBlockConfigModalLabel">Adding New Credit Block</h4>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            </div>
+            <div class="container-fluid">
+                <div class="modal-body">
+                {% csrf_token %}
+                    <p>What type of credit block do you want to add?</p>
+                    <input type="submit" name="dropin" class="btn btn-sm btn-primary" value="Drop In" />
+                    <input type="submit" name="course" class="btn btn-sm btn-warning" value="Course" />
+                </div>
+            </div>
+        </form>
+
+        </div>
+    </div><!-- /.modal-content -->
+</div><!-- /.modal-dialog -->

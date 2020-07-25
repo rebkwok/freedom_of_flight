@@ -279,10 +279,18 @@ class DropInBlockConfig(BaseBlockConfig):
     size = models.PositiveIntegerField(help_text="Number of events in block")
     event_type = models.ForeignKey(EventType, on_delete=models.SET_NULL, null=True)
 
+    @cached_property
+    def block_config_type(self):
+        return "dropin"
+
 
 class CourseBlockConfig(BaseBlockConfig):
     # COURSES
     course_type = models.ForeignKey(CourseType, on_delete=models.SET_NULL, null=True)
+
+    @cached_property
+    def block_config_type(self):
+        return "course"
 
     @cached_property
     def size(self):
@@ -291,7 +299,6 @@ class CourseBlockConfig(BaseBlockConfig):
     @cached_property
     def event_type(self):
         return self.course_type.event_type
-
 
 class BaseVoucher(models.Model):
     discount = models.PositiveIntegerField(help_text="Enter a number between 1 and 100")
