@@ -9,13 +9,15 @@ from django.shortcuts import get_object_or_404, HttpResponseRedirect
 from django.urls import reverse
 from django.utils import timezone
 
+from delorean import Delorean
+
 from activitylog.models import ActivityLog
 from booking.models import Event
 from common.utils import full_name
 from timetable.models import TimetableSession
 
 from ..forms import CloneEventWeeklyForm, CloneEventDailyIntervalsForm, CloneSingleEventForm, CloneTimetableSessionForm
-from .utils import staff_required
+from .utils import staff_required, utc_adjusted_datetime
 
 
 logger = logging.getLogger(__name__)
@@ -25,11 +27,13 @@ logger = logging.getLogger(__name__)
 @staff_required
 def clone_event(request, event_slug):
     event = get_object_or_404(Event, slug=event_slug)
+    delorean_time_in_uk = Delorean(event.start)
+    delorean_time_in_uk.shift("Europe/London")
     weekly_form = CloneEventWeeklyForm(
         event=event,
         initial={
             "recurring_weekly_weekdays": [event.start.weekday()],
-            "recurring_weekly_time": event.start.time(),
+            "recurring_weekly_time": delorean_time_in_uk.datetime.time(),
         }
     )
     daily_form = CloneEventDailyIntervalsForm()
@@ -99,16 +103,17 @@ def get_next_start(start, weekday, selected_time):
     # If it's negative, it's already passed this week, so we need next week
     if days_until_target_weekday < 0:
         days_until_target_weekday += 7
+    # The selected time is entered in local time today and should be considered the local time the
+    # user wants for every cloned event
     next_start = datetime.combine(start, selected_time) + timedelta(days_until_target_weekday)
-    next_start = next_start.replace(tzinfo=timezone.utc)
-    return next_start
+    return utc_adjusted_datetime(next_start)
 
 
 def clone_event_weekly(request, event, weekdays, start, end, time):
     # turn the start and end dates into datetimes
     start_date = datetime.combine(start, datetime.min.time())
     end_date = datetime.combine(end, datetime.max.time())
-    # Turn both dates into UK timezone aware
+    # Turn both dates into timezone aware
     end_date = end_date.replace(tzinfo=timezone.utc)
     start_date = start_date.replace(tzinfo=timezone.utc)
     cloned_events = []
@@ -149,9 +154,9 @@ def clone_event_weekly(request, event, weekdays, start, end, time):
 def clone_event_daily(request, event, target_date, start_time, end_time, interval):
     # turn the start dates into datetime and make it tz aware
     start_datetime = datetime.combine(target_date, start_time)
-    start_datetime = start_datetime.replace(tzinfo=timezone.utc)
+    start_datetime = utc_adjusted_datetime(start_datetime)
     end_datetime = datetime.combine(target_date, end_time)
-    end_datetime = end_datetime.replace(tzinfo=timezone.utc)
+    end_datetime = utc_adjusted_datetime(end_datetime)
     interval = int(interval)
     cloned_times = []
     existing_times = []

@@ -4,6 +4,9 @@ from django.core.cache import cache
 from django.contrib.auth.models import Group
 from django.urls import reverse
 from django.shortcuts import HttpResponseRedirect
+from django.utils import timezone
+
+from delorean import Delorean
 
 
 def staff_required(func):
@@ -64,3 +67,14 @@ class InstructorOrStaffUserMixin:
         if user_is_instructor_or_staff:
             return super().dispatch(request, *args, **kwargs)
         return HttpResponseRedirect(reverse('booking:permission_denied'))
+
+
+def utc_adjusted_datetime(naive_target_datetime):
+    # Target datetime is naive, a date combined with the naive time that it received from user input or from a
+    # unaware timetable session in the DB.
+    # Check if it has a UTC offset in Europe/London
+    naive_datetime_in_utc = Delorean(naive_target_datetime, timezone="UTC")
+    uk_datetime = naive_datetime_in_utc.shift("Europe/London")
+    utcoffset = uk_datetime.datetime.utcoffset()
+    # return a datetime obj, not the Delorean datetime
+    return naive_datetime_in_utc.datetime - utcoffset

@@ -4,22 +4,23 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db.models import Count
-from django.http import HttpResponseBadRequest, JsonResponse, HttpResponse
+from django.http import JsonResponse
 from django.template.response import TemplateResponse
-from django.shortcuts import get_object_or_404, render, HttpResponseRedirect
-from django.views.generic import ListView, CreateView, UpdateView
+from django.shortcuts import render, HttpResponseRedirect
+from django.views.generic import ListView
 from django.utils import timezone
 from django.urls import reverse
 
 from braces.views import LoginRequiredMixin
+from delorean import Delorean
 
 from activitylog.models import ActivityLog
-from booking.models import Booking, Event, Track, EventType
+from booking.models import Event, Track, EventType
 from common.utils import full_name
 from timetable.models import TimetableSession
 
 from ..forms import TimetableSessionCreateUpdateForm, UploadTimetableForm
-from .utils import is_instructor_or_staff, staff_required, StaffUserMixin, InstructorOrStaffUserMixin
+from .utils import staff_required, StaffUserMixin, utc_adjusted_datetime
 from .event_views import EventCreateView, EventUpdateView
 
 
@@ -195,8 +196,10 @@ def upload_timetable(request, track, start_date, end_date, session_ids, show_on_
     while uploading_date <= end_date:
         sessions_to_create = TimetableSession.objects.filter(day=uploading_date.weekday(), id__in=session_ids)
         for session in sessions_to_create:
-            event_start = datetime.combine(uploading_date, session.time)
-            event_start = event_start.replace(tzinfo=timezone.utc)
+            # If the session start date is in DST, we need to adjust the literal session time, otherwise it'll be created
+            # as that literal time in UTC, which will be 1 hour earlier than we want
+            naive_event_start = datetime.combine(uploading_date, session.time)
+            event_start = utc_adjusted_datetime(naive_event_start)
             uploaded_event, created = Event.objects.get_or_create(
                 name=session.name,
                 event_type=session.event_type,

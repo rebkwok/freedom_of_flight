@@ -15,6 +15,8 @@ import sys
 
 import environ
 
+from django.utils import timezone
+
 root = environ.Path(__file__) - 2  # two folders back (/a/b/ - 3 = /)
 
 # defaults
@@ -100,6 +102,7 @@ MIDDLEWARE = [
     'debug_toolbar.middleware.DebugToolbarMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'common.middleware.TimezoneMiddleware',
 ]
 
 CACHES = {

@@ -48,6 +48,8 @@ class CloneEventTests(EventTestMixin, TestUsersMixin, TestCase):
         assert resp.status_code == 200
 
     def test_inital(self):
+        self.event.start = datetime(2020, 1, 1, 10, 0, tzinfo=timezone.utc)
+        self.event.save()
         resp = self.client.get(self.url)
         # single clone sets date to event date + one week
         assert resp.context_data["single_form"].initial == {
@@ -58,10 +60,25 @@ class CloneEventTests(EventTestMixin, TestUsersMixin, TestCase):
             "recurring_weekly_weekdays": [self.event.start.weekday()],
             "recurring_weekly_time": self.event.start.time()
         }
+        # If the event is in BST, the initial start times are adjusted
+        self.event.start = datetime(2020, 8, 1, 10, 0, tzinfo=timezone.utc)
+        self.event.save()
+        resp = self.client.get(self.url)
+        # single clone sets date to event date + one week; this stays as it is because django will display it properly
+        assert resp.context_data["single_form"].initial == {
+            "recurring_once_datetime": self.event.start + timedelta(days=7)
+        }
+        assert resp.context_data["daily_form"].initial == {}
+        # but we adjust the time to show the user the time they expect today
+        assert resp.context_data["weekly_form"].initial == {
+            "recurring_weekly_weekdays": [self.event.start.weekday()],
+            "recurring_weekly_time": (self.event.start + timedelta(hours=1)).time()
+        }
 
     @patch("studioadmin.forms.timezone")
     def test_clone_single_event(self, mock_tz):
         mock_tz.now.return_value = datetime(2020, 1, 1, tzinfo=timezone.utc)
+        # This datestring in the form is in local time (BST) and converted to UTC by django
         data = {
             "recurring_once_datetime": "04-Apr-2020 10:00",
             "submit": "Clone once"
@@ -75,7 +92,7 @@ class CloneEventTests(EventTestMixin, TestUsersMixin, TestCase):
         # set to defaults
         assert cloned_event.show_on_site is False
         assert cloned_event.course is None
-        assert cloned_event.start == datetime(2020, 4, 4, 10, 0, tzinfo=timezone.utc)
+        assert cloned_event.start == datetime(2020, 4, 4, 9, 0, tzinfo=timezone.utc)
 
     @patch("studioadmin.forms.timezone")
     def test_clone_single_event_already_exists(self, mock_tz):
@@ -83,9 +100,10 @@ class CloneEventTests(EventTestMixin, TestUsersMixin, TestCase):
         # make another event with the same name and event type, and the date we're about to try to clone to
         baker.make_recipe(
             "booking.future_event", name="Original event",  event_type=self.aerial_event_type,
-            start=datetime(2020, 4, 4, 10, 0, tzinfo=timezone.utc)
+            start=datetime(2020, 4, 4, 9, 0, tzinfo=timezone.utc)
         )
         assert Event.objects.filter(name="Original event").count() == 2
+        # This datestring in the form is in local time (BST) and converted to UTC by django
         data = {
             "recurring_once_datetime": "04-Apr-2020 10:00",
             "submit": "Clone once"
@@ -119,8 +137,9 @@ class CloneEventTests(EventTestMixin, TestUsersMixin, TestCase):
         # Mondays in July - 6th, 13th, 20th, 27th
         dates = [cloned_event.start.date() for cloned_event in cloned_events]
         times = {cloned_event.start.time() for cloned_event in cloned_events}
+        # Today is non-BST, event dates are BST, so event dates in UTC are 1 hr earlier
         assert dates == [date(2020, 7, 6), date(2020, 7, 13), date(2020, 7, 20), date(2020, 7, 27)]
-        assert times == {time(10, 0)}
+        assert times == {time(9, 0)}
 
     @patch("studioadmin.forms.timezone")
     def test_clone_weekly_recurring_event_inclusive(self, mock_tz):
@@ -137,8 +156,9 @@ class CloneEventTests(EventTestMixin, TestUsersMixin, TestCase):
         # Fridays in July - 17th, 24th, 31st - make events on inclusive start/end dates
         dates = [cloned_event.start.date() for cloned_event in cloned_events]
         times = {cloned_event.start.time() for cloned_event in cloned_events}
+        # Today is non-BST, event dates are BST, so event dates in UTC are 1 hr earlier
         assert dates == [date(2020, 7, 17), date(2020, 7, 24), date(2020, 7, 31)]
-        assert times == {time(10, 0)}
+        assert times == {time(9, 0)}
 
     @patch("studioadmin.forms.timezone")
     def test_clone_weekly_recurring_event_date_validation(self, mock_tz):
@@ -192,13 +212,15 @@ class CloneEventTests(EventTestMixin, TestUsersMixin, TestCase):
         dates = [cloned_event.start.date() for cloned_event in cloned_events]
         times = {cloned_event.start.time() for cloned_event in cloned_events}
         assert dates == [date(2020, 7, day) for day in [1, 5, 8, 12, 15, 19, 22, 26, 29]]
-        assert times == {time(10, 0)}
+        # Mocked now is January - not BST.  Input time is taked as the expected literal time, so if the event is in
+        # BST, the UTC date is 1 hr before
+        assert times == {time(9, 0)}
 
     @patch("studioadmin.forms.timezone")
     def test_clone_recurring_daily_intervals(self, mock_tz):
         mock_tz.now.return_value = datetime(2020, 1, 1, tzinfo=timezone.utc)
         data = {
-            "recurring_daily_date": "01-Jul-2020",
+            "recurring_daily_date": "07-Jan-2020",
             "recurring_daily_interval": "20",
             "recurring_daily_starttime": "10:00",
             "recurring_daily_endtime": "12:00",
@@ -208,7 +230,8 @@ class CloneEventTests(EventTestMixin, TestUsersMixin, TestCase):
         cloned_events = Event.objects.filter(name="Original event").exclude(id=self.event.id).order_by("start")
         dates = {cloned_event.start.date() for cloned_event in cloned_events}
         times = {cloned_event.start.time() for cloned_event in cloned_events}
-        assert dates == {date(2020, 7, 1)}
+        # Mocked now and event data are both in GMT, so entered time is the same in UTC-stored events
+        assert dates == {date(2020, 1, 7)}
         assert times == {time(10, 0), time(10, 20), time(10, 40), time(11, 0), time(11, 20), time(11, 40), time(12, 00)}
 
     @patch("studioadmin.forms.timezone")
@@ -226,7 +249,8 @@ class CloneEventTests(EventTestMixin, TestUsersMixin, TestCase):
         dates = {cloned_event.start.date() for cloned_event in cloned_events}
         times = {cloned_event.start.time() for cloned_event in cloned_events}
         assert dates == {date(2020, 7, 1)}
-        assert times == {time(10, 0), time(10, 10), time(10, 20), time(10, 30)}
+        # today is BST, so times are 1 hr earlier in UTC
+        assert times == {time(9, 0), time(9, 10), time(9, 20), time(9, 30)}
 
     @patch("studioadmin.forms.timezone")
     def test_clone_recurring_daily_intervals_validation(self, mock_tz):
@@ -287,4 +311,5 @@ class CloneEventTests(EventTestMixin, TestUsersMixin, TestCase):
         dates = {cloned_event.start.date() for cloned_event in cloned_events}
         times = {cloned_event.start.time() for cloned_event in cloned_events}
         assert dates == {date(2020, 4, 1)}
-        assert times == {time(10, 0), time(10, 30)}
+        # BST, stored times are in UTC
+        assert times == {time(9, 0), time(9, 30)}
