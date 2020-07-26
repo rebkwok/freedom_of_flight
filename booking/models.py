@@ -478,7 +478,11 @@ class Block(models.Model):
             # it's the right type of config and course type matches
             # check the earliest event
             event = course.events.order_by("start").first()
-            return self._valid_and_active_for_event(event)
+            valid_for_event = self._valid_and_active_for_event(event)
+            if valid_for_event:
+                # make sure it hasn't been used to book events on a different course
+                has_bookings_on_other_courses = self.bookings.exclude(event__course=course).exists()
+                return not has_bookings_on_other_courses
         return False
 
     def delete(self, *args, **kwargs):
