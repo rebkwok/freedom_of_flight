@@ -1,15 +1,14 @@
 from datetime import datetime, timedelta
 import logging
-import pytz
 
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.template.response import TemplateResponse
 from django.shortcuts import get_object_or_404, HttpResponseRedirect
 from django.urls import reverse
-from django.utils import timezone
 
-from delorean import Delorean
+from delorean import Delorean, stops, WEEKLY
+from dateutil.rrule import MINUTELY
 
 from activitylog.models import ActivityLog
 from booking.models import Event
@@ -17,7 +16,7 @@ from common.utils import full_name
 from timetable.models import TimetableSession
 
 from ..forms import CloneEventWeeklyForm, CloneEventDailyIntervalsForm, CloneSingleEventForm, CloneTimetableSessionForm
-from .utils import staff_required, utc_adjusted_datetime
+from .utils import staff_required
 
 
 logger = logging.getLogger(__name__)
@@ -94,47 +93,52 @@ def base_clone(event):
     return cloned_event
 
 
-def get_next_start(start, weekday, selected_time):
-    start_weekday = start.weekday()
-    # Get the beginning of the start week
-    start_week_monday = 0 - start_weekday
-    # Get the days until the weekday we want
-    days_until_target_weekday = start_week_monday + weekday
-    # If it's negative, it's already passed this week, so we need next week
-    if days_until_target_weekday < 0:
-        days_until_target_weekday += 7
-    # The selected time is entered in local time today and should be considered the local time the
-    # user wants for every cloned event
-    next_start = datetime.combine(start, selected_time) + timedelta(days_until_target_weekday)
-    return utc_adjusted_datetime(next_start)
-
-
 def clone_event_weekly(request, event, weekdays, start, end, time):
     # turn the start and end dates into datetimes
-    start_date = datetime.combine(start, datetime.min.time())
-    end_date = datetime.combine(end, datetime.max.time())
-    # Turn both dates into timezone aware
-    end_date = end_date.replace(tzinfo=timezone.utc)
-    start_date = start_date.replace(tzinfo=timezone.utc)
+    start_datetime = datetime.combine(start, time)
+    end_datetime = datetime.combine(end, datetime.max.time())
+
+    next_weekday_methods = {
+        "0": "next_monday",
+        "1": "next_tuesday",
+        "2": "next_wednesday",
+        "3": "next_thursday",
+        "4": "next_friday",
+        "5": "next_saturday",
+        "6": "next_sunday",
+
+    }
+    all_datetimes_to_upload = []
+    for weekday in weekdays:
+        if int(weekday) != start_datetime.weekday():
+            weekday_start = getattr(Delorean(start_datetime, timezone="UTC"), next_weekday_methods[weekday])()
+            weekday_start = weekday_start.naive  # dates for stops need to be naive
+        else:
+            weekday_start = start_datetime
+        # The literal entered time from the form is naive, and is assumed to be in UK time
+        # Create the delorean stops in Europe/London and then convert to UTC for saving in the db
+        weekly_stops = stops(start=weekday_start, stop=end_datetime, freq=WEEKLY, timezone="Europe/London")
+        weekly_stops_in_utc = [stop.shift("UTC") for stop in weekly_stops]
+        all_datetimes_to_upload.extend(weekly_stops_in_utc)
+
     cloned_events = []
     existing_dates = []
-    for weekday in weekdays:
-        weekday = int(weekday)
-        event_start = get_next_start(start_date, weekday, time)
-        while event_start <= end_date:
-            if Event.objects.filter(name=event.name, start=event_start, event_type=event.event_type):
-                existing_dates.append(event_start)
-            else:
-                cloned_event = base_clone(event)
-                cloned_event.start = event_start
-                cloned_event.save()
-                cloned_events.append(cloned_event)
-            event_start = get_next_start(event_start + timedelta(7), weekday, time)
+
+    for datetime_to_upload in all_datetimes_to_upload:
+        if Event.objects.filter(name=event.name, start=datetime_to_upload.datetime, event_type=event.event_type):
+            existing_dates.append(datetime_to_upload)
+        else:
+            cloned_event = base_clone(event)
+            cloned_event.start = datetime_to_upload.datetime
+            cloned_event.save()
+            cloned_events.append(cloned_event)
+
     if cloned_events:
+        # Shift the dates back to UK time for string formatting
         messages.success(
             request,
             f"{event.event_type.label.title()} was cloned to the following dates: "
-            f"{', '.join([cloned.start.strftime('%d-%b-%Y, %H:%M') for cloned in cloned_events])}"
+            f"{', '.join([Delorean(cloned.start).shift('Europe/London').format_datetime('d MMM y, HH:mm') for cloned in cloned_events])}"
         )
         ActivityLog.objects.create(
             log=f"Event id {event.id} cloned to {', '.join([str(cloned.id) for cloned in cloned_events])} "
@@ -144,52 +148,58 @@ def clone_event_weekly(request, event, weekdays, start, end, time):
         messages.warning(request, "Nothing to clone")
 
     if existing_dates:
+        # Shift the dates back to UK time for string formatting
         messages.error(
             request,
             f"An {event.event_type.label.title()} with this name and start already exists for the following dates and "
-            f"was not cloned: {', '.join([existing_date.strftime('%d-%b-%Y, %H:%M') for existing_date in existing_dates])}"
+            f"was not cloned: "
+            f"{', '.join([existing_date.shift('Europe/London').format_datetime('d MMM y, HH:mm') for existing_date in existing_dates])}"
         )
 
 
 def clone_event_daily(request, event, target_date, start_time, end_time, interval):
-    # turn the start dates into datetime and make it tz aware
+    # turn the start and end dates into datetimes
     start_datetime = datetime.combine(target_date, start_time)
-    start_datetime = utc_adjusted_datetime(start_datetime)
     end_datetime = datetime.combine(target_date, end_time)
-    end_datetime = utc_adjusted_datetime(end_datetime)
-    interval = int(interval)
+
+    # The literal entered time from the form is naive, and is assumed to be in UK time
+    # Create the delorean stops in Europe/London and then convert to UTC for saving in the db
+    time_stops = stops(
+        start=start_datetime, stop=end_datetime, freq=MINUTELY, interval=interval, timezone="Europe/London"
+    )
+    datetimes_to_upload = [stop.shift("UTC") for stop in time_stops]
     cloned_times = []
     existing_times = []
 
-    event_start = start_datetime
-    while event_start <= end_datetime:
-        if Event.objects.filter(name=event.name, start=event_start, event_type=event.event_type):
-            existing_times.append(event_start)
+    for datetime_to_upload in datetimes_to_upload:
+        if Event.objects.filter(name=event.name, start=datetime_to_upload.datetime, event_type=event.event_type):
+            existing_times.append(datetime_to_upload)
         else:
             cloned_event = base_clone(event)
-            cloned_event.start = event_start
+            cloned_event.start = datetime_to_upload.datetime
             cloned_event.save()
-            cloned_times.append(event_start)
-        event_start = event_start + timedelta(minutes=interval)
+            cloned_times.append(datetime_to_upload)
 
     if cloned_times:
+        # Shift the times back to UK time for string formatting messages to user
         messages.success(
             request,
             f"{event.event_type.label.title()} was cloned to the following times on {target_date.strftime('%d-%b-%Y')}: "
-            f"{', '.join([cloned_time.strftime('%H:%M') for cloned_time in cloned_times])}"
+            f"{', '.join([cloned_time.shift('Europe/London').format_datetime('HH:mm') for cloned_time in cloned_times])}"
         )
         ActivityLog.objects.create(
-            log=f"Event id {event.id} cloned to {', '.join([cloned_time.strftime('%H:%M') for cloned_time in cloned_times])} "
+            log=f"Event id {event.id} cloned to {', '.join([cloned_time.format_datetime('HH:mm') for cloned_time in cloned_times])} (UTC)"
                 f"on {target_date.strftime('%d-%b-%Y')} by admin user {full_name(request.user)}"
         )
     else:
         messages.warning(request, "Nothing to clone")
 
     if existing_times:
+        # Shift the times back to UK time for string formatting messages to user
         messages.error(
             request,
-            f"Events with this name and start already exist for the following dates and "
-            f"were not cloned: {', '.join([existing_time.strftime('%d-%b-%Y, %H:%M') for existing_time in existing_times])}"
+            f"Events with this name and start already exist on {target_date.strftime('%d-%b-%Y')} at these times and "
+            f"were not cloned: {', '.join([existing_time.shift('Europe/London').format_datetime('HH:mm') for existing_time in existing_times])}"
         )
 
 
