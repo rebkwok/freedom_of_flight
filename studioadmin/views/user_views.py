@@ -89,3 +89,15 @@ class UserListView(LoginRequiredMixin, InstructorOrStaffUserMixin, ListView):
         context["search_form"] = SearchForm(initial=initial)
         context["total_users"] = self.get_queryset().count()
         return context
+
+
+class UserDetailView(InstructorOrStaffUserMixin, LoginRequiredMixin, DetailView):
+    model = User
+    template_name = "studioadmin/user_detail.html"
+    context_object_name = "account_user"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        user = self.get_object()
+        context["latest_disclaimer"] = user.online_disclaimer.exists() and user.online_disclaimer.latest("id")
+        return context

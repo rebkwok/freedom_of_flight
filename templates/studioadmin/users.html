@@ -2,11 +2,7 @@
 
 {% load static studioadmintags accounttags email_obfuscator crispy_forms_tags %}
 
-{#{% block subnav-xs %}#}
-{#    {%  include "studioadmin/includes/navs/xs/students_subnav.html" %}#}
-{#{% endblock %}#}
 {% block precontent %}
-{#    {%  include "studioadmin/includes/navs/students_subnav.html" %}#}
 {% endblock %}
 
 
@@ -65,7 +61,7 @@
                 {% else %}No{% endif %}
             </td>
             <td class="text-center">
-                <a href="#" target="_blank"><i class="fas fa-link"></i></a>
+                <a href="{% url 'studioadmin:user_detail' account_user.id %}"><i class="fas fa-link"></i></a>
             </td>
             <td class="text-center studioadmin-tbl">
                 {% if account_user.manager_user %}

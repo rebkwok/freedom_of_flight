@@ -66,10 +66,9 @@
                     <td class="text-center" id="booking-status-{{ booking.id }}">{{ booking.status }}</td>
                     <td class="text-center"> {{ booking.user.first_name }} {{ booking.user.last_name }}</td>
                     <td class="text-center">
-                        {% if booking.user|has_disclaimer %}
-                            <a href="#" target="_blank"><span id="disclaimer" class="far fa-file-alt"></span></a>
-                        {% elif booking.user|has_expired_disclaimer %}
-                            <span class=helptext">(expired)</span>
+                        {% if booking.user|has_disclaimer or booking.user|has_expired_disclaimer %}
+                            <a href="{% url 'studioadmin:user_detail' booking.user.id %}" target="_blank"><span id="disclaimer" class="far fa-file-alt"></span></a>
+                            {% if not booking.user|has_disclaimer %}<span class=helptext">(expired)</span>{% endif %}
                         {% else %}
                             <span id="disclaimer" class="fas fa-times"></span>
                         {% endif %}

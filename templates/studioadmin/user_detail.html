@@ -1,0 +1,69 @@
+{%  extends "studioadmin/base.html" %}
+
+{% load studioadmintags accounttags email_obfuscator static %}
+
+{% block precontent %}
+{% endblock %}
+
+{% block content %}
+    <h1>{{ account_user|full_name }}</h1>
+
+    <div class="card">
+            <div class="card-body">
+                <h4 class="card-header">Contact Information</h4>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item">
+                        {% if account_user.manager_user %}
+                            <b>Address:</b> {{ account_user.childuserprofile.address }}, {{ account_user.childuserprofile.postcode }}<br/>
+                            <b>Phone:</b> {{ account_user.childuserprofile.phone }}<br/>
+                            <b>Date of birth:</b> {{ account_user.childuserprofile.date_of_birth }}
+                        {% else %}
+                            <b>Email:</b> {{ account_user.email|obfuscate_mailto }}<br/>
+                            <b>Address:</b> {{ account_user.userprofile.address }}, {{ account_user.userprofile.postcode }}<br/>
+                            <b>Phone:</b> {{ account_user.userprofile.phone }}<br/>
+                            <b>Date of birth:</b> {{ account_user.userprofile.date_of_birth }}<br/>
+                        {% endif %}
+                        </li>
+                    </ul>
+
+            {% if account_user.manager_user %}
+                <h4 class="card-header">Account managed by:</h4>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item">
+                        <b>Name: </b>{{ account_user.manager_user|full_name }}<br/>
+                        <b>Email:</b> {{ account_user.manager_user.email|obfuscate_mailto }}<br/>
+                        <b>Address:</b> {{ account_user.manager_user.userprofile.address }}, {{ account_user.userprofile.postcode }}<br/>
+                        <b>Phone:</b> {{ account_user.manager_user.userprofile.phone }}
+                    </li>
+                </ul>
+            {% endif %}
+            {% if latest_disclaimer %}
+            <h4 class="card-header">Disclaimer ({% if user|has_disclaimer %}Active{% else %}Expired{% endif %})</h4>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item">
+                        <b>Version:</b> {{ latest_disclaimer.version }}<br/>
+                        <b>Completed on:</b> {{ latest_disclaimer.date }}
+                </ul>
+            <h4 class="card-header">Emergency Contact Information</h4>
+            <ul class="list-group list-group-flush">
+                <li class="list-group-item">
+                    <b>Name:</b> {{ latest_disclaimer.emergency_contact_name }}<br/>
+                    <b>Phone:</b> {{ latest_disclaimer.emergency_contact_phone }}<br/>
+                    <b>Relationship:</b> {{ latest_disclaimer.emergency_contact_relationship }}
+            </ul>
+            <h4 class="card-header">Questionnaire Responses</h4>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item">
+                        {{ latest_disclaimer.health_questionnaire_responses|format_health_questionnaire }}
+                    </li>
+                </ul>
+
+            {% else %}
+                <h4 class="card-title">Disclaimer</h4>
+            <div class="card-text">No disclaimer completed</div>
+            {% endif %}
+        </div>
+        </div>
+    <a class="btn btn-outline-dark mt-4" href="{% url 'studioadmin:users' %}">Back</a>
+
+{% endblock content %}
