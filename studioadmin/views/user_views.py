@@ -3,12 +3,16 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, HttpResponseRedirect, reverse
 from django.template.response import TemplateResponse
+from django.views.generic import ListView, DetailView
+from django.contrib.postgres.search import SearchVector
+from django import forms
+from braces.views import LoginRequiredMixin
 
 from booking.email_helpers import send_bcc_emails
 from booking.models import Booking, Course, Event
 
-from ..forms import EmailUsersForm
-from .utils import staff_required
+from ..forms import EmailUsersForm, SearchForm
+from .utils import staff_required, InstructorOrStaffUserMixin
 
 
 @login_required
@@ -55,3 +59,33 @@ def process_form_and_send_email(request, form):
         reply_to=form.cleaned_data["reply_to_email"], cc=form.cleaned_data["cc"]
     )
     messages.success(request, "Email sent")
+
+
+class UserListView(LoginRequiredMixin, InstructorOrStaffUserMixin, ListView):
+
+    model = User
+    context_object_name = "users"
+    template_name = "studioadmin/users.html"
+    paginate_by = 30
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        search = self.request.GET.get('search')
+        action = self.request.GET.get('action')
+        if self.request.GET.get('search') and action == "Search":
+            queryset = queryset.annotate(
+                search=SearchVector('first_name', 'last_name', 'username'),
+            ).filter(search=search)
+        return queryset
+
+    def get_context_data(self, *args, **kwargs):
+        context = super().get_context_data(*args, **kwargs)
+        search = self.request.GET.get('search', '')
+        action = self.request.GET.get('action')
+        if action == "Search":
+            initial = {"search": search}
+        else:
+            initial = {"search": ""}
+        context["search_form"] = SearchForm(initial=initial)
+        context["total_users"] = self.get_queryset().count()
+        return context

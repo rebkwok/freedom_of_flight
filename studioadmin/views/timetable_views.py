@@ -8,11 +8,9 @@ from django.http import JsonResponse
 from django.template.response import TemplateResponse
 from django.shortcuts import render, HttpResponseRedirect
 from django.views.generic import ListView
-from django.utils import timezone
 from django.urls import reverse
 
 from braces.views import LoginRequiredMixin
-from delorean import Delorean
 
 from activitylog.models import ActivityLog
 from booking.models import Event, Track, EventType

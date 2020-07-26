@@ -607,3 +607,23 @@ class StudioadminDisclaimerContentForm(DisclaimerContentAdminForm):
     class Meta:
         model = DisclaimerContent
         fields = ("disclaimer_terms", "version", "form")
+
+
+class SearchForm(forms.Form):
+    search = forms.CharField(
+        help_text="Search name or email address", required=False, initial="", label=""
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_method = "get"
+        self.helper.form_class = "form-inline"
+        self.helper.layout = Layout(
+            Row(
+                Column("search", css_class="col-6"),
+                Column(
+                    Submit('action', 'Search', css_class="btn btn-sm btn-success"),
+                    Submit('action', 'Reset', css_class="btn btn-sm btn-secondary"), css_class="col-6"),
+            )
+        )

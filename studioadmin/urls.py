@@ -20,6 +20,7 @@ from studioadmin.views import (
     CookiePolicyListView, DataPrivacyPolicyListView, DisclaimerContentListView,
     CookiePolicyDetailView, DataPrivacyPolicyDetailView, DisclaimerContentDetailView,
     DisclaimerContentCreateView, DisclaimerContentUpdateView, CookiePolicyCreateView, DataPrivacyPolicyCreateView,
+    UserListView,
 )
 
 app_name = 'studioadmin'
@@ -98,6 +99,8 @@ urlpatterns = [
     re_path(
         r'^policies/disclaimer-version/edit/(?P<version>\d+\.\d+)/$', DisclaimerContentUpdateView.as_view(), name='edit_disclaimer_content'
     ),
+    # users
+    path('students/', UserListView.as_view(), name="users"),
 
     # help
     path('help/', help, name="help"),

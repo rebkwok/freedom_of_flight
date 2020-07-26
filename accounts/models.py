@@ -498,6 +498,13 @@ def is_manager(self):
     return False
 
 
+@property
+def manager_user(self):
+    if hasattr(self, "childuserprofile"):
+        return self.childuserprofile.parent_user_profile.user
+    return None
+
 User.add_to_class("managed_users", managed_users)
 User.add_to_class("is_student", is_student)
 User.add_to_class("is_manager", is_manager)
+User.add_to_class("manager_user", manager_user)

@@ -18,7 +18,7 @@ jQuery(document).ready(function () {
     jQuery('form.dirty-check').areYouSure();
 
     //http://tablesorter.com/docs/
-    // jQuery("#sortTable").tablesorter();
+    jQuery("#sortTable").tablesorter();
 
 });
 
