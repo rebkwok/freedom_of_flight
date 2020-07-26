@@ -17,7 +17,7 @@ from shortuuid import ShortUUID
 from .forms import DisclaimerForm, DataPrivacyAgreementForm, NonRegisteredDisclaimerForm, \
     ProfileForm, DisclaimerContactUpdateForm, RegisterChildUserForm
 from .models import CookiePolicy, DataPrivacyPolicy, SignedDataPrivacy, UserProfile, OnlineDisclaimer, \
-    has_active_data_privacy_agreement, has_active_disclaimer, has_expired_disclaimer, ChildUserProfile
+    has_active_data_privacy_agreement, has_active_disclaimer, has_expired_disclaimer, ChildUserProfile, DisclaimerContent
 from activitylog.models import ActivityLog
 
 
@@ -182,6 +182,8 @@ class DisclaimerCreateView(LoginRequiredMixin, DynamicDisclaimerFormMixin, Creat
     template_name = 'accounts/disclaimer_form.html'
 
     def dispatch(self, request, *args, **kwargs):
+        if not DisclaimerContent.objects.exists():
+            return render(request, "accounts/no_disclaimers.html")
         self.disclaimer_user = get_object_or_404(User, pk=kwargs["user_id"])
         return super().dispatch(request, *args, **kwargs)
 
