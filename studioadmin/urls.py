@@ -20,7 +20,8 @@ from studioadmin.views import (
     CookiePolicyListView, DataPrivacyPolicyListView, DisclaimerContentListView,
     CookiePolicyDetailView, DataPrivacyPolicyDetailView, DisclaimerContentDetailView,
     DisclaimerContentCreateView, DisclaimerContentUpdateView, CookiePolicyCreateView, DataPrivacyPolicyCreateView,
-    UserListView, UserDetailView
+    UserListView, UserDetailView, UserBookingsListView, BookingAddView, BookingEditView,
+    UserBookingsHistoryListView,
 )
 
 app_name = 'studioadmin'
@@ -102,6 +103,10 @@ urlpatterns = [
     # users
     path('users/', UserListView.as_view(), name="users"),
     path('user/<int:pk>/detail/', UserDetailView.as_view(), name="user_detail"),
+    path('user/<int:user_id>/bookings/', UserBookingsListView.as_view(), name="user_bookings"),
+    path('user/<int:user_id>/bookings/history/', UserBookingsHistoryListView.as_view(), name="past_user_bookings"),
+    path('user/<int:user_id>/booking/add/', BookingAddView.as_view(), name="bookingadd"),
+    path('user/booking/<int:pk>/edit/', BookingEditView.as_view(), name="bookingedit"),
 
     # help
     path('help/', help, name="help"),

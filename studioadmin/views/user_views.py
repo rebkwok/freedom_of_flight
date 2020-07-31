@@ -1,18 +1,26 @@
+from datetime import datetime
+
 from django.contrib.auth.models import User
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import get_object_or_404, HttpResponseRedirect, reverse
+from django.shortcuts import get_object_or_404, HttpResponseRedirect, reverse, HttpResponse
 from django.template.response import TemplateResponse
-from django.views.generic import ListView, DetailView
+from django.template.loader import render_to_string
+from django.views.generic import ListView, DetailView, CreateView, UpdateView
 from django.contrib.postgres.search import SearchVector
 from django import forms
+from django.forms import ModelChoiceField
+from django.utils import timezone
+
 from braces.views import LoginRequiredMixin
 
-from booking.email_helpers import send_bcc_emails
-from booking.models import Booking, Course, Event
+from activitylog.models import ActivityLog
+from booking.email_helpers import send_bcc_emails, send_user_and_studio_emails, send_waiting_list_email
+from booking.models import Booking, Course, Event, WaitingListUser
+from common.utils import full_name
 
-from ..forms import EmailUsersForm, SearchForm
-from .utils import staff_required, InstructorOrStaffUserMixin
+from ..forms import EmailUsersForm, SearchForm, AddEditBookingForm
+from .utils import staff_required, InstructorOrStaffUserMixin, StaffUserMixin
 
 
 @login_required
@@ -91,7 +99,7 @@ class UserListView(LoginRequiredMixin, InstructorOrStaffUserMixin, ListView):
         return context
 
 
-class UserDetailView(InstructorOrStaffUserMixin, LoginRequiredMixin, DetailView):
+class UserDetailView(LoginRequiredMixin, InstructorOrStaffUserMixin, DetailView):
     model = User
     template_name = "studioadmin/user_detail.html"
     context_object_name = "account_user"
@@ -101,3 +109,181 @@ class UserDetailView(InstructorOrStaffUserMixin, LoginRequiredMixin, DetailView)
         user = self.get_object()
         context["latest_disclaimer"] = user.online_disclaimer.exists() and user.online_disclaimer.latest("id")
         return context
+
+
+class UserBookingsListView(LoginRequiredMixin, InstructorOrStaffUserMixin, ListView):
+    model = Booking
+    context_object_name = "bookings"
+    template_name = "studioadmin/user_bookings_list.html"
+    paginate_by = 20
+
+    def dispatch(self, request, *args, **kwargs):
+        self.user = get_object_or_404(User, pk=kwargs["user_id"])
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, *args, **kwargs):
+        context = super().get_context_data(*args, **kwargs)
+        context["account_user"] = self.user
+        return context
+
+    def get_queryset(self):
+        start_of_today = datetime.combine(datetime.today(), datetime.min.time()).replace(tzinfo=timezone.utc)
+        return self.user.bookings.filter(event__start__gte=start_of_today).order_by("event__start")
+
+
+class UserBookingsHistoryListView(UserBookingsListView):
+
+    def get_context_data(self, *args, **kwargs):
+        context = super().get_context_data(*args, **kwargs)
+        context["past"] = True
+        return context
+
+    def get_queryset(self):
+        return self.user.bookings.filter(event__start__lte=timezone.now()).order_by("-event__start")
+
+
+class BookingEditView(UpdateView):
+    form_class = AddEditBookingForm
+    model = Booking
+    template_name = 'studioadmin/includes/user-booking-modal.html'
+
+    def get_form_kwargs(self, *args, **kwargs):
+        kwargs = super().get_form_kwargs(*args, **kwargs)
+        kwargs['user'] = self.object.user
+        return kwargs
+
+    def form_valid(self, form):
+        process_user_booking_updates(form, self.request, self.object.user)
+        return HttpResponse(
+            render_to_string(
+                'studioadmin/includes/modal-success.html'
+            )
+        )
+
+
+class BookingAddView(CreateView):
+    model = Booking
+    template_name = 'studioadmin/includes/user-booking-add-modal.html'
+    form_class = AddEditBookingForm
+
+    def dispatch(self, request, *args, **kwargs):
+        self.booking_user = User.objects.get(id=kwargs['user_id'])
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, *args, **kwargs):
+        context = super().get_context_data(*args, **kwargs)
+        context["booking_user"] = self.booking_user
+        return context
+
+    def get_form_kwargs(self, *args, **kwargs):
+        kwargs = super().get_form_kwargs(*args, **kwargs)
+        kwargs['user'] = self.booking_user
+        return kwargs
+
+    def form_valid(self, form):
+        process_user_booking_updates(form, self.request, self.booking_user)
+        return HttpResponse(
+            render_to_string(
+                'studioadmin/includes/modal-success.html'
+            )
+        )
+
+
+def process_user_booking_updates(form, request, user):
+    if form.has_changed():
+        if form.changed_data == ['send_confirmation']:
+            messages.info(
+                request,  "'Send confirmation' checked but no changes were made; email has not been "
+                "sent to user.".format(form.instance.event))
+        else:
+            extra_msgs = [] # these will be displayed as a list in the email to the user
+            booking = form.save(commit=False)
+            event_was_full = booking.event.spaces_left == 0
+            action = 'updated' if form.instance.id else 'created'
+            block_removed = False
+
+            if 'status' in form.changed_data and action == 'updated':
+                if booking.status == 'CANCELLED':
+                    if booking.event.course:
+                        # bookings for course events don't get cancelled fully, just set to no_show
+                        booking.status = "OPEN"
+                        booking.no_show = True
+                        # reset the block if it was removed
+                        booking.block = user.bookings.get(id=booking.id).block
+                        extra_msgs.append("Cancelled course bookings are not refunded to user; booking has been set to no-show instead.")
+                    elif booking.block:
+                        booking.block = None
+                        block_removed = True
+                    action = 'cancelled'
+                elif booking.status == 'OPEN':
+                    action = 'reopened'
+                extra_msgs.append("Booking status changed to {}".format(action))
+
+            elif 'no_show' in form.changed_data and action == 'updated' and booking.status == 'OPEN':
+                action = 'cancelled' if booking.no_show else 'reopened'
+                extra_msgs.append("Booking {} as 'no-show'".format(action))
+
+            if 'block' in form.changed_data:
+                booking.block = None
+
+            booking.save()
+
+            if 'send_confirmation' in form.changed_data:
+                host = 'http://{}'.format(request.META.get('HTTP_HOST'))
+                ctx = {
+                    'host': host,
+                    'event': booking.event,
+                    'user': user,
+                    'action': action,
+                    'extra_msgs': extra_msgs
+                }
+
+                email_user = booking.user.manager_user if booking.user.manager_user else booking.user
+                send_user_and_studio_emails(
+                    ctx, email_user, send_to_studio=False, subjects={"user": f"Your booking for {booking.event} has been {action}"},
+                    template_short_name="'studioadmin/email/booking_change_confirmation")
+                send_confirmation_msg = "and confirmation email sent to user"
+            else:
+                send_confirmation_msg = ""
+
+            messages.success(
+                request, 'Booking for {} has been {} {}'.format(booking.event,  action,  send_confirmation_msg)
+            )
+
+            ActivityLog.objects.create(
+                log='Booking id {} (user {}) for "{}" {} by admin user {}'.format(
+                    booking.id,  full_name(booking.user),  booking.event,
+                    action,  full_name(request.user)
+                )
+            )
+
+            if block_removed:
+                 messages.info(request, f"Block removed for {booking.event}")
+
+            if action == 'cancelled':
+                if block_removed:
+                    messages.info(
+                        request,
+                        'Note: this booking has been cancelled and the block used has been updated.'
+                    )
+
+                if event_was_full:
+                    waiting_list_users = WaitingListUser.objects.filter(event=booking.event)
+                    if waiting_list_users:
+                        host = 'http://{}'.format(request.META.get('HTTP_HOST'))
+                        send_waiting_list_email(booking.event, waiting_list_users, host)
+
+            if action == 'created' or action == 'reopened':
+                try:
+                    waiting_list_user = WaitingListUser.objects.get(user=booking.user,  event=booking.event)
+                    waiting_list_user.delete()
+                    ActivityLog.objects.create(
+                        log='User {} has been removed from the waiting list for {}'.format(
+                            full_name(booking.user),  booking.event
+                        )
+                    )
+                except WaitingListUser.DoesNotExist:
+                    pass
+
+    else:
+        messages.info(request, 'No changes made')

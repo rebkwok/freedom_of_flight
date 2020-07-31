@@ -1,0 +1,129 @@
+{%  extends "studioadmin/base.html" %}
+
+{% load accounttags studioadmintags static %}
+
+{#{% block subnav-xs %}#}
+{#    {%  include "studioadmin/includes/navs/xs/events_subnav.html" %}#}
+{#{% endblock %}#}
+{% block precontent %}
+{#    {%  include "studioadmin/includes/navs/events_subnav.html" %}#}
+{% endblock %}
+
+{% block content %}
+    {% if past %}
+    <h1>Booking History for {{ account_user|full_name }}</h1>
+    {% else %}
+    <h1>Bookings for {{ account_user|full_name }}</h1>
+    {% endif %}
+
+    <div class="float-right">
+    {% if past %}
+        <a href="{% url 'studioadmin:user_bookings' user.id %}">View upcoming bookings</a>
+    {% else %}
+        <a href="{% url 'studioadmin:past_user_bookings' user.id %}">View booking history</a>
+    {% endif  %}
+    </div>
+    <a class="bookingadd btn btn-success btn-sm mb-2" href="#" data-form="{% url 'studioadmin:bookingadd' user.id %}" title="add booking">Add new booking</a>
+    {% if bookings %}
+        <table class="table">
+            <thead>
+            <tr>
+                <th></th>
+                <th>Date/time</th>
+                <th>Event</th>
+                <th>Track</th>
+                <th>Status</th>
+            </tr>
+            </thead>
+
+            <!-- Modal -->
+            <div class="modal fade" id="UserBookingModal" tabindex="-1" role="dialog" aria-labelledby="UserBookingModalLabel"></div>
+            <div class="modal fade" id="UserBookingAddModal" tabindex="-1" role="dialog" aria-labelledby="UserBookingAddModalLabel"></div>
+            <!-- /.modal -->
+
+            <tbody>
+                {% for booking in bookings %}
+                    <tr>
+                        <td>
+                            <a class="bookingedit" href="#"
+                                   data-form="{% url 'studioadmin:bookingedit' booking.id %}"
+                                   title="edit booking">Edit</a>
+                        </td>
+                        <td>{{ booking.event.start }}</td>
+                        <td>{{ booking.event.name }}</td>
+                        <td>{{ booking.event.event_type.track }}</td>
+                        <td>{{ booking.status }}</td>
+                    </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+
+     {% if page_obj.paginator.num_pages > 1 %}
+        <!--NAVIGATION-->
+        <nav aria-label="Page navigation" class="pb-1">
+          <ul class="pagination">
+            {% if page_obj.has_previous %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ page_obj.previous_page_number }}" aria-label="Previous">
+                <span aria-hidden="true">&laquo;</span>
+                <span class="sr-only">Previous</span>
+              </a>
+            </li>
+            {% else %}
+              <a class="page-link" disabled=disabled href="#" aria-label="Previous">
+                <span aria-hidden="true">&laquo;</span>
+                <span class="sr-only">Previous</span>
+              </a>
+            {% endif %}
+          <li class="page-item"><a class="page-link" href="#">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</a></li>
+
+          <li class="page-item">
+            {% if page_obj.has_next %}
+              <a class="page-link" href="?page={{ page_obj.next_page_number }}" aria-label="Next">
+                <span aria-hidden="true">&raquo;</span>
+                <span class="sr-only">Next</span>
+              </a>
+            {% else %}
+              <a class="page-link" disabled=disabled href="#" aria-label="Next">
+                <span aria-hidden="true">&raquo;</span>
+                <span class="sr-only">Next</span>
+              </a>
+            {% endif %}
+          </li>
+
+          </ul>
+        </nav>
+    {% endif %}
+
+    {% else %}
+        No upcoming bookings
+    {% endif %}
+
+{% endblock content %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.form/4.2.2/jquery.form.min.js" integrity="sha384-FzT3vTVGXqf7wRfy8k4BiyzvbNfeYjK+frTVqZeNDFl8woCbF0CYG6g2fMEFFo/i" crossorigin="anonymous"></script>
+<script>
+    $(".bookingedit").click(function(ev) { // for each edit url
+        ev.preventDefault(); // prevent navigation
+        var url = $(this).data("form"); // get the form url
+        $("#UserBookingModal").load(url, function() { // load the url into the modal
+            $(this).modal('show'); // display the modal on url load
+        });
+
+        return false; // prevent the click propagation
+    });
+</script>
+<script>
+    $(".bookingadd").click(function(ev) { // for each add url
+        ev.preventDefault(); // prevent navigation
+        var url = $(this).data("form"); // get the form url
+        $("#UserBookingAddModal").load(url, function() { // load the url into the modal
+            $(this).modal('show'); // display the modal on url load
+        });
+
+        return false; // prevent the click propagation
+    });
+
+</script>
+{% endblock %}

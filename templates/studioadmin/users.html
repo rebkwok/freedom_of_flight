@@ -35,7 +35,7 @@
         <tr>
             <td class="text-center">
                 {% if request.user.is_staff %}
-                <a href="">{{ account_user|full_name|truncatechars:30 }}</a>
+                <a href="{% url 'studioadmin:user_bookings' account_user.id %}">{{ account_user|full_name|truncatechars:30 }}</a>
                 {% else %}
                 {{ account_user|full_name|truncatechars:30  }}
                 {% endif %}

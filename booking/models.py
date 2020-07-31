@@ -238,7 +238,9 @@ class Event(models.Model):
         return self.start < timezone.now()
 
     def __str__(self):
-        return f"{self.name} - {self.start.astimezone(pytz.timezone('Europe/London')).strftime('%d %b %Y, %H:%M')} ({self.event_type.track})"
+        course_str = f" ({self.course.name})" if self.course else ""
+        return f"{self.name}{course_str} - {self.start.astimezone(pytz.timezone('Europe/London')).strftime('%d %b %Y, %H:%M')} " \
+               f"({self.event_type.track})"
 
     def clean(self):
         if self.course and not self.course.course_type.event_type == self.event_type:
@@ -464,20 +466,20 @@ class Block(models.Model):
             return False
         if event.course:
             # if the event is part of a course, it should be using a course block
-            return False
+            return self.valid_for_course(course=event.course, event=event)
         if self.dropin_block_config is not None and self.dropin_block_config.event_type == event.event_type:
             # it's the right type of config and event type matches
             return self._valid_and_active_for_event(event)
         return False
 
-    def valid_for_course(self, course):
+    def valid_for_course(self, course, event=None):
         # if it's not active we don't care about anything else
         if not self.active_block:
             return False
         if self.course_block_config is not None and self.course_block_config.course_type == course.course_type:
             # it's the right type of config and course type matches
             # check the earliest event
-            event = course.events.order_by("start").first()
+            event = event or course.events.order_by("start").first()
             valid_for_event = self._valid_and_active_for_event(event)
             if valid_for_event:
                 # make sure it hasn't been used to book events on a different course

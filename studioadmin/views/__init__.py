@@ -24,5 +24,9 @@ from .timetable_views import (
     TimetableSessionListView, ajax_timetable_session_delete, TimetableSessionCreateView, TimetableSessionUpdateView,
     timetable_session_create_choice_view, upload_timetable_view
 )
-from .user_views import email_event_users_view, email_course_users_view, UserListView, UserDetailView
+from .user_views import (
+    email_event_users_view, email_course_users_view, UserListView, UserDetailView, UserBookingsListView,
+    UserBookingsHistoryListView, BookingAddView, BookingEditView
+)
+
 from .waiting_list import ajax_remove_from_waiting_list, event_waiting_list_view

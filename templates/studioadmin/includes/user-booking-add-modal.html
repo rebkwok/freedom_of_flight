@@ -1,0 +1,34 @@
+{% load crispy_forms_tags %}
+
+<div class="modal-dialog modal-md">
+    <div class="modal-content">
+        <form id="user-booking-add-form" method='post' class="form" role="form" action='{% url "studioadmin:bookingadd" booking_user.id %}'>
+            <div class="modal-header">
+                <h4 class="modal-title" id="UserBookingAddModalLabel">Adding booking for {{ booking_user.first_name }} {{ booking_user.last_name}}</h4>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            </div>
+
+            <div class="container-fluid">
+                <div class="modal-body">
+                {% csrf_token %}
+                {{ form|crispy }}
+                </div>
+            </div>
+            <div class="modal-footer">
+                <input type="button" class="btn btn-sm btn-secondary" data-dismiss="modal" value="Cancel" />
+                <input type="submit" class="btn btn-sm btn-success" value="Save" />
+            </div>
+        </form>
+
+
+        <script>
+            var form_options = {
+                target: '#UserBookingAddModal',
+                success: function() { }
+            };
+
+            $('#user-booking-add-form').ajaxForm(form_options);
+        </script>
+
+    </div><!-- /.modal-content -->
+</div><!-- /.modal-dialog -->

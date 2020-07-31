@@ -18,7 +18,7 @@ from crispy_forms.layout import Button, Layout, Submit, Row, Column, Field, Fiel
 
 from accounts.admin import CookiePolicyAdminForm, DataPrivacyPolicyAdminForm, DisclaimerContentAdminForm
 from accounts.models import DisclaimerContent
-from booking.models import Event, Course, EventType, COMMON_LABEL_PLURALS, DropInBlockConfig, CourseBlockConfig
+from booking.models import Booking, Event, Course, EventType, COMMON_LABEL_PLURALS, DropInBlockConfig, CourseBlockConfig
 from common.utils import full_name
 from timetable.models import TimetableSession
 
@@ -627,3 +627,83 @@ class SearchForm(forms.Form):
                     Submit('action', 'Reset', css_class="btn btn-sm btn-secondary"), css_class="col-6"),
             )
         )
+
+
+class AddEditBookingForm(forms.ModelForm):
+
+    send_confirmation = forms.BooleanField(
+        widget=forms.CheckboxInput(attrs={'class': "regular-checkbox",}), initial=False, required=False,
+        help_text="Send confimation email to student"
+    )
+
+    class Meta:
+        model = Booking
+        fields = (
+            'user', 'event', 'status', 'no_show', 'attended', 'block',
+        )
+
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        if self.user is not None:
+            self.fields['user'].initial = self.user.id
+
+        if self.instance.id:
+            already_booked = self.user.bookings.exclude(event_id=self.instance.event.id).values_list("event_id", flat=True)
+        else:
+            already_booked = self.user.bookings.values_list("event_id", flat=True)
+
+        self.fields['event'] = forms.ModelChoiceField(
+            queryset=Event.objects.filter(
+                start__gte=timezone.now()
+            ).filter(cancelled=False).exclude(id__in=already_booked).order_by('-start'),
+            widget=forms.Select(attrs={'class': 'form-control input-sm'}),
+            required=True
+        )
+
+        active_user_blocks = [
+            block.id for block in self.user.blocks.all() if block.active_block
+        ]
+        self.has_available_block = True if active_user_blocks else False
+
+        self.fields['block'] = (forms.ModelChoiceField(
+            queryset=self.user.blocks.filter(id__in=active_user_blocks),
+            widget=forms.Select(attrs={'class': 'form-control input-sm'}),
+            required=False,
+            empty_label="--------None--------"
+        ))
+
+    def clean(self):
+        """
+        make sure that block selected is for the correct event type
+        Add form validation for cancelled bookings
+        """
+        block = self.cleaned_data.get('block')
+        event = self.cleaned_data.get('event')
+        status = self.cleaned_data.get('status')
+        no_show = self.cleaned_data.get('status')
+
+        if block:
+            # check block validity; this will check both events and courses
+            if not block.valid_for_event(event):
+                msg = f"{event.event_type.pluralized_label} on this course" if event.course else f"this {event.event_type.label}"
+                self.add_error("block", f"Block is not valid for {msg} (wrong event type or expired by date of {event.event_type.label})")
+            if status == "CANCELLED" and not no_show and not event.course:
+                self.add_error(
+                    "block", f"Block cannot be assigned for cancelled booking.  "
+                             f"Set to open and no_show if a block should be used.")
+
+        # full event
+        if not event.spaces_left:
+            if not self.instance.id:
+                if status == "OPEN" and not no_show:
+                    # Trying to make a new, open booking
+                    self.add_error("__all__", f"This {event.event_type.label} is full, can't make new booking.")
+            else:
+                # if this is an existing booking for a course, booking can be reopened, no need to check
+                if not event.course:
+                    existing_booking = self.user.bookings.get(event=event)
+                    if (status == "OPEN" and not no_show) and (existing_booking.status == "CANCELLED" or existing_booking.no_show):
+                        # trying to reopen cancelled booking for full event
+                        if status == "OPEN" and not no_show:
+                            self.add_error("__all__", f"This {event.event_type.label} is full, can't make new booking.")

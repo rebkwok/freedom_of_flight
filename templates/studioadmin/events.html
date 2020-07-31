@@ -59,7 +59,8 @@
                                 <td class="text-center">{{ event.spaces_left }} {% if event.max_participants %}/ {{ event.max_participants }}{% endif %}</td>
                                 <td>{{ event.event_type.name }}</td>
                                 {% if event.course %}
-                                    <td class="helptext text-center">Set on course</td>
+                                    <td class="helptext text-center">
+                                        <span class="btn btn-sm btn-visible btn-secondary">{{ event.show_on_site|yesno|title }}</span></td>
                                 {% else %}
                                     <td class="text-center">
                                         {% if event.cancelled %}

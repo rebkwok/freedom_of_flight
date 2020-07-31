@@ -1,0 +1,11 @@
+{% extends 'email_base.html' %}
+
+{% block messagecontent %}
+
+<p>Your booking for {{ event }} has been {{ action }} by an administrator.</p>
+
+{% if extra_msgs %}<ul>{% for msg in extra_msgs %}<li>{{ msg }}</li>{% endfor %}</ul>{% endif %}
+
+<a href="{{ host }}{% url 'booking:bookings' %}">View your bookings</a>
+
+{% endblock %}
