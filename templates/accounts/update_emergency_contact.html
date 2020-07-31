@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load accounttags %}
+{% load accounttags crispy_forms_tags %}
 
 {% block precontent %}
     {{ block.super }}
@@ -21,17 +21,7 @@
 
        <form class="dirty-check form" action="" method="post">
            {% csrf_token %}
-
-           {% for field in form %}
-                <div class="form-group">
-                     <label class="control-label" for='id_{{ field.name }}'>{{ field.label }}</label>
-                    {{ field }}
-                    {% if field.errors %}<span class="errorlist">{{ field.errors }}</span>{% endif %}
-                   </div>
-                   <div class="helptext ">{{ field.help_text }}</div>
-           {% endfor %}
-
-            <div><input class="btn btn-success" type="submit" value="Submit" /></div>
+            {% crispy form %}
        </form>
 
 {% endblock %}

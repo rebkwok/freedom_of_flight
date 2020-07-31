@@ -59,63 +59,6 @@ class SignUpFormTests(TestUsersMixin, TestCase):
         assert form.is_valid() is False
 
 
-class DisclaimerFormTests(TestUsersMixin, TestCase):
-
-    form_data = {
-        'emergency_contact_name': "test",
-        'emergency_contact_relationship': "test",
-        'emergency_contact_phone': "test",
-        'terms_accepted': True,
-        'password': 'password',
-        'health_questionnaire_responses_0': "test"
-    }
-
-    def setUp(self):
-        self.create_users()
-        make_disclaimer_content(
-            form=[
-                    {
-                        'type': 'text',
-                        'required': False,
-                        'label': 'Say something',
-                        'name': 'text-1234',
-                        'subtype': 'text'
-                    }
-                ]
-        )
-
-    def test_disclaimer_form(self):
-        form = DisclaimerForm(data=self.form_data, disclaimer_user=self.student_user)
-        assert form.is_valid()
-
-    def test_terms_accepted_required(self):
-        data = {**self.form_data, 'terms_accepted': False}
-        form = DisclaimerForm(data=data, disclaimer_user=self.student_user)
-        assert form.is_valid() is False
-        assert form.errors == {'terms_accepted': ['This field is required.']}
-
-    def test_with_expired_disclaimer(self):
-        disclaimer = make_online_disclaimer(
-            user=self.student_user,
-            date=datetime(2015, 2, 10, 19, 0, tzinfo=timezone.utc),
-            emergency_contact_name="Donald Duck",
-            emergency_contact_relationship="Duck",
-            emergency_contact_phone="123",
-            health_questionnaire_responses={"Say something": "Boo"}
-        )
-        assert disclaimer.is_active is False
-
-        form = DisclaimerForm(disclaimer_user=self.student_user)
-        # initial fields set to expired disclaimer
-        # Note health questionnaire fields are modified in the view after the form is instantiated
-        assert form.fields['emergency_contact_name'].initial == 'Donald Duck'
-        assert form.fields['emergency_contact_relationship'].initial == 'Duck'
-        assert form.fields['emergency_contact_phone'].initial == '123'
-
-        # terms accepted NOT set to expired
-        assert form.fields['terms_accepted'].initial is None
-
-
 # class NonRegisteredDisclaimerFormTests(TestUsersMixin, TestCase):
 #
 #     def setUp(self):

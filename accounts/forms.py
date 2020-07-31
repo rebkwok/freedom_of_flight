@@ -2,9 +2,11 @@ from copy import deepcopy
 from datetime import datetime
 
 from django import forms
-from django.contrib.auth.models import User
+from django.utils.html import mark_safe, linebreaks
 from django.utils import timezone
 
+from crispy_forms.helper import FormHelper
+from crispy_forms.layout import Button, Layout, Submit, Row, Column, Field, Fieldset, Hidden, HTML
 
 from accounts import validators as account_validators
 from .models import DataPrivacyPolicy, SignedDataPrivacy, OnlineDisclaimer, UserProfile, \
@@ -36,6 +38,7 @@ class AccountFormMixin:
         self.fields["address"] = forms.CharField(widget=forms.TextInput(attrs={'class': 'form-control'}))
         self.fields["postcode"] = forms.CharField(max_length=10, widget=forms.TextInput(attrs={'class': 'form-control'}))
         self.fields["phone"] = forms.CharField(max_length=20, widget=forms.TextInput(attrs={'class': 'form-control'}))
+        self.fields["phone"].validators = [account_validators.phone_number_validator]
 
 
 class CoreAccountFormMixin:
@@ -116,7 +119,6 @@ class ProfileForm(CoreAccountFormMixin, AccountFormMixin, forms.ModelForm):
         fields = ("first_name", "last_name", "address", "postcode", "phone", "date_of_birth", "student", "manager")
 
 
-
 class RegisterChildUserForm(AccountFormMixin, forms.ModelForm):
     first_name = forms.CharField(
         widget=forms.TextInput(attrs={'class': "form-control"}), required = True
@@ -137,8 +139,6 @@ class RegisterChildUserForm(AccountFormMixin, forms.ModelForm):
     class Meta:
         model = ChildUserProfile
         fields = ("first_name", "last_name", "address", "postcode", "phone", "date_of_birth")
-
-
 
 
 BASE_DISCLAIMER_FORM_WIDGETS = {
@@ -163,17 +163,19 @@ class DisclaimerForm(forms.ModelForm):
     )
 
     def __init__(self, *args, **kwargs):
-        user = kwargs.pop('disclaimer_user')
+        user = kwargs.pop('disclaimer_user', None)
+        self.request_user = kwargs.pop('request_user')
         super().__init__(*args, **kwargs)
 
         if self.instance.id:
             self.disclaimer_content = DisclaimerContent.objects.get(version=self.instance.version)
         else:
             self.disclaimer_content = DisclaimerContent.current()
+        self.fields["health_questionnaire_responses"].required = any(field.get("required") for field in self.disclaimer_content.form)
+        self.fields["emergency_contact_phone"].validators = [account_validators.phone_number_validator]
+
         # in the DisclaimerForm, these fields are autopoulated
         self.disclaimer_terms = self.disclaimer_content.disclaimer_terms
-        self.has_health_questionnaire = self.disclaimer_content.form not in [None, []]
-        self.fields["health_questionnaire_responses"].required = False
         if user is not None:
             if has_expired_disclaimer(user):
                 last_disclaimer = OnlineDisclaimer.objects.filter(user=user).last()
@@ -184,6 +186,21 @@ class DisclaimerForm(forms.ModelForm):
                         last_value = getattr(last_disclaimer, field_name)
                         self.fields[field_name].initial = last_value
 
+        self.helper = FormHelper()
+        self.helper.layout = Layout(
+            HTML("<h3>Emergency Contact Information</h3>"),
+            "emergency_contact_name",
+            "emergency_contact_phone",
+            "emergency_contact_relationship",
+            HTML("<h3>Health Questionnaire</h3>"),
+            "health_questionnaire_responses",
+            HTML("<h3>Disclaimer Terms</h3>"),
+            HTML(mark_safe(linebreaks(self.disclaimer_content.disclaimer_terms))),
+            "terms_accepted",
+            "password",
+            Submit('submit', 'Save')
+        )
+
     class Meta:
         model = OnlineDisclaimer
         fields = (
@@ -191,6 +208,12 @@ class DisclaimerForm(forms.ModelForm):
             'emergency_contact_relationship', 'emergency_contact_phone', 'health_questionnaire_responses'
         )
         widgets = deepcopy(BASE_DISCLAIMER_FORM_WIDGETS)
+
+    def clean_password(self):
+        password = self.cleaned_data.get("password")
+        if self.request_user.check_password(password):
+            return password
+        self.add_error("password", "Invalid password entered")
 
 
 class NonRegisteredDisclaimerForm(DisclaimerForm):
@@ -225,13 +248,37 @@ class NonRegisteredDisclaimerForm(DisclaimerForm):
         })
 
     def __init__(self, *args, **kwargs):
-        kwargs['user'] = None
         super().__init__(*args, **kwargs)
         del self.fields['password']
+        self.fields["phone"].validators = [account_validators.phone_number_validator]
         self.fields['event_date'].input_formats = ['%d-%b-%Y']
         self.fields['event_date'].help_text = "Please enter the date of the " \
                                               "event you will be attending.  This will help us " \
                                               "retrieve your disclaimer on the day."
+
+        self.helper = FormHelper()
+        self.helper.layout = Layout(
+            HTML("<h3>Your details</h3>"),
+            "first_name",
+            "last_name",
+            "email",
+            "address",
+            "postcode",
+            "phone",
+            "date_of_birth",
+            "event_date",
+            HTML("<h3>Emergency Contact Information</h3>"),
+            "emergency_contact_name",
+            "emergency_contact_phone",
+            "emergency_contact_relationship",
+            HTML("<h3>Health Questionnaire</h3>"),
+            "health_questionnaire_responses",
+            HTML("<h3>Disclaimer Terms</h3>"),
+            HTML(mark_safe(linebreaks(self.disclaimer_content.disclaimer_terms))),
+            "terms_accepted",
+            "password",
+            Submit('submit', 'Save')
+        )
 
     def clean(self):
         cleaned_data = super().clean()
@@ -255,6 +302,17 @@ class DisclaimerContactUpdateForm(forms.ModelForm):
             'emergency_contact_name', 'emergency_contact_relationship', 'emergency_contact_phone'
         )
         widgets = deepcopy(BASE_DISCLAIMER_FORM_WIDGETS)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["emergency_contact_phone"].validators = [account_validators.phone_number_validator]
+        self.helper = FormHelper()
+        self.helper.layout = Layout(
+            "emergency_contact_name",
+            "emergency_contact_phone",
+            "emergency_contact_relationship",
+            Submit('submit', 'Save', css_class="btn btn-success")
+        )
 
 
 class DataPrivacyAgreementForm(forms.Form):

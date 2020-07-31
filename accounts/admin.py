@@ -40,6 +40,7 @@ class OnlineDisclaimerAdmin(admin.ModelAdmin):
             responses.append(f"<strong>{question}</strong><br/>{response}")
         return format_html(mark_safe("<br/>".join(responses)))
 
+
 class NonRegisteredDisclaimerAdmin(admin.ModelAdmin):
 
     readonly_fields = (
