@@ -18,7 +18,9 @@ from crispy_forms.layout import Button, Layout, Submit, Row, Column, Field, Fiel
 
 from accounts.admin import CookiePolicyAdminForm, DataPrivacyPolicyAdminForm, DisclaimerContentAdminForm
 from accounts.models import DisclaimerContent
-from booking.models import Booking, Event, Course, EventType, COMMON_LABEL_PLURALS, DropInBlockConfig, CourseBlockConfig
+from booking.models import (
+    Booking, Block, Event, Course, EventType, COMMON_LABEL_PLURALS, BlockConfig
+)
 from common.utils import full_name
 from timetable.models import TimetableSession
 
@@ -124,23 +126,19 @@ class TimetableSessionCreateUpdateForm(forms.ModelForm):
         )
 
 
-def get_course_event_choices(course_type, instance_id=None):
+def get_course_event_choices(event_type, instance_id=None):
 
-    def callable():
-        if instance_id is None:
-            queryset = Event.objects.filter(
-                event_type=course_type.event_type, start__gte=timezone.now(), cancelled=False, course__isnull=True
-            ).order_by('start')
-        else:
-            query = (
-                Q(event_type=course_type.event_type, start__gte=timezone.now(), cancelled=False, course__isnull=True) |
-                Q(course_id=instance_id)
-            )
-            queryset = Event.objects.filter(query).order_by('start')
-        EVENT_CHOICES = [(event.id, str(event)) for event in queryset]
-        return tuple(EVENT_CHOICES)
-
-    return callable
+    if instance_id is None:
+        queryset = Event.objects.filter(
+            event_type=event_type, start__gte=timezone.now(), cancelled=False, course__isnull=True
+        ).order_by('start')
+    else:
+        query = (
+            Q(event_type=event_type, start__gte=timezone.now(), cancelled=False, course__isnull=True) |
+            Q(course_id=instance_id)
+        )
+        queryset = Event.objects.filter(query).order_by('start')
+    return queryset
 
 
 class CourseUpdateForm(forms.ModelForm):
@@ -148,15 +146,16 @@ class CourseUpdateForm(forms.ModelForm):
     class Meta:
         model = Course
         fields = (
-            "course_type",
+            "event_type",
             "name", "description",
+            "number_of_events",
             "max_participants",
             "show_on_site",
             "cancelled"
         )
 
     def __init__(self,*args, **kwargs):
-        self.course_type = kwargs.pop("course_type")
+        self.event_type = kwargs.pop("event_type")
         super().__init__(*args, **kwargs)
         for name, field in self.fields.items():
             if name == "show_on_site":
@@ -171,12 +170,12 @@ class CourseUpdateForm(forms.ModelForm):
                 if name == "description":
                     field.widget.attrs.update({"rows": 10})
 
-        self.fields["events"] = forms.MultipleChoiceField(
+        self.fields["events"] = forms.ModelMultipleChoiceField(
             required=False,
-            choices=get_course_event_choices(self.course_type, self.instance.id),
+            queryset=get_course_event_choices(self.event_type, self.instance.id),
             widget=forms.SelectMultiple(attrs={"class": "form-control"}),
             help_text="Select one or more (ctrl/cmd+click to select multiple)",
-            label=f"Add {self.course_type.event_type.pluralized_label} to this course"
+            label=f"Add {self.event_type.pluralized_label} to this course"
         )
 
         if self.instance:
@@ -184,8 +183,9 @@ class CourseUpdateForm(forms.ModelForm):
 
     def clean_events(self):
         events = self.cleaned_data["events"]
-        if len(events) > self.course_type.number_of_events:
-            self.add_error("events", f"Too many {self.course_type.event_type.pluralized_label} selected; select a maximum of {self.course_type.number_of_events}")
+        number_of_events = self.cleaned_data["number_of_events"]
+        if len(events) > number_of_events:
+            self.add_error("events", f"Too many {self.event_type.pluralized_label} selected; select a maximum of {number_of_events}")
         else:
             return events
 
@@ -193,7 +193,7 @@ class CourseUpdateForm(forms.ModelForm):
 class CourseCreateForm(CourseUpdateForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["course_type"].widget = forms.HiddenInput(attrs={"value": self.course_type.id})
+        self.fields["event_type"].widget = forms.HiddenInput(attrs={"value": self.event_type.id})
         self.fields["cancelled"].widget = forms.HiddenInput()
 
 
@@ -521,54 +521,29 @@ class EventTypeForm(forms.ModelForm):
         )
 
 
-class DropInBlockConfigForm(forms.ModelForm):
+class BlockConfigForm(forms.ModelForm):
     class Meta:
-        model = DropInBlockConfig
-        fields = ("event_type", "identifier", "description", "size", "duration", "cost", "active")
+        model = BlockConfig
+        fields = ("event_type", "name", "description", "size", "duration", "course", "cost", "active")
 
     def __init__(self, *args, **kwargs):
+        is_course = kwargs.pop("is_course")
         super().__init__(*args, **kwargs)
         self.fields["event_type"].help_text = "Each credit block is associated with a single event type and will be valid " \
                                               "for the number of events you select, for events of that event type only."
         self.fields["description"].help_text = "This will be displayed to users when purchasing credit blocks."
-        self.fields["identifier"].help_text = "A short name for the credit block"
+        self.fields["name"].help_text = "A short name for the credit block"
         self.fields["active"].help_text = "Active credit blocks are available for purchase by users and will be displayed " \
                                           "on the credit block purchase page."
         self.helper = FormHelper()
         back_url = reverse('studioadmin:block_configs')
         self.helper.layout = Layout(
             "event_type",
-            "identifier",
+            "name",
             "description",
             "size",
             "duration",
-            PrependedText('cost', '£'),
-            "active",
-            Submit('submit', f'Save', css_class="btn btn-success"),
-            HTML(f'<a class="btn btn-outline-dark" href="{back_url}">Back</a>')
-        )
-
-
-class CourseBlockConfigForm(forms.ModelForm):
-    class Meta:
-        model = CourseBlockConfig
-        fields = ("course_type", "identifier", "description", "duration", "cost", "active")
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields["course_type"].help_text = "Each course credit block is associated with a single course type which " \
-                                               "defines the event type and number of events and in the course."
-        self.fields["description"].help_text = "This will be displayed to users when purchasing credit blocks."
-        self.fields["identifier"].help_text = "A short name for the credit block"
-        self.fields["active"].help_text = "Active credit blocks are available for purchase by users and will be displayed " \
-                                          "on the credit block purchase page."
-        self.helper = FormHelper()
-        back_url = reverse('studioadmin:block_configs')
-        self.helper.layout = Layout(
-            "course_type",
-            "identifier",
-            "description",
-            "duration",
+            Hidden("course", is_course),
             PrependedText('cost', '£'),
             "active",
             Submit('submit', f'Save', css_class="btn btn-success"),
@@ -707,3 +682,44 @@ class AddEditBookingForm(forms.ModelForm):
                         # trying to reopen cancelled booking for full event
                         if status == "OPEN" and not no_show:
                             self.add_error("__all__", f"This {event.event_type.label} is full, can't make new booking.")
+
+
+class AddEditBlockForm(forms.ModelForm):
+
+    class Meta:
+        model = Block
+        fields = ('user', 'paid', 'block_config', 'manual_expiry_date')
+
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+
+        self.fields["manual_expiry_date"] = forms.DateField(
+            required=False, label="Manual expiry date",
+            widget=forms.DateInput(attrs={"autocomplete": "off"}, format='%d-%b-%Y'), input_formats=['%d-%b-%Y'],
+            help_text="Leave blank to auto-calculate expiry date"
+        )
+
+        self.fields["block_config"].label = "Block type"
+        if not self.instance.id or not self.instance.bookings.exists():
+            block_type_queryset = BlockConfig.objects.filter(active=True)
+        else:
+            # choices should only include the same event type if there are any events already booking
+            block_type_queryset = BlockConfig.objects.filter(active=True, event_type=self.instance.block_config.event_type)
+            self.fields["block_config"].help_text = "Bookings have already been made using this block; can only change to a block " \
+                                                  "of the same type"
+        self.fields["block_config"].queryset = block_type_queryset
+
+        self.helper = FormHelper()
+        self.helper.layout = Layout(
+            Hidden("user", self.user.id),
+            "block_config",
+            HTML(f"<p>Purchase date: <b>{self.instance.purchase_date.strftime('%d-%b-%y')}</b></p>") if self.instance.id else "",
+            HTML(f"<p>Start date (set to date of first booking): <b>{self.instance.start_date.strftime('%d-%b-%y')}</b></p>") if self.instance.id and self.instance.start_date else "",
+            "paid",
+            HTML("<p>By default, expiry date is calculated from date of first booking, as determined by the block duration. "
+                 "If required, you can override it here with a manually set date.</p>"),
+            HTML(f"<p>Expiry date: <b>{self.instance.expiry_date.strftime('%d-%b-%y')}</b></p>") if self.instance.id and self.instance.expiry_date else "",
+            "manual_expiry_date",
+            Submit('submit', 'Save')
+        )

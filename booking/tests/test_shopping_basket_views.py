@@ -6,7 +6,7 @@ from django.urls import reverse
 from django.test import TestCase
 from django.utils import timezone
 
-from booking.models import Block, DropInBlockConfig, CourseBlockConfig, BlockVoucher
+from booking.models import Block, BlockConfig, BlockVoucher
 from common.test_utils import TestUsersMixin
 from payments.models import Invoice
 
@@ -24,8 +24,8 @@ class ShoppingBasketViewTests(TestUsersMixin, TestCase):
         self.make_data_privacy_agreement(self.manager_user)
         self.make_disclaimer(self.student_user)
         self.login(self.student_user)
-        self.dropin_block_config = baker.make(DropInBlockConfig, cost=20)
-        self.course_block_config = baker.make(CourseBlockConfig, cost=40)
+        self.dropin_block_config = baker.make(BlockConfig, cost=20)
+        self.course_block_config = baker.make(BlockConfig, course=True, cost=40)
 
     def test_no_unpaid_blocks(self):
         resp = self.client.get(self.url)
@@ -35,7 +35,7 @@ class ShoppingBasketViewTests(TestUsersMixin, TestCase):
         assert "Your cart is empty" in resp.rendered_content
 
     def test_with_unpaid_blocks(self):
-        block = baker.make_recipe("booking.dropin_block", dropin_block_config=self.dropin_block_config, user=self.student_user)
+        block = baker.make_recipe("booking.dropin_block", block_config=self.dropin_block_config, user=self.student_user)
         resp = self.client.get(self.url)
         assert list(resp.context_data["unpaid_block_info"]) == [
             {"block": block, "original_cost": 20, "voucher_applied": {"code": None, "discounted_cost": None}}
@@ -46,8 +46,8 @@ class ShoppingBasketViewTests(TestUsersMixin, TestCase):
 
     def test_shows_user_managed_unpaid_blocks(self):
         self.login(self.manager_user)
-        block1 = baker.make_recipe("booking.dropin_block", dropin_block_config=self.dropin_block_config, user=self.manager_user)
-        block2 = baker.make_recipe("booking.dropin_block", dropin_block_config__cost=10, user=self.child_user)
+        block1 = baker.make_recipe("booking.dropin_block", block_config=self.dropin_block_config, user=self.manager_user)
+        block2 = baker.make_recipe("booking.dropin_block", block_config__cost=10, user=self.child_user)
 
         resp = self.client.get(self.url)
         assert list(resp.context_data["unpaid_block_info"]) == [
@@ -59,8 +59,8 @@ class ShoppingBasketViewTests(TestUsersMixin, TestCase):
 
     def test_voucher_application(self):
         voucher = baker.make(BlockVoucher, code="test", discount=50)
-        voucher.dropin_block_configs.add(self.dropin_block_config)
-        block = baker.make_recipe("booking.dropin_block", dropin_block_config=self.dropin_block_config, user=self.student_user)
+        voucher.block_configs.add(self.dropin_block_config)
+        block = baker.make_recipe("booking.dropin_block", block_config=self.dropin_block_config, user=self.student_user)
         resp = self.client.get(self.url)
         assert resp.context_data["total_cost"] == 20
 
@@ -75,8 +75,8 @@ class ShoppingBasketViewTests(TestUsersMixin, TestCase):
 
     def test_remove_voucher(self):
         voucher = baker.make(BlockVoucher, code="test", discount=50)
-        voucher.dropin_block_configs.add(self.dropin_block_config)
-        block = baker.make_recipe("booking.dropin_block", dropin_block_config=self.dropin_block_config,
+        voucher.block_configs.add(self.dropin_block_config)
+        block = baker.make_recipe("booking.dropin_block", block_config=self.dropin_block_config,
                                   user=self.student_user, voucher=voucher)
         resp = self.client.get(self.url)
         assert resp.context_data["total_cost"] == 10  # discount applied
@@ -93,8 +93,8 @@ class ShoppingBasketViewTests(TestUsersMixin, TestCase):
 
     def test_voucher_whitespace_removed(self):
         voucher = baker.make(BlockVoucher, code="test", discount=50)
-        voucher.dropin_block_configs.add(self.dropin_block_config)
-        block = baker.make_recipe("booking.dropin_block", dropin_block_config=self.dropin_block_config,
+        voucher.block_configs.add(self.dropin_block_config)
+        block = baker.make_recipe("booking.dropin_block", block_config=self.dropin_block_config,
                                   user=self.student_user)
         resp = self.client.post(self.url, data={"add_voucher_code": "add_voucher_code", "code": "  test  "})
         assert list(resp.context_data["unpaid_block_info"]) == [
@@ -105,9 +105,9 @@ class ShoppingBasketViewTests(TestUsersMixin, TestCase):
 
     def test_existing_voucher_removed_from_block_if_invalid(self):
         voucher = baker.make(BlockVoucher, code="test", discount=50)
-        voucher.dropin_block_configs.add(self.dropin_block_config)
+        voucher.block_configs.add(self.dropin_block_config)
         block = baker.make_recipe(
-            "booking.dropin_block", dropin_block_config=self.dropin_block_config, user=self.student_user, voucher=voucher
+            "booking.dropin_block", block_config=self.dropin_block_config, user=self.student_user, voucher=voucher
         )
         voucher.activated = False
         voucher.save()
@@ -119,7 +119,7 @@ class ShoppingBasketViewTests(TestUsersMixin, TestCase):
     def test_voucher_validation(self):
         voucher = baker.make(BlockVoucher, code="test", discount=50, activated=False)
         baker.make_recipe(
-            "booking.dropin_block", dropin_block_config=self.dropin_block_config, user=self.student_user,
+            "booking.dropin_block", block_config=self.dropin_block_config, user=self.student_user,
         )
 
         # invalid code
@@ -140,7 +140,7 @@ class ShoppingBasketViewTests(TestUsersMixin, TestCase):
         assert resp.context_data["total_cost"] == 20
 
         # voucher not started
-        voucher.dropin_block_configs.add(self.dropin_block_config)
+        voucher.block_configs.add(self.dropin_block_config)
         voucher.start_date = timezone.now() + timedelta(2)
         voucher.save()
         resp = self.client.post(self.url, data={"add_voucher_code": "add_voucher_code", "code": "test"})
@@ -162,7 +162,7 @@ class ShoppingBasketViewTests(TestUsersMixin, TestCase):
         voucher.max_per_user = 1
         voucher.save()
         baker.make(
-            Block, dropin_block_config=self.dropin_block_config, user=self.student_user, voucher=voucher, paid=True
+            Block, block_config=self.dropin_block_config, user=self.student_user, voucher=voucher, paid=True
         )
         resp = self.client.post(self.url, data={"add_voucher_code": "add_voucher_code", "code": "test"})
         assert resp.context_data["voucher_add_error"] == [
@@ -174,7 +174,7 @@ class ShoppingBasketViewTests(TestUsersMixin, TestCase):
         voucher.max_per_user = None
         voucher.max_vouchers = 2
         voucher.save()
-        baker.make(Block, voucher=voucher, dropin_block_config=self.dropin_block_config, _quantity=2)
+        baker.make(Block, voucher=voucher, block_config=self.dropin_block_config, _quantity=2)
 
         # voucher used for only some block before it's used up
         resp = self.client.post(self.url, data={"add_voucher_code": "add_voucher_code", "code": "test"})
@@ -185,9 +185,9 @@ class ShoppingBasketViewTests(TestUsersMixin, TestCase):
 
     def test_apply_voucher_to_multiple_blocks(self):
         voucher = baker.make(BlockVoucher, code="test", discount=50, max_per_user=10)
-        voucher.dropin_block_configs.add(self.dropin_block_config)
+        voucher.block_configs.add(self.dropin_block_config)
         baker.make_recipe(
-            "booking.dropin_block", dropin_block_config=self.dropin_block_config, user=self.student_user,
+            "booking.dropin_block", block_config=self.dropin_block_config, user=self.student_user,
             _quantity=3
         )
         resp = self.client.post(self.url, data={"add_voucher_code": "add_voucher_code", "code": "test"})
@@ -195,9 +195,9 @@ class ShoppingBasketViewTests(TestUsersMixin, TestCase):
 
     def test_apply_multiple_vouchers(self):
         voucher = baker.make(BlockVoucher, code="test", discount=50, max_per_user=10)
-        voucher.dropin_block_configs.add(self.dropin_block_config)
+        voucher.block_configs.add(self.dropin_block_config)
         baker.make_recipe(
-            "booking.dropin_block", dropin_block_config=self.dropin_block_config, user=self.student_user,
+            "booking.dropin_block", block_config=self.dropin_block_config, user=self.student_user,
             _quantity=3
         )
         resp = self.client.post(self.url, data={"add_voucher_code": "add_voucher_code", "code": "test"})
@@ -205,20 +205,20 @@ class ShoppingBasketViewTests(TestUsersMixin, TestCase):
 
         # second valid voucher replaces the first
         voucher1 = baker.make(BlockVoucher, code="foo", discount=20, max_per_user=10)
-        voucher1.dropin_block_configs.add(self.dropin_block_config)
+        voucher1.block_configs.add(self.dropin_block_config)
         resp = self.client.post(self.url, data={"add_voucher_code": "add_voucher_code", "code": "foo"})
         assert resp.context_data["total_cost"] == 48
 
     def test_apply_multiple_vouchers_to_different_blocks(self):
         voucher = baker.make(BlockVoucher, code="test", discount=50, max_per_user=10)
-        voucher.dropin_block_configs.add(self.dropin_block_config)
+        voucher.block_configs.add(self.dropin_block_config)
         voucher1 = baker.make(BlockVoucher, code="foo", discount=10, max_per_user=10)
-        voucher1.course_block_configs.add(self.course_block_config)
+        voucher1.block_configs.add(self.course_block_config)
         dropin_block = baker.make_recipe(
-            "booking.dropin_block", dropin_block_config=self.dropin_block_config, user=self.student_user,
+            "booking.dropin_block", block_config=self.dropin_block_config, user=self.student_user,
         )
         course_block = baker.make_recipe(
-            "booking.course_block", course_block_config=self.course_block_config, user=self.student_user,
+            "booking.course_block", block_config=self.course_block_config, user=self.student_user,
         )
         resp = self.client.post(self.url, data={"add_voucher_code": "add_voucher_code", "code": "test"})
         # applied to first block only
@@ -241,9 +241,9 @@ class ShoppingBasketViewTests(TestUsersMixin, TestCase):
 
     def test_payment_button_when_total_is_zero(self):
         voucher = baker.make(BlockVoucher, code="test", discount=50, max_per_user=10)
-        voucher.dropin_block_configs.add(self.dropin_block_config)
+        voucher.block_configs.add(self.dropin_block_config)
         baker.make_recipe(
-            "booking.dropin_block", dropin_block_config=self.dropin_block_config, user=self.student_user,
+            "booking.dropin_block", block_config=self.dropin_block_config, user=self.student_user,
         )
         resp = self.client.post(self.url, data={"add_voucher_code": "add_voucher_code", "code": "test"})
         assert resp.context_data["total_cost"] == 10
@@ -270,12 +270,12 @@ class AjaxShoppingBasketCheckoutTests(TestUsersMixin, TestCase):
         self.make_data_privacy_agreement(self.manager_user)
         self.make_disclaimer(self.student_user)
         self.login(self.student_user)
-        self.dropin_block_config = baker.make(DropInBlockConfig, cost=20)
-        self.course_block_config = baker.make(CourseBlockConfig, cost=40)
+        self.dropin_block_config = baker.make(BlockConfig, cost=20)
+        self.course_block_config = baker.make(BlockConfig, cost=40)
 
     def test_rechecks_total(self):
         baker.make_recipe(
-            "booking.dropin_block", dropin_block_config=self.dropin_block_config, user=self.student_user,
+            "booking.dropin_block", block_config=self.dropin_block_config, user=self.student_user,
         )
         # total is incorrect, redirect to basket again
         resp = self.client.post(self.url, data={"cart_total": 10}).json()
@@ -284,9 +284,9 @@ class AjaxShoppingBasketCheckoutTests(TestUsersMixin, TestCase):
 
     def test_rechecks_vouchers_valid(self):
         voucher = baker.make(BlockVoucher, code="test", discount=50, max_per_user=10, activated=False)
-        voucher.dropin_block_configs.add(self.dropin_block_config)
+        voucher.block_configs.add(self.dropin_block_config)
         block = baker.make_recipe(
-            "booking.dropin_block", dropin_block_config=self.dropin_block_config, user=self.student_user,
+            "booking.dropin_block", block_config=self.dropin_block_config, user=self.student_user,
             voucher=voucher
         )
         # block has invalid voucher
@@ -298,7 +298,7 @@ class AjaxShoppingBasketCheckoutTests(TestUsersMixin, TestCase):
 
     def test_creates_invoice_and_applies_to_unpaid_blocks(self):
         block = baker.make_recipe(
-            "booking.dropin_block", dropin_block_config=self.dropin_block_config, user=self.student_user,
+            "booking.dropin_block", block_config=self.dropin_block_config, user=self.student_user,
         )
         assert Invoice.objects.exists() is False
         # total is correct
@@ -313,9 +313,9 @@ class AjaxShoppingBasketCheckoutTests(TestUsersMixin, TestCase):
 
     def test_zero_total(self):
         voucher = baker.make(BlockVoucher, code="test", discount=100, max_per_user=10)
-        voucher.dropin_block_configs.add(self.dropin_block_config)
+        voucher.block_configs.add(self.dropin_block_config)
         block = baker.make_recipe(
-            "booking.dropin_block", dropin_block_config=self.dropin_block_config, user=self.student_user,
+            "booking.dropin_block", block_config=self.dropin_block_config, user=self.student_user,
             voucher=voucher
         )
         resp = self.client.post(self.url, data={"cart_total": 0}).json()
@@ -330,7 +330,7 @@ class AjaxShoppingBasketCheckoutTests(TestUsersMixin, TestCase):
             Invoice, username=self.student_user.username, amount=20, transaction_id=None
         )
         block = baker.make_recipe(
-            "booking.dropin_block", dropin_block_config=self.dropin_block_config, user=self.student_user,
+            "booking.dropin_block", block_config=self.dropin_block_config, user=self.student_user,
             invoice=invoice
         )
         # total is correct

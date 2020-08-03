@@ -7,8 +7,8 @@
 {% endblock %}
 
 {% block content %}
-    <h2 class="mt-1">Active Credit Blocks</h2>
     {% if active_blocks_by_config %}
+        <h2 class="mt-1">Active Credit Blocks</h2>
         {% for config, blocks in active_blocks_by_config.items  %}
             <div class="list-group mb-2">
                 <div class="list-group-item list-group-item-dark pt-1 pb-1">{{ config }}</div>
@@ -27,7 +27,30 @@
                 {% endfor %}
             </div>
         {% endfor %}
-    {% else %}
+    {% endif %}
+    {% if expired_blocks_by_config %}
+        <h2 class="mt-1">Used/Expired Credit Blocks</h2>
+        {% for config, blocks in expired_blocks_by_config.items  %}
+            <div class="list-group mb-2">
+                <div class="list-group-item list-group-item-dark pt-1 pb-1">{{ config }}</div>
+                {% for block in blocks %}
+                    <div class="list-group-item">
+                        Purchased: {{ block.purchase_date | date:"d M Y" }}<br/>
+                        User: {{ block.user.first_name }} {{ block.user.last_name }}<br/>
+                        {{ block|block_expiry_text }}<br/>
+                        Bookings: {% if not block.bookings.exists %}N/A{% endif %}
+                        <ul>
+                            {% for booking in block.bookings.all %}
+                                <li>{{ booking.event.name }} | {{ booking.event.start|date:"D d M Y, H:i" }}</li>
+                            {% endfor %}
+                        </ul>
+                        </div>
+                {% endfor %}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    {% if not active_blocks_by_config and not expired_blocks %}
         <p>You do not have any active blocks.</p>
     {% endif %}
 

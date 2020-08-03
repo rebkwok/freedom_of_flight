@@ -14,14 +14,14 @@ from studioadmin.views import (
     upload_timetable_view, email_event_users_view, email_course_users_view,
     TrackCreateView, TrackListView, TrackUpdateView, EventTypeListView, toggle_track_default,
     choose_track_for_event_type, EventTypeCreateView, EventTypeUpdateView, event_type_delete_view,
-    CourseTypeListView, CourseTypeCreateView, CourseTypeUpdateView, course_type_delete_view,
     block_config_list_view, ajax_toggle_block_config_active, block_config_delete_view, choose_block_config_type,
-    DropInBlockConfigCreateView, CourseBlockConfigCreateView, BlockConfigUpdateView,
+    BlockConfigCreateView, BlockConfigUpdateView,
     CookiePolicyListView, DataPrivacyPolicyListView, DisclaimerContentListView,
     CookiePolicyDetailView, DataPrivacyPolicyDetailView, DisclaimerContentDetailView,
     DisclaimerContentCreateView, DisclaimerContentUpdateView, CookiePolicyCreateView, DataPrivacyPolicyCreateView,
     UserListView, UserDetailView, UserBookingsListView, BookingAddView, BookingEditView,
     UserBookingsHistoryListView,
+    UserBlocksListView, BlockAddView, BlockEditView, ajax_block_delete,
 )
 
 app_name = 'studioadmin'
@@ -49,7 +49,7 @@ urlpatterns = [
     path('course/<slug>/cancel/', cancel_course_view, name='cancel_course'),
     path('ajax-toggle-course-visible/<int:course_id>/', ajax_toggle_course_visible, name="ajax_toggle_course_visible"),
     path('course/create/', course_create_choice_view, name="choose_course_type_to_create"),
-    path('course/<int:course_type_id>/create/', CourseCreateView.as_view(), name="create_course"),
+    path('course/<int:event_type_id>/create/', CourseCreateView.as_view(), name="create_course"),
     path('course/<slug>/update/', CourseUpdateView.as_view(), name="update_course"),
     path('course/<course_slug>/email-students/', email_course_users_view, name="email_course_users"),
 
@@ -72,19 +72,13 @@ urlpatterns = [
     path('site-config/event-type/<int:track_id>/add/', EventTypeCreateView.as_view(), name="add_event_type"),
     path('site-config/event-type/<int:pk>/update/', EventTypeUpdateView.as_view(), name="edit_event_type"),
     path('site-config/event-type/<int:event_type_id>/delete/', event_type_delete_view, name="delete_event_type"),
-    # course types
-    path('site-config/course-types/', CourseTypeListView.as_view(), name="course_types"),
-    path('site-config/course-type/add/', CourseTypeCreateView.as_view(), name="add_course_type"),
-    path('site-config/course-type/<int:pk>/update/', CourseTypeUpdateView.as_view(), name="edit_course_type"),
-    path('site-config/course-type/<int:course_type_id>/delete/', course_type_delete_view, name="delete_course_type"),
     # block configs
     path('site-config/credit-blocks/', block_config_list_view, name="block_configs"),
     path('site-config/ajax-toggle-credit-block-active/', ajax_toggle_block_config_active, name="ajax_toggle_block_config_active"),
     path('site-config/credit-block/<int:block_config_id>/delete/', block_config_delete_view, name="delete_block_config"),
     path('site-config/credit-block/create/', choose_block_config_type, name="choose_block_config_type"),
-    path('site-config/credit-block/drop-in/create/', DropInBlockConfigCreateView.as_view(), name="add_dropin_block_config"),
-    path('site-config/credit-block/course/create/', CourseBlockConfigCreateView.as_view(), name="add_course_block_config"),
-    path('site-config/credit-block/<block_config_type>/<int:block_config_id>/update/', BlockConfigUpdateView.as_view(), name="edit_block_config"),
+    path('site-config/credit-block/<block_config_type>/create/', BlockConfigCreateView.as_view(), name="add_block_config"),
+    path('site-config/credit-block/<int:pk>/update/', BlockConfigUpdateView.as_view(), name="edit_block_config"),
     # policies
     path('policies/cookie-policies/', CookiePolicyListView.as_view(), name="cookie_policies"),
     path('policies/data-privacy-policies/', DataPrivacyPolicyListView.as_view(), name="data_privacy_policies"),
@@ -107,6 +101,10 @@ urlpatterns = [
     path('user/<int:user_id>/bookings/history/', UserBookingsHistoryListView.as_view(), name="past_user_bookings"),
     path('user/<int:user_id>/booking/add/', BookingAddView.as_view(), name="bookingadd"),
     path('user/booking/<int:pk>/edit/', BookingEditView.as_view(), name="bookingedit"),
+    path('user/<int:user_id>/blocks/', UserBlocksListView.as_view(), name="user_blocks"),
+    path('user/<int:user_id>/block/add/', BlockAddView.as_view(), name="blockadd"),
+    path('user/block/<int:pk>/edit/', BlockEditView.as_view(), name="blockedit"),
+    path('user/block/<int:block_id>/delete/', ajax_block_delete, name="blockdelete"),
 
     # help
     path('help/', help, name="help"),

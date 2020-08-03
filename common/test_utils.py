@@ -11,7 +11,7 @@ from accounts.models import (
     SignedDataPrivacy, OnlineDisclaimer, has_active_disclaimer, NonRegisteredDisclaimer,
     UserProfile, ChildUserProfile, ArchivedDisclaimer
 )
-from booking.models import Event, EventType, Course, CourseType, Track
+from booking.models import Event, EventType, Course, Track
 
 
 def make_disclaimer_content(**kwargs):
@@ -181,8 +181,7 @@ class EventTestMixin:
         cls.floor_event_type = baker.make(EventType, name="floor", track=cls.adult_track)
         cls.kids_aerial_event_type = baker.make(EventType, name="aerial", track=cls.kids_track)
         cls.kids_floor_event_type = baker.make(EventType, name="floor", track=cls.kids_track)
-        cls.course_type = baker.make(CourseType, event_type=cls.aerial_event_type, number_of_events=3)
-        
+
     def create_tracks_and_event_types(self):
         self.adult_track = baker.make(Track, name="Adults", default=True)
         self.kids_track = baker.make(Track, name="Kids")
@@ -191,7 +190,6 @@ class EventTestMixin:
         self.floor_event_type = baker.make(EventType, name="floor", track=self.adult_track)
         self.kids_aerial_event_type = baker.make(EventType, name="aerial", track=self.kids_track)
         self.kids_floor_event_type = baker.make(EventType, name="floor", track=self.kids_track)
-        self.course_type = baker.make(CourseType, event_type=self.aerial_event_type, number_of_events=3)
 
     def create_events_and_course(self):
         self.aerial_events = baker.make_recipe("booking.future_event", event_type=self.aerial_event_type,  _quantity=2)
@@ -199,7 +197,7 @@ class EventTestMixin:
         self.kids_aerial_events = baker.make_recipe("booking.future_event", event_type=self.kids_aerial_event_type,  _quantity=3)
         self.kids_floor_events = baker.make_recipe("booking.future_event", event_type=self.kids_floor_event_type,  _quantity=3)
         self.course = baker.make(
-            Course, name="This month's aerial course", course_type=self.course_type,
+            Course, name="This month's aerial course", event_type=self.aerial_event_type, number_of_events=3,
             max_participants=2, show_on_site=True
         )
         self.course_event = baker.make_recipe(

@@ -15,9 +15,8 @@ from .policy_views import (
 from .site_config_views import (
     TrackCreateView, TrackListView, TrackUpdateView, EventTypeListView, toggle_track_default, help,
     choose_track_for_event_type, EventTypeCreateView, EventTypeUpdateView, event_type_delete_view,
-    CourseTypeListView, CourseTypeCreateView, CourseTypeUpdateView, course_type_delete_view,
     block_config_list_view, ajax_toggle_block_config_active, block_config_delete_view, choose_block_config_type,
-    DropInBlockConfigCreateView, CourseBlockConfigCreateView, BlockConfigUpdateView
+    BlockConfigCreateView, BlockConfigUpdateView
 )
 from .register_views import RegisterListView, register_view, ajax_add_register_booking, ajax_toggle_attended
 from .timetable_views import (
@@ -26,7 +25,8 @@ from .timetable_views import (
 )
 from .user_views import (
     email_event_users_view, email_course_users_view, UserListView, UserDetailView, UserBookingsListView,
-    UserBookingsHistoryListView, BookingAddView, BookingEditView
+    UserBookingsHistoryListView, BookingAddView, BookingEditView,
+    UserBlocksListView, BlockAddView, BlockEditView, ajax_block_delete,
 )
 
 from .waiting_list import ajax_remove_from_waiting_list, event_waiting_list_view

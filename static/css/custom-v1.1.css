@@ -90,6 +90,11 @@ div.accounts-subnav {
   color: purple;
 }
 
+a#siteConfigNavbarDropdown {
+  color: purple;
+  background-color: #f7edfa;
+}
+
 #navbarCoursesSubNavContainer {
   background-color: #f0fff0;
 }
@@ -113,6 +118,21 @@ div.accounts-subnav {
 #navbarPoliciesSubNav > ul > li.nav-item.active > a {
   color: darkred;
 }
+
+#navbarUserDetailSubNavContainer {
+  background-color: #f5fffd;
+}
+
+#navbarUserDetailSubNav > ul > li.nav-item.active > a {
+  color: #0aa182;
+}
+
+a#userDetailsNavbarDropdown {
+  color: #0aa182;
+  background-color: #f5fffd;
+}
+
+
 
 #eventsTrackTabs > a.nav-item.nav-link {
   color: dimgrey;
@@ -263,6 +283,10 @@ hr.tooltip-hr {
   margin-bottom: 0;
   border-top: 1px solid grey;
 
+}
+
+.tooltip {
+  pointer-events: none;
 }
 
 .tooltip-inner {

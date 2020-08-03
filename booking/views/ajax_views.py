@@ -12,7 +12,7 @@ from django.template.loader import render_to_string
 from accounts.models import has_active_disclaimer
 from activitylog.models import ActivityLog
 
-from ..models import Booking, Block, Course, Event, WaitingListUser, DropInBlockConfig, CourseBlockConfig
+from ..models import Booking, Block, Course, Event, WaitingListUser, BlockConfig
 from ..utils import calculate_user_cart_total, has_available_block, get_active_user_block, get_user_booking_info
 from ..email_helpers import send_waiting_list_email, send_user_and_studio_emails
 from .views_utils import get_unpaid_user_managed_blocks
@@ -247,7 +247,7 @@ def ajax_course_booking(request, course_id):
     }
     # send emails
     send_user_and_studio_emails(
-        ctx, request.user, course.course_type.event_type.email_studio_when_booked, subjects, "course_booked"
+        ctx, request.user, course.event_type.email_studio_when_booked, subjects, "course_booked"
     )
 
     messages.success(request, "Course booking created")
@@ -275,22 +275,12 @@ def ajax_block_delete(request, block_id):
 
 @login_required
 @require_http_methods(['POST'])
-def ajax_dropin_block_purchase(request, block_config_id):
+def ajax_block_purchase(request, block_config_id):
     user_id = request.POST["user_id"]
     user = get_object_or_404(User, pk=user_id)
-    block_config = get_object_or_404(DropInBlockConfig, pk=block_config_id)
-    block, new = Block.objects.get_or_create(user=user, dropin_block_config=block_config, paid=False)
+    block_config = get_object_or_404(BlockConfig, pk=block_config_id)
+    block, new = Block.objects.get_or_create(user=user, block_config=block_config, paid=False)
     return process_block_purchase(request, block, new, block_config)
-
-
-@login_required
-@require_http_methods(['POST'])
-def ajax_course_block_purchase(request, block_config_id):
-    user_id = request.POST["user_id"]
-    user = get_object_or_404(User, pk=user_id)
-    course_config = get_object_or_404(CourseBlockConfig, pk=block_config_id)
-    block, new = Block.objects.get_or_create(user=user, course_block_config=course_config, paid=False)
-    return process_block_purchase(request, block, new, course_config)
 
 
 def process_block_purchase(request, block, new, block_config):

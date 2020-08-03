@@ -30,7 +30,7 @@
         <table class="table table-sm">
             <thead>
                 <tr>
-                    <th>Identifier<br/><span class="helptext">Click to edit</span></th>
+                    <th>Name<br/><span class="helptext">Click to edit</span></th>
                     <th>Active</th>
                     <th>Size</th>
                     <th>Duration (weeks)</th>
@@ -44,12 +44,11 @@
                     <td colspan="6">{{ title }}</td>
                 </tr>
                 {% for block_config in block_configs %}
-                    <tr id="row-{{ block_config.block_config_type }}-{{ block_config.id }}">
-                        <td><a href="{% url 'studioadmin:edit_block_config' block_config.block_config_type block_config.id %}">{{ block_config.identifier }}</a></td>
+                    <tr id="row-{{ block_config.id }}">
+                        <td><a href="{% url 'studioadmin:edit_block_config' block_config.id %}">{{ block_config.name }}</a></td>
                         <td>
                             <span
-                              id="active-{{ block_config.block_config_type }}-{{ block_config.id }}"
-                              data-block_config_type={{ block_config.block_config_type }}
+                              id="active-{{ block_config.id }}"
                               data-block_config_id={{ block_config.id }}
                               class="active-btn"
                               >
@@ -63,7 +62,6 @@
                             {% if not block_config.block_set.exists %}
                                 <div
                                     class="block-config-delete-btn"
-                                    data-block_config_type={{ block_config.block_config_type }}
                                     data-block_config_id="{{ block_config.id }}"
                                 >
                                     <span class="btn btn-sm btn-danger pt-0 pb-0"><i class="far fa-trash-alt"></i></span>

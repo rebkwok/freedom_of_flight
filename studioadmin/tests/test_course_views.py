@@ -82,7 +82,7 @@ class CourseAdminListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         assert "active_tab" not in resp.context_data
 
     def test_pagination(self):
-        baker.make(Course, course_type=self.course_type, _quantity=20)
+        baker.make(Course, event_type=self.aerial_event_type, _quantity=20)
         self.login(self.staff_user)
 
         resp = self.client.get(self.url + '?page=1')
@@ -117,9 +117,9 @@ class CourseAjaxMakeVisibleTests(TestUsersMixin, TestCase):
 
     def setUp(self):
         self.create_admin_users()
-        self.course = baker.make(Course, course_type__number_of_events=2, show_on_site=False)
+        self.course = baker.make(Course, number_of_events=2, show_on_site=False)
         self.events = baker.make_recipe(
-            "booking.future_event", event_type=self.course.course_type.event_type, course=self.course,
+            "booking.future_event", event_type=self.course.event_type, course=self.course,
             show_on_site=False, _quantity=2
         )
         self.url = reverse("studioadmin:ajax_toggle_course_visible", args=(self.course.id,))
@@ -168,7 +168,7 @@ class CancelEventViewTests(EventTestMixin, TestUsersMixin, TestCase):
     def test_list_open_booking_users_on_course_events(self):
         url = self.url(self.course)
         event = baker.make_recipe(
-            "booking.future_event", event_type=self.course_type.event_type, course=self.course
+            "booking.future_event", event_type=self.aerial_event_type, course=self.course
         )
         baker.make(Booking, event=self.course_event, _quantity=5)
         baker.make(Booking, event=self.course_event, status="CANCELLED", _quantity=3)
@@ -286,7 +286,7 @@ class CancelEventViewTests(EventTestMixin, TestUsersMixin, TestCase):
 
     def test_cancel_course_with_open_bookings_email_message(self):
         event = baker.make_recipe(
-            "booking.future_event", event_type=self.course_type.event_type, course=self.course
+            "booking.future_event", event_type=self.aerial_event_type, course=self.course
         )
         # user has 2 bookings, only send email once
         baker.make(Booking, event=self.course_event, user=self.student_user)
@@ -316,7 +316,7 @@ class CourseCreateViewTests(EventTestMixin, TestUsersMixin, TestCase):
     def setUp(self):
         self.create_users()
         self.create_admin_users()
-        self.url = reverse("studioadmin:create_course", args=(self.course_type.id,))
+        self.url = reverse("studioadmin:create_course", args=(self.aerial_event_type.id,))
         self.login(self.staff_user)
 
     @classmethod
@@ -327,7 +327,8 @@ class CourseCreateViewTests(EventTestMixin, TestUsersMixin, TestCase):
         return {
             "name": "test course",
             "description": "",
-            "course_type": self.course_type.id,
+            "event_type": self.aerial_event_type.id,
+            "number_of_events": 3,
             "max_participants": 10,
             "show_on_site": False,
             "events": [],
@@ -359,10 +360,10 @@ class CourseCreateViewTests(EventTestMixin, TestUsersMixin, TestCase):
     def test_redirects_to_events_list_on_save(self):
         resp = self.client.post(self.url, data=self.form_data())
         assert resp.status_code == 302
-        assert resp.url == reverse("studioadmin:courses") + f"?track={self.course_type.event_type.track.id}"
+        assert resp.url == reverse("studioadmin:courses") + f"?track={self.aerial_event_type.track.id}"
 
     def test_create_course_with_events(self):
-        events = baker.make_recipe("booking.future_event", event_type=self.course_type.event_type, _quantity=2)
+        events = baker.make_recipe("booking.future_event", event_type=self.aerial_event_type, _quantity=2)
         data = self.form_data()
         data["events"] = [event.id for event in events]
         self.client.post(self.url, data)
@@ -375,7 +376,7 @@ class CourseUpdateViewTests(EventTestMixin, TestUsersMixin, TestCase):
     def setUp(self):
         self.create_users()
         self.create_admin_users()
-        self.course = baker.make(Course, course_type__event_type=self.aerial_event_type)
+        self.course = baker.make(Course, event_type=self.aerial_event_type)
         self.url = reverse("studioadmin:update_course", args=(self.course.slug,))
         self.login(self.staff_user)
 
@@ -388,7 +389,8 @@ class CourseUpdateViewTests(EventTestMixin, TestUsersMixin, TestCase):
             "id": self.course.id,
             "name": "test course",
             "description": "",
-            "course_type": self.course_type.id,
+            "event_type": self.course.event_type.id,
+            "number_of_events": self.course.number_of_events,
             "max_participants": 10,
             "show_on_site": False,
             "events": [],
@@ -417,9 +419,9 @@ class CourseUpdateViewTests(EventTestMixin, TestUsersMixin, TestCase):
         assert self.course.name == "test course"
 
         assert resp.status_code == 302
-        assert resp.url == reverse("studioadmin:courses") + f"?track={self.course_type.event_type.track.id}"
+        assert resp.url == reverse("studioadmin:courses") + f"?track={self.course.event_type.track.id}"
 
-    def test_course_type_form_field_is_shown(self):
+    def test_event_type_form_field_is_shown(self):
         resp = self.client.get(self.url)
         form = resp.context_data["form"]
-        assert isinstance(form.fields["course_type"].widget, forms.Select)
+        assert isinstance(form.fields["event_type"].widget, forms.Select)

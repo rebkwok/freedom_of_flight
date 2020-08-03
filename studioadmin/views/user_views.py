@@ -3,10 +3,11 @@ from datetime import datetime
 from django.contrib.auth.models import User
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import get_object_or_404, HttpResponseRedirect, reverse, HttpResponse
+from django.shortcuts import get_object_or_404, HttpResponseRedirect, render, reverse, HttpResponse
+from django.http import HttpResponseBadRequest, JsonResponse
 from django.template.response import TemplateResponse
 from django.template.loader import render_to_string
-from django.views.generic import ListView, DetailView, CreateView, UpdateView
+from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
 from django.contrib.postgres.search import SearchVector
 from django import forms
 from django.forms import ModelChoiceField
@@ -16,10 +17,10 @@ from braces.views import LoginRequiredMixin
 
 from activitylog.models import ActivityLog
 from booking.email_helpers import send_bcc_emails, send_user_and_studio_emails, send_waiting_list_email
-from booking.models import Booking, Course, Event, WaitingListUser
+from booking.models import Booking, Block, Course, Event, WaitingListUser
 from common.utils import full_name
 
-from ..forms import EmailUsersForm, SearchForm, AddEditBookingForm
+from ..forms import EmailUsersForm, SearchForm, AddEditBookingForm, AddEditBlockForm
 from .utils import staff_required, InstructorOrStaffUserMixin, StaffUserMixin
 
 
@@ -46,7 +47,7 @@ def email_course_users_view(request, course_slug):
         form = EmailUsersForm(request.POST, course=course)
         if form.is_valid():
             process_form_and_send_email(request, form)
-            return HttpResponseRedirect(reverse("studioadmin:courses") + f"?track={course.course_type.event_type.track_id}")
+            return HttpResponseRedirect(reverse("studioadmin:courses") + f"?track={course.event_type.track_id}")
     context = {"form": form, "course": course}
     return TemplateResponse(request, "studioadmin/email_course_users.html", context)
 
@@ -193,10 +194,9 @@ def process_user_booking_updates(form, request, user):
     if form.has_changed():
         if form.changed_data == ['send_confirmation']:
             messages.info(
-                request,  "'Send confirmation' checked but no changes were made; email has not been "
-                "sent to user.".format(form.instance.event))
+                request,  "'Send confirmation' checked but no changes were made; email has not been sent to user."
+            )
         else:
-            extra_msgs = [] # these will be displayed as a list in the email to the user
             booking = form.save(commit=False)
             event_was_full = booking.event.spaces_left == 0
             action = 'updated' if form.instance.id else 'created'
@@ -210,37 +210,37 @@ def process_user_booking_updates(form, request, user):
                         booking.no_show = True
                         # reset the block if it was removed
                         booking.block = user.bookings.get(id=booking.id).block
-                        extra_msgs.append("Cancelled course bookings are not refunded to user; booking has been set to no-show instead.")
+                        messages.info(
+                            request,
+                            "Cancelled course event bookings are not refunded to user; booking has been set to no-show instead."
+                        )
                     elif booking.block:
                         booking.block = None
                         block_removed = True
                     action = 'cancelled'
                 elif booking.status == 'OPEN':
                     action = 'reopened'
-                extra_msgs.append("Booking status changed to {}".format(action))
 
             elif 'no_show' in form.changed_data and action == 'updated' and booking.status == 'OPEN':
                 action = 'cancelled' if booking.no_show else 'reopened'
-                extra_msgs.append("Booking {} as 'no-show'".format(action))
+                messages.success(request, f"Booking {action} as 'no-show'")
 
-            if 'block' in form.changed_data:
-                booking.block = None
-
+            if not booking.block and booking.status == "OPEN":
+                messages.error(request, "NOTE: This booking does not have a credit block assigned.")
             booking.save()
 
             if 'send_confirmation' in form.changed_data:
-                host = 'http://{}'.format(request.META.get('HTTP_HOST'))
+                host = f"http://{request.META.get('HTTP_HOST')}"
                 ctx = {
                     'host': host,
                     'event': booking.event,
                     'user': user,
                     'action': action,
-                    'extra_msgs': extra_msgs
                 }
-
                 email_user = booking.user.manager_user if booking.user.manager_user else booking.user
                 send_user_and_studio_emails(
-                    ctx, email_user, send_to_studio=False, subjects={"user": f"Your booking for {booking.event} has been {action}"},
+                    ctx, email_user, send_to_studio=False,
+                    subjects={"user": f"Your booking for {booking.event} has been {action}"},
                     template_short_name="'studioadmin/email/booking_change_confirmation")
                 send_confirmation_msg = "and confirmation email sent to user"
             else:
@@ -252,25 +252,18 @@ def process_user_booking_updates(form, request, user):
 
             ActivityLog.objects.create(
                 log='Booking id {} (user {}) for "{}" {} by admin user {}'.format(
-                    booking.id,  full_name(booking.user),  booking.event,
-                    action,  full_name(request.user)
+                    booking.id,  full_name(booking.user),  booking.event, action,  full_name(request.user)
                 )
             )
 
-            if block_removed:
-                 messages.info(request, f"Block removed for {booking.event}")
-
             if action == 'cancelled':
                 if block_removed:
-                    messages.info(
-                        request,
-                        'Note: this booking has been cancelled and the block used has been updated.'
-                    )
+                    messages.info(request, 'Note: this booking has been cancelled and the block used has been updated.')
 
                 if event_was_full:
                     waiting_list_users = WaitingListUser.objects.filter(event=booking.event)
                     if waiting_list_users:
-                        host = 'http://{}'.format(request.META.get('HTTP_HOST'))
+                        host = f"http://{request.META.get('HTTP_HOST')}"
                         send_waiting_list_email(booking.event, waiting_list_users, host)
 
             if action == 'created' or action == 'reopened':
@@ -278,12 +271,89 @@ def process_user_booking_updates(form, request, user):
                     waiting_list_user = WaitingListUser.objects.get(user=booking.user,  event=booking.event)
                     waiting_list_user.delete()
                     ActivityLog.objects.create(
-                        log='User {} has been removed from the waiting list for {}'.format(
-                            full_name(booking.user),  booking.event
-                        )
+                        log=f'User {full_name(booking.user)} has been removed from the waiting list for {booking.event}'
                     )
                 except WaitingListUser.DoesNotExist:
                     pass
 
     else:
         messages.info(request, 'No changes made')
+
+
+class UserBlocksListView(LoginRequiredMixin, InstructorOrStaffUserMixin, ListView):
+    model = Block
+    context_object_name = "blocks"
+    template_name = "studioadmin/user_blocks_list.html"
+    paginate_by = 20
+
+    def dispatch(self, request, *args, **kwargs):
+        self.user = get_object_or_404(User, pk=kwargs["user_id"])
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, *args, **kwargs):
+        context = super().get_context_data(*args, **kwargs)
+        context["account_user"] = self.user
+        return context
+
+    def get_queryset(self):
+        return self.user.blocks.all().order_by("-expiry_date", "-start_date", "-purchase_date")
+
+
+class BlockMixin:
+    form_class = AddEditBlockForm
+    model = Block
+
+    def form_valid(self, form):
+        block = form.save(commit=False)
+        if block.bookings.count() > block.block_config.size:
+            form.add_error("block_type", "Too many bookings already made against block; cannot change to this block type")
+
+        if form.is_valid():
+            block.save()
+            return HttpResponse(
+                render_to_string(
+                    'studioadmin/includes/modal-success.html'
+                )
+            )
+        else:
+            context = self.get_context_data()
+            context["form"] = form
+            return render(self.request, self.template_name, context)
+
+
+class BlockEditView(LoginRequiredMixin, InstructorOrStaffUserMixin, BlockMixin, UpdateView):
+    template_name = 'studioadmin/includes/user-block-modal.html'
+
+    def get_form_kwargs(self, *args, **kwargs):
+        kwargs = super().get_form_kwargs(*args, **kwargs)
+        kwargs['user'] = self.object.user
+        return kwargs
+
+
+class BlockAddView(LoginRequiredMixin, InstructorOrStaffUserMixin, BlockMixin, CreateView):
+    template_name = 'studioadmin/includes/user-block-add-modal.html'
+
+    def dispatch(self, request, *args, **kwargs):
+        self.block_user = User.objects.get(id=kwargs['user_id'])
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_form_kwargs(self, *args, **kwargs):
+        kwargs = super().get_form_kwargs(*args, **kwargs)
+        kwargs['user'] = self.block_user
+        return kwargs
+
+    def get_context_data(self, *args, **kwargs):
+        context = super().get_context_data(*args, **kwargs)
+        context["block_user"] = self.block_user
+        return context
+
+
+def ajax_block_delete(request, block_id):
+    block = Block.objects.get(id=block_id)
+    if block.paid:
+        return HttpResponseBadRequest("Cannot delete a paid block")
+    ActivityLog.objects.create(
+        log=f"Block {block.block_config} (id {block_id}) for {full_name(block.user)} deleted by admin user {full_name(request.user)}"
+    )
+    block.delete()
+    return JsonResponse({"deleted": True, "alert_msg": "Block deleted"})

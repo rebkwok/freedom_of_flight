@@ -11,7 +11,7 @@ from django.utils import timezone
 
 from accounts.models import has_active_disclaimer
 
-from booking.models import Booking, Block, WaitingListUser, DropInBlockConfig, CourseBlockConfig
+from booking.models import Booking, Block, WaitingListUser, BlockConfig
 from common.test_utils import TestUsersMixin, EventTestMixin
 
 
@@ -45,7 +45,7 @@ class BookingToggleAjaxViewTests(EventTestMixin, TestUsersMixin, TestCase):
 
         self.make_disclaimer(self.child_user)
         # child user has valid block
-        baker.make(Block, dropin_block_config__event_type=self.aerial_event_type, user=self.child_user, paid=True)
+        baker.make(Block, block_config__event_type=self.aerial_event_type, user=self.child_user, paid=True)
         resp = self.client.post(self.url(self.aerial_events[0].id), data={"user_id": self.child_user.id})
         assert resp.status_code == 200
         assert Booking.objects.filter(event=self.aerial_events[0], user=self.child_user).exists()
@@ -65,7 +65,7 @@ class BookingToggleAjaxViewTests(EventTestMixin, TestUsersMixin, TestCase):
         Test creating a booking
         """
         # block not paid, can't be used
-        block = baker.make(Block, dropin_block_config__event_type=self.aerial_event_type, user=self.student_user)
+        block = baker.make(Block, block_config__event_type=self.aerial_event_type, user=self.student_user)
         assert Booking.objects.exists() is False
         resp = self.client.post(self.url(self.aerial_events[0].id), data={"user_id": self.student_user.id})
         assert "redirect" in resp.json()
@@ -92,7 +92,7 @@ class BookingToggleAjaxViewTests(EventTestMixin, TestUsersMixin, TestCase):
         )
         # user has available block
         baker.make(
-            Block, dropin_block_config__event_type=self.floor_event_type, user=self.student_user, paid=True
+            Block, block_config__event_type=self.floor_event_type, user=self.student_user, paid=True
         )
         assert event.bookings.count() == 0
         resp = self.client.post(self.url(event.id), data={"user_id": self.student_user.id})
@@ -108,7 +108,7 @@ class BookingToggleAjaxViewTests(EventTestMixin, TestUsersMixin, TestCase):
         event = baker.make_recipe("booking.future_event", event_type=self.floor_event_type, max_participants=3)
         # user has available block
         baker.make(
-            Block, dropin_block_config__event_type=self.floor_event_type, user=self.student_user, paid=True
+            Block, block_config__event_type=self.floor_event_type, user=self.student_user, paid=True
         )
         # make event full
         baker.make(Booking, event=event, _quantity=3)
@@ -124,7 +124,7 @@ class BookingToggleAjaxViewTests(EventTestMixin, TestUsersMixin, TestCase):
         event = baker.make_recipe("booking.future_event", event_type=self.floor_event_type, cancelled=True)
         # user has available block
         baker.make(
-            Block, dropin_block_config__event_type=self.floor_event_type, user=self.student_user, paid=True
+            Block, block_config__event_type=self.floor_event_type, user=self.student_user, paid=True
         )
         resp = self.client.post(self.url(event.id), data={"user_id": self.student_user.id})
 
@@ -136,7 +136,7 @@ class BookingToggleAjaxViewTests(EventTestMixin, TestUsersMixin, TestCase):
     def test_rebook_cancelled_booking(self):
         # user has available block
         block = baker.make(
-            Block, dropin_block_config__event_type=self.aerial_event_type, user=self.student_user, paid=True
+            Block, block_config__event_type=self.aerial_event_type, user=self.student_user, paid=True
         )
         booking = baker.make(
             Booking, user=self.student_user, event=self.aerial_events[0], status="CANCELLED"
@@ -154,7 +154,7 @@ class BookingToggleAjaxViewTests(EventTestMixin, TestUsersMixin, TestCase):
     def test_already_booked_cancels_booking(self):
         # user has available block
         block = baker.make(
-            Block, dropin_block_config__event_type=self.aerial_event_type, user=self.student_user, paid=True
+            Block, block_config__event_type=self.aerial_event_type, user=self.student_user, paid=True
         )
         booking = baker.make(
             Booking, user=self.student_user, event=self.aerial_events[0], status="OPEN", block=block
@@ -173,7 +173,7 @@ class BookingToggleAjaxViewTests(EventTestMixin, TestUsersMixin, TestCase):
     def test_rebook_no_show_booking(self):
         # user has available block
         block = baker.make(
-            Block, dropin_block_config__event_type=self.aerial_event_type, user=self.student_user, paid=True
+            Block, block_config__event_type=self.aerial_event_type, user=self.student_user, paid=True
         )
         booking = baker.make(
             Booking, user=self.student_user, event=self.aerial_events[0], status="OPEN", no_show=True,
@@ -194,7 +194,7 @@ class BookingToggleAjaxViewTests(EventTestMixin, TestUsersMixin, TestCase):
     def test_create_booking_user_on_waiting_list(self):
         # user has available block
         baker.make(
-            Block, dropin_block_config__event_type=self.aerial_event_type, user=self.student_user, paid=True
+            Block, block_config__event_type=self.aerial_event_type, user=self.student_user, paid=True
         )
         baker.make(WaitingListUser, user=self.student_user, event=self.aerial_events[0])
         assert WaitingListUser.objects.filter(user=self.student_user, event=self.aerial_events[0]).exists() is True
@@ -212,7 +212,7 @@ class BookingToggleAjaxViewTests(EventTestMixin, TestUsersMixin, TestCase):
         event = baker.make_recipe("booking.future_event", event_type=self.floor_event_type, max_participants=2)
         # user has available block and booking
         baker.make(
-            Block, dropin_block_config__event_type=self.floor_event_type, user=self.student_user, paid=True
+            Block, block_config__event_type=self.floor_event_type, user=self.student_user, paid=True
         )
         booking = baker.make(Booking, user=self.student_user, event=event)
         # make another booking so event is full
@@ -236,7 +236,7 @@ class BookingToggleAjaxViewTests(EventTestMixin, TestUsersMixin, TestCase):
         event = baker.make_recipe("booking.future_event", event_type=self.floor_event_type, max_participants=2)
         # user has available block and booking
         baker.make(
-            Block, dropin_block_config__event_type=self.floor_event_type, user=self.student_user, paid=True
+            Block, block_config__event_type=self.floor_event_type, user=self.student_user, paid=True
         )
         baker.make(Booking, user=self.student_user, event=event)
         # make another booking so event is full
@@ -259,7 +259,7 @@ class BookingToggleAjaxViewTests(EventTestMixin, TestUsersMixin, TestCase):
         )
         # user has available block and booking
         block = baker.make(
-            Block, dropin_block_config__event_type=self.floor_event_type, user=self.student_user, paid=True
+            Block, block_config__event_type=self.floor_event_type, user=self.student_user, paid=True
         )
         booking = baker.make(Booking, user=self.student_user, event=event, block=block)
         # cancel booking, set to no-show
@@ -278,7 +278,7 @@ class BookingToggleAjaxViewTests(EventTestMixin, TestUsersMixin, TestCase):
         )
         # user has available block and booking
         block = baker.make(
-            Block, dropin_block_config__event_type=self.floor_event_type, user=self.student_user, paid=True
+            Block, block_config__event_type=self.floor_event_type, user=self.student_user, paid=True
         )
         booking = baker.make(Booking, user=self.student_user, event=event, block=block)
         # cancel booking, set to no-show
@@ -296,7 +296,7 @@ class BookingToggleAjaxViewTests(EventTestMixin, TestUsersMixin, TestCase):
         )
         # user has available block and booking
         block = baker.make(
-            Block, course_block_config__course_type=self.course_type, user=self.student_user, paid=True
+            Block, block_config__event_type=self.aerial_event_type, user=self.student_user, paid=True
         )
         booking = baker.make(Booking, user=self.student_user, event=course_event, block=block)
         # cancel booking, set to no-show
@@ -345,7 +345,9 @@ class BookingAjaxCourseBookingViewTests(EventTestMixin, TestUsersMixin, TestCase
         # booking a course books for all events on the course
         # make usable block
         block = baker.make(
-            Block, user=self.student_user, course_block_config__course_type=self.course_type, paid=True
+            Block, user=self.student_user, block_config__event_type=self.aerial_event_type,
+            block_config__course=True, block_config__size=self.course.number_of_events,
+            paid=True
         )
         assert self.course.is_configured()
         resp = self.client.post(self.url(self.course.id), data={"user_id": self.student_user.id})
@@ -369,7 +371,9 @@ class BookingAjaxCourseBookingViewTests(EventTestMixin, TestUsersMixin, TestCase
         self.login(self.manager_user)
         self.make_disclaimer(self.child_user)
         block = baker.make(
-            Block, user=self.child_user, course_block_config__course_type=self.course_type, paid=True
+            Block, user=self.child_user,
+            block_config__event_type=self.aerial_event_type, block_config__course=True, paid=True,
+            block_config__size=self.course.number_of_events
         )
         resp = self.client.post(self.url(self.course.id), data={"user_id": self.child_user.id})
         assert resp.status_code == 200
@@ -391,7 +395,7 @@ class BookingAjaxCourseBookingViewTests(EventTestMixin, TestUsersMixin, TestCase
         assert has_active_disclaimer(self.child_user) is False
         self.login(self.manager_user)
         block = baker.make(
-            Block, user=self.child_user, course_block_config__course_type=self.course_type, paid=True
+            Block, user=self.child_user, block_config__event_type=self.aerial_event_type, block_config__course=True, paid=True
         )
         resp = self.client.post(self.url(self.course.id), data={"user_id": self.child_user.id})
         # redirects to the disclaimer page for the child user, even though manager user has no disclaimer
@@ -458,25 +462,25 @@ class AjaxBlockDeleteView(TestUsersMixin, TestCase):
         # the block to delete
         self.login(self.manager_user)
         block = baker.make_recipe(
-            "booking.dropin_block", dropin_block_config__cost=10, user=self.child_user
+            "booking.dropin_block", block_config__cost=10, user=self.child_user
         )
         # some other blocks for manager and managed user
         baker.make_recipe(
-            "booking.dropin_block", dropin_block_config__cost=1, user=self.child_user
+            "booking.dropin_block", block_config__cost=1, user=self.child_user
         )
         baker.make_recipe(
-            "booking.dropin_block", dropin_block_config__cost=2, user=self.manager_user
+            "booking.dropin_block", block_config__cost=2, user=self.manager_user
         )
         baker.make_recipe(
-            "booking.dropin_block", dropin_block_config__cost=3, user=self.manager_user
+            "booking.dropin_block", block_config__cost=3, user=self.manager_user
         )
         # paid blocks don't count towards total
         baker.make_recipe(
-            "booking.dropin_block", dropin_block_config__cost=100, user=self.manager_user,
+            "booking.dropin_block", block_config__cost=100, user=self.manager_user,
             paid=True
         )
         baker.make_recipe(
-            "booking.dropin_block", dropin_block_config__cost=200, user=self.child_user,
+            "booking.dropin_block", block_config__cost=200, user=self.child_user,
             paid=True
         )
 
@@ -501,14 +505,14 @@ class AjaxBlockPurchaseTests(TestUsersMixin, TestCase):
 
     def setUp(self):
         self.create_users()
-        self.dropin_config = baker.make(DropInBlockConfig, cost=20)
-        self.course_config = baker.make(CourseBlockConfig, cost=20)
+        self.dropin_config = baker.make(BlockConfig, cost=20)
+        self.course_config = baker.make(BlockConfig, course=True, cost=20)
         self.login(self.student_user)
 
     def test_add_new_dropin_block(self):
         # create block, set to unpaid
         assert Block.objects.exists() is False
-        url = reverse("booking:ajax_dropin_block_purchase", args=(self.dropin_config.id,))
+        url = reverse("booking:ajax_block_purchase", args=(self.dropin_config.id,))
         resp = self.client.post(url, data={"user_id": self.student_user.id})
         assert Block.objects.exists()
         new_block = Block.objects.first()
@@ -524,7 +528,7 @@ class AjaxBlockPurchaseTests(TestUsersMixin, TestCase):
     def test_add_new_course_block(self):
         # create block, set to unpaid
         assert Block.objects.exists() is False
-        url = reverse("booking:ajax_course_block_purchase", args=(self.course_config.id,))
+        url = reverse("booking:ajax_block_purchase", args=(self.course_config.id,))
         resp = self.client.post(url, data={"user_id": self.student_user.id})
         assert Block.objects.exists()
         new_block = Block.objects.first()
@@ -541,7 +545,7 @@ class AjaxBlockPurchaseTests(TestUsersMixin, TestCase):
         self.login(self.manager_user)
         # manager has another unpaid block already
         baker.make_recipe("booking.course_block", user=self.manager_user)
-        url = reverse("booking:ajax_dropin_block_purchase", args=(self.dropin_config.id,))
+        url = reverse("booking:ajax_block_purchase", args=(self.dropin_config.id,))
         resp = self.client.post(url, data={"user_id": self.child_user.id})
         new_block = Block.objects.latest("id")
         assert new_block.user == self.child_user
@@ -557,12 +561,12 @@ class AjaxBlockPurchaseTests(TestUsersMixin, TestCase):
     def test_delete_from_cart(self):
         self.login(self.manager_user)
         # user has multiple unpaid blocks
-        course_block = baker.make_recipe("booking.course_block", course_block_config=self.course_config, user=self.manager_user)
-        dropin_block1 = baker.make_recipe("booking.dropin_block", dropin_block_config=self.dropin_config, user=self.child_user)
+        course_block = baker.make_recipe("booking.course_block", block_config=self.course_config, user=self.manager_user)
+        dropin_block1 = baker.make_recipe("booking.dropin_block", block_config=self.dropin_config, user=self.child_user)
         # this is the block that will get deleted
-        baker.make_recipe("booking.dropin_block", dropin_block_config=self.dropin_config, user=self.manager_user)
+        baker.make_recipe("booking.dropin_block", block_config=self.dropin_config, user=self.manager_user)
 
-        url = reverse("booking:ajax_dropin_block_purchase", args=(self.dropin_config.id,))
+        url = reverse("booking:ajax_block_purchase", args=(self.dropin_config.id,))
         resp = self.client.post(url, data={"user_id": self.manager_user.id})
         assert [block.id for block in self.manager_user.blocks.all()] == [course_block.id]
         assert [block.id for block in self.child_user.blocks.all()] == [dropin_block1.id]

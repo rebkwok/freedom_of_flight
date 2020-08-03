@@ -1,0 +1,38 @@
+{% load accounttags %}
+
+<div class="subnav d-none d-md-block">
+<nav class="navbar fixed-top fixed-top-subnav pt-8 navbar-expand navbar-light" id="navbarUserDetailSubNavContainer">
+  <a class="navbar-brand" href="#">ADMIN: STUDENT DETAILS</a>
+  <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarUserDetailSubNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+  <div class="collapse navbar-collapse" id="navbarUserDetailSubNav">
+    <ul class="navbar-nav">
+      <li class="nav-item">
+          <a class="nav-link" href="{% url 'studioadmin:user_detail' account_user.id %}">Details & Disclaimer</a>
+      </li>
+      <li class="nav-item">
+          <a class="nav-link" href="{% url 'studioadmin:user_bookings' account_user.id %}">Bookings</a>
+      </li>
+      <li class="nav-item">
+          <a class="nav-link" href="{% url 'studioadmin:past_user_bookings' account_user.id %}">Booking History</a>
+      </li>
+      <li class="nav-item">
+          <a class="nav-link" href="{% url 'studioadmin:user_blocks' account_user.id %}">Blocks</a>
+      </li>
+    </ul>
+  </div>
+</nav>
+</div>
+
+<li class="nav-item dropdown d-block d-md-none" id="userDetailsNavbarDropdownContainer">
+    <a class="nav-link dropdown-toggle" href="#" id="userDetailsNavbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+      Options
+    </a>
+    <div class="dropdown-menu" aria-labelledby="userDetailsNavbarDropdown">
+      <a class="dropdown-item" href="{% url 'studioadmin:user_detail' account_user.id %}">Details & Disclaimer</a>
+      <a class="dropdown-item" href="{% url 'studioadmin:user_bookings' account_user.id %}">Bookings</a>
+      <a class="dropdown-item" href="{% url 'studioadmin:past_user_bookings' account_user.id %}">Booking History</a>
+      <a class="dropdown-item" href="{% url 'studioadmin:user_blocks' account_user.id %}">Blocks</a>
+    </div>
+</li>

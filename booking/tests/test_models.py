@@ -10,8 +10,8 @@ from model_bakery import baker
 import pytest
 
 from booking.models import (
-    Course, Event, EventType, Block, Booking, BlockVoucher, Track, CourseType,
-    DropInBlockConfig, CourseBlockConfig
+    Course, Event, EventType, Block, Booking, BlockVoucher, Track,
+    BlockConfig
 )
 from common.test_utils import EventTestMixin, TestUsersMixin
 
@@ -100,7 +100,7 @@ class EventTests(EventTestMixin, TestCase):
         assert error.value.messages == ['Cannot add this course - event types do not match.']
 
     def test_cannot_add_course_if_course_already_has_the_full_number_events(self):
-        new_course = baker.make(Course, course_type__number_of_events=1, course_type__event_type=self.event.event_type)
+        new_course = baker.make(Course, number_of_events=1, event_type=self.event.event_type)
         event = self.aerial_events[1]
         event.course = new_course
         event.save()
@@ -248,14 +248,6 @@ class EventTypeTests(TestCase):
         assert str(evtype) == 'Aerial - Kids classes'
 
 
-class CourseTypeTests(TestCase):
-
-    def test_str_class(self):
-        evtype = baker.make(EventType, name="Aerial", track__name="Kids classes")
-        course_type = baker.make(CourseType, event_type=evtype, number_of_events=3)
-        assert str(course_type) == 'Aerial - Kids classes - 3'
-
-
 class CourseTests(EventTestMixin, TestCase):
 
     def setUp(self):
@@ -283,7 +275,7 @@ class CourseTests(EventTestMixin, TestCase):
         # course has 1 event already, which is in future
         assert self.course.has_started is False
         baker.make_recipe(
-            "booking.past_event", event_type=self.course.course_type.event_type, course=self.course
+            "booking.past_event", event_type=self.course.event_type, course=self.course
         )
         assert self.course.has_started is True
 
@@ -291,7 +283,7 @@ class CourseTests(EventTestMixin, TestCase):
         # A course is configured if it has the right number of events on it
         # Course allows 2 events, already has self.event
         baker.make_recipe(
-            "booking.future_event", event_type=self.course.course_type.event_type, course=self.course,
+            "booking.future_event", event_type=self.course.event_type, course=self.course,
             _quantity=1
         )
         assert self.course.is_configured() is True
@@ -311,30 +303,17 @@ class CourseTests(EventTestMixin, TestCase):
 class BlockConfigTests(TestCase):
 
     def test_dropin_block_config_str(self):
-        dropin_config = baker.make(DropInBlockConfig, identifier="A Drop in Block")
+        dropin_config = baker.make(BlockConfig, name="A Drop in Block")
         assert str(dropin_config) == "A Drop in Block"
 
     def test_course_block_config_str(self):
-        course_config = baker.make(CourseBlockConfig, identifier="A Course Block")
+        course_config = baker.make(BlockConfig, name="A Course Block", course=True)
         assert str(course_config) == "A Course Block"
 
     def test_block_config_size(self):
         # property to make course and drop in block configs behave the same
-        course_type = baker.make(CourseType, number_of_events=5)
-        course_config = baker.make(CourseBlockConfig, course_type=course_type, identifier="A Course Block")
-        dropin_config = baker.make(DropInBlockConfig, identifier="A Drop in Block", size=4)
-        assert course_config.size == 5
+        dropin_config = baker.make(BlockConfig, name="A Drop in Block", size=4)
         assert dropin_config.size == 4
-
-    def test_course_block_event_type(self):
-        # property to make course and drop in block configs behave the same
-        event_type1 = baker.make(EventType)
-        event_type2 = baker.make(EventType)
-        course_type = baker.make(CourseType,event_type=event_type1)
-        course_config = baker.make(CourseBlockConfig, course_type=course_type, identifier="A Course Block")
-        dropin_config = baker.make(DropInBlockConfig, identifier="A Drop in Block", event_type=event_type2)
-        assert course_config.event_type == event_type1
-        assert dropin_config.event_type == event_type2
 
 
 class BlockVoucherTests(TestCase):
@@ -376,21 +355,11 @@ class BlockVoucherTests(TestCase):
         voucher.save()
         assert voucher.has_started is False
 
-    def test_all_block_configs(self):
-        dropin_block_configs = baker.make(DropInBlockConfig, _quantity=2)
-        course_block_configs = baker.make(DropInBlockConfig, _quantity=2)
-        not_on_voucher_config = baker.make(DropInBlockConfig)
-        voucher = baker.make(BlockVoucher)
-        voucher.dropin_block_configs.add(*dropin_block_configs)
-        voucher.dropin_block_configs.add(*course_block_configs)
-        assert len(voucher.all_block_configs()) == 4
-        assert not_on_voucher_config not in voucher.all_block_configs()
-
     def test_check_block_config(self):
-        dropin_block_configs = baker.make(DropInBlockConfig, _quantity=2)
-        course_block_configs = baker.make(DropInBlockConfig, _quantity=2)
+        dropin_block_configs = baker.make(BlockConfig, _quantity=2)
+        course_block_configs = baker.make(BlockConfig, course=True, _quantity=2)
         voucher = baker.make(BlockVoucher)
-        voucher.dropin_block_configs.add(dropin_block_configs[0], course_block_configs[0])
+        voucher.block_configs.add(dropin_block_configs[0], course_block_configs[0])
         assert voucher.check_block_config(dropin_block_configs[0]) is True
         assert voucher.check_block_config(course_block_configs[0]) is True
         assert voucher.check_block_config(dropin_block_configs[1]) is False
@@ -406,17 +375,12 @@ class BlockTests(TestUsersMixin, TestCase):
     def setUp(self):
         self.create_users()
         self.event_type = baker.make(EventType)
-        dropin_config = baker.make(DropInBlockConfig, size=2, duration=2, cost=10, event_type=self.event_type)
-        self.dropin_block = baker.make(
-            Block, dropin_block_config=dropin_config,
-            course_block_config=None,
-            user=self.student_user
-        )
+        dropin_config = baker.make(BlockConfig, size=2, duration=2, cost=10, event_type=self.event_type)
+        self.dropin_block = baker.make(Block, block_config=dropin_config, user=self.student_user)
 
-        self.course_type = baker.make(CourseType, number_of_events=2, event_type=self.event_type)
-        course_config = baker.make(CourseBlockConfig, duration=2, cost=10, course_type=self.course_type)
+        course_config = baker.make(BlockConfig, duration=2, cost=10, event_type=self.event_type, course=True, size=3)
         self.course_block = baker.make(
-            Block, course_block_config=course_config, dropin_block_config=None, user=self.student_user
+            Block, block_config=course_config, user=self.student_user
         )
 
     def test_block_expiry_date(self):
@@ -488,26 +452,9 @@ class BlockTests(TestUsersMixin, TestCase):
 
         assert str(self.dropin_block) == f'{self.dropin_block.user.username} -- {self.dropin_block.block_config} -- purchased 01 Feb 2015'
 
-    def test_block_config(self):
-        # blocks can be associated with dropin or course configs; helper property returns
-        # whichever is relevant
-        assert isinstance(self.dropin_block.block_config, DropInBlockConfig)
-        assert isinstance(self.course_block.block_config, CourseBlockConfig)
-
-    def test_one_and_only_one_config(self):
-        dropin_config = baker.make(DropInBlockConfig)
-        course_config = baker.make(CourseBlockConfig)
-        with pytest.raises(ValidationError) as error:
-            baker.make(Block, dropin_block_config=dropin_config, course_block_config=course_config)
-        assert error.value.messages == ['Only one of dropin_block_config or course_block_config can be set.']
-
-        with pytest.raises(ValidationError) as error:
-            baker.make(Block, dropin_block_config=None, course_block_config=None)
-        assert error.value.messages == ['One of dropin_block_config or course_block_config is required.']
-
     def test_cost_with_voucher(self):
         voucher = baker.make(BlockVoucher, code='123', discount=50)
-        voucher.dropin_block_configs.add(self.dropin_block.block_config)
+        voucher.block_configs.add(self.dropin_block.block_config)
         self.dropin_block.voucher = voucher
         self.dropin_block.save()
         assert self.dropin_block.cost_with_voucher == 5.00
@@ -557,7 +504,7 @@ class BlockTests(TestUsersMixin, TestCase):
         # wrong event type
         invalid_event = baker.make(Event)
         # the right event type, but part of a course
-        course = baker.make(Course, course_type=self.course_type)
+        course = baker.make(Course, event_type=self.event_type, number_of_events=3)
         invalid_course_event = baker.make(Event, course=course, event_type=self.event_type)
 
         # not valid for anything until paid
@@ -571,15 +518,15 @@ class BlockTests(TestUsersMixin, TestCase):
 
     def test_valid_for_course(self):
         # valid course
-        valid_course = baker.make(Course, course_type=self.course_type)
+        valid_course = baker.make(Course, event_type=self.event_type, number_of_events=3)
         baker.make(Event, course=valid_course, event_type=self.event_type)
 
         # valid course - no events
-        valid_course1 = baker.make(Course, course_type=self.course_type)
+        valid_course1 = baker.make(Course, event_type=self.event_type, number_of_events=3)
 
         # invalid course - wrong type
         invalid_course2 = baker.make(Course)
-        baker.make(Event, course=invalid_course2, event_type=invalid_course2.course_type.event_type)
+        baker.make(Event, course=invalid_course2, event_type=invalid_course2.event_type)
 
         # not valid for anything until paid
         assert not self.course_block.valid_for_course(valid_course)

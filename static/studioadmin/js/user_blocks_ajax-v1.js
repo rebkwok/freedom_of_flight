@@ -11,37 +11,8 @@
 var MILLS_TO_IGNORE = 500;
 
 /**
-   Executes a toggle click. Triggered by clicks on the waiting list button.
+   Executes a toggle click. Triggered by clicks on the regular student yes/no links.
  */
-var toggleActive = function()  {
-
-    //In this scope, "this" is the button just clicked on.
-    //The "this" in processResult is *not* the button just clicked
-    //on.
-    var $button_just_clicked_on = $(this);
-
-    //The value of the "data-block_config_id" attribute.
-    var block_config_id = $button_just_clicked_on.data('block_config_id');
-
-    var processResult = function(
-       result, status, jqXHR)  {
-      //console.log("sf result='" + result + "', status='" + status + "', jqXHR='" + jqXHR + "', user_id='" + user_id + "'");
-        $('#active-' + block_config_id).html(result);
-   };
-
-   $.ajax(
-       {
-          url: '/studioadmin/site-config/ajax-toggle-credit-block-active/',
-          data: {"block_config_id": block_config_id},
-          type: 'POST',
-          dataType: 'html',
-          success: processResult
-          //Should also have a "fail" call as well.
-       }
-    );
-};
-
-
 const processFailure = function(
    result, status, jqXHR)  {
   //console.log("sf result='" + result + "', status='" + status + "', jqXHR='" + jqXHR + "'");
@@ -50,23 +21,22 @@ const processFailure = function(
   }
    };
 
-
-const processDeleteBlockConfig = function()  {
+const processDeleteBlock = function()  {
 
    //In this scope, "this" is the button just clicked on.
    //The "this" in processResult is *not* the button just clicked
    //on.
    const $button_just_clicked_on = $(this);
 
-   //The value of the "data-booking_id" attribute.
-   const block_config_id = $button_just_clicked_on.data('block_config_id');
+   //The value of the "data-block_id" attribute.
+   const block_id = $button_just_clicked_on.data('block_id');
 
    const processResult = function(
        result, status, jqXHR)  {
       //console.log("sf result='" + result.attended + "', status='" + status + "', jqXHR='" + jqXHR + "', booking_id='" + booking_id + "'");
 
        if(result.deleted === true) {
-           $('#row-' + block_config_id).hide();
+           $('#row-block-' + block_id).hide();
        }
 
        if (result.alert_msg) {
@@ -77,7 +47,7 @@ const processDeleteBlockConfig = function()  {
 
    $.ajax(
        {
-          url: '/studioadmin/site-config/credit-block/' + block_config_id + '/delete/' ,
+          url: '/studioadmin/user/block/' + block_id + '/delete/' ,
           type: "POST",
           dataType: 'json',
           success: processResult,
@@ -116,19 +86,7 @@ $(document).ready(function()  {
     would attach a *second* listener to every button, meaning each
     click would be processed twice.
    */
-  $('.active-btn').click(_.debounce(toggleActive, MILLS_TO_IGNORE, true));
-
-  $('.block-config-delete-btn').click(_.debounce(processDeleteBlockConfig, MILLS_TO_IGNORE, true));
-
-   $(".add-block-config").click(function(ev) { // for each add url
-        ev.preventDefault(); // prevent navigation
-        var url = $(this).data("form"); // get the form url
-        $("#AddBlockConfigModal").load(url, function() { // load the url into the modal
-            $(this).modal('show'); // display the modal on url load
-        });
-        return false; // prevent the click propagation
-    });
-
+  $('.block-delete-btn').click(_.debounce(processDeleteBlock, MILLS_TO_IGNORE, true));
   /*
     Warning: Placing the true parameter outside of the debounce call:
 
@@ -137,5 +95,25 @@ $(document).ready(function()  {
 
     results in "TypeError: e.handler.apply is not a function".
    */
+
+    $(".blockedit").click(function(ev) { // for each edit url
+        ev.preventDefault(); // prevent navigation
+        var url = $(this).data("form"); // get the form url
+        $("#UserBlockModal").load(url, function() { // load the url into the modal
+            $(this).modal('show'); // display the modal on url load
+        });
+
+        return false; // prevent the click propagation
+    });
+
+    $(".blockadd").click(function(ev) { // for each add url
+        ev.preventDefault(); // prevent navigation
+        var url = $(this).data("form"); // get the form url
+        $("#UserBlockAddModal").load(url, function() { // load the url into the modal
+            $(this).modal('show'); // display the modal on url load
+        });
+
+        return false; // prevent the click propagation
+    });
 
 });

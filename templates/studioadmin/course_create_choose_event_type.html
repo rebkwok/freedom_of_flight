@@ -9,10 +9,10 @@
 
 {% block content %}
     <h1>Choose the type of course to create:</h1>
-    {% for course_type in course_types %}
+    {% for event_type in event_types %}
         <div class="row">
-            <div class="col-8 col-sm-6">{{ course_type.event_type.name }} - {{ course_type.number_of_events }} {{ course_type.event_type.pluralized_label }} ({{  course_type.event_type.track }})</div>
-            <div class="col-4 col-sm-6"><a class="btn btn-sm btn-outline-primary" href="{% url 'studioadmin:create_course' course_type.id %}">Select</a></div>
+            <div class="col-8 col-sm-6">{{ event_type }}</div>
+            <div class="col-4 col-sm-6"><a class="btn btn-sm btn-outline-primary" href="{% url 'studioadmin:create_course' event_type.id %}">Select</a></div>
         </div>
         <hr/>
     {% endfor %}

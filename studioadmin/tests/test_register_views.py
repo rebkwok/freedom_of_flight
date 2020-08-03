@@ -140,7 +140,7 @@ class AddRegisterBookingTests(TestUsersMixin, TestCase):
 
     def test_adds_to_user_block(self):
         block = baker.make_recipe(
-            "booking.dropin_block", dropin_block_config__event_type=self.event.event_type,
+            "booking.dropin_block", block_config__event_type=self.event.event_type,
             user=self.student_user, paid=True
         )
         self.login(self.staff_user)
@@ -227,7 +227,7 @@ class AjaxToggleAttendedTests(EventTestMixin, TestUsersMixin, TestCase):
         assert booking.no_show is True
 
     def test_toggle_no_show_does_not_remove_block(self):
-        block = baker.make_recipe("booking.dropin_block", dropin_block_config__event_type=self.aerial_event_type)
+        block = baker.make_recipe("booking.dropin_block", block_config__event_type=self.aerial_event_type)
         booking = baker.make(Booking, event=self.aerial_events[0], block=block)
         url = reverse("studioadmin:ajax_toggle_attended", args=(booking.id,))
         resp = self.client.post(url, {"attendance": "no-show"}).json()

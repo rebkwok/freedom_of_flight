@@ -13,7 +13,7 @@ from braces.views import LoginRequiredMixin
 
 from activitylog.models import ActivityLog
 from booking.email_helpers import send_bcc_emails
-from booking.models import Booking, Course, Event, Track, EventType, CourseType
+from booking.models import Booking, Course, Event, Track, EventType
 
 from ..forms import CourseCreateForm, CourseUpdateForm
 from .utils import is_instructor_or_staff, staff_required, StaffUserMixin, InstructorOrStaffUserMixin
@@ -61,7 +61,7 @@ class CourseAdminListView(LoginRequiredMixin, StaffUserMixin, ListView):
         tracks = Track.objects.all()
         track_courses = []
         for i, track in enumerate(tracks):
-            track_qs = [course for course in all_courses if course.course_type.event_type.track == track]
+            track_qs = [course for course in all_courses if course.event_type.track == track]
             if track_qs:
                 # Don't add the track tab if there are no events to display
                 track_paginator = Paginator(track_qs, 20)
@@ -139,7 +139,7 @@ def cancel_course_view(request, slug):
             messages.success(request, f'Course and all associated events cancelled; {message}')
             ActivityLog.objects.create(log=f"Course {course} cancelled by admin user {request.user}; {message}")
 
-        return HttpResponseRedirect(reverse('studioadmin:events') + f"?track={course.course_type.event_type.track_id}")
+        return HttpResponseRedirect(reverse('studioadmin:events') + f"?track={course.event_type.track_id}")
 
     context = {
         'course': course,
@@ -151,8 +151,8 @@ def cancel_course_view(request, slug):
 @login_required
 @staff_required
 def course_create_choice_view(request):
-    course_types = CourseType.objects.all()
-    return render(request, "studioadmin/course_create_choose_course_type.html", {"course_types": course_types})
+    event_types = EventType.objects.all()
+    return render(request, "studioadmin/course_create_choose_event_type.html", {"event_types": event_types})
 
 
 class CourseCreateUpdateMixin:
@@ -167,7 +167,7 @@ class CourseCreateUpdateMixin:
             event.course = course
             event.cancelled = course.cancelled
             event.save()
-        return HttpResponseRedirect(self.get_success_url(course.course_type.event_type.track_id))
+        return HttpResponseRedirect(self.get_success_url(course.event_type.track_id))
 
     def get_success_url(self, track_id):
         return reverse('studioadmin:courses') + f"?track={track_id}"
@@ -179,13 +179,13 @@ class CourseCreateView(LoginRequiredMixin, StaffUserMixin, CourseCreateUpdateMix
 
     def get_form_kwargs(self, **kwargs):
         form_kwargs = super().get_form_kwargs(**kwargs)
-        form_kwargs["course_type"] = CourseType.objects.get(id=self.kwargs["course_type_id"])
+        form_kwargs["event_type"] = EventType.objects.get(id=self.kwargs["event_type_id"])
         return form_kwargs
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["creating"] = True
-        context["course_type"] = CourseType.objects.get(id=self.kwargs["course_type_id"])
+        context["event_type"] = EventType.objects.get(id=self.kwargs["event_type_id"])
         return context
 
 
@@ -194,5 +194,18 @@ class CourseUpdateView(LoginRequiredMixin, StaffUserMixin, CourseCreateUpdateMix
 
     def get_form_kwargs(self, **kwargs):
         form_kwargs = super().get_form_kwargs()
-        form_kwargs["course_type"] = self.get_object().course_type
+        form_kwargs["event_type"] = self.get_object().event_type
         return form_kwargs
+
+    def form_valid(self, form):
+        new_events = form.cleaned_data["events"]
+        course = form.save(commit=False)
+        current_course_events = course.events.all()
+        for event in current_course_events:
+            if event not in new_events:
+                course.events.remove(event)
+        for event in new_events:
+            if event not in current_course_events:
+                course.events.add(event)
+        course.save()
+        return HttpResponseRedirect(self.get_success_url(course.event_type.track.id))

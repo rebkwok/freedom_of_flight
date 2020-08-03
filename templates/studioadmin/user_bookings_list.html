@@ -2,11 +2,8 @@
 
 {% load accounttags studioadmintags static %}
 
-{#{% block subnav-xs %}#}
-{#    {%  include "studioadmin/includes/navs/xs/events_subnav.html" %}#}
-{#{% endblock %}#}
 {% block precontent %}
-{#    {%  include "studioadmin/includes/navs/events_subnav.html" %}#}
+    {%  include "studioadmin/includes/navs/user_detail_subnav.html" %}
 {% endblock %}
 
 {% block content %}
@@ -18,9 +15,9 @@
 
     <div class="float-right">
     {% if past %}
-        <a href="{% url 'studioadmin:user_bookings' user.id %}">View upcoming bookings</a>
+        <a class="d-block d-md-none" href="{% url 'studioadmin:user_bookings' user.id %}">View upcoming bookings</a>
     {% else %}
-        <a href="{% url 'studioadmin:past_user_bookings' user.id %}">View booking history</a>
+        <a class="d-block d-md-none" href="{% url 'studioadmin:past_user_bookings' user.id %}">View booking history</a>
     {% endif  %}
     </div>
     <a class="bookingadd btn btn-success btn-sm mb-2" href="#" data-form="{% url 'studioadmin:bookingadd' user.id %}" title="add booking">Add new booking</a>
@@ -33,6 +30,7 @@
                 <th>Event</th>
                 <th>Track</th>
                 <th>Status</th>
+                <th>Block assigned</th>
             </tr>
             </thead>
 
@@ -49,10 +47,11 @@
                                    data-form="{% url 'studioadmin:bookingedit' booking.id %}"
                                    title="edit booking">Edit</a>
                         </td>
-                        <td>{{ booking.event.start }}</td>
-                        <td>{{ booking.event.name }}</td>
+                        <td>{{ booking.event.start|date:"D d M Y, H:i" }}</td>
+                        <td>{{ booking.event.name }} {% if booking.event.course %}({{ booking.event.course.name }}){% endif %}</td>
                         <td>{{ booking.event.event_type.track }}</td>
                         <td>{{ booking.status }}</td>
+                        <td>{% if booking.block %}Yes{% else %}-{% endif %}</td>
                     </tr>
             {% endfor %}
             </tbody>

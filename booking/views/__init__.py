@@ -1,6 +1,6 @@
 from .ajax_views import (
     ajax_block_delete, ajax_course_booking, ajax_toggle_booking, ajax_toggle_waiting_list,
-    ajax_dropin_block_purchase, ajax_course_block_purchase
+    ajax_block_purchase
 )
 
 from .block_views import (

@@ -232,18 +232,18 @@ class EventListViewTests(EventTestMixin, TestUsersMixin, TestCase):
     def test_block_info(self):
         self.make_disclaimer(self.student_user)
         block = baker.make_recipe(
-            "booking.dropin_block", dropin_block_config__event_type=self.aerial_event_type,
-            dropin_block_config__size=10, user=self.student_user, paid=True
+            "booking.dropin_block", block_config__event_type=self.aerial_event_type,
+            block_config__size=10, user=self.student_user, paid=True
         )
         resp = self.client.get(self.adult_url)
         assert "(10/10 remaining); not started" in resp.rendered_content
 
-        block.dropin_block_config.duration = None
-        block.dropin_block_config.save()
+        block.block_config.duration = None
+        block.block_config.save()
         resp = self.client.get(self.adult_url)
         assert "(10/10 remaining); never expires" in resp.rendered_content
 
-        block.dropin_block_config.duration = 2
+        block.block_config.duration = 2
         block.save()
         baker.make(Booking, block=block, event=self.aerial_events[0])
         resp = self.client.get(self.adult_url)
@@ -252,8 +252,10 @@ class EventListViewTests(EventTestMixin, TestUsersMixin, TestCase):
 
         baker.make_recipe(
             "booking.course_block",
-            course_block_config__identifier="A Test Course Block",
-            course_block_config__course_type=self.course_type,
+            block_config__name="A Test Course Block",
+            block_config__event_type=self.aerial_event_type,
+            block_config__course=True,
+            block_config__size=self.course.number_of_events,
             user=self.student_user, paid=True)
         resp = self.client.get(self.adult_url)
         assert "A Test Course Block" in resp.rendered_content

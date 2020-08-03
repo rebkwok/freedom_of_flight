@@ -112,29 +112,15 @@ class EventType(models.Model):
         super().save()
 
 
-class CourseType(models.Model):
-    """
-    Holds size and event type/quantity info for a Course, distinct from the
-    specific course events themselves
-    """
-    event_type = models.ForeignKey(EventType, on_delete=models.CASCADE)
-    number_of_events = models.PositiveIntegerField(default=4)
-
-    class Meta:
-        unique_together = ("event_type", "number_of_events")
-
-    def __str__(self):
-        return f"{self.event_type} - {self.number_of_events}"
-
-
 class Course(models.Model):
-    """A collection of specific Events of the number and EventType as defined by the CourseType"""
+    """A collection of specific Events of the same EventType"""
     name = models.CharField(
         max_length=255, help_text="A short identifier that will be displayed to users on the event list.  "
     )
     description = models.TextField(blank=True, default="")
-    course_type = models.ForeignKey(CourseType, on_delete=models.CASCADE)
-    slug = AutoSlugField(populate_from=["name", "course_type"], max_length=40, unique=True)
+    event_type = models.ForeignKey(EventType, on_delete=models.CASCADE)
+    number_of_events = models.PositiveIntegerField(default=4)
+    slug = AutoSlugField(populate_from=["name", "event_type", "number_of_events"], max_length=40, unique=True)
     cancelled = models.BooleanField(default=False)
     max_participants = models.PositiveIntegerField(help_text="Overrides any value set on individual linked events")
     show_on_site = models.BooleanField(default=False, help_text="Overrides any value set on individual linked events")
@@ -158,10 +144,10 @@ class Course(models.Model):
             return last_event.start
 
     def is_configured(self):
-        return self.events.count() == self.course_type.number_of_events
+        return self.events.count() == self.number_of_events
 
     def __str__(self):
-        return f"{self.name} ({self.course_type})"
+        return f"{self.name} ({self.event_type} - {self.number_of_events})"
 
     def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
         super().save()
@@ -243,7 +229,7 @@ class Event(models.Model):
                f"({self.event_type.track})"
 
     def clean(self):
-        if self.course and not self.course.course_type.event_type == self.event_type:
+        if self.course and not self.course.event_type == self.event_type:
             raise ValidationError({'course': _('Cannot add this course - event types do not match.')})
         if self.course and self.course.is_configured() and self not in self.course.events.all():
             raise ValidationError({'course': _('Cannot add this course - course is already configured with all its events.')})
@@ -264,6 +250,23 @@ class Event(models.Model):
         super().save()
 
 
+class BlockConfig(models.Model):
+    name = models.CharField(max_length=255)
+    description = models.TextField(null=True, blank=True)
+    cost = models.DecimalField(max_digits=8, decimal_places=2)
+    duration = models.PositiveIntegerField(help_text="Number of weeks until block expires (from first use)", default=4,
+                                           null=True, blank=True)
+    size = models.PositiveIntegerField(
+        help_text="Number of events in block. For a course block, the number of events in the course"
+    )
+    event_type = models.ForeignKey(EventType, on_delete=models.SET_NULL, null=True)
+    course = models.BooleanField(default=False)
+    active = models.BooleanField(default=False, help_text="Purchasable by users")
+
+    def __str__(self):
+        return self.name
+
+
 class BaseBlockConfig(models.Model):
     """Holds cost and event info for a Course or block of (drop in) events"""
     identifier = models.CharField(max_length=255)
@@ -275,32 +278,6 @@ class BaseBlockConfig(models.Model):
     def __str__(self):
         return self.identifier
 
-
-class DropInBlockConfig(BaseBlockConfig):
-    # DROP-IN BLOCKS
-    size = models.PositiveIntegerField(help_text="Number of events in block")
-    event_type = models.ForeignKey(EventType, on_delete=models.SET_NULL, null=True)
-
-    @cached_property
-    def block_config_type(self):
-        return "dropin"
-
-
-class CourseBlockConfig(BaseBlockConfig):
-    # COURSES
-    course_type = models.ForeignKey(CourseType, on_delete=models.SET_NULL, null=True)
-
-    @cached_property
-    def block_config_type(self):
-        return "course"
-
-    @cached_property
-    def size(self):
-        return self.course_type.number_of_events
-
-    @cached_property
-    def event_type(self):
-        return self.course_type.event_type
 
 class BaseVoucher(models.Model):
     discount = models.PositiveIntegerField(help_text="Enter a number between 1 and 100")
@@ -350,14 +327,10 @@ class BaseVoucher(models.Model):
 
 class BlockVoucher(BaseVoucher):
     code = models.CharField(max_length=255, unique=True)
-    dropin_block_configs = models.ManyToManyField(DropInBlockConfig, blank=True)
-    course_block_configs = models.ManyToManyField(CourseBlockConfig, blank=True)
-
-    def all_block_configs(self):
-        return list(self.dropin_block_configs.all()) + list(self.course_block_configs.all())
+    block_configs = models.ManyToManyField(BlockConfig)
 
     def check_block_config(self, block_config):
-        return block_config in self.all_block_configs()
+        return block_config in self.block_configs.all()
 
     def __str__(self):
         return self.code
@@ -368,8 +341,7 @@ class Block(models.Model):
     Block booking
     """
     user = models.ForeignKey(User, related_name='blocks', on_delete=models.CASCADE)
-    dropin_block_config = models.ForeignKey(DropInBlockConfig, on_delete=models.SET_NULL, null=True, blank=True)
-    course_block_config = models.ForeignKey(CourseBlockConfig, on_delete=models.SET_NULL, null=True, blank=True)
+    block_config = models.ForeignKey(BlockConfig, on_delete=models.CASCADE)
     purchase_date = models.DateTimeField(default=timezone.now)
     start_date = models.DateTimeField(null=True, blank=True)
     paid = models.BooleanField(default=False, help_text='Payment has been made by user')
@@ -390,10 +362,6 @@ class Block(models.Model):
 
     def __str__(self):
         return f"{self.user.username} -- {self.block_config} -- purchased {self.purchase_date.strftime('%d %b %Y')}"
-
-    @cached_property
-    def block_config(self):
-        return self.dropin_block_config if self.dropin_block_config else self.course_block_config
 
     @property
     def cost_with_voucher(self):
@@ -467,8 +435,8 @@ class Block(models.Model):
         if event.course:
             # if the event is part of a course, it should be using a course block
             return self.valid_for_course(course=event.course, event=event)
-        if self.dropin_block_config is not None and self.dropin_block_config.event_type == event.event_type:
-            # it's the right type of config and event type matches
+        if not self.block_config.course and self.block_config.event_type == event.event_type:
+            # event type matches and it's not a course block, check it's valid for this event (hasn't expired)
             return self._valid_and_active_for_event(event)
         return False
 
@@ -476,9 +444,11 @@ class Block(models.Model):
         # if it's not active we don't care about anything else
         if not self.active_block:
             return False
-        if self.course_block_config is not None and self.course_block_config.course_type == course.course_type:
-            # it's the right type of config and course type matches
-            # check the earliest event
+        if self.block_config.course \
+                and self.block_config.event_type == course.event_type \
+                and self.block_config.size == course.number_of_events:
+            # it's valid for courses, event type matches, and it's the right size for the course
+            # check it's valid for the earliest event (hasn't expired)
             event = event or course.events.order_by("start").first()
             valid_for_event = self._valid_and_active_for_event(event)
             if valid_for_event:
@@ -497,12 +467,6 @@ class Block(models.Model):
                 log=f'Booking id {booking.id} booked with deleted block {self.id} has been reset'
             )
         super().delete(*args, **kwargs)
-
-    def clean(self):
-        if not self.dropin_block_config and not self.course_block_config:
-            raise ValidationError({'dropin_block_config': _('One of dropin_block_config or course_block_config is required.')})
-        elif self.dropin_block_config and self.course_block_config:
-            raise ValidationError({'course_block_config': _('Only one of dropin_block_config or course_block_config can be set.')})
 
     def save(self, *args, **kwargs):
         self.full_clean()
@@ -649,17 +613,10 @@ class WaitingListUser(models.Model):
 
 
 class GiftVoucherType(models.Model):
-    dropin_block_config = models.ForeignKey(
-        DropInBlockConfig, null=True, blank=True, on_delete=models.SET_NULL, related_name="dropin_gift_vouchers"
-    )
-    course_block_config = models.ForeignKey(
-        CourseBlockConfig, null=True, blank=True, on_delete=models.SET_NULL, related_name="course_gift_vouchers"
+    block_config = models.ForeignKey(
+        BlockConfig, null=True, blank=True, on_delete=models.SET_NULL, related_name="gift_vouchers"
     )
     active = models.BooleanField(default=True, help_text="Display on site; set to False instead of deleting unused voucher types")
-
-    @cached_property
-    def block_config(self):
-        return self.dropin_block_config if self.dropin_block_config else self.course_block_config
 
     @cached_property
     def cost(self):

@@ -6,8 +6,8 @@ from booking.views import (
     disclaimer_required, home,
     EventListView, EventDetailView,
     permission_denied, dropin_block_purchase_view,
-    course_block_purchase_view, block_purchase_view, ajax_course_block_purchase,
-    ajax_dropin_block_purchase, shopping_basket, ajax_checkout
+    course_block_purchase_view, block_purchase_view,
+    ajax_block_purchase, shopping_basket, ajax_checkout
 )
 
 
@@ -37,8 +37,7 @@ urlpatterns = [
     path("blocks/purchase-options/dropin/<slug:event_slug>/", dropin_block_purchase_view, name="dropin_block_purchase"),
     path("blocks/purchase-options/course/<slug:course_slug>/", course_block_purchase_view, name="course_block_purchase"),
     path("blocks/purchase-options/", block_purchase_view, name="block_purchase"),
-    path('ajax-block-purchase/course/<int:block_config_id>/', ajax_course_block_purchase, name='ajax_course_block_purchase'),
-    path('ajax-block-purchase/dropin/<int:block_config_id>/', ajax_dropin_block_purchase, name='ajax_dropin_block_purchase'),
+    path('ajax-block-purchase/<int:block_config_id>/', ajax_block_purchase, name='ajax_block_purchase'),
 
     # SHOPPING BASKET
     path("shopping-cart/", shopping_basket, name="shopping_basket"),

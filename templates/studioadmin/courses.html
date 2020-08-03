@@ -42,7 +42,7 @@
                             <tr {% if course.cancelled %}class="expired"{% endif %}>
                                 <td><a href="{% url 'studioadmin:update_course' course.slug %}">{{ course.name }}</a></td>
                                 <td>{{ course.events.first.start|date:"D d M Y, H:i" }}</td>
-                                <td class="text-center">{{ course.course_type.number_of_events }}</td>
+                                <td class="text-center">{{ course.number_of_events }}</td>
                                 <td class="text-center">
                                         <div
                                             class="badge badge-warning pr-2 pl-2"
@@ -54,7 +54,7 @@
                                         </div>
                                 </td>
                                 <td class="text-center">{% if course.events.exists %}{{ course.events.first.spaces_left }}{% else %}{{ course.max_participants }}{% endif %} {% if course.max_participants %}/ {{ course.max_participants }}{% endif %}</td>
-                                <td>{{ course.course_type.event_type.name }}</td>
+                                <td>{{ course.event_type.name }}</td>
                                 {% if event.course %}
                                     <td class="helptext">Set on course</td>
                                 {% else %}
