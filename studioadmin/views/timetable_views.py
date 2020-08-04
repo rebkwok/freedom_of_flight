@@ -68,9 +68,11 @@ class TimetableSessionListView(LoginRequiredMixin, StaffUserMixin, ListView):
                 else:
                     page = 1
                 queryset = track_paginator.get_page(page)
+                paginated_ids = [session.id for session in queryset.object_list]
                 queryset_by_day = {}
                 for session_item in session_ids_by_day:
-                    queryset_by_day.setdefault(day_names[session_item["day"]], []).append(track_qs.get(id=session_item["id"]))
+                    if session_item["id"] in paginated_ids:
+                        queryset_by_day.setdefault(day_names[session_item["day"]], []).append(track_qs.get(id=session_item["id"]))
 
                 track_obj = {
                     'index': i,

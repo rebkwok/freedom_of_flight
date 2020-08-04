@@ -6,9 +6,9 @@ Account
 <div class="dropdown-menu" aria-labelledby="navbarDropdown">
  <span class="dropdown-item helptext">Logged in as {{ request.user|full_name }}</span>
   <a class="dropdown-item" href="{% url 'accounts:profile' %}">Profile</a>
-  <a class="dropdown-item" href="{% url 'booking:bookings' %}">Bookings</a>
   <a class="dropdown-item" href="{% url 'booking:blocks' %}">Credit Blocks</a>
-  <a class="dropdown-item" href="#"><em>Booking History</em></a>
+  <a class="dropdown-item" href="{% url 'booking:bookings' %}">Bookings</a>
+  <a class="dropdown-item" href="{% url 'booking:past_bookings' %}">Booking History</a>
   <a class="dropdown-item" href="#"><em>Payment History</em></a>
   <a class="dropdown-item" href="{% url 'account_change_password' %}">Change password</a>
   <a class="dropdown-item" href="{% url 'account_logout' %}">Log out</a>

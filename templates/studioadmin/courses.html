@@ -10,22 +10,23 @@
 {% endblock %}
 
 {% block content %}
-    <h1>Courses</h1>
-    <nav>
-        <div class="nav nav-tabs" id="courseTrackTabs" role="tablist">
-            {% for track_obj in track_courses %}
-                <a class="nav-item nav-link {% get_active_tab_class track_obj.index tab %}" href="#tab{{ track_obj.index }}" data-toggle="tab">{{ track_obj.track }}</a>
-            {%  endfor %}
-        </div>
-    </nav>
-    <div class="tab-content">
+    <h1>{% if past %}Past {% endif %}Courses</h1>
+    {% if track_courses %}
+        <nav>
+            <div class="nav nav-tabs" id="courseTrackTabs" role="tablist">
+                {% for track_obj in track_courses %}
+                    <a class="nav-item nav-link {% get_active_tab_class track_obj.index tab %}" href="#tab{{ track_obj.index }}" data-toggle="tab">{{ track_obj.track }}</a>
+                {%  endfor %}
+            </div>
+        </nav>
+        <div class="tab-content">
         {% for track_obj in track_courses %}
             <div class="tab-pane fade {% get_active_pane_class track_obj.index tab %}" id="tab{{ track_obj.index }}" role="tabpanel">
                 <div class="table-responsive">
                     <table class="table">
                         <thead>
                             <tr>
-                                <th scope="col">Name<br/><span class="helptext">Click to edit</span></th>
+                                <th scope="col">Name{% if not past %}<br/><span class="helptext">Click to edit</span>{% endif %}</th>
                                 <th scope="col">Start (first event)</th>
                                 <th scope="col" class="text-center">Number of events</th>
                                 <th scope="col" class="text-center">Events configured</th>
@@ -40,7 +41,13 @@
                         <tbody>
                         {% for course in track_obj.queryset %}
                             <tr {% if course.cancelled %}class="expired"{% endif %}>
-                                <td><a href="{% url 'studioadmin:update_course' course.slug %}">{{ course.name }}</a></td>
+                                <td>
+                                    {% if not past %}
+                                        <a href="{% url 'studioadmin:update_course' course.slug %}">{{ course.name }}</a>
+                                    {% else %}
+                                        {{ course.name }}
+                                    {% endif %}
+                                </td>
                                 <td>{{ course.events.first.start|date:"D d M Y, H:i" }}</td>
                                 <td class="text-center">{{ course.number_of_events }}</td>
                                 <td class="text-center">
@@ -74,15 +81,19 @@
                                 {% endif %}
                                 <td class="text-center">{{ course.is_configured|yesno|title }}</td>
                                 <td>
-                                    {% if course.cancelled %}
-                                        Cancelled
-                                    {%  else %}
-                                        <a class="btn btn-sm btn-danger pt-0 pb-0" href="{% url 'studioadmin:cancel_course' course.slug %}">Cancel</a>
+                                    {% if not past %}
+                                        {% if course.cancelled %}
+                                            Cancelled
+                                        {%  else %}
+                                            <a class="btn btn-sm btn-danger pt-0 pb-0" href="{% url 'studioadmin:cancel_course' course.slug %}">Cancel</a>
+                                        {% endif %}
                                     {% endif %}
                                 </td>
                                 <td>
                                     {% if course.events.first.bookings.exists %}
-                                    <a href="{% url 'studioadmin:email_course_users' course.slug %}"><i class="far fa-envelope"></i></a>
+                                        <div data-toggle="tooltip" data-placement="top" title="Email booked students">
+                                            <a href="{% url 'studioadmin:email_course_users' course.slug %}"><i class="far fa-envelope"></i></a>
+                                        </div>
                                     {% endif %}
                                 </td>
                             </tr>
@@ -97,7 +108,9 @@
 
 
     </div> <!-- tab content -->
-
+    {% else %}
+    No courses to display
+    {% endif %}
 {% endblock content %}
 
 {% block extra_js %}

@@ -6,6 +6,9 @@
   </button>
   <div class="collapse navbar-collapse" id="navbarEventsSubNav">
     <ul class="navbar-nav">
+      </li>
+        <a class="nav-link" href="{% url 'studioadmin:registers' %}">Registers</a>
+      </li>
       <li class="nav-item">
           <a class="nav-link" href="{% url 'studioadmin:choose_event_type_to_create' %}">Add event</a>
       </li>
@@ -13,9 +16,9 @@
           <a class="nav-link" href="{% url 'studioadmin:events' %}">View/Edit</a>
       </li>
        <li class="nav-item">
-          <a class="nav-link" href="{% url 'studioadmin:registers' %}">Registers</a>
-      </li>
-    </ul>
+           <a class="nav-link" href="{% url 'studioadmin:past_events' %}">Past events</a>
+       </li>
+      </ul>
   </div>
 </nav>
 </div>

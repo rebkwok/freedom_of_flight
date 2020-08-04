@@ -6,8 +6,8 @@ from studioadmin.views import (
     EventAdminListView, ajax_toggle_event_visible, RegisterListView, register_view,
     ajax_add_register_booking, ajax_toggle_attended,
     ajax_remove_from_waiting_list, event_waiting_list_view, cancel_event_view,
-    event_create_choice_view, EventCreateView, EventUpdateView, clone_event,
-    CourseAdminListView, course_create_choice_view, CourseCreateView, CourseUpdateView,
+    event_create_choice_view, EventCreateView, EventUpdateView, clone_event, PastEventAdminListView,
+    CourseAdminListView, course_create_choice_view, CourseCreateView, CourseUpdateView, PastCourseAdminListView,
     ajax_toggle_course_visible, cancel_course_view,
     TimetableSessionListView, ajax_timetable_session_delete, timetable_session_create_choice_view,
     TimetableSessionCreateView, TimetableSessionUpdateView, clone_timetable_session_view,
@@ -29,6 +29,7 @@ app_name = 'studioadmin'
 
 urlpatterns = [
     path('events/', EventAdminListView.as_view(), name='events'),
+    path('events/past/', PastEventAdminListView.as_view(), name='past_events'),
     path('event/<slug>/cancel/', cancel_event_view, name='cancel_event'),
     path('ajax-toggle-event-visible/<int:event_id>/', ajax_toggle_event_visible, name="ajax_toggle_event_visible"),
     path('event/create/', event_create_choice_view, name="choose_event_type_to_create"),
@@ -46,6 +47,7 @@ urlpatterns = [
     path('timetable/upload/', upload_timetable_view, name="upload_timetable"),
 
     path('courses/', CourseAdminListView.as_view(), name='courses'),
+    path('courses/past/', PastCourseAdminListView.as_view(), name='past_courses'),
     path('course/<slug>/cancel/', cancel_course_view, name='cancel_course'),
     path('ajax-toggle-course-visible/<int:course_id>/', ajax_toggle_course_visible, name="ajax_toggle_course_visible"),
     path('course/create/', course_create_choice_view, name="choose_course_type_to_create"),

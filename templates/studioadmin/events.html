@@ -11,7 +11,7 @@
 
 {% block content %}
 <div class="admincontent">
-    <h1>Scheduled Events</h1>
+    <h1>{% if past %}Past{% else %}Scheduled{% endif %} Events</h1>
     <nav>
         <div class="nav nav-tabs" id="eventsTrackTabs" role="tablist">
             {% for track_obj in track_events %}
@@ -28,7 +28,7 @@
                     <table class="table table-sm">
                         <thead>
                             <tr>
-                                <th scope="col">Name<br/><span class="helptext">Click to edit</span></th>
+                                <th scope="col">Name{% if not past %}<br/><span class="helptext">Click to edit</span>{% endif %}</th>
                                 <th scope="col" class="text-center">Course</th>
                                 <th scope="col">Time</th>
                                 <th scope="col" class="text-center">Duration</th>
@@ -45,13 +45,25 @@
                             <tr class="table-secondary table-divider"><td colspan="10">{{ event_date|date:"D d M Y" }}</></td></tr>
                             {% for event in events %}
                             <tr {% if event.cancelled %}class="expired"{% endif %}>
-                                <td><a href="{% url 'studioadmin:update_event' event.slug %}">{{ event.name }}</a></td>
+                                <td>
+                                    {% if not past %}
+                                        <a href="{% url 'studioadmin:update_event' event.slug %}">{{ event.name }}</a>
+                                    {% else %}
+                                        {{ event.name }}
+                                    {% endif %}
+                                    {% if event.cancelled %} (CANCELLED){% endif %}
+                                </td>
                                 <td class="text-center">
                                     {% if event.course %}
+                                        {% if not past %}
                                         <a href="{% url 'studioadmin:update_course' event.course.slug %}">
                                             <div data-toggle="tooltip" data-placement="top" title="{{ event.course.name }}">
                                             <i class="fas fa-external-link-alt"></i></div>
                                         </a>
+                                        {% else %}
+                                            <div data-toggle="tooltip" data-placement="top" title="{{ event.course.name }}">
+                                            <i class="far fa-question-circle"></i></div>
+                                        {% endif %}
                                     {% endif %}
                                 </td>
                                 <td>{{ event.start|date:"H:i" }}</td>
@@ -76,17 +88,25 @@
                                         {% endif %}
                                     </td>
                                 {% endif %}
-                                <td class="pr-0 pl-1 text-center"><a href="{% url 'studioadmin:clone_event' event.slug %}"><i class="far fa-clone"></i></a></td>
                                 <td class="pr-0 pl-1 text-center">
-                                    {% if event.cancelled %}
-                                        Cancelled
-                                    {%  else %}
-                                        <a class="btn btn-sm btn-danger pt-0 pb-0" href="{% url 'studioadmin:cancel_event' event.slug %}">Cancel</a>
+                                    <div data-toggle="tooltip" data-placement="top" title="Clone this {{ event.event_type.label }}">
+                                        <a href="{% url 'studioadmin:clone_event' event.slug %}"><i class="far fa-clone"></i></a>
+                                    </div>
+                                </td>
+                                <td class="pr-0 pl-1 text-center">
+                                    {% if not past %}
+                                        {% if event.cancelled %}
+                                            Cancelled
+                                        {%  else %}
+                                            <a class="btn btn-sm btn-danger pt-0 pb-0" href="{% url 'studioadmin:cancel_event' event.slug %}">Cancel</a>
+                                        {% endif %}
                                     {% endif %}
                                 </td>
                                 <td>
                                     {% if event.bookings.exists %}
-                                    <a href="{% url 'studioadmin:email_event_users' event.slug %}"><i class="far fa-envelope"></i></a>
+                                        <div data-toggle="tooltip" data-placement="top" title="Email booked students">
+                                            <a href="{% url 'studioadmin:email_event_users' event.slug %}"><i class="far fa-envelope"></i></a>
+                                        </div>
                                     {% endif %}
                                 </td>
                             </tr>
@@ -100,7 +120,7 @@
         {% endfor %}
     </div> <!-- tab content -->
 {% else %}
-<p>No events created yet</p>
+<p>No events to display</p>
 {% endif %}
 </div>
 {% endblock content %}

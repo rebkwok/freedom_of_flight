@@ -59,10 +59,6 @@ class BaseEventAdminListView(ListView):
             track_qs = all_events.filter(event_type__track=track)
             # group by date before pagination
             event_ids_by_date = track_qs.values('start__date').annotate(count=Count('id')).values('start__date', 'id')
-            events_by_date = {}
-            for event_info in event_ids_by_date:
-                events_by_date.setdefault(event_info["start__date"], []).append(all_events.get(id=event_info["id"]))
-
             if track_qs:
                 # Don't add the track tab if there are no events to display
                 track_paginator = Paginator(track_qs, 20)
@@ -71,6 +67,11 @@ class BaseEventAdminListView(ListView):
                 else:
                     page = 1
                 queryset = track_paginator.get_page(page)
+                paginated_ids = [event.id for event in queryset.object_list]
+                events_by_date = {}
+                for event_info in event_ids_by_date:
+                    if event_info["id"] in paginated_ids:
+                        events_by_date.setdefault(event_info["start__date"], []).append(all_events.get(id=event_info["id"]))
 
                 track_obj = {
                     'index': i,
@@ -91,6 +92,19 @@ class BaseEventAdminListView(ListView):
 
 class EventAdminListView(LoginRequiredMixin, StaffUserMixin, BaseEventAdminListView):
     template_name = "studioadmin/events.html"
+
+
+class PastEventAdminListView(EventAdminListView):
+    template_name = "studioadmin/events.html"
+
+    def get_queryset(self):
+        start_of_today = datetime.combine(timezone.now().date(), datetime.min.time(), tzinfo=timezone.utc)
+        return Event.objects.filter(start__lt=start_of_today).order_by("-start")
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["past"] = True
+        return context
 
 
 def ajax_toggle_event_visible(request, event_id):

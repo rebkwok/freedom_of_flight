@@ -87,6 +87,20 @@ class CourseAdminListView(LoginRequiredMixin, StaffUserMixin, ListView):
         return context
 
 
+class PastCourseAdminListView(CourseAdminListView):
+
+    def _include_course(self, course, start_of_today):
+        if course.last_event_date is None:
+            return False
+        else:
+            return course.last_event_date < start_of_today
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['past'] = True
+        return context
+
+
 def ajax_toggle_course_visible(request, course_id):
     course = Course.objects.get(id=course_id)
     course.show_on_site = not course.show_on_site

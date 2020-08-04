@@ -9,7 +9,7 @@
 {% block content %}
 <div id="confirm-dialog"></div>
 
-    <h2 class="mt-2">Active Bookings</h2>
+    <h2 class="mt-2">{% if history %}Past{% else %}Active{% endif %} Bookings</h2>
 
     <form class="form-inline pb-3" method="post">
         {% csrf_token %}
@@ -32,7 +32,7 @@
                             </span></em>
                             <span class="float-right">
 
-                            {% if user|can_book_or_cancel:booking.event %}
+                            {% if not history and user|can_book_or_cancel:booking.event %}
                                 <span
                                     id="book_{{ booking.event.id }}"
                                     data-user_id="{{ booking.user.id }}"
@@ -57,7 +57,7 @@
                                     {% endif %}
                                 {% elif booking.event.cancelled %}
                                     <span>Event Cancelled</span>
-                                {% endif %}
+                            {% endif %}
                             </span>
                         <div>
                             <span class="helptext">{{ booking.event.event_type.name }}</span>
@@ -78,44 +78,10 @@
             </div>
         {% endfor %}
 
-    {% if page_bookings.has_other_pages %}
-        <!--NAVIGATION-->
-        <nav aria-label="Page navigation">
-          <ul class="pagination">
-            {% if page_bookings.has_previous %}
-            <li class="page-item">
-              <a class="page-link" href="?page={{ page_bookings.previous_page_number }}" aria-label="Previous">
-                <span aria-hidden="true">&laquo;</span>
-                <span class="sr-only">Previous</span>
-              </a>
-            </li>
-            {% else %}
-              <a class="page-link" disabled=disabled href="#" aria-label="Previous">
-                <span aria-hidden="true">&laquo;</span>
-                <span class="sr-only">Previous</span>
-              </a>
-            {% endif %}
-          <li class="page-item"><a class="page-link" href="#">Page {{ page_bookings.number }} of {{ page_bookings.paginator.num_pages }}</a></li>
+        {% include 'common/includes/single_page_pagination.html' %}
 
-          <li class="page-item">
-            {% if page_events.has_next %}
-              <a class="page-link" href="?page={{ page_bookings.next_page_number }}" aria-label="Next">
-                <span aria-hidden="true">&raquo;</span>
-                <span class="sr-only">Next</span>
-              </a>
-            {% else %}
-              <a class="page-link" disabled=disabled href="#" aria-label="Next">
-                <span aria-hidden="true">&raquo;</span>
-                <span class="sr-only">Next</span>
-              </a>
-            {% endif %}
-          </li>
-
-          </ul>
-        </nav>
-    {% endif %}
     {% else %}
-        <p>No active bookings.</p>
+        <p>No bookings to display.</p>
     {% endif %}
 
 {% endblock content %}

@@ -85,6 +85,10 @@ class EventType(models.Model):
     description = models.TextField(help_text="Description", null=True, blank=True)
     track = models.ForeignKey(Track, on_delete=models.SET_NULL, null=True, related_name="event_types")
     contact_email = models.EmailField(default=settings.DEFAULT_STUDIO_EMAIL)
+    booking_restriction = models.PositiveIntegerField(
+        default=15, help_text="Time (minutes) to prevent booking prior to event start. Set to 0 to allow unrestricted booking "
+                              "up to the event start time",
+    )
     cancellation_period = models.PositiveIntegerField(default=24)
     email_studio_when_booked = models.BooleanField(default=False)
     allow_booking_cancellation = models.BooleanField(default=True)

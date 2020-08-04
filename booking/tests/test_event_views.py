@@ -148,7 +148,7 @@ class EventListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         for event in self.aerial_events:
             # create a booking for this user for all events
             baker.make(
-                Booking, block__dropin_block_config__event_type=self.aerial_event_type,
+                Booking, block__block_config__event_type=self.aerial_event_type,
                 user=self.student_user, event=event
             )
 
@@ -156,6 +156,7 @@ class EventListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         user_booking_info = resp.context_data['user_booking_info']
 
         # user booking info for every track event
+        # track events include aerial_events, floor_events, and one course event
         assert len(user_booking_info) == Event.objects.filter(event_type__track=self.adult_track).count()
         # make the aerial events a queryset
         aerial_events = Event.objects.filter(id__in=[event.id for event in self.aerial_events])
@@ -188,6 +189,34 @@ class EventListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         assert 'Cancel' in resp.rendered_content
         # course details button shown for the unbooked course
         assert 'Course details' in resp.rendered_content
+
+    def test_event_list_user_booking_info_booking_restriction(self):
+        """
+        test that booked events are shown on listing
+        """
+        self.make_disclaimer(self.student_user)
+        resp = self.client.get(self.adult_url)
+        user_booking_info = resp.context_data['user_booking_info']
+
+        # user booking info for every track event
+        assert len(user_booking_info) == Event.objects.filter(event_type__track=self.adult_track).count()
+        # make the aerial events a queryset
+        aerial_events = Event.objects.filter(id__in=[event.id for event in self.aerial_events])
+        for event_id, user_info in user_booking_info.items():
+            if event_id in aerial_events.values_list("id", flat=True):
+                assert user_info["has_booked"] is False
+                assert user_info["can_book_or_cancel"] is True
+
+        # set the start date to <15 mins ahead (the default booking restriction time)
+        for event in self.aerial_events:
+            event.start = timezone.now() + timedelta(minutes=10)
+            event.save()
+        resp = self.client.get(self.adult_url)
+        user_booking_info = resp.context_data['user_booking_info']
+        for event_id, user_info in user_booking_info.items():
+            if event_id in aerial_events.values_list("id", flat=True):
+                assert user_info["has_booked"] is False
+                assert user_info["can_book_or_cancel"] is False
 
     def test_cancelled_events_are_not_listed(self):
         resp = self.client.get(self.adult_url)

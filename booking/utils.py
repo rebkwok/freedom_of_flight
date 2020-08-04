@@ -1,4 +1,6 @@
+from datetime import timedelta
 from django.contrib.auth.models import User
+from django.utils import timezone
 
 
 def get_view_as_user(request):
@@ -65,6 +67,10 @@ def calculate_user_cart_total(unpaid_blocks=None):
 
 def user_can_book_or_cancel(user, event):
     if event.cancelled:
+        return False
+    elif event.event_type.booking_restriction > 0 and (
+            event.start - timedelta(minutes=event.event_type.booking_restriction) < timezone.now()
+    ):
         return False
     elif event.has_space:
         return True

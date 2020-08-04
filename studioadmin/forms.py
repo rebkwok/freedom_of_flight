@@ -174,7 +174,6 @@ class CourseUpdateForm(forms.ModelForm):
             required=False,
             queryset=get_course_event_choices(self.event_type, self.instance.id),
             widget=forms.SelectMultiple(attrs={"class": "form-control"}),
-            help_text="Select one or more (ctrl/cmd+click to select multiple)",
             label=f"Add {self.event_type.pluralized_label} to this course"
         )
 
@@ -480,7 +479,8 @@ class EventTypeForm(forms.ModelForm):
     class Meta:
         model = EventType
         fields = (
-            "track", "name", "label", "plural_suffix", "description", "cancellation_period", "email_studio_when_booked",
+            "track", "name", "label", "plural_suffix", "description", "booking_restriction",
+            "cancellation_period", "email_studio_when_booked",
             "allow_booking_cancellation", "is_online"
         )
 
@@ -513,6 +513,7 @@ class EventTypeForm(forms.ModelForm):
                 Column("other_plural_suffix", css_class="col-6"),
             ),
             "description",
+            AppendedText('booking_restriction', 'mins'),
             AppendedText('cancellation_period', 'hrs'),
             "email_studio_when_booked",
             "allow_booking_cancellation",

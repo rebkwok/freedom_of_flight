@@ -4,8 +4,9 @@
       Events Options
     </a>
     <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+      <a class="dropdown-item" href="{% url 'studioadmin:registers' %}">Registers</a>
       <a class="dropdown-item" href="{% url 'studioadmin:choose_event_type_to_create' %}">Add event</a>
       <a class="dropdown-item" href="{% url 'studioadmin:events' %}">View/Edit</a>
-      <a class="dropdown-item" href="{% url 'studioadmin:registers' %}">Registers</a>
+      <a class="dropdown-item" href="{% url 'studioadmin:past_events' %}">Past events</a>
     </div>
   </li>

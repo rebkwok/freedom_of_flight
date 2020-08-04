@@ -12,7 +12,8 @@
 {% block content %}
     <h1>Tracks</h1>
     <p>
-        Tracks represent categories of events that will be grouped together on the booking site.
+        Tracks represent categories of events that will be grouped together on the booking site.  Set one default
+        track - this will be the site landing page.
     </p>
 
 {% if tracks %}
@@ -21,7 +22,7 @@
                 <tr>
                     <th>Name<br/><span class="helptext">Click to edit</span></th>
                     <th>Event Types</th>
-                    <th></th>
+                    <th>Default</th>
                 </tr>
             </thead>
             <tbody>
