@@ -2,6 +2,10 @@
 
 {% load crispy_forms_tags %}
 
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-multiselect/0.9.15/css/bootstrap-multiselect.css" integrity="sha512-EvvoSMXERW4Pe9LjDN9XDzHd66p8Z49gcrB7LCUplh0GcEHiV816gXGwIhir6PJiwl0ew8GFM2QaIg2TW02B9A==" crossorigin="anonymous" />
+{% endblock %}
+
 {% block subnav-xs %}
     {%  include "studioadmin/includes/navs/xs/courses_subnav.html" %}
 {% endblock %}
@@ -37,3 +41,18 @@
 
 {% endblock %}
 
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-multiselect/0.9.15/js/bootstrap-multiselect.min.js" integrity="sha512-aFvi2oPv3NjnjQv1Y/hmKD7RNMendo4CZ2DwQqMWzoURKxcqAoktj0nNG4LU8m23+Ws9X5uVDD4OXLqpUVXD5Q==" crossorigin="anonymous"></script>
+<script type="text/javascript">
+    $(document).ready(function() {
+        $('#id_events').multiselect({
+            buttonClass: 'btn btn-sm btn-primary',
+            nonSelectedText: 'Click to choose events',
+            enableFiltering: true,
+            enableCaseInsensitiveFiltering: true,
+        });
+    });
+</script>
+
+{% endblock %}
