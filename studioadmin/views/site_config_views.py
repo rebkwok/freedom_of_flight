@@ -16,9 +16,11 @@ from booking.models import Track, EventType, BlockConfig
 from common.utils import full_name
 
 from ..forms import EventTypeForm, BlockConfigForm
-from .utils import staff_required, StaffUserMixin
+from .utils import staff_required, StaffUserMixin, is_instructor_or_staff
 
 
+@login_required
+@is_instructor_or_staff
 def help(request):
     return TemplateResponse(request, "studioadmin/help.html")
 

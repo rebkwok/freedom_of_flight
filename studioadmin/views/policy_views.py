@@ -1,21 +1,9 @@
-from copy import deepcopy
-from datetime import datetime
-import json
-
-from django import forms
-from django.conf import settings
-from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.core.paginator import Paginator
+from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
-from django.db.models import Count
-from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
-from django.template.loader import render_to_string
 from django.template.response import TemplateResponse
-from django.shortcuts import get_object_or_404, render, HttpResponseRedirect
-from django.views.decorators.http import require_http_methods
-from django.views.generic import ListView, DetailView, CreateView, UpdateView, FormView
-from django.utils import timezone
+from django.shortcuts import get_object_or_404, HttpResponseRedirect, render
+from django.views.generic import ListView, DetailView, CreateView, UpdateView
 from django.urls import reverse
 
 from braces.views import LoginRequiredMixin
@@ -26,11 +14,7 @@ from common.utils import full_name
 
 
 from ..forms import StudioadminDisclaimerContentForm, CookiePolicyAdminForm, DataPrivacyPolicyAdminForm
-from .utils import is_instructor_or_staff, staff_required, StaffUserMixin, InstructorOrStaffUserMixin
-
-
-def help(request):
-    return TemplateResponse(request, "studioadmin/help.html")
+from .utils import StaffUserMixin, is_instructor_or_staff
 
 
 class CookiePolicyListView(LoginRequiredMixin, StaffUserMixin, ListView):
