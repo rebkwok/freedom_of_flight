@@ -45,6 +45,19 @@ class DisclaimerContentModelTests(TestCase):
             content.disclaimer_terms = "third version"
             content.save()
 
+    def test_can_update_and_make_draft_published(self):
+        content = make_disclaimer_content(is_draft=True, disclaimer_terms="first versin")
+        first_issue_date = content.issue_date
+
+        content.disclaimer_terms = "second version"
+        content.is_draft = False
+        content.save()
+        assert first_issue_date < content.issue_date
+
+        with self.assertRaises(ValueError):
+            content.disclaimer_terms = "third version"
+            content.save()
+
     def test_cannot_change_existing_published_disclaimer_version(self):
         content = make_disclaimer_content(disclaimer_terms="first version", version=4, is_draft=True)
         content.version = 3.8
