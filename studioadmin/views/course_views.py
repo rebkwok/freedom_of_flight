@@ -23,6 +23,7 @@ class CourseAdminListView(LoginRequiredMixin, StaffUserMixin, ListView):
     template_name = "studioadmin/courses.html"
     model = Course
     context_object_name = "courses"
+    custom_paginate_by = 10
 
     def _include_course(self, course, start_of_today):
         if course.last_event_date is None:
@@ -55,25 +56,25 @@ class CourseAdminListView(LoginRequiredMixin, StaffUserMixin, ListView):
             tab = int(tab)
         except ValueError:  # value error if tab is not an integer, default to 0
             tab = 0
-
         context['tab'] = str(tab)
 
         tracks = Track.objects.all()
         track_courses = []
         for i, track in enumerate(tracks):
-            track_qs = [course for course in all_courses if course.event_type.track == track]
-            if track_qs:
+            track_queryset = [course for course in all_courses if course.event_type.track == track]
+            if track_queryset:
                 # Don't add the track tab if there are no events to display
-                track_paginator = Paginator(track_qs, 20)
+                track_paginator = Paginator(track_queryset, self.custom_paginate_by)
+                page = 1
                 if "tab" in self.request.GET and tab == i:
-                    page = self.request.GET.get('page', 1)
-                else:
-                    page = 1
-                queryset = track_paginator.get_page(page)
-
+                    try:
+                        page = int(self.request.GET.get('page', 1))
+                    except ValueError:
+                        pass
+                page_obj = track_paginator.get_page(page)
                 track_obj = {
                     'index': i,
-                    'queryset': queryset,
+                    'page_obj': page_obj,
                     'track': track.name
                 }
                 track_courses.append(track_obj)

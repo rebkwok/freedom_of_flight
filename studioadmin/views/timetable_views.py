@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.paginator import Paginator
-from django.db.models import Count
+from django.db.models import Count, QuerySet
 from django.http import JsonResponse
 from django.template.response import TemplateResponse
 from django.shortcuts import render, HttpResponseRedirect
@@ -26,6 +26,7 @@ class TimetableSessionListView(LoginRequiredMixin, StaffUserMixin, ListView):
 
     model = TimetableSession
     template_name = "studioadmin/timetable.html"
+    custom_paginate_by = 20
 
     def get_queryset(self):
         return super().get_queryset().order_by("day", "time")
@@ -56,28 +57,32 @@ class TimetableSessionListView(LoginRequiredMixin, StaffUserMixin, ListView):
 
         day_names = dict(TimetableSession.DAY_CHOICES)
         for i, track in enumerate(tracks):
-            track_qs = all_sessions.filter(event_type__track=track)
-            if track_qs:
-                # group the session before paginating
-                session_ids_by_day = track_qs.values('day').annotate(count=Count('id')).values('day', 'id')
-
+            track_queryset = all_sessions.filter(event_type__track=track)
+            if track_queryset:
                 # Don't add the track tab if there are no sessions to display
-                track_paginator = Paginator(track_qs, 20)
+                track_paginator = Paginator(track_queryset, self.custom_paginate_by)
+                page = 1
                 if "tab" in self.request.GET and tab == i:
-                    page = self.request.GET.get('page', 1)
+                    try:
+                        page = int(self.request.GET.get('page', 1))
+                    except ValueError:
+                        pass
+                page_obj = track_paginator.get_page(page)
+                if not isinstance(page_obj.object_list, QuerySet):
+                    paginated_ids = [session.id for session in page_obj.object_list]
+                    paginated_sessions = track_queryset.filter(id__in=paginated_ids)
                 else:
-                    page = 1
-                queryset = track_paginator.get_page(page)
-                paginated_ids = [session.id for session in queryset.object_list]
-                queryset_by_day = {}
+                    paginated_sessions = page_obj.object_list
+                session_ids_by_day = paginated_sessions.values('day').annotate(count=Count('id')).values('day', 'id')
+                sessions_by_day = {}
                 for session_item in session_ids_by_day:
-                    if session_item["id"] in paginated_ids:
-                        queryset_by_day.setdefault(day_names[session_item["day"]], []).append(track_qs.get(id=session_item["id"]))
-
+                    sessions_by_day.setdefault(
+                        day_names[session_item["day"]], []
+                    ).append(track_queryset.get(id=session_item["id"]))
                 track_obj = {
                     'index': i,
-                    'queryset': queryset,
-                    'queryset_by_day': queryset_by_day,
+                    'page_obj': page_obj,
+                    'sessions_by_day': sessions_by_day,
                     'track': track.name
                 }
                 track_sessions.append(track_obj)

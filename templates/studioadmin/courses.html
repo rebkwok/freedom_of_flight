@@ -39,7 +39,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                        {% for course in track_obj.queryset %}
+                        {% for course in track_obj.page_obj %}
                             <tr {% if course.cancelled %}class="expired"{% endif %}>
                                 <td>
                                     {% if not past %}
@@ -101,7 +101,7 @@
                         </tbody>
                     </table>
                 </div>
-            {% include 'studioadmin/includes/event_pagination.html' %}
+            {% include 'studioadmin/includes/track_pagination.html' %}
             </div>
         {% endfor %}
 

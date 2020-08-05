@@ -61,9 +61,9 @@ class EventAdminListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         track_events = resp.context_data["track_events"]
         assert len(track_events) == 2  # 2 tracks, kids and adults
         assert track_events[0]["track"] == "Adults"
-        assert len(track_events[0]["queryset"].object_list) == Event.objects.filter(event_type__track=self.adult_track).count()
+        assert len(track_events[0]["page_obj"].object_list) == Event.objects.filter(event_type__track=self.adult_track).count()
         assert track_events[1]["track"] == "Kids"
-        assert len(track_events[1]["queryset"].object_list) == Event.objects.filter(event_type__track=self.kids_track).count()
+        assert len(track_events[1]["page_obj"].object_list) == Event.objects.filter(event_type__track=self.kids_track).count()
 
     def test_events_with_track_param(self):
         self.login(self.staff_user)
@@ -80,24 +80,24 @@ class EventAdminListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         self.login(self.staff_user)
 
         resp = self.client.get(self.url + '?page=1')
-        assert len(resp.context_data["track_events"][0]["queryset"].object_list) == 20
-        paginator = resp.context_data['track_events'][0]["queryset"]
+        assert len(resp.context_data["track_events"][0]["page_obj"].object_list) == 20
+        paginator = resp.context_data['track_events'][0]["page_obj"]
         self.assertEqual(paginator.number, 1)
 
         resp = self.client.get(self.url + '?page=2&tab=0')
-        assert len(resp.context_data["track_events"][0]["queryset"].object_list) == 6
-        paginator = resp.context_data['track_events'][0]["queryset"]
+        assert len(resp.context_data["track_events"][0]["page_obj"].object_list) == 6
+        paginator = resp.context_data['track_events'][0]["page_obj"]
         self.assertEqual(paginator.number, 2)
 
         # page not a number shows page 1
         resp = self.client.get(self.url + '?page=one')
-        paginator = resp.context_data['track_events'][0]["queryset"]
+        paginator = resp.context_data['track_events'][0]["page_obj"]
         self.assertEqual(paginator.number, 1)
 
         # page out of range shows page q
         resp = self.client.get(self.url + '?page=3')
-        assert len(resp.context_data["track_events"][0]["queryset"].object_list) == 20
-        paginator = resp.context_data['track_events'][0]["queryset"]
+        assert len(resp.context_data["track_events"][0]["page_obj"].object_list) == 20
+        paginator = resp.context_data['track_events'][0]["page_obj"]
         assert paginator.number == 1
 
     def test_pagination_with_tab(self):
@@ -106,17 +106,17 @@ class EventAdminListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         self.login(self.staff_user)
 
         resp = self.client.get(self.url + '?page=2&tab=1')  # get page 2 for the kids track tab
-        assert len(resp.context_data["track_events"][0]["queryset"].object_list) == 20
+        assert len(resp.context_data["track_events"][0]["page_obj"].object_list) == 20
         assert resp.context_data["track_events"][1]["track"] == "Kids"
-        assert len(resp.context_data["track_events"][1]["queryset"].object_list) == 6
+        assert len(resp.context_data["track_events"][1]["page_obj"].object_list) == 6
 
         resp = self.client.get(self.url + '?page=2&tab=3')  # invalid tab returns page 1 for all
-        assert len(resp.context_data["track_events"][0]["queryset"].object_list) == 20
-        assert len(resp.context_data["track_events"][1]["queryset"].object_list) == 20
+        assert len(resp.context_data["track_events"][0]["page_obj"].object_list) == 20
+        assert len(resp.context_data["track_events"][1]["page_obj"].object_list) == 20
 
         resp = self.client.get(self.url + '?page=2&tab=foo')  # invalid tab defaults to tab 0
-        assert len(resp.context_data["track_events"][0]["queryset"].object_list) == 6
-        assert len(resp.context_data["track_events"][1]["queryset"].object_list) == 20
+        assert len(resp.context_data["track_events"][0]["page_obj"].object_list) == 6
+        assert len(resp.context_data["track_events"][1]["page_obj"].object_list) == 20
 
 
 class EventAjaxMakeVisibleTests(TestUsersMixin, TestCase):

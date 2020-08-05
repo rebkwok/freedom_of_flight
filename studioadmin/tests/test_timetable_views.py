@@ -53,9 +53,9 @@ class TimetableListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         track_sessions = resp.context_data["track_sessions"]
         assert len(track_sessions) == 2  # 2 tracks, kids and adults
         assert track_sessions[0]["track"] == "Adults"
-        assert len(track_sessions[0]["queryset"].object_list) == TimetableSession.objects.filter(event_type__track=self.adult_track).count()
+        assert len(track_sessions[0]["page_obj"].object_list) == TimetableSession.objects.filter(event_type__track=self.adult_track).count()
         assert track_sessions[1]["track"] == "Kids"
-        assert len(track_sessions[1]["queryset"].object_list) == TimetableSession.objects.filter(event_type__track=self.kids_track).count()
+        assert len(track_sessions[1]["page_obj"].object_list) == TimetableSession.objects.filter(event_type__track=self.kids_track).count()
 
     def test_events_with_track_param(self):
         self.login(self.staff_user)
@@ -72,24 +72,24 @@ class TimetableListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         self.login(self.staff_user)
 
         resp = self.client.get(self.url + '?page=1')
-        assert len(resp.context_data["track_sessions"][0]["queryset"].object_list) == 20
-        paginator = resp.context_data['track_sessions'][0]["queryset"]
+        assert len(resp.context_data["track_sessions"][0]["page_obj"].object_list) == 20
+        paginator = resp.context_data['track_sessions'][0]["page_obj"]
         self.assertEqual(paginator.number, 1)
 
         resp = self.client.get(self.url + '?page=2&tab=0')
-        assert len(resp.context_data["track_sessions"][0]["queryset"].object_list) == 10
-        paginator = resp.context_data['track_sessions'][0]["queryset"]
+        assert len(resp.context_data["track_sessions"][0]["page_obj"].object_list) == 10
+        paginator = resp.context_data['track_sessions'][0]["page_obj"]
         self.assertEqual(paginator.number, 2)
 
         # page not a number shows page 1
         resp = self.client.get(self.url + '?page=one')
-        paginator = resp.context_data['track_sessions'][0]["queryset"]
+        paginator = resp.context_data['track_sessions'][0]["page_obj"]
         self.assertEqual(paginator.number, 1)
 
         # page out of range shows page 1
         resp = self.client.get(self.url + '?page=3')
-        assert len(resp.context_data["track_sessions"][0]["queryset"].object_list) == 20
-        paginator = resp.context_data['track_sessions'][0]["queryset"]
+        assert len(resp.context_data["track_sessions"][0]["page_obj"].object_list) == 20
+        paginator = resp.context_data['track_sessions'][0]["page_obj"]
         assert paginator.number == 1
 
     def test_pagination_with_tab(self):
@@ -98,17 +98,17 @@ class TimetableListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         self.login(self.staff_user)
 
         resp = self.client.get(self.url + '?page=2&tab=1')  # get page 2 for the kids track tab
-        assert len(resp.context_data["track_sessions"][0]["queryset"].object_list) == 20
+        assert len(resp.context_data["track_sessions"][0]["page_obj"].object_list) == 20
         assert resp.context_data["track_sessions"][1]["track"] == "Kids"
-        assert len(resp.context_data["track_sessions"][1]["queryset"].object_list) == 3
+        assert len(resp.context_data["track_sessions"][1]["page_obj"].object_list) == 3
 
         resp = self.client.get(self.url + '?page=2&tab=3')  # invalid tab returns page 1 for all
-        assert len(resp.context_data["track_sessions"][0]["queryset"].object_list) == 20
-        assert len(resp.context_data["track_sessions"][1]["queryset"].object_list) == 20
+        assert len(resp.context_data["track_sessions"][0]["page_obj"].object_list) == 20
+        assert len(resp.context_data["track_sessions"][1]["page_obj"].object_list) == 20
 
         resp = self.client.get(self.url + '?page=2&tab=foo')  # invalid tab defaults to tab 0
-        assert len(resp.context_data["track_sessions"][0]["queryset"].object_list) == 5
-        assert len(resp.context_data["track_sessions"][1]["queryset"].object_list) == 20
+        assert len(resp.context_data["track_sessions"][0]["page_obj"].object_list) == 5
+        assert len(resp.context_data["track_sessions"][1]["page_obj"].object_list) == 20
 
 
 class AjaxDeleteSessionTests(TestUsersMixin, TestCase):

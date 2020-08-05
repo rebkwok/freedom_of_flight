@@ -55,10 +55,10 @@ class EventRegisterListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         track_events = resp.context_data["track_events"]
         assert len(track_events) == 2  # 2 tracks, kids and adults
         assert track_events[0]["track"] == "Adults"
-        assert len(track_events[0]["queryset"].object_list) == Event.objects.filter(
+        assert len(track_events[0]["page_obj"].object_list) == Event.objects.filter(
             event_type__track=self.adult_track).count()
         assert track_events[1]["track"] == "Kids"
-        assert len(track_events[1]["queryset"].object_list) == Event.objects.filter(
+        assert len(track_events[1]["page_obj"].object_list) == Event.objects.filter(
             event_type__track=self.kids_track).count()
 
         assert "Click for register" in resp.rendered_content

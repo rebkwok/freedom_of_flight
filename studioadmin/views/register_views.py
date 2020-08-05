@@ -23,6 +23,7 @@ from .utils import is_instructor_or_staff, InstructorOrStaffUserMixin
 
 class RegisterListView(LoginRequiredMixin, InstructorOrStaffUserMixin, BaseEventAdminListView):
     template_name = "studioadmin/registers.html"
+    custom_paginate_by = 10
 
     def get_queryset(self):
         queryset = super().get_queryset()

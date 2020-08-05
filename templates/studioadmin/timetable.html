@@ -47,7 +47,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                        {% for day, sessions in track_obj.queryset_by_day.items %}
+                        {% for day, sessions in track_obj.sessions_by_day.items %}
                             <tr class="table-secondary table-divider"><td colspan="7">{{ day }}</td>
                             {% for session in sessions %}
                                 <tr id="row-timetable-session-{{ session.id }}">
@@ -75,8 +75,8 @@
                         </tbody>
                     </table>
                 </div>
+            {% include 'studioadmin/includes/track_pagination.html' %}
             </div>
-            {% include 'studioadmin/includes/event_pagination.html' %}
         {% endfor %}
 
     </div> <!-- tab content -->

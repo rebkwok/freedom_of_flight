@@ -4,7 +4,7 @@ from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.paginator import Paginator
-from django.db.models import Count
+from django.db.models import Count, QuerySet
 from django.template.response import TemplateResponse
 from django.shortcuts import get_object_or_404, render, HttpResponseRedirect
 from django.views.generic import ListView, CreateView, UpdateView
@@ -21,9 +21,25 @@ from ..forms import EventCreateUpdateForm
 from .utils import is_instructor_or_staff, staff_required, StaffUserMixin, InstructorOrStaffUserMixin
 
 
-class BaseEventAdminListView(ListView):
+class TrackEventPaginationMixin:
+    def paginate_by_date_for_track(self, track_queryset, page):
+        track_paginator = Paginator(track_queryset, self.custom_paginate_by)
+        page_obj = track_paginator.get_page(page)
+        if not isinstance(page_obj.object_list, QuerySet):
+            paginated_ids = [event.id for event in page_obj.object_list]
+            paginated_events = track_queryset.filter(id__in=paginated_ids)
+        else:
+            paginated_events = page_obj.object_list
+        event_ids_by_date = paginated_events.values('start__date').annotate(count=Count('id')).values('start__date', 'id')
+        events_by_date = {}
+        for event_info in event_ids_by_date:
+            events_by_date.setdefault(event_info["start__date"], []).append(paginated_events.get(id=event_info["id"]))
+        return page_obj, events_by_date
 
+
+class BaseEventAdminListView(TrackEventPaginationMixin, ListView):
     model = Event
+    custom_paginate_by = 20
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -33,7 +49,6 @@ class BaseEventAdminListView(ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         all_events = self.get_queryset()
-
         track_id = self.request.GET.get('track')
         requested_track = None
         if track_id:
@@ -51,32 +66,25 @@ class BaseEventAdminListView(ListView):
             tab = 0
 
         context['tab'] = str(tab)
-
         tracks = Track.objects.all()
         track_events = []
 
         for i, track in enumerate(tracks):
             track_qs = all_events.filter(event_type__track=track)
             # group by date before pagination
-            event_ids_by_date = track_qs.values('start__date').annotate(count=Count('id')).values('start__date', 'id')
             if track_qs:
                 # Don't add the track tab if there are no events to display
-                track_paginator = Paginator(track_qs, 20)
+                page = 1
                 if "tab" in self.request.GET and tab == i:
-                    page = self.request.GET.get('page', 1)
-                else:
-                    page = 1
-                queryset = track_paginator.get_page(page)
-                paginated_ids = [event.id for event in queryset.object_list]
-                events_by_date = {}
-                for event_info in event_ids_by_date:
-                    if event_info["id"] in paginated_ids:
-                        events_by_date.setdefault(event_info["start__date"], []).append(all_events.get(id=event_info["id"]))
-
+                    try:
+                        page = int(self.request.GET.get('page', 1))
+                    except ValueError:
+                        pass
+                page_obj, events_by_date = self.paginate_by_date_for_track(track_qs, page)
                 track_obj = {
                     'index': i,
-                    'queryset': queryset,
-                    'queryset_by_date': events_by_date,
+                    'page_obj': page_obj,
+                    'events_by_date': events_by_date,
                     'track': track.name
                 }
                 track_events.append(track_obj)

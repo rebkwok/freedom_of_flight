@@ -41,7 +41,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                        {% for event_date, events in track_obj.queryset_by_date.items %}
+                        {% for event_date, events in track_obj.events_by_date.items %}
                             <tr class="table-secondary table-divider"><td colspan="10">{{ event_date|date:"D d M Y" }}</></td></tr>
                             {% for event in events %}
                             <tr {% if event.cancelled %}class="expired"{% endif %}>
@@ -115,7 +115,7 @@
                         </tbody>
                     </table>
                 </div>
-            {% include 'studioadmin/includes/event_pagination.html' %}
+            {% include 'studioadmin/includes/track_pagination.html' %}
             </div>
         {% endfor %}
     </div> <!-- tab content -->

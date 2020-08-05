@@ -67,7 +67,7 @@ class CourseAdminListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         track_events = resp.context_data["track_courses"]
         assert len(track_events) == 1  # Only 1 track for courses
         assert track_events[0]["track"] == "Adults"
-        assert len(track_events[0]["queryset"].object_list) == Course.objects.count()
+        assert len(track_events[0]["page_obj"].object_list) == Course.objects.count()
 
     def test_events_with_track_param(self):
         self.login(self.staff_user)
@@ -82,34 +82,34 @@ class CourseAdminListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         assert "active_tab" not in resp.context_data
 
     def test_pagination(self):
-        baker.make(Course, event_type=self.aerial_event_type, _quantity=20)
+        baker.make(Course, event_type=self.aerial_event_type, _quantity=10)
         self.login(self.staff_user)
 
         resp = self.client.get(self.url + '?page=1')
-        assert len(resp.context_data["track_courses"][0]["queryset"].object_list) == 20
-        paginator = resp.context_data['track_courses'][0]["queryset"]
+        assert len(resp.context_data["track_courses"][0]["page_obj"].object_list) == 10
+        paginator = resp.context_data['track_courses'][0]["page_obj"]
         self.assertEqual(paginator.number, 1)
 
         # invalid tab, defaults to tab 0
         resp = self.client.get(self.url + '?page=2&tab=foo')
-        assert len(resp.context_data["track_courses"][0]["queryset"].object_list) == 1
-        paginator = resp.context_data['track_courses'][0]["queryset"]
+        assert len(resp.context_data["track_courses"][0]["page_obj"].object_list) == 1
+        paginator = resp.context_data['track_courses'][0]["page_obj"]
         self.assertEqual(paginator.number, 2)
 
         resp = self.client.get(self.url + '?page=2&tab=0')
-        assert len(resp.context_data["track_courses"][0]["queryset"].object_list) == 1
-        paginator = resp.context_data['track_courses'][0]["queryset"]
+        assert len(resp.context_data["track_courses"][0]["page_obj"].object_list) == 1
+        paginator = resp.context_data['track_courses'][0]["page_obj"]
         self.assertEqual(paginator.number, 2)
 
         # page not a number shows page 1
         resp = self.client.get(self.url + '?page=one')
-        paginator = resp.context_data['track_courses'][0]["queryset"]
+        paginator = resp.context_data['track_courses'][0]["page_obj"]
         self.assertEqual(paginator.number, 1)
 
         # page out of range shows page q
         resp = self.client.get(self.url + '?page=3')
-        assert len(resp.context_data["track_courses"][0]["queryset"].object_list) == 20
-        paginator = resp.context_data['track_courses'][0]["queryset"]
+        assert len(resp.context_data["track_courses"][0]["page_obj"].object_list) == 10
+        paginator = resp.context_data['track_courses'][0]["page_obj"]
         assert paginator.number == 1
 
 
