@@ -12,8 +12,7 @@ from accounts.models import CookiePolicy, DataPrivacyPolicy, DisclaimerContent
 from activitylog.models import ActivityLog
 from common.utils import full_name
 
-
-from ..forms import StudioadminDisclaimerContentForm, CookiePolicyAdminForm, DataPrivacyPolicyAdminForm
+from ..forms import StudioadminDisclaimerContentForm, StudioadminCookiePolicyForm, StudioadminDataPrivacyPolicyForm
 from .utils import StaffUserMixin, is_instructor_or_staff
 
 
@@ -30,6 +29,21 @@ class CookiePolicyDetailView(LoginRequiredMixin, StaffUserMixin, DetailView):
 
     def get_object(self):
         return get_object_or_404(CookiePolicy, version=self.kwargs['version'])
+
+
+class CookiePolicyCreateView(LoginRequiredMixin, StaffUserMixin, CreateView):
+
+    model = CookiePolicy
+    template_name = 'studioadmin/policy_create.html'
+    form_class = StudioadminCookiePolicyForm
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["policy_type"] = "Cookie Policy"
+        return context
+
+    def get_success_url(self):
+        return reverse("studioadmin:cookie_policies")
 
 
 class DataPrivacyPolicyListView(LoginRequiredMixin, StaffUserMixin, ListView):
@@ -50,6 +64,21 @@ class DataPrivacyPolicyDetailView(LoginRequiredMixin, StaffUserMixin, DetailView
 
     def get_object(self):
         return get_object_or_404(DataPrivacyPolicy, version=self.kwargs['version'])
+
+
+class DataPrivacyPolicyCreateView(LoginRequiredMixin, StaffUserMixin, CreateView):
+
+    model = DataPrivacyPolicy
+    template_name = 'studioadmin/policy_create.html'
+    form_class = StudioadminDataPrivacyPolicyForm
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["policy_type"] = "Data Privacy Policy"
+        return context
+
+    def get_success_url(self):
+        return reverse("studioadmin:data_privacy_policies")
 
 
 class DisclaimerContentListView(LoginRequiredMixin, StaffUserMixin, ListView):
@@ -81,13 +110,14 @@ class DisclaimerContentCreateView(LoginRequiredMixin, StaffUserMixin, CreateView
     def dispatch(self, request, *args, **kwargs):
         try:
             draft = DisclaimerContent.objects.filter(is_draft=True).latest('id')
+            messages.info(request, "Cannot add a new version while a draft already exists. Editing latest draft version")
             return HttpResponseRedirect(reverse('studioadmin:edit_disclaimer_content', args=(draft.version,)))
         except DisclaimerContent.DoesNotExist:
             return super(DisclaimerContentCreateView, self).dispatch(request, *args, **kwargs)
 
     def get_form_kwargs(self):
         form_kwargs = super().get_form_kwargs()
-        form_kwargs["same_as_published"] = True
+        form_kwargs["hide_reset_button"] = True
         return form_kwargs
 
     def form_valid(self, form):
@@ -116,14 +146,31 @@ class DisclaimerContentUpdateView(LoginRequiredMixin, StaffUserMixin, UpdateView
     template_name = 'studioadmin/disclaimer_content_create_update.html'
     form_class = StudioadminDisclaimerContentForm
 
+    def dispatch(self, request, *args, **kwargs):
+        obj = self.get_object()
+        if not obj.is_draft:
+            try:
+                draft = DisclaimerContent.objects.filter(is_draft=True).latest('id')
+                return HttpResponseRedirect(reverse('studioadmin:edit_disclaimer_content', args=(draft.version,)))
+            except DisclaimerContent.DoesNotExist:
+                messages.error(
+                    request,
+                    "Published disclaimer versions cannot be edited; make a new version if updates are required."
+                )
+                return HttpResponseRedirect(reverse("studioadmin:disclaimer_contents"))
+        return super().dispatch(request, *args, **kwargs)
+
     def get_form_kwargs(self):
         form_kwargs = super().get_form_kwargs()
         obj = self.get_object()
         current = DisclaimerContent.current()
-        form_kwargs["same_as_published"] = (
-                obj.disclaimer_terms == current.disclaimer_terms and
-                obj.form == current.form
-        )
+        if current:
+            form_kwargs["hide_reset_button"] = (
+                    obj.disclaimer_terms == current.disclaimer_terms and
+                    obj.form == current.form
+            )
+        else:
+            form_kwargs["hide_reset_button"] = True
         return form_kwargs
 
     def get_object(self):
@@ -156,44 +203,14 @@ class DisclaimerContentUpdateView(LoginRequiredMixin, StaffUserMixin, UpdateView
         # get here if we made an error with the version or tried to save with no changes, so just instantiate a
         # new form and add the errors manually to the context
         current = DisclaimerContent.current()
-        same_as_published = (
+        hide_reset_button = (
                 form.instance.disclaimer_terms == current.disclaimer_terms and
                 form.instance.form == current.form
         )
         context = self.get_context_data()
         context["form_errors"] = form.errors
-        context["form"] = StudioadminDisclaimerContentForm(same_as_published=same_as_published)
+        context["form"] = StudioadminDisclaimerContentForm(hide_reset_button=hide_reset_button)
         return TemplateResponse(self.request, self.template_name, context)
 
     def get_success_url(self):
         return reverse('studioadmin:disclaimer_contents')
-
-
-class CookiePolicyCreateView(LoginRequiredMixin, StaffUserMixin, CreateView):
-
-    model = CookiePolicy
-    template_name = 'studioadmin/policy_create.html'
-    form_class = CookiePolicyAdminForm
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context["policy_type"] = "Cookie Policy"
-        return context
-
-    def get_success_url(self):
-        return reverse("studioadmin:cookie_policies")
-
-
-class DataPrivacyPolicyCreateView(LoginRequiredMixin, StaffUserMixin, CreateView):
-
-    model = DataPrivacyPolicy
-    template_name = 'studioadmin/policy_create.html'
-    form_class = DataPrivacyPolicyAdminForm
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context["policy_type"] = "Data Privacy Policy"
-        return context
-
-    def get_success_url(self):
-        return reverse("studioadmin:data_privacy_policies")

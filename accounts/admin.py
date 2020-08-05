@@ -149,7 +149,6 @@ class DisclaimerContentAdminForm(forms.ModelForm):
     def clean(self):
         new_disclaimer_terms = self.cleaned_data.get('disclaimer_terms')
         new_health_questionnaire = self.cleaned_data.get('form')
-
         # check content has changed
         current_content = DisclaimerContent.current()
         if current_content and current_content.disclaimer_terms == new_disclaimer_terms:

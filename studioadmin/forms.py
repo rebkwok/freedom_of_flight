@@ -17,7 +17,7 @@ from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Button, Layout, Submit, Row, Column, Field, Fieldset, Hidden, HTML
 
 from accounts.admin import CookiePolicyAdminForm, DataPrivacyPolicyAdminForm, DisclaimerContentAdminForm
-from accounts.models import DisclaimerContent
+from accounts.models import CookiePolicy, DisclaimerContent, DataPrivacyPolicy
 from booking.models import (
     Booking, Block, Event, Course, EventType, COMMON_LABEL_PLURALS, BlockConfig
 )
@@ -552,10 +552,24 @@ class BlockConfigForm(forms.ModelForm):
         )
 
 
+class StudioadminCookiePolicyForm(CookiePolicyAdminForm):
+
+    class Meta:
+        model = CookiePolicy
+        exclude = ('issue_date',)
+
+
+class StudioadminDataPrivacyPolicyForm(DataPrivacyPolicyAdminForm):
+
+    class Meta:
+        model = DataPrivacyPolicy
+        exclude = ('issue_date',)
+
+
 class StudioadminDisclaimerContentForm(DisclaimerContentAdminForm):
 
     def __init__(self, *args, **kwargs):
-        same_as_published = kwargs.pop("same_as_published", False)
+        hide_reset_button = kwargs.pop("hide_reset_button", False)
         super().__init__(*args, **kwargs)
 
         self.helper = FormHelper()
@@ -576,7 +590,7 @@ class StudioadminDisclaimerContentForm(DisclaimerContentAdminForm):
             "version",
             Submit('save_draft', 'Save as draft', css_class="btn btn-primary"),
             Submit('publish', 'Publish', css_class="btn btn-success"),
-            Submit('reset', 'Reset to latest published version', css_class="btn btn-secondary") if not same_as_published else '',
+            Submit('reset', 'Reset to latest published version', css_class="btn btn-secondary") if not hide_reset_button else '',
             HTML(f'<a class="btn btn-outline-dark" href="{back_url}">Back</a>')
         )
 
