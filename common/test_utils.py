@@ -30,7 +30,7 @@ def make_online_disclaimer(**kwargs):
     if "version" not in kwargs:
         kwargs["version"] = DisclaimerContent.current_version()
     defaults = {
-        "health_questionnaire_responses": [],
+        "health_questionnaire_responses": {},
         "terms_accepted": True,
         "emergency_contact_name": "test",
         "emergency_contact_relationship": "test",
@@ -52,7 +52,7 @@ def make_nonregistered_disclaimer(**kwargs):
         "date_of_birth": datetime(1990, 6, 7, tzinfo=timezone.utc),
         "phone": "123455",
         "event_date": datetime(2020, 10, 1, tzinfo=timezone.utc),
-        "health_questionnaire_responses": [],
+        "health_questionnaire_responses": {},
         "terms_accepted": True,
         "emergency_contact_name": "test",
         "emergency_contact_relationship": "test",
@@ -73,7 +73,7 @@ def make_archived_disclaimer(**kwargs):
         "date_archived": timezone.now(),
         "event_date": None,
         "phone": "123455",
-        "health_questionnaire_responses": [],
+        "health_questionnaire_responses": {},
         "terms_accepted": True,
         "emergency_contact_name": "test",
         "emergency_contact_relationship": "test",
@@ -164,7 +164,7 @@ class TestUsersMixin:
         if not has_active_disclaimer(user):
             if DisclaimerContent.current_version() == 0:
                 make_disclaimer_content(version=1)
-            make_online_disclaimer(user=user, version=DisclaimerContent.current_version())
+            return make_online_disclaimer(user=user, version=DisclaimerContent.current_version())
 
     def user_access_test(self, allowed, url):
         users = {

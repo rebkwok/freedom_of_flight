@@ -192,7 +192,7 @@ class DisclaimerForm(forms.ModelForm):
             "emergency_contact_name",
             "emergency_contact_phone",
             "emergency_contact_relationship",
-            HTML("<h3>Health Questionnaire</h3>"),
+            HTML("<h3>Health Questionnaire</h3>") if self.disclaimer_content.form else "",
             "health_questionnaire_responses",
             HTML("<h3>Disclaimer Terms</h3>"),
             HTML(mark_safe(linebreaks(self.disclaimer_content.disclaimer_terms))),

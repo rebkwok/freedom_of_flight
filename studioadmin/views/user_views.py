@@ -108,7 +108,7 @@ class UserDetailView(LoginRequiredMixin, InstructorOrStaffUserMixin, DetailView)
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         user = self.get_object()
-        context["latest_disclaimer"] = user.online_disclaimer.exists() and user.online_disclaimer.latest("id")
+        context["latest_disclaimer"] = user.online_disclaimer.latest("id") if user.online_disclaimer.exists() else None
         return context
 
 

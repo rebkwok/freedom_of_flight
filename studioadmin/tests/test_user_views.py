@@ -1,11 +1,14 @@
 from model_bakery import baker
 
+from django.contrib.auth.models import User
 from django.core import mail
+from django.core.cache import cache
 from django.urls import reverse
 from django.test import TestCase
 
 from booking.models import Booking
-from common.test_utils import EventTestMixin, TestUsersMixin
+from accounts.models import has_active_disclaimer
+from common.test_utils import EventTestMixin, TestUsersMixin, make_disclaimer_content
 
 
 class EmailUsersViewsTests(EventTestMixin, TestUsersMixin, TestCase):
@@ -114,3 +117,74 @@ class EmailUsersViewsTests(EventTestMixin, TestUsersMixin, TestCase):
         assert mail.outbox[0].bcc == [self.instructor_user.email]
         assert mail.outbox[0].reply_to == "test@test.com"
         assert mail.outbox[0].subject == "Test"
+
+
+class UserListViewTests(TestUsersMixin, TestCase):
+
+    def setUp(self):
+        self.create_admin_users()
+        self.create_users()
+        self.login(self.staff_user)
+        self.url = reverse("studioadmin:users")
+
+    def test_instructor_and_staff_can_access(self):
+        self.user_access_test(["staff", "instructor"], self.url)
+
+    def test_all_users_listed(self):
+        resp = self.client.get(self.url)
+        assert len(resp.context_data["users"]) == User.objects.count()
+
+    def test_user_search(self):
+        resp = self.client.get(self.url + "?search=manager&action=Search")
+        assert resp.context_data["search_form"].initial == {"search": "manager"}
+        assert len(resp.context_data["users"]) == 1
+
+    def test_user_search_reset(self):
+        resp = self.client.get(self.url + "?search=manager&action=Reset")
+        assert resp.context_data["search_form"].initial == {"search": ""}
+        assert len(resp.context_data["users"]) == User.objects.count()
+        # any action except search resets
+        resp = self.client.get(self.url + "?search=manager&action=foo")
+        assert resp.context_data["search_form"].initial == {"search": ""}
+        assert len(resp.context_data["users"]) == User.objects.count()
+
+
+class UserDetailViewTests(TestUsersMixin, TestCase):
+
+    def setUp(self):
+        self.create_admin_users()
+        self.create_users()
+        self.login(self.staff_user)
+        self.url = reverse("studioadmin:user_detail", args=(self.student_user.id,))
+        cache.clear()
+
+    def test_instructor_and_staff_can_access(self):
+        self.user_access_test(["staff", "instructor"], self.url)
+
+    def test_no_disclaimer(self):
+        assert has_active_disclaimer(self.student_user) is False
+        resp = self.client.get(self.url)
+        assert resp.context_data["account_user"] == self.student_user
+        assert resp.context_data["latest_disclaimer"] is None
+
+    def test_with_active_disclaimer(self):
+        disclaimer = self.make_disclaimer(self.student_user)
+        resp = self.client.get(self.url)
+        assert resp.context_data["latest_disclaimer"] == disclaimer
+
+    def test_with_expired_disclaimer(self):
+        disclaimer = self.make_disclaimer(self.student_user)
+        make_disclaimer_content(version=None)
+        assert has_active_disclaimer(self.student_user) is False
+        resp = self.client.get(self.url)
+        assert resp.context_data["latest_disclaimer"] == disclaimer
+
+    def test_with_expired_and_active_disclaimer(self):
+        self.make_disclaimer(self.student_user)
+        make_disclaimer_content(version=None)
+        assert has_active_disclaimer(self.student_user) is False
+        active_disclaimer = self.make_disclaimer(self.student_user)
+        assert has_active_disclaimer(self.student_user) is True
+
+        resp = self.client.get(self.url)
+        assert resp.context_data["latest_disclaimer"] == active_disclaimer
