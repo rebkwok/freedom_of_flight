@@ -39,30 +39,26 @@ def toggle_track_default(request, track_id):
     return HttpResponseRedirect(reverse("studioadmin:tracks"))
 
 
-class TrackCreateView(LoginRequiredMixin, StaffUserMixin, CreateView):
+class TrackCreateUpdateMixin(LoginRequiredMixin, StaffUserMixin):
+    model = Track
+    fields = ("name", "default")
+
+    def form_valid(self, form):
+        track = form.save()
+        ActivityLog.objects.create(
+            log=f"Track id {track.id} ({track}) {self.action} by admin user {full_name(self.request.user)}"
+        )
+        return HttpResponse(render_to_string('studioadmin/includes/modal-success.html'))
+
+
+class TrackCreateView(TrackCreateUpdateMixin, CreateView):
     template_name = "studioadmin/includes/track-add-modal.html"
-    model = Track
-    fields = ("name", "default")
-
-    def form_valid(self, form):
-        track = form.save()
-        ActivityLog.objects.create(
-            log=f"Track id {track.id} ({track}) created by admin user {full_name(self.request.user)}"
-        )
-        return HttpResponse(render_to_string('studioadmin/includes/modal-success.html'))
+    action = "created"
 
 
-class TrackUpdateView(LoginRequiredMixin, StaffUserMixin, UpdateView):
+class TrackUpdateView(TrackCreateUpdateMixin, UpdateView):
     template_name = "studioadmin/includes/track-edit-modal.html"
-    model = Track
-    fields = ("name", "default")
-
-    def form_valid(self, form):
-        track = form.save()
-        ActivityLog.objects.create(
-            log=f"Track id {track.id} ({track}) updated by admin user {full_name(self.request.user)}"
-        )
-        return HttpResponse(render_to_string('studioadmin/includes/modal-success.html'))
+    action = "updated"
 
 
 class EventTypeListView(LoginRequiredMixin, StaffUserMixin, ListView):
