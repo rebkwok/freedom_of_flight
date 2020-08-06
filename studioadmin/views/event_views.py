@@ -28,7 +28,7 @@ class TrackEventPaginationMixin:
         if not isinstance(page_obj.object_list, QuerySet):
             paginated_ids = [event.id for event in page_obj.object_list]
             paginated_events = track_queryset.filter(id__in=paginated_ids)
-        else:
+        else:  # pragma: no cover
             paginated_events = page_obj.object_list
         event_ids_by_date = paginated_events.values('start__date').annotate(count=Count('id')).values('start__date', 'id')
         events_by_date = {}

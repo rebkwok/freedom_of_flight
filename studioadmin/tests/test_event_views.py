@@ -1,10 +1,13 @@
 # -*- coding: utf-8 -*-
+from datetime import timedelta
+
 from model_bakery import baker
 
 from django import forms
 from django.urls import reverse
 from django.core import mail
 from django.test import TestCase
+from django.utils import timezone
 
 from booking.models import Event, Booking, EventType
 from common.test_utils import TestUsersMixin, EventTestMixin
@@ -79,7 +82,7 @@ class EventAdminListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         baker.make_recipe('booking.future_event', event_type__track=self.adult_track, _quantity=20)
         self.login(self.staff_user)
 
-        resp = self.client.get(self.url + '?page=1')
+        resp = self.client.get(self.url + '?page=1&tab=0')
         assert len(resp.context_data["track_events"][0]["page_obj"].object_list) == 20
         paginator = resp.context_data['track_events'][0]["page_obj"]
         self.assertEqual(paginator.number, 1)
@@ -90,15 +93,15 @@ class EventAdminListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         self.assertEqual(paginator.number, 2)
 
         # page not a number shows page 1
-        resp = self.client.get(self.url + '?page=one')
+        resp = self.client.get(self.url + '?page=one&tab=0')
         paginator = resp.context_data['track_events'][0]["page_obj"]
         self.assertEqual(paginator.number, 1)
 
-        # page out of range shows page q
-        resp = self.client.get(self.url + '?page=3')
-        assert len(resp.context_data["track_events"][0]["page_obj"].object_list) == 20
+        # page out of range shows last page
+        resp = self.client.get(self.url + '?page=3&tab=0')
+        assert len(resp.context_data["track_events"][0]["page_obj"].object_list) == 6
         paginator = resp.context_data['track_events'][0]["page_obj"]
-        assert paginator.number == 1
+        assert paginator.number == 2
 
     def test_pagination_with_tab(self):
         baker.make_recipe('booking.future_event', event_type__track=self.adult_track, _quantity=20)
@@ -117,6 +120,35 @@ class EventAdminListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         resp = self.client.get(self.url + '?page=2&tab=foo')  # invalid tab defaults to tab 0
         assert len(resp.context_data["track_events"][0]["page_obj"].object_list) == 6
         assert len(resp.context_data["track_events"][1]["page_obj"].object_list) == 20
+
+
+class PastEventAdminListViewTests(EventTestMixin, TestUsersMixin, TestCase):
+
+    def setUp(self):
+        self.create_test_setup()
+        self.create_users()
+        self.create_admin_users()
+        self.url = reverse('studioadmin:past_events')
+
+    def test_no_past_events(self):
+        baker.make_recipe('booking.future_event', event_type__track=self.adult_track, _quantity=20)
+        self.login(self.staff_user)
+        resp = self.client.get(self.url)
+        assert resp.context_data["past"] is True
+        assert resp.context_data["track_events"] == []
+
+    def test_past_events(self):
+        past_event = baker.make_recipe(
+            'booking.past_event', start=timezone.now() - timedelta(1), event_type__track=self.adult_track
+        )
+        self.login(self.staff_user)
+        resp = self.client.get(self.url)
+        assert resp.context_data["past"] is True
+        assert resp.context_data["track_events"][0]["page_obj"].object_list == [past_event]
+
+        active_events_resp = self.client.get(reverse('studioadmin:events'))
+        assert active_events_resp.context_data["track_events"][0]["track"] == self.adult_track.name
+        assert past_event not in active_events_resp.context_data["track_events"][0]["page_obj"].object_list
 
 
 class EventAjaxMakeVisibleTests(TestUsersMixin, TestCase):

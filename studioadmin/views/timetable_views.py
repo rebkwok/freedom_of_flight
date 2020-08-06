@@ -71,7 +71,7 @@ class TimetableSessionListView(LoginRequiredMixin, StaffUserMixin, ListView):
                 if not isinstance(page_obj.object_list, QuerySet):
                     paginated_ids = [session.id for session in page_obj.object_list]
                     paginated_sessions = track_queryset.filter(id__in=paginated_ids)
-                else:
+                else:  # pragma: no cover
                     paginated_sessions = page_obj.object_list
                 session_ids_by_day = paginated_sessions.values('day').annotate(count=Count('id')).values('day', 'id')
                 sessions_by_day = {}

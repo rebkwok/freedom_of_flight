@@ -80,7 +80,10 @@ def process_event_booking_updates(form, event, request):
     booking, created = Booking.objects.get_or_create(user_id=user_id, event=event)
     if created:
         action = 'opened'
-    elif booking.status == 'OPEN' and not booking.no_show:
+    elif booking.status == 'OPEN' and not booking.no_show:  # pragma: no cover
+        # we shouldn't ever get here because the form only shows user choices for users that aren't
+        # already booked, but this is here just on the off chance that a user books at the same time as we
+        # try to add a booking in the register
         messages.info(request, 'Open booking for this user already exists')
         return
     else:

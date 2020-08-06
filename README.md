@@ -1,6 +1,5 @@
-[![Build Status](https://travis-ci.org/rebkwok/pipsevents.svg?branch=master)](https://travis-ci.org/rebkwok/freedom_of_flight)
+[![Build Status](https://travis-ci.org/rebkwok/freedom_of_flight.svg?branch=master)](https://travis-ci.org/rebkwok/freedom_of_flight)
 [![Coverage Status](https://coveralls.io/repos/github/rebkwok/freedom_of_flight/badge.svg?branch=master)](https://coveralls.io/github/rebkwok/freedom_of_flight?branch=master)
-
 ## bookings website
 
 # Required settings

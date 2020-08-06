@@ -71,7 +71,7 @@ class TimetableListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         baker.make(TimetableSession, event_type__track=self.adult_track, _quantity=20)
         self.login(self.staff_user)
 
-        resp = self.client.get(self.url + '?page=1')
+        resp = self.client.get(self.url + '?page=1&tab=0')
         assert len(resp.context_data["track_sessions"][0]["page_obj"].object_list) == 20
         paginator = resp.context_data['track_sessions'][0]["page_obj"]
         self.assertEqual(paginator.number, 1)
@@ -82,15 +82,15 @@ class TimetableListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         self.assertEqual(paginator.number, 2)
 
         # page not a number shows page 1
-        resp = self.client.get(self.url + '?page=one')
+        resp = self.client.get(self.url + '?page=one&tab=0')
         paginator = resp.context_data['track_sessions'][0]["page_obj"]
         self.assertEqual(paginator.number, 1)
 
-        # page out of range shows page 1
-        resp = self.client.get(self.url + '?page=3')
-        assert len(resp.context_data["track_sessions"][0]["page_obj"].object_list) == 20
+        # page out of range shows last page
+        resp = self.client.get(self.url + '?page=3&tab=0')
+        assert len(resp.context_data["track_sessions"][0]["page_obj"].object_list) == 10
         paginator = resp.context_data['track_sessions'][0]["page_obj"]
-        assert paginator.number == 1
+        assert paginator.number == 2
 
     def test_pagination_with_tab(self):
         baker.make(TimetableSession, event_type__track=self.adult_track, _quantity=15)
@@ -209,6 +209,43 @@ class TimetableSessionCreateViewTests(EventTestMixin, TestUsersMixin, TestCase):
         assert resp.url == reverse("studioadmin:timetable") + f"?track={self.aerial_event_type.track.id}"
 
 
+class TimetableSessionUpdateViewTests(EventTestMixin, TestUsersMixin, TestCase):
+
+    def setUp(self):
+        self.create_users()
+        self.create_admin_users()
+        self.timetable_session = baker.make(TimetableSession, name="foo", event_type=self.aerial_event_type)
+        self.url = reverse("studioadmin:update_timetable_session", args=(self.timetable_session.id,))
+        self.login(self.staff_user)
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.create_cls_tracks_and_event_types()
+
+    def form_data(self):
+        return {
+            "id": self.timetable_session.id,
+            "name": "test",
+            "description": "",
+            "event_type": self.aerial_event_type.id,
+            "day": "0",
+            "time": "16:00",
+            "max_participants": 10,
+            "duration": 90,
+        }
+
+    def test_update_timetable_session(self):
+        assert self.timetable_session.name == "foo"
+        resp = self.client.post(self.url, data=self.form_data())
+        self.timetable_session.refresh_from_db()
+        assert self.timetable_session.name == "test"
+
+    def test_redirects_to_timetable_on_save(self):
+        resp = self.client.post(self.url, data=self.form_data())
+        assert resp.status_code == 302
+        assert resp.url == reverse("studioadmin:timetable") + f"?track={self.aerial_event_type.track.id}"
+
+
 class TimetableUploadViewTests(EventTestMixin, TestUsersMixin, TestCase):
     def setUp(self):
         self.create_users()
@@ -251,6 +288,19 @@ class TimetableUploadViewTests(EventTestMixin, TestUsersMixin, TestCase):
         assert kids_track["index"] == 1
         assert f"sessions_0" in adult_track["form"].fields
         assert f"sessions_1" in kids_track["form"].fields
+
+    def test_with_tab(self):
+        baker.make(TimetableSession, event_type__track=self.adult_track, _quantity=2)
+        baker.make(Track, name="unknown_track")
+        baker.make(TimetableSession, event_type__track=self.kids_track, _quantity=2)
+        resp = self.client.get(self.url + "?tab=1")
+        assert len(resp.context_data["track_sessions"]) == 2
+        assert resp.context_data["tab"] == "1"
+        assert resp.context_data["track_sessions"][1]["track"] == "Kids"
+
+        # invalid tab defaults to 0
+        resp = self.client.get(self.url + "?tab=foo")
+        assert resp.context_data["tab"] == "0"
 
     @patch("studioadmin.forms.timezone")
     def test_upload_timetable_for_correct_track(self, mock_tz):
@@ -346,3 +396,28 @@ class TimetableUploadViewTests(EventTestMixin, TestUsersMixin, TestCase):
         assert test_events.count() == 2
         for test_event in test_events:
             assert test_event.start.weekday() == 0
+
+    def test_upload_timetable_with_errors(self):
+        baker.make(
+            TimetableSession, event_type=self.aerial_event_type, day=0, time=time(10, 0), name="test"
+        )
+        tsession = baker.make(
+            TimetableSession, event_type=self.kids_aerial_event_type, day=3, time=time(10, 0), name="test1"
+        )
+        data = {
+            "track": self.kids_track.id,
+            "track_index": 1,
+            "sessions_1": [tsession.id],
+            "show_on_site": False,
+            "start_date": "01-Feb-2020",
+            "end_date": "15-Feb-2020"
+        }
+        resp = self.client.post(self.url, data=data)
+        track_sessions = resp.context_data["track_sessions"]
+        form = track_sessions[1]["form"]
+        assert form.errors == {
+            "start_date": ["Date must be in the future"],
+            "end_date": ["Date must be in the future"]
+        }
+        # goes to the tab for the invalid form
+        assert resp.context_data["tab"] == 1

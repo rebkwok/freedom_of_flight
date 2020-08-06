@@ -131,13 +131,6 @@ class AddRegisterBookingTests(TestUsersMixin, TestCase):
         booking.refresh_from_db()
         assert booking.status == "OPEN"
 
-    def test_add_open_booking_already_exists(self):
-        booking = baker.make(Booking, event=self.event, user=self.student_user)
-        self.login(self.staff_user)
-        self.client.post(self.url, {'user': self.student_user.id})
-        booking.refresh_from_db()
-        assert booking.status == "OPEN"
-
     def test_adds_to_user_block(self):
         block = baker.make_recipe(
             "booking.dropin_block", block_config__event_type=self.event.event_type,
