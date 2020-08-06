@@ -18,18 +18,7 @@ class WaitingListViewStudioAdminTests(TestUsersMixin, TestCase):
         self.ajax_remvove_url = reverse("studioadmin:ajax_remove_from_waiting_list")
 
     def test_staff_or_instructor_allowed(self):
-        self.login(self.student_user)
-        resp = self.client.get(self.url)
-        assert resp.status_code == 302
-        assert resp.url == reverse("booking:permission_denied")
-
-        self.login(self.staff_user)
-        resp = self.client.get(self.url)
-        assert resp.status_code == 200
-
-        self.login(self.instructor_user)
-        resp = self.client.get(self.url)
-        assert resp.status_code == 200
+        self.user_access_test(["instructor", "staff"], self.url)
 
     def test_waiting_list_users_shown(self):
         """

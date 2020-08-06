@@ -33,19 +33,7 @@ class CloneEventTests(EventTestMixin, TestUsersMixin, TestCase):
         cls.create_cls_tracks_and_event_types()
 
     def test_only_staff_user_can_access(self):
-        self.login(self.student_user)
-        resp = self.client.get(self.url)
-        assert resp.status_code == 302
-        assert resp.url == reverse("booking:permission_denied")
-
-        self.login(self.instructor_user)
-        resp = self.client.get(self.url)
-        assert resp.status_code == 302
-        assert resp.url == reverse("booking:permission_denied")
-
-        self.login(self.staff_user)
-        resp = self.client.get(self.url)
-        assert resp.status_code == 200
+        self.user_access_test(["staff"], self.url)
 
     def test_inital(self):
         self.event.start = datetime(2020, 1, 1, 10, 0, tzinfo=timezone.utc)

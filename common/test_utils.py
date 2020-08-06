@@ -3,6 +3,7 @@ import random
 
 from django.contrib.auth.models import User, Group
 from django.utils import timezone
+from django.shortcuts import reverse
 
 from model_bakery import baker
 
@@ -164,6 +165,21 @@ class TestUsersMixin:
             if DisclaimerContent.current_version() == 0:
                 make_disclaimer_content(version=1)
             make_online_disclaimer(user=user, version=DisclaimerContent.current_version())
+
+    def user_access_test(self, allowed, url):
+        users = {
+            "student": self.student_user,
+            "staff": self.staff_user,
+            "instructor": self.instructor_user
+        }
+        for user_type, user in users.items():
+            self.login(user)
+            resp = self.client.get(url)
+            if user_type in allowed:
+                assert resp.status_code == 200
+            else:
+                assert resp.status_code == 302
+                assert resp.url == reverse("booking:permission_denied")
 
 
 class EventTestMixin:

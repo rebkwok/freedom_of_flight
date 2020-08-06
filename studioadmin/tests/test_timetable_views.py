@@ -32,19 +32,7 @@ class TimetableListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         assert resp.status_code == 302
         assert redirected_url in resp.url
 
-        self.login(self.student_user)
-        resp = self.client.get(self.url)
-        assert resp.status_code == 302
-        assert resp.url == reverse('booking:permission_denied')
-
-        self.login(self.instructor_user)
-        resp = self.client.get(self.url)
-        assert resp.status_code == 302
-        assert resp.url == reverse('booking:permission_denied')
-
-        self.login(self.staff_user)
-        resp = self.client.get(self.url)
-        assert resp.status_code == 200
+        self.user_access_test(["staff"], self.url)
 
     def test_sessions_by_track(self):
         self.login(self.staff_user)
@@ -136,19 +124,7 @@ class ChooseEventTypeToCreateTests(EventTestMixin, TestUsersMixin, TestCase):
         cls.create_cls_tracks_and_event_types()
 
     def test_only_staff(self):
-        self.login(self.student_user)
-        resp = self.client.get(self.url)
-        assert resp.status_code == 302
-        assert resp.url == reverse("booking:permission_denied")
-
-        self.login(self.instructor_user)
-        resp = self.client.get(self.url)
-        assert resp.status_code == 302
-        assert resp.url == reverse("booking:permission_denied")
-
-        self.login(self.staff_user)
-        resp = self.client.get(self.url)
-        assert resp.status_code == 200
+        self.user_access_test(["staff"], self.url)
 
     def test_event_types_in_context(self):
         resp = self.client.get(self.url)
@@ -182,19 +158,7 @@ class TimetableSessionCreateViewTests(EventTestMixin, TestUsersMixin, TestCase):
         }
 
     def test_only_staff(self):
-        self.login(self.student_user)
-        resp = self.client.get(self.url)
-        assert resp.status_code == 302
-        assert resp.url == reverse("booking:permission_denied")
-
-        self.login(self.instructor_user)
-        resp = self.client.get(self.url)
-        assert resp.status_code == 302
-        assert resp.url == reverse("booking:permission_denied")
-
-        self.login(self.staff_user)
-        resp = self.client.get(self.url)
-        assert resp.status_code == 200
+        self.user_access_test(["staff"], self.url)
 
     def test_create_timetable_session(self):
         assert TimetableSession.objects.exists() is False
@@ -259,19 +223,7 @@ class TimetableUploadViewTests(EventTestMixin, TestUsersMixin, TestCase):
         cls.create_cls_tracks_and_event_types()
 
     def test_only_staff(self):
-        self.login(self.student_user)
-        resp = self.client.get(self.url)
-        assert resp.status_code == 302
-        assert resp.url == reverse("booking:permission_denied")
-
-        self.login(self.instructor_user)
-        resp = self.client.get(self.url)
-        assert resp.status_code == 302
-        assert resp.url == reverse("booking:permission_denied")
-
-        self.login(self.staff_user)
-        resp = self.client.get(self.url)
-        assert resp.status_code == 200
+        self.user_access_test(["staff"], self.url)
 
     def test_separate_forms_per_track(self):
         # track form fields are labelled with track index

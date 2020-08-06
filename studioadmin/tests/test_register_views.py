@@ -19,31 +19,11 @@ class EventRegisterListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         self.create_admin_users()
         self.url = reverse('studioadmin:registers')
 
-    def test_cannot_access_if_not_staff(self):
+    def test_staff_and_instructor_only(self):
         """
         test that the page redirects if user is not a staff user
         """
-        self.login(self.student_user)
-        resp = self.client.get(self.url)
-        assert resp.status_code == 302
-        assert resp.url == reverse('booking:permission_denied')
-
-    def test_instructor_group_can_access(self):
-        """
-        test that the page redirects if user is in the instructor group but is
-        not a staff user
-        """
-        self.login(self.instructor_user)
-        resp = self.client.get(self.url)
-        assert resp.status_code == 200
-
-    def test_can_access_as_staff_user(self):
-        """
-        test that the page can be accessed by a staff user
-        """
-        self.login(self.staff_user)
-        resp = self.client.get(self.url)
-        assert resp.status_code == 200
+        self.user_access_test(["instructor", "staff"], self.url)
 
     def test_shows_registers(self):
         """
@@ -73,18 +53,7 @@ class RegisterViewTests(TestUsersMixin, TestCase):
         self.url = reverse("studioadmin:register", args=(self.event.id,))
 
     def test_instructor_or_staff_allowed(self):
-        self.login(self.student_user)
-        resp = self.client.get(self.url)
-        assert resp.status_code == 302
-        assert resp.url == reverse("booking:permission_denied")
-
-        self.login(self.staff_user)
-        resp = self.client.get(self.url)
-        assert resp.status_code == 200
-
-        self.login(self.instructor_user)
-        resp = self.client.get(self.url)
-        assert resp.status_code == 200
+        self.user_access_test(["instructor", "staff"], self.url)
 
     def test_shows_enabled_add_new_booking_button(self):
         self.login(self.staff_user)

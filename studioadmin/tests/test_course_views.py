@@ -30,32 +30,11 @@ class CourseAdminListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         assert resp.status_code == 302
         assert redirected_url in resp.url
 
-    def test_cannot_access_if_not_staff(self):
+    def test_staff_only(self):
         """
         test that the page redirects if user is not a staff user
         """
-        self.login(self.student_user)
-        resp = self.client.get(self.url)
-        assert resp.status_code == 302
-        assert resp.url == reverse('booking:permission_denied')
-
-    def test_instructor_group_cannot_access(self):
-        """
-        test that the page redirects if user is in the instructor group but is
-        not a staff user
-        """
-        self.login(self.instructor_user)
-        resp = self.client.get(self.url)
-        assert resp.status_code == 302
-        assert resp.url == reverse('booking:permission_denied')
-
-    def test_can_access_as_staff_user(self):
-        """
-        test that the page can be accessed by a staff user
-        """
-        self.login(self.staff_user)
-        resp = self.client.get(self.url)
-        assert resp.status_code == 200
+        self.user_access_test(["staff"], self.url)
 
     def test_courses_by_track(self):
         self.login(self.staff_user)
@@ -193,20 +172,7 @@ class CancelCourseViewTests(EventTestMixin, TestUsersMixin, TestCase):
         return reverse("studioadmin:cancel_course", args=(course.slug,))
 
     def test_only_staff_user_can_access(self):
-        url = self.url(self.course)
-        self.login(self.student_user)
-        resp = self.client.get(url)
-        assert resp.status_code == 302
-        assert resp.url == reverse("booking:permission_denied")
-
-        self.login(self.instructor_user)
-        resp = self.client.get(url)
-        assert resp.status_code == 302
-        assert resp.url == reverse("booking:permission_denied")
-
-        self.login(self.staff_user)
-        resp = self.client.get(url)
-        assert resp.status_code == 200
+        self.user_access_test(["staff"], self.url)
 
     def test_list_open_booking_users_on_course_events(self):
         url = self.url(self.course)
@@ -379,19 +345,7 @@ class CourseCreateViewTests(EventTestMixin, TestUsersMixin, TestCase):
         }
 
     def test_only_staff(self):
-        self.login(self.student_user)
-        resp = self.client.get(self.url)
-        assert resp.status_code == 302
-        assert resp.url == reverse("booking:permission_denied")
-
-        self.login(self.instructor_user)
-        resp = self.client.get(self.url)
-        assert resp.status_code == 302
-        assert resp.url == reverse("booking:permission_denied")
-
-        self.login(self.staff_user)
-        resp = self.client.get(self.url)
-        assert resp.status_code == 200
+        self.user_access_test(["staff"], self.url)
 
     def test_choose_event_type_for_course(self):
         url = reverse("studioadmin:choose_course_type_to_create")
@@ -446,19 +400,7 @@ class CourseUpdateViewTests(EventTestMixin, TestUsersMixin, TestCase):
         }
 
     def test_only_staff(self):
-        self.login(self.student_user)
-        resp = self.client.get(self.url)
-        assert resp.status_code == 302
-        assert resp.url == reverse("booking:permission_denied")
-
-        self.login(self.instructor_user)
-        resp = self.client.get(self.url)
-        assert resp.status_code == 302
-        assert resp.url == reverse("booking:permission_denied")
-
-        self.login(self.staff_user)
-        resp = self.client.get(self.url)
-        assert resp.status_code == 200
+        self.user_access_test(["staff"], self.url)
 
     def test_update_course(self):
         assert self.course.name != "test course"

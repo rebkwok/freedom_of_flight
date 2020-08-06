@@ -24,19 +24,8 @@ class EmailUsersViewsTests(EventTestMixin, TestUsersMixin, TestCase):
         cls.create_cls_tracks_and_event_types()
 
     def test_staff_only(self):
-        self.login(self.student_user)
-        resp = self.client.get(self.event_url)
-        assert resp.status_code == 302
-        assert resp.url == reverse("booking:permission_denied")
-
-        self.login(self.instructor_user)
-        resp = self.client.get(self.event_url)
-        assert resp.status_code == 302
-        assert resp.url == reverse("booking:permission_denied")
-
-        self.login(self.staff_user)
-        resp = self.client.get(self.event_url)
-        assert resp.status_code == 200
+        self.user_access_test(["staff"], self.event_url)
+        self.user_access_test(["staff"], self.course_url)
 
     def test_email_event_users_open_and_cancelled_bookings(self):
         # shows users for open bookings checked, cancelled/no-show unchecked in form initial

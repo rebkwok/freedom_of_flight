@@ -23,18 +23,7 @@ class HelpViewTests(TestUsersMixin, TestCase):
         cls.url = reverse("studioadmin:help")
 
     def test_instructor_or_staff(self):
-        self.login(self.student_user)
-        self.client.logout()
-        resp = self.client.get(self.url)
-        assert resp.status_code == 302
-
-        self.login(self.instructor_user)
-        resp = self.client.get(self.url)
-        assert resp.status_code == 200
-
-        self.login(self.staff_user)
-        resp = self.client.get(self.url)
-        assert resp.status_code == 200
+        self.user_access_test(["instructor", "staff"], self.url)
 
 
 class CookiePolicyViewTests(TestUsersMixin, TestCase):
@@ -49,17 +38,7 @@ class CookiePolicyViewTests(TestUsersMixin, TestCase):
         cls.list_url = reverse("studioadmin:cookie_policies")
 
     def test_list_view_staff_only(self):
-        self.login(self.student_user)
-        resp = self.client.get(self.list_url)
-        assert resp.status_code == 302
-
-        self.login(self.instructor_user)
-        resp = self.client.get(self.list_url)
-        assert resp.status_code == 302
-
-        self.login(self.staff_user)
-        resp = self.client.get(self.list_url)
-        assert resp.status_code == 200
+        self.user_access_test(["staff"], self.url)
 
     def test_detail_view(self):
         policy = baker.make(CookiePolicy, version=1.0)
@@ -100,17 +79,7 @@ class DataPrivacyPolicyViewTests(TestUsersMixin, TestCase):
         cls.list_url = reverse("studioadmin:data_privacy_policies")
 
     def test_list_view_staff_only(self):
-        self.login(self.student_user)
-        resp = self.client.get(self.list_url)
-        assert resp.status_code == 302
-
-        self.login(self.instructor_user)
-        resp = self.client.get(self.list_url)
-        assert resp.status_code == 302
-
-        self.login(self.staff_user)
-        resp = self.client.get(self.list_url)
-        assert resp.status_code == 200
+        self.user_access_test(["staff"], self.url)
 
     def test_list_view_current_version(self):
         baker.make(DataPrivacyPolicy, content='Foo', version=None)
@@ -159,17 +128,7 @@ class DisclaimerContentViewTests(TestUsersMixin, TestCase):
         cls.list_url = reverse("studioadmin:disclaimer_contents")
 
     def test_list_view_staff_only(self):
-        self.login(self.student_user)
-        resp = self.client.get(self.list_url)
-        assert resp.status_code == 302
-
-        self.login(self.instructor_user)
-        resp = self.client.get(self.list_url)
-        assert resp.status_code == 302
-
-        self.login(self.staff_user)
-        resp = self.client.get(self.list_url)
-        assert resp.status_code == 200
+        self.user_access_test(["staff"], self.url)
 
     def test_list_view_current_version(self):
         make_disclaimer_content(disclaimer_terms='Foo')
