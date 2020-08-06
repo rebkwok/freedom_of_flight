@@ -38,7 +38,7 @@ class CookiePolicyViewTests(TestUsersMixin, TestCase):
         cls.list_url = reverse("studioadmin:cookie_policies")
 
     def test_list_view_staff_only(self):
-        self.user_access_test(["staff"], self.url)
+        self.user_access_test(["staff"], self.list_url)
 
     def test_detail_view(self):
         policy = baker.make(CookiePolicy, version=1.0)
@@ -79,7 +79,7 @@ class DataPrivacyPolicyViewTests(TestUsersMixin, TestCase):
         cls.list_url = reverse("studioadmin:data_privacy_policies")
 
     def test_list_view_staff_only(self):
-        self.user_access_test(["staff"], self.url)
+        self.user_access_test(["staff"], self.list_url)
 
     def test_list_view_current_version(self):
         baker.make(DataPrivacyPolicy, content='Foo', version=None)
@@ -128,7 +128,7 @@ class DisclaimerContentViewTests(TestUsersMixin, TestCase):
         cls.list_url = reverse("studioadmin:disclaimer_contents")
 
     def test_list_view_staff_only(self):
-        self.user_access_test(["staff"], self.url)
+        self.user_access_test(["staff"], self.list_url)
 
     def test_list_view_current_version(self):
         make_disclaimer_content(disclaimer_terms='Foo')

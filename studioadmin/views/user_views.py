@@ -9,8 +9,6 @@ from django.template.response import TemplateResponse
 from django.template.loader import render_to_string
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
 from django.contrib.postgres.search import SearchVector
-from django import forms
-from django.forms import ModelChoiceField
 from django.utils import timezone
 
 from braces.views import LoginRequiredMixin
@@ -21,7 +19,7 @@ from booking.models import Booking, Block, Course, Event, WaitingListUser
 from common.utils import full_name
 
 from ..forms import EmailUsersForm, SearchForm, AddEditBookingForm, AddEditBlockForm
-from .utils import staff_required, InstructorOrStaffUserMixin, StaffUserMixin
+from .utils import staff_required, InstructorOrStaffUserMixin
 
 
 @login_required
@@ -143,7 +141,7 @@ class UserBookingsHistoryListView(UserBookingsListView):
         return self.user.bookings.filter(event__start__lte=timezone.now()).order_by("-event__start")
 
 
-class BookingEditView(UpdateView):
+class BookingEditView(LoginRequiredMixin, InstructorOrStaffUserMixin, UpdateView):
     form_class = AddEditBookingForm
     model = Booking
     template_name = 'studioadmin/includes/user-booking-modal.html'
@@ -162,7 +160,7 @@ class BookingEditView(UpdateView):
         )
 
 
-class BookingAddView(CreateView):
+class BookingAddView(LoginRequiredMixin, InstructorOrStaffUserMixin, CreateView):
     model = Booking
     template_name = 'studioadmin/includes/user-booking-add-modal.html'
     form_class = AddEditBookingForm
@@ -215,8 +213,8 @@ def process_user_booking_updates(form, request, user):
                             "Cancelled course event bookings are not refunded to user; booking has been set to no-show instead."
                         )
                     elif booking.block:
+                        # Form validation should prevent this, but make sure no block is assigned anyway
                         booking.block = None
-                        block_removed = True
                     action = 'cancelled'
                 elif booking.status == 'OPEN':
                     action = 'reopened'
@@ -224,6 +222,14 @@ def process_user_booking_updates(form, request, user):
             elif 'no_show' in form.changed_data and action == 'updated' and booking.status == 'OPEN':
                 action = 'cancelled' if booking.no_show else 'reopened'
                 messages.success(request, f"Booking {action} as 'no-show'")
+
+            if action == "updated" and "block" in form.changed_data and not booking.block and booking.event.course:
+                # Don't remove blocks from course events
+                booking.block = user.bookings.get(id=booking.id).block
+                messages.info(
+                    request,
+                    f"Block cannot be updated; applies to all {booking.event.event_type.pluralized_label} in the course."
+                )
 
             if not booking.block and booking.status == "OPEN":
                 messages.error(request, "NOTE: This booking does not have a credit block assigned.")
@@ -241,7 +247,8 @@ def process_user_booking_updates(form, request, user):
                 send_user_and_studio_emails(
                     ctx, email_user, send_to_studio=False,
                     subjects={"user": f"Your booking for {booking.event} has been {action}"},
-                    template_short_name="'studioadmin/email/booking_change_confirmation")
+                    template_dir="studioadmin/email",
+                    template_short_name="booking_change_confirmation")
                 send_confirmation_msg = "and confirmation email sent to user"
             else:
                 send_confirmation_msg = ""
@@ -257,9 +264,6 @@ def process_user_booking_updates(form, request, user):
             )
 
             if action == 'cancelled':
-                if block_removed:
-                    messages.info(request, 'Note: this booking has been cancelled and the block used has been updated.')
-
                 if event_was_full:
                     waiting_list_users = WaitingListUser.objects.filter(event=booking.event)
                     if waiting_list_users:
@@ -306,7 +310,7 @@ class BlockMixin:
     def form_valid(self, form):
         block = form.save(commit=False)
         if block.bookings.count() > block.block_config.size:
-            form.add_error("block_type", "Too many bookings already made against block; cannot change to this block type")
+            form.add_error("block_config", "Too many bookings already made against block; cannot change to this block type")
 
         if form.is_valid():
             block.save()

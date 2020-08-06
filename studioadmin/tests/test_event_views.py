@@ -163,7 +163,7 @@ class CancelEventViewTests(EventTestMixin, TestUsersMixin, TestCase):
         return reverse("studioadmin:cancel_event", args=(event.slug,))
 
     def test_only_staff_user_can_access(self):
-        self.user_access_test(["staff"], self.url)
+        self.user_access_test(["staff"], self.url(self.event))
 
     def test_list_open_bookings_on_event(self):
         url = self.url(self.event)

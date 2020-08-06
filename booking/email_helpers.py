@@ -1,3 +1,5 @@
+import os
+
 from django.conf import settings
 from django.core.mail import send_mail
 from django.core.mail.message import EmailMultiAlternatives
@@ -56,15 +58,15 @@ def send_bcc_emails(context, bcc_user_emails, subject, template_without_ext, rep
     msg.send(fail_silently=False)
 
 
-def send_user_and_studio_emails(context, user, send_to_studio, subjects, template_short_name):
+def send_user_and_studio_emails(context, user, send_to_studio, subjects, template_short_name, template_dir="booking/email"):
     context.update({"studio_email": settings.DEFAULT_STUDIO_EMAIL})
     # send email to user
     send_mail(
         f'{settings.ACCOUNT_EMAIL_SUBJECT_PREFIX} {subjects["user"]}',
-        get_template(f'booking/email/{template_short_name}.txt').render(context),
+        get_template(os.path.join(template_dir, f"{template_short_name}.txt")).render(context),
         settings.DEFAULT_FROM_EMAIL,
         [user.email],
-        html_message=get_template(f'booking/email/{template_short_name}.html').render(context),
+        html_message=get_template(os.path.join(template_dir, f"{template_short_name}.html")).render(context),
         fail_silently=False
     )
 
@@ -72,7 +74,7 @@ def send_user_and_studio_emails(context, user, send_to_studio, subjects, templat
     if send_to_studio:
         send_mail(
             f'{settings.ACCOUNT_EMAIL_SUBJECT_PREFIX} {subjects["studio"]}',
-            get_template(f'booking/email/to_studio_{template_short_name}.txt').render(context),
+            get_template(os.path.join(template_dir, f"to_studio_{template_short_name}.txt")).render(context),
             settings.DEFAULT_FROM_EMAIL,
             [settings.DEFAULT_STUDIO_EMAIL],
             fail_silently=False

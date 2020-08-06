@@ -671,8 +671,7 @@ class AddEditBookingForm(forms.ModelForm):
         block = self.cleaned_data.get('block')
         event = self.cleaned_data.get('event')
         status = self.cleaned_data.get('status')
-        no_show = self.cleaned_data.get('status')
-
+        no_show = self.cleaned_data.get('no_show')
         if block:
             # check block validity; this will check both events and courses
             if not block.valid_for_event(event):
@@ -697,6 +696,17 @@ class AddEditBookingForm(forms.ModelForm):
                         # trying to reopen cancelled booking for full event
                         if status == "OPEN" and not no_show:
                             self.add_error("__all__", f"This {event.event_type.label} is full, can't make new booking.")
+
+    def full_clean(self):
+        super().full_clean()
+        if self.errors.get("__all__"):
+            errorlist = [*self.errors["__all__"]]
+            for error in self.errors["__all__"]:
+                # remove the default full booking messages, it's not user friendly and we should have added a nicer one already
+                if error.startswith("Attempting to create booking for full event") and len(self.errors["__all__"]) >= 2:
+                    errorlist.remove(error)
+            if errorlist != self.errors["__all__"]:
+                self.errors["__all__"] = errorlist
 
 
 class AddEditBlockForm(forms.ModelForm):
