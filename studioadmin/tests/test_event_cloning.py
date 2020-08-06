@@ -142,6 +142,50 @@ class CloneEventTests(EventTestMixin, TestUsersMixin, TestCase):
         assert times == {time(9, 0)}
 
     @patch("studioadmin.forms.timezone")
+    def test_clone_weekly_recurring_event_already_exists(self, mock_tz):
+        mock_tz.now.return_value = datetime(2020, 1, 1, tzinfo=timezone.utc)
+        data = {
+            "recurring_weekly_start": "01-Jul-2020",
+            "recurring_weekly_end": "31-Jul-2020",
+            "recurring_weekly_time": "10:00",
+            "recurring_weekly_weekdays": [0],
+            "submit": "Clone weekly recurring class",
+        }
+        # Existing event that shouldn't get cloned
+        existing = baker.make_recipe(
+            "booking.future_event", name="Original event",
+            event_type=self.aerial_event_type, start=datetime(2020, 7, 6, 9, 0, tzinfo=timezone.utc)
+        )
+        resp = self.client.post(self.url, data, follow=True)
+        cloned_events = Event.objects.filter(name="Original event").exclude(id=self.event.id).order_by("start")
+        # Mondays in July - 6th, 13th, 20th, 27th
+        dates = [cloned_event.start.date() for cloned_event in cloned_events]
+        times = {cloned_event.start.time() for cloned_event in cloned_events}
+        # Today is non-BST, event dates are BST, so event dates in UTC are 1 hr earlier
+        assert dates == [date(2020, 7, 6), date(2020, 7, 13), date(2020, 7, 20), date(2020, 7, 27)]
+        assert times == {time(9, 0)}
+        assert Event.objects.get(name="Original event", start__date=date(2020, 7, 6)).id == existing.id
+        # message to user shows local time
+        assert "Classes with this name already exist for the following dates/times and were not cloned: " \
+               "6 Jul 2020, 10:00" in resp.rendered_content
+
+    @patch("studioadmin.forms.timezone")
+    def test_clone_weekly_recurring_event_nothing_to_clone(self, mock_tz):
+        mock_tz.now.return_value = datetime(2020, 1, 1, tzinfo=timezone.utc)
+        # no mondays in time period
+        data = {
+            "recurring_weekly_start": "01-Jul-2020",
+            "recurring_weekly_end": "05-Jul-2020",
+            "recurring_weekly_time": "10:00",
+            "recurring_weekly_weekdays": [0],
+            "submit": "Clone weekly recurring class",
+        }
+        resp = self.client.post(self.url, data, follow=True)
+        cloned_events = Event.objects.filter(name="Original event").exclude(id=self.event.id)
+        assert cloned_events.exists() is False
+        assert "Nothing to clone" in resp.rendered_content
+
+    @patch("studioadmin.forms.timezone")
     def test_clone_weekly_recurring_event_inclusive(self, mock_tz):
         mock_tz.now.return_value = datetime(2020, 1, 1, tzinfo=timezone.utc)
         data = {
@@ -151,7 +195,7 @@ class CloneEventTests(EventTestMixin, TestUsersMixin, TestCase):
             "recurring_weekly_weekdays": [4],
             "submit": "Clone weekly recurring class",
         }
-        resp = self.client.post(self.url, data)
+        self.client.post(self.url, data)
         cloned_events = Event.objects.filter(name="Original event").exclude(id=self.event.id).order_by("start")
         # Fridays in July - 17th, 24th, 31st - make events on inclusive start/end dates
         dates = [cloned_event.start.date() for cloned_event in cloned_events]
@@ -233,6 +277,51 @@ class CloneEventTests(EventTestMixin, TestUsersMixin, TestCase):
         # Mocked now and event data are both in GMT, so entered time is the same in UTC-stored events
         assert dates == {date(2020, 1, 7)}
         assert times == {time(10, 0), time(10, 20), time(10, 40), time(11, 0), time(11, 20), time(11, 40), time(12, 00)}
+
+    @patch("studioadmin.forms.timezone")
+    def test_clone_recurring_daily_intervals_existing_event(self, mock_tz):
+        mock_tz.now.return_value = datetime(2020, 1, 1, tzinfo=timezone.utc)
+        data = {
+            "recurring_daily_date": "07-Jan-2020",
+            "recurring_daily_interval": "20",
+            "recurring_daily_starttime": "10:00",
+            "recurring_daily_endtime": "12:00",
+            "submit": "Clone at recurring intervals",
+        }
+        existing = baker.make_recipe(
+            "booking.future_event", name="Original event", event_type=self.event.event_type,
+            start=datetime(2020, 1, 7, 10, 40, tzinfo=timezone.utc)
+        )
+        resp = self.client.post(self.url, data, follow=True)
+        cloned_events = Event.objects.filter(name="Original event").exclude(id=self.event.id).order_by("start")
+        dates = {cloned_event.start.date() for cloned_event in cloned_events}
+        times = {cloned_event.start.time() for cloned_event in cloned_events}
+        # Mocked now and event data are both in GMT, so entered time is the same in UTC-stored events
+        assert dates == {date(2020, 1, 7)}
+        assert times == {time(10, 0), time(10, 20), time(10, 40), time(11, 0), time(11, 20), time(11, 40), time(12, 00)}
+        assert Event.objects.get(name="Original event", start=datetime(2020, 1, 7, 10, 40, tzinfo=timezone.utc)).id == existing.id
+        assert "Classes with this name already exist on 7 Jan 2020 at these times and were not cloned: " \
+               "10:40" in resp.rendered_content
+
+    @patch("studioadmin.forms.timezone")
+    def test_clone_recurring_daily_intervals_nothing_to_clone(self, mock_tz):
+        mock_tz.now.return_value = datetime(2020, 1, 1, tzinfo=timezone.utc)
+        data = {
+            "recurring_daily_date": "07-Jan-2020",
+            "recurring_daily_interval": "20",
+            "recurring_daily_starttime": "10:00",
+            "recurring_daily_endtime": "10:10",
+            "submit": "Clone at recurring intervals",
+        }
+        # existing event at start time, which is the only valid cloning time
+        existing = baker.make_recipe(
+            "booking.future_event", name="Original event", event_type=self.event.event_type,
+            start=datetime(2020, 1, 7, 10, 0, tzinfo=timezone.utc)
+        )
+        assert Event.objects.filter(name="Original event").exclude(id__in=[self.event.id, existing.id]).exists() is False
+        resp = self.client.post(self.url, data, follow=True)
+        assert "Classes with this name already exist on 7 Jan 2020 at these times and were not cloned: " \
+               "10:00" in resp.rendered_content
 
     @patch("studioadmin.forms.timezone")
     def test_clone_recurring_daily_intervals_start_date_today(self, mock_tz):

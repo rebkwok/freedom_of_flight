@@ -151,8 +151,8 @@ def clone_event_weekly(request, event, weekdays, start, end, time):
         # Shift the dates back to UK time for string formatting
         messages.error(
             request,
-            f"An {event.event_type.label.title()} with this name and start already exists for the following dates and "
-            f"was not cloned: "
+            f"{event.event_type.pluralized_label.title()} with this name already exist for the following dates/times and "
+            f"were not cloned: "
             f"{', '.join([existing_date.shift('Europe/London').format_datetime('d MMM y, HH:mm') for existing_date in existing_dates])}"
         )
 
@@ -184,21 +184,23 @@ def clone_event_daily(request, event, target_date, start_time, end_time, interva
         # Shift the times back to UK time for string formatting messages to user
         messages.success(
             request,
-            f"{event.event_type.label.title()} was cloned to the following times on {target_date.strftime('%d-%b-%Y')}: "
+            f"{event.event_type.label.title()} was cloned to the following times on {target_date.strftime('%-d %b %Y')}: "
             f"{', '.join([cloned_time.shift('Europe/London').format_datetime('HH:mm') for cloned_time in cloned_times])}"
         )
         ActivityLog.objects.create(
             log=f"Event id {event.id} cloned to {', '.join([cloned_time.format_datetime('HH:mm') for cloned_time in cloned_times])} (UTC)"
-                f"on {target_date.strftime('%d-%b-%Y')} by admin user {full_name(request.user)}"
+                f"on {target_date.strftime('%-d %b %Y')} by admin user {full_name(request.user)}"
         )
-    else:
+    else:  # pragma: no cover
+        # This is here as a catchall, but we should never get here. The start of the range is always a valid cloning
+        # time, so either there's an existing event that we report on, or we clone
         messages.warning(request, "Nothing to clone")
 
     if existing_times:
         # Shift the times back to UK time for string formatting messages to user
         messages.error(
             request,
-            f"Events with this name and start already exist on {target_date.strftime('%d-%b-%Y')} at these times and "
+            f"{event.event_type.pluralized_label.title()} with this name already exist on {target_date.strftime('%-d %b %Y')} at these times and "
             f"were not cloned: {', '.join([existing_time.shift('Europe/London').format_datetime('HH:mm') for existing_time in existing_times])}"
         )
 
@@ -217,7 +219,7 @@ def clone_single_event(request, event, start_datetime):
         cloned_event.save()
         messages.success(
             request,
-            f"{cloned_event.event_type.label.title()} cloned to {cloned_event.start.strftime('%d-%b-%Y, %H:%M')}"
+            f"{cloned_event.event_type.label.title()} cloned to {cloned_event.start.strftime('%e %b %Y, %H:%M')}"
         )
         ActivityLog.objects.create(
             log=f"Event id {event.id} cloned to {cloned_event.id} by admin user {full_name(request.user)}"
