@@ -15,7 +15,8 @@ logger = logging.getLogger(__name__)
 @require_GET
 def paypal_return(request):
     pdt_obj, failed = process_pdt(request)
-    context = {"failed": failed, "pdt_obj": pdt_obj}
+    context = {"pdt_obj": pdt_obj}
+    error = None
     if not failed:
         invoice = get_invoice_from_ipn_or_pdt(pdt_obj, "PDT", raise_immediately=False)
         if invoice is not None:
@@ -27,6 +28,7 @@ def paypal_return(request):
                 except PayPalProcessingError as e:
                     logging.error("Error processing paypal PDT %s", e)
                     failed = True
+                    error = f"Error processing paypal PDT {e}",
                 else:
                     # Everything is OK
                     for block in invoice.blocks.all():
@@ -41,11 +43,12 @@ def paypal_return(request):
         else:
             # No invoice retrieved, fail
             failed = True
-            send_failed_payment_emails(pdt_obj, error="No invoice on PDT on return from paypal")
+            error = "No invoice on PDT on return from paypal"
     if not failed:
         return render(request, 'payments/valid_payment.html', context)
 
-    send_failed_payment_emails(pdt_obj, error="Failed status on PDT return from paypal")
+    error = error or "Failed status on PDT return from paypal"
+    send_failed_payment_emails(pdt_obj, error=error)
     return render(request, 'payments/non_valid_payment.html', context)
 
 

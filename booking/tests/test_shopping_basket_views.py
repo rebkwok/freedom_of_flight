@@ -311,6 +311,27 @@ class AjaxShoppingBasketCheckoutTests(TestUsersMixin, TestCase):
         assert block.invoice == invoice
         assert "paypal_form_html" in resp
 
+    def test_creates_invoice_and_applies_to_unpaid_blocks_with_vouchers(self):
+        voucher = baker.make(BlockVoucher, discount=10)
+        voucher.block_configs.add(self.dropin_block_config)
+        block = baker.make_recipe(
+            "booking.dropin_block", block_config=self.dropin_block_config, user=self.student_user,
+            voucher=voucher
+        )
+        assert Invoice.objects.exists() is False
+        # total is correct
+        resp = self.client.post(self.url, data={"cart_total": 18}).json()
+        block.refresh_from_db()
+        assert Invoice.objects.exists()
+        invoice = Invoice.objects.first()
+        assert invoice.username == self.student_user.username
+        assert invoice.amount == 18
+        assert block.invoice == invoice
+        assert "paypal_form_html" in resp
+
+        paypal_form_html = resp['paypal_form_html']
+        assert 'value="18.00"' in paypal_form_html
+
     def test_zero_total(self):
         voucher = baker.make(BlockVoucher, code="test", discount=100, max_per_user=10)
         voucher.block_configs.add(self.dropin_block_config)

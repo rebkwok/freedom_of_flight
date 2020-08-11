@@ -53,7 +53,7 @@ def check_paypal_data(ipn_or_pdt, invoice):
         raise PayPalProcessingError("Invoice amount is not correct")
 
     if ipn_or_pdt.mc_currency != 'GBP':
-        raise PayPalProcessingError(f"Unexpected currency {pdt_obj.mc_currency}")
+        raise PayPalProcessingError(f"Unexpected currency {ipn_or_pdt.mc_currency}")
 
 
 def get_invoice_from_ipn_or_pdt(ipn_or_pdt, paypal_obj_type, raise_immediately=False):
@@ -68,7 +68,7 @@ def get_invoice_from_ipn_or_pdt(ipn_or_pdt, paypal_obj_type, raise_immediately=F
                 raise PayPalProcessingError(f"Error processing paypal {paypal_obj_type} {ipn_or_pdt.id}; could not find invoice")
             return None
         # set the retrieved invoice on the paypal obj
-        ipn_or_pdt.invoice = invoice.id
+        ipn_or_pdt.invoice = invoice.invoice_id
         ipn_or_pdt.save()
     try:
         return Invoice.objects.get(invoice_id=ipn_or_pdt.invoice)
