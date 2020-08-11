@@ -257,7 +257,7 @@ class CourseTests(EventTestMixin, TestCase):
         self.event.save()
 
     def test_str(self):
-        assert str(self.course) == f"{self.course.name} (aerial - Adults - 3)"
+        assert str(self.course) == f"{self.course.name} (Aerial - Adults - 3)"
 
     def test_full(self):
         assert self.course.full is False

@@ -44,7 +44,7 @@
                     </td>
                     <td>
                         {% for event_type in track.event_types.all %}
-                            {{ event_type.name }}<br/>
+                            {{ event_type.name|title }}<br/>
                         {% endfor %}
                     </td>
                     <td>

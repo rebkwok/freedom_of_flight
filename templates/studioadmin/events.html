@@ -69,7 +69,7 @@
                                 <td>{{ event.start|date:"H:i" }}</td>
                                 <td class="text-center">{{ event.duration }} mins</td>
                                 <td class="text-center">{{ event.spaces_left }} {% if event.max_participants %}/ {{ event.max_participants }}{% endif %}</td>
-                                <td>{{ event.event_type.name }}</td>
+                                <td>{{ event.event_type.name|title }}</td>
                                 {% if event.course %}
                                     <td class="helptext text-center">
                                         <span class="btn btn-sm btn-visible btn-secondary">{{ event.show_on_site|yesno|title }}</span></td>

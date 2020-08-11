@@ -113,6 +113,8 @@ def event_type_delete_view(request, event_type_id):
     event_type = get_object_or_404(EventType, pk=event_type_id)
     if event_type.event_set.exists():
         return HttpResponseBadRequest("Can't delete event type; it has linked events")
+    if event_type.course_set.exists():
+        return HttpResponseBadRequest("Can't delete event type; it has linked courses")
     ActivityLog.objects.create(
         log=f"Event type {event_type.name} (id {event_type_id}) deleted by admin user {full_name(request.user)}"
     )
@@ -140,7 +142,7 @@ def choose_track_for_event_type(request):
 @login_required
 @staff_required
 def block_config_list_view(request):
-    block_configs = BlockConfig.objects.all().order_by("active")
+    block_configs = BlockConfig.objects.all().order_by("-active")
     context = {
         "block_config_groups": {
             "Drop-in Credit Blocks": block_configs.exclude(course=True),
@@ -163,10 +165,12 @@ def ajax_toggle_block_config_active(request):
     return render(request, "studioadmin/includes/ajax_toggle_block_config_active_btn.html", {"block_config": block_config})
 
 
+@login_required
+@staff_required
 def block_config_delete_view(request, block_config_id):
     block_config = get_object_or_404(BlockConfig, pk=block_config_id)
-    if block_config.block_set.exists():
-        return HttpResponseBadRequest("Cannot delete credit block; blocks have already been purchased/created")
+    if block_config.block_set.filter(paid=True).exists():
+        return HttpResponseBadRequest("Cannot delete credit block; blocks have already been purchased")
     ActivityLog.objects.create(
         log=f"Credit block {block_config.name} (id {block_config_id}) deleted by admin user {full_name(request.user)}"
     )
@@ -174,6 +178,8 @@ def block_config_delete_view(request, block_config_id):
     return JsonResponse({"deleted": True, "alert_msg": "Credit block deleted"})
 
 
+@login_required
+@staff_required
 def choose_block_config_type(request):
     if request.method == "POST":
         if "dropin" in request.POST:
@@ -183,7 +189,7 @@ def choose_block_config_type(request):
     return render(request, "studioadmin/includes/block-config-add-modal.html")
 
 
-class BlockConfigCreateView(CreateView):
+class BlockConfigCreateView(LoginRequiredMixin, StaffUserMixin, CreateView):
     model = BlockConfig
     template_name = "studioadmin/block_config_create_update.html"
     form_class = BlockConfigForm

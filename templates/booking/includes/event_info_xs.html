@@ -2,7 +2,7 @@
 
     <span data-toggle="tooltip" data-html="true"
           title="<span class='align-left'>
-        {{ event.event_type.name }}<br/>
+        {{ event.event_type.name|title }}<br/>
         Availability: {% if event.full %}Full{% else %}{{ event.spaces_left }}{% endif %}<br/>
         {% if user_info.used_block  %}
         Credit block used: {{ user_info.used_block|user_block_info }}

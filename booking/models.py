@@ -70,7 +70,7 @@ class EventType(models.Model):
     Used for assigning to courses and cost categories (see Block Type)
     Also defines some common fields
     """
-    name = models.CharField(max_length=255)
+    name = models.CharField(max_length=255, help_text='Name for this event type (lowercase)')
     label = models.CharField(
         max_length=255,
         default="class",
@@ -98,7 +98,7 @@ class EventType(models.Model):
         unique_together = ("name", "track")
 
     def __str__(self):
-        return f"{self.name} - {self.track}"
+        return f"{self.name.title()} - {self.track}"
 
     @property
     def pluralized_label(self):
@@ -110,6 +110,7 @@ class EventType(models.Model):
         return plural_label
 
     def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
+        self.name = self.name.lower()
         self.label = self.label.lower()
         self.plural_suffix = self.plural_suffix.lower().replace(" ", "")
         self.plural_suffix = COMMON_LABEL_PLURALS.get(self.label.split()[-1], self.plural_suffix)
@@ -269,6 +270,9 @@ class BlockConfig(models.Model):
 
     def __str__(self):
         return self.name
+
+    def blocks_purchased(self):
+        return self.block_set.filter(paid=True).count()
 
 
 class BaseBlockConfig(models.Model):

@@ -1,5 +1,5 @@
 <span class="d-none d-sm-block">
-    <span class="helptext">{{event.event_type.name}}</span>
+    <span class="helptext">{{event.event_type.name|title}}</span>
     <span class="helptext"> | Availability:
         <span id="availability_{{ event.id }}">{% include 'booking/includes/event_availability_badge.html' %}</span>
     </span>

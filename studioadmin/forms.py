@@ -498,7 +498,7 @@ class EventTypeForm(forms.ModelForm):
 
         self.helper = FormHelper()
         self.helper.layout = Layout(
-            Hidden("track", track) if track is not None else "track",
+            Hidden("track", track.id) if track is not None else "track",
             "name",
             "label",
             HTML(
@@ -521,6 +521,10 @@ class EventTypeForm(forms.ModelForm):
             Submit('submit', f'Save')
         )
 
+    def clean_name(self):
+        name = self.cleaned_data["name"]
+        return name.lower()
+
 
 class BlockConfigForm(forms.ModelForm):
     class Meta:
@@ -530,8 +534,14 @@ class BlockConfigForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         is_course = kwargs.pop("is_course")
         super().__init__(*args, **kwargs)
+        if self.instance.id:
+            self.existing_blocks = Block.objects.filter(block_config=self.instance, paid=True).exists()
+        else:
+            self.existing_blocks = False
         self.fields["event_type"].help_text = "Each credit block is associated with a single event type and will be valid " \
                                               "for the number of events you select, for events of that event type only."
+        if self.existing_blocks:
+            self.fields["event_type"].widget.attrs.update({"disabled": "disabled"})
         self.fields["description"].help_text = "This will be displayed to users when purchasing credit blocks."
         self.fields["name"].help_text = "A short name for the credit block"
         self.fields["active"].help_text = "Active credit blocks are available for purchase by users and will be displayed " \
@@ -539,11 +549,11 @@ class BlockConfigForm(forms.ModelForm):
         self.helper = FormHelper()
         back_url = reverse('studioadmin:block_configs')
         self.helper.layout = Layout(
-            "event_type",
+            Field('event_type', readonly=True) if self.existing_blocks else "event_type",
             "name",
             "description",
-            "size",
-            "duration",
+            Field('size', readonly=True) if self.existing_blocks else "size",
+            Field('duration', readonly=True) if self.existing_blocks else "duration",
             Hidden("course", is_course),
             PrependedText('cost', '£'),
             "active",

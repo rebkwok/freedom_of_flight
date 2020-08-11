@@ -14,10 +14,15 @@
     <h1>Creating new {{ block_config_type }} credit block</h1>
     {% else %}
         <h1>Updating {{ block_config_type }} credit block: {{ form.instance.identitier }}</h1>
+        {% if form.existing_blocks %}
+            <p class="text-danger">
+                NOTE: blocks of this type have already been purchased; cannot update event type, size or duration.
+            </p>
+        {% endif %}
     {% endif %}
 
     {% if form.errors %}
-        <p class="errorlist">Please correct the errors below:</p>
+        <p class="text-danger">Please correct the errors below:</p>
     {% endif %}
 
         <form method="post" action="">

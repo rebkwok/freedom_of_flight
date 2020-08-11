@@ -55,7 +55,7 @@
                                 <td>{{ session.time|date:"H:i" }}</td>
                                 <td>{{ session.duration }} mins</td>
                                 <td class="text-center">{{ session.max_participants }}</td>
-                                <td>{{ session.event_type.name }}</td>
+                                <td>{{ session.event_type.name|title }}</td>
                                 <td class="pr-0 pl-1">
                                     <div data-toggle="tooltip" data-placement="top" title="Clone this {{ session.event_type.label }}">
                                     <a href="{% url 'studioadmin:clone_timetable_session' session.id %}"><i class="far fa-clone"></i></a>

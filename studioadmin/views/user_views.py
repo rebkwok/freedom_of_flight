@@ -212,7 +212,7 @@ def process_user_booking_updates(form, request, user):
                             request,
                             "Cancelled course event bookings are not refunded to user; booking has been set to no-show instead."
                         )
-                    elif booking.block:
+                    elif booking.block:  # pragma: no cover
                         # Form validation should prevent this, but make sure no block is assigned anyway
                         booking.block = None
                     action = 'cancelled'

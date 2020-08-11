@@ -1,7 +1,7 @@
 {% load crispy_forms_tags %}
 
 {% if form.errors %}
-    <div class="errorlist">Please correct the errors below</div>
+    <div class="text-danger">Please correct the errors below</div>
     {{ form.non_form_errors }}
 {% endif %}
 

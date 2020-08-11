@@ -61,7 +61,7 @@
                                         </div>
                                 </td>
                                 <td class="text-center">{% if course.events.exists %}{{ course.events.first.spaces_left }}{% else %}{{ course.max_participants }}{% endif %} {% if course.max_participants %}/ {{ course.max_participants }}{% endif %}</td>
-                                <td>{{ course.event_type.name }}</td>
+                                <td>{{ course.event_type.name|title }}</td>
                                 {% if event.course %}
                                     <td class="helptext">Set on course</td>
                                 {% else %}

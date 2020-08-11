@@ -31,22 +31,23 @@
             <thead>
                 <tr>
                     <th>Name<br/><span class="helptext">Click to edit</span></th>
-                    <th>Active</th>
-                    <th>Size</th>
-                    <th>Duration (weeks)</th>
-                    <th>Cost</th>
+                    <th class="text-center">Active</th>
+                    <th class="text-center">Size</th>
+                    <th class="text-center">Duration (weeks)</th>
+                    <th class="text-center">Cost</th>
+                    <th class="text-center">Purchased</th>
                     <th></th>
                 </tr>
             </thead>
             <tbody>
             {% for title, block_configs in block_config_groups.items %}
                 <tr class="table-secondary">
-                    <td colspan="6">{{ title }}</td>
+                    <td colspan="7">{{ title }}</td>
                 </tr>
                 {% for block_config in block_configs %}
                     <tr id="row-{{ block_config.id }}">
                         <td><a href="{% url 'studioadmin:edit_block_config' block_config.id %}">{{ block_config.name }}</a></td>
-                        <td>
+                        <td class="text-center">
                             <span
                               id="active-{{ block_config.id }}"
                               data-block_config_id={{ block_config.id }}
@@ -55,11 +56,12 @@
                               {% include "studioadmin/includes/ajax_toggle_block_config_active_btn.html" %}
                             </span>
                         </td>
-                        <td>{{ block_config.size }}</td>
-                        <td>{{ block_config.duration }}</td>
-                        <th>£{{ block_config.cost }}</th>
+                        <td class="text-center">{{ block_config.size }}</td>
+                        <td class="text-center">{{ block_config.duration }}</td>
+                        <td class="text-center">£{{ block_config.cost }}</td>
+                        <td class="text-center">{{ block_config.blocks_purchased }}</td>
                         <td class="text-center">
-                            {% if not block_config.block_set.exists %}
+                            {% if not block_config.blocks_purchased %}
                                 <div
                                     class="block-config-delete-btn"
                                     data-block_config_id="{{ block_config.id }}"

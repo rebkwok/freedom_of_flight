@@ -43,7 +43,7 @@
 
             {% for event_type in event_types %}
                 <tr id="row-event-type-{{ event_type.id }}">
-                    <td><a href="{% url 'studioadmin:edit_event_type' event_type.id %}">{{ event_type.name }}</a></td>
+                    <td><a href="{% url 'studioadmin:edit_event_type' event_type.id %}">{{ event_type.name|title }}</a></td>
                     <td>{{ event_type.track }}</td>
                     <td class="text-center">{{ event_type.cancellation_period }} hrs</td>
                     <td class="text-center">{% if not event_type.event_set.exists %}

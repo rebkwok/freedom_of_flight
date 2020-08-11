@@ -60,7 +60,7 @@
                             {% endif %}
                             </span>
                         <div>
-                            <span class="helptext">{{ booking.event.event_type.name }}</span>
+                            <span class="helptext">{{ booking.event.event_type.name|title }}</span>
                             <span class="helptext"> | Availability:
                                 <span id="availability_{{ booking.event.id }}">{% include 'booking/includes/event_availability_badge.html' %}</span>
                             </span>
