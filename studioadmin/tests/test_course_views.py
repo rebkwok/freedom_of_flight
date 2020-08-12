@@ -416,6 +416,17 @@ class CourseUpdateViewTests(EventTestMixin, TestUsersMixin, TestCase):
         form = resp.context_data["form"]
         assert isinstance(form.fields["event_type"].widget, forms.Select)
 
+    def test_cancelled_field_only_shown_for_cancelled_courses(self):
+        resp = self.client.get(self.url)
+        form = resp.context_data["form"]
+        assert isinstance(form.fields["cancelled"].widget, forms.HiddenInput)
+
+        self.course.cancelled = True
+        self.course.save()
+        resp = self.client.get(self.url)
+        form = resp.context_data["form"]
+        assert isinstance(form.fields["cancelled"].widget, forms.CheckboxInput)
+
     def test_update_events_on_course(self):
         assert self.course.events.count() == 0
         event = baker.make_recipe("booking.future_event", event_type=self.course.event_type)

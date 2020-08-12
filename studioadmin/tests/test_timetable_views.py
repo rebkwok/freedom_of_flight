@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from datetime import datetime, date, time
+from datetime import datetime, date, time, timedelta
 from model_bakery import baker
 from unittest.mock import patch
 
@@ -373,3 +373,12 @@ class TimetableUploadViewTests(EventTestMixin, TestUsersMixin, TestCase):
         }
         # goes to the tab for the invalid form
         assert resp.context_data["tab"] == 1
+
+        # invalid dated
+        data.update({
+            "start_date": (timezone.now() + timedelta(7)).strftime("%d-%b-%Y"),
+            "end_date": (timezone.now() + timedelta(6)).strftime("%d-%b-%Y"),
+        })
+        resp = self.client.post(self.url, data=data)
+        form = resp.context_data["track_sessions"][1]["form"]
+        assert form.errors == {"end_date": ["End date must be after start date"]}

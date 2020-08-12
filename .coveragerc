@@ -1,0 +1,2 @@
+[run]
+omit = freedom_of_flight/asgi.py,freedom_of_flight/wsgi.py,manage.py

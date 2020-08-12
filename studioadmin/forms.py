@@ -388,7 +388,9 @@ class UploadTimetableForm(forms.Form):
             required=True,
             label="Choose sessions to upload:"
         )
-        self.fields[f"sessions_{track_index}"].initial = [choice[0] for choice in self.fields[f"sessions_{track_index}"].choices]
+        self.fields[f"sessions_{track_index}"].initial = [
+            choice[0] for choice in self.fields[f"sessions_{track_index}"].choices
+        ]
         self.fields["start_date"].widget.attrs.update({"class": "upload_start"})
 
         self.helper = FormHelper()
