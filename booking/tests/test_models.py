@@ -292,12 +292,43 @@ class CourseTests(EventTestMixin, TestCase):
         assert self.course.is_configured() is False
 
     def test_changing_max_participants_updates_linked_events(self):
-        # TODO
-        pass
+        event = baker.make_recipe(
+            "booking.future_event", event_type=self.course.event_type, max_participants=20,
+        )
+        assert event.max_participants == 20
+        assert self.course.max_participants == 2
+        event.course = self.course
+        event.save()
+        assert event.max_participants == 2
+
+        self.course.max_participants = 10
+        self.course.save()
+        event.refresh_from_db()
+        assert event.max_participants == 10
+
+    def test_changing_show_on_site_updates_linked_events(self):
+        event = baker.make_recipe(
+            "booking.future_event", event_type=self.course.event_type, show_on_site=False,
+        )
+        assert event.show_on_site is False
+        assert self.course.show_on_site is True
+        event.course = self.course
+        event.save()
+        assert event.show_on_site is True
 
     def test_cancelling_course_cancels_linked_events(self):
-        # TODO
-        pass
+        event = baker.make_recipe(
+            "booking.future_event", event_type=self.course.event_type, cancelled=False,
+        )
+        assert event.cancelled is False
+        assert self.course.cancelled is False
+        event.course = self.course
+        event.save()
+
+        self.course.cancelled = True
+        self.course.save()
+        event.refresh_from_db()
+        assert event.cancelled is True
 
 
 class BlockConfigTests(TestCase):
