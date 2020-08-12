@@ -53,10 +53,8 @@ class Track(models.Model):
         if default:
             return default[0]
         else:
-            try:
-                return Track.objects.first()
-            except Track.DoesNotExist:
-                return None
+            # returns the first one, or None
+            return Track.objects.first()
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
@@ -273,18 +271,6 @@ class BlockConfig(models.Model):
 
     def blocks_purchased(self):
         return self.block_set.filter(paid=True).count()
-
-
-class BaseBlockConfig(models.Model):
-    """Holds cost and event info for a Course or block of (drop in) events"""
-    identifier = models.CharField(max_length=255)
-    description = models.TextField(null=True, blank=True)
-    cost = models.DecimalField(max_digits=8, decimal_places=2)
-    duration = models.PositiveIntegerField(help_text="Number of weeks until block expires (from first use)", default=4, null=True, blank=True)
-    active = models.BooleanField(default=False)
-
-    def __str__(self):
-        return self.identifier
 
 
 class BaseVoucher(models.Model):
@@ -548,7 +534,6 @@ class Booking(models.Model):
     def _old_booking(self):
         if self.pk:
             return Booking.objects.get(pk=self.pk)
-        return None
 
     def _is_new_booking(self):
         if not self.pk:
@@ -632,3 +617,42 @@ class GiftVoucherType(models.Model):
 
     def __str__(self):
         return f"{self.block_config} -  £{self.cost}"
+
+
+class Subscription(models.Model):
+    name = models.CharField(max_length=255, unique=True)
+    description = models.TextField(null=True, blank=True)
+    cost = models.DecimalField(max_digits=8, decimal_places=2)
+    duration = models.PositiveIntegerField(
+        help_text="How long does the subscription run for (weeks/months) until renewal", default=1
+    )
+    duration_units = models.CharField(max_length=255, default="months", choices=(("weeks", "weeks"), ("months", "months")))
+    start_date = models.DateTimeField(default=timezone.now)
+    recurrence = models.BooleanField(default=True, help_text="Subscription automatically renews and bills students")
+    recur_options = models.CharField(
+        max_length=255,
+        choices=(
+            ("start_date", "Recur from the specified start date"),
+            ("signup_date", "Recur from the date students sign up")
+        ),
+        help_text="Control when subscription renews and bills.  Choose start date to run the subscription for a set "
+                  "time period (e.g. from the 1st of each month).  Choose sign up date to have the subscription renew "
+                  "for each student from the date they first signed up."
+    )
+    purchasable = models.BooleanField(default=True, help_text="Visible on site and available to purchase")
+    status = models.CharField(
+        max_length=20,
+        default="active",
+        choices=(("active", "active"), ("paused", "paused"), ("cancelled", "cancelled"))
+    )
+
+
+class PurchasedSubscription(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    subscription = models.ForeignKey(Subscription, on_delete=models.CASCADE)
+    paid = models.BooleanField(default=False)
+    status = models.CharField(
+        max_length=20,
+        default="active",
+        choices=(("active", "active"), ("paused", "paused"), ("cancelled", "cancelled"))
+    )
