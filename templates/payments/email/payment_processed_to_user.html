@@ -10,6 +10,9 @@
         {% for block in invoice.blocks.all %}
             <li>{{ block }}</li>
         {% endfor %}
+        {% for subscription in invoice.subscription.all %}
+            <li>{{ subscription }}</li>
+        {% endfor %}
     </ul>
 </p>
 {% endblock %}

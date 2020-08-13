@@ -1,28 +1,26 @@
 # -*- coding: utf-8 -*-
-from datetime import datetime
+import calendar
+from datetime import datetime, timedelta
 from decimal import Decimal
 import logging
 import pytz
-import shortuuid
 
 from django.db import models
 from django.conf import settings
 from django.contrib.auth.models import Group, User
 from django.core.exceptions import ValidationError
+from django.contrib.postgres.fields import JSONField
 from django.urls import reverse
-from django.db.models.signals import pre_save, post_save
-from django.dispatch import receiver
-from django.template.defaultfilters import pluralize
 from django.utils import timezone
 from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
 
+from delorean import Delorean
 from django_extensions.db.fields import AutoSlugField
-
-from datetime import timedelta
 from dateutil.relativedelta import relativedelta
 
 from activitylog.models import ActivityLog
+from common.utils import start_of_day_in_utc, end_of_day_in_utc, end_of_day_in_local_time
 from payments.models import Invoice
 
 from .utils import has_available_block as has_available_block_util
@@ -362,14 +360,6 @@ class Block(models.Model):
         percentage_to_pay = (100 - self.voucher.discount) / 100
         return Decimal(float(self.block_config.cost) * percentage_to_pay).quantize(Decimal('.05'))
 
-    def _get_end_of_day(self, input_datetime):
-        end_of_day_utc = datetime.combine(input_datetime, datetime.max.time())
-        end_of_day_utc = end_of_day_utc.replace(tzinfo=timezone.utc)
-        uktz = pytz.timezone('Europe/London')
-        end_of_day_uk = end_of_day_utc.astimezone(uktz)
-        utc_offset = end_of_day_uk.utcoffset()
-        return end_of_day_utc - utc_offset
-
     def get_expiry_date(self):
         # if a manual extended expiry date has been set, use that instead
         # (unless it's been set to be earlier than the calculated expiry date)
@@ -386,7 +376,7 @@ class Block(models.Model):
             # back 1 sec
             duration = self.block_config.duration
             expiry_datetime = self.start_date + relativedelta(weeks=duration)
-            return self._get_end_of_day(expiry_datetime)
+            return end_of_day_in_local_time(expiry_datetime)
         else:
             self.expiry_date = None
 
@@ -473,12 +463,369 @@ class Block(models.Model):
 
         # make manual expiry date end of day
         if self.manual_expiry_date:
-            self.manual_expiry_date = self._get_end_of_day(self.manual_expiry_date)
+            self.manual_expiry_date = end_of_day_in_local_time(self.manual_expiry_date)
             self.expiry_date = self.manual_expiry_date
 
         # start date is set to the first date the block is used and used to generate expiry date
         if self.start_date:
             self.expiry_date = self.get_expiry_date()
+        super().save(*args, **kwargs)
+
+
+class WaitingListUser(models.Model):
+    """
+    A model to represent a single user on a waiting list for an event
+    """
+    user = models.ForeignKey(
+        User, related_name='waitinglists', on_delete=models.CASCADE
+    )
+    event = models.ForeignKey(
+        Event, related_name='waitinglistusers', on_delete=models.CASCADE
+    )
+    # date user joined the waiting list
+    date_joined = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['user', 'event'])
+        ]
+
+
+class GiftVoucherType(models.Model):
+    block_config = models.ForeignKey(
+        BlockConfig, null=True, blank=True, on_delete=models.SET_NULL, related_name="gift_vouchers"
+    )
+    active = models.BooleanField(default=True, help_text="Display on site; set to False instead of deleting unused voucher types")
+
+    @cached_property
+    def cost(self):
+        return self.block_config.cost
+
+    def __str__(self):
+        return f"{self.block_config} -  £{self.cost}"
+
+
+class SubscriptionConfig(models.Model):
+    name = models.CharField(max_length=255, unique=True)
+    description = models.TextField(null=True, blank=True)
+    cost = models.DecimalField(max_digits=8, decimal_places=2)
+    duration = models.PositiveIntegerField(
+        help_text="How long does the subscription run for (weeks/months)?", default=1
+    )
+    duration_units = models.CharField(max_length=255, default="months", choices=(("weeks", "weeks"), ("months", "months")))
+    start_date = models.DateTimeField(
+        default=timezone.now,
+        null=True, blank=True,
+        help_text="Date that this subscription first starts.  If subscription recurs monthly, set to a date 1st-28th to "
+                  "ensure consistent recurral."
+    )
+    recurrence = models.BooleanField(default=True, help_text="Subscription automatically renews and bills students")
+    start_options = models.CharField(
+        max_length=255,
+        default="start_date",
+        choices=(
+            ("start_date", "Start from the specified start date"),
+            ("signup_date", "Start from the date students sign up"),
+            ("first_booking_date", "Start from date of first booked event"),
+        ),
+        help_text="Control when subscriptions start.  Choose start date to run the subscription for a set "
+                  "time period (e.g. from the 1st of each month).  The first subscription period will start on the start date "
+                  "you specify, and subsequent subscription period will recur from that date. Choose sign up date to have the "
+                  "subscription start individually for each student from the date they sign up and purchase."
+    )
+    active = models.BooleanField(default=True, help_text="Visible on site and available to purchase")
+    advance_purchase_allowed = models.BooleanField(
+        default=True,
+        help_text="Allow students to purchase the next period's subscription before the current one has finished. This is "
+                  "recommended if this subscription allows students to make bookings for scheduled events."
+    )
+    partial_purchase_allowed = models.BooleanField(
+        default=False,
+        help_text="For subscriptions with a specific start date, allow purchase of the current subscription period at"
+                  "a reduced price per remaining week."
+    )
+    cost_per_week = models.DecimalField(
+        max_digits=8, decimal_places=2, null=True, blank=True,
+        help_text="For subscriptions allowing partial purchase.  The price that will be charged per week/partial "
+                  "week remaining in the current subscription period"
+    )
+
+    # dicts, keyed by event type id
+    # indicates event types this subscription can be used for, and restrictions on use
+    # {
+    #   <event_type_id>: {"number_allowed": <int> or None, "allowed_unit": day/week/month}
+    # }
+    # NOT VALID FOR COURSES
+    # Can find valid event types for a single config with EventType.objects.filter(id__in=config.bookable_event_types.keys())
+    # find user's subscriptions that are valid for an event type
+    # order by next expiry date first (in case of None values, secondary ordering by start and purchase dates
+    # subscriptions = user.subscriptions.filter(config__bookable_event_types__has_key(event.event_type.id)).order_by("expiry_date", "start_date", "purchase_date")
+    # Then check usages, get the next subscription that is allowed.  Usually there'll only be one, but just in case
+    bookable_event_types = JSONField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.name} ({'active' if self.active else 'inactive'})"
+
+    def get_start_options_for_user(self, user):
+        """
+        Get the purchasable subscriptions for this user
+        start_options = signup_date:
+           check for current subscription - one that is paid, has started and hasn't expired yet
+           no current subscription: show option to purchase with start date today
+           current subscription AND advance purchase allowed: show option to purchase with start date next period
+        start_options = first_booking_date
+            check for current active subscription: paid, has start date (i.e. has been used) and hasn't expired yet
+            check for pending subscriptions: paid, no start date
+            if user has no active or pending subscriptions, show option to purchase
+            if user has active, no pending subscriptions AND advance purchase allowed, show option to purchase
+        start_options = start_date
+            Find current and next start dates based on config start date
+            Return both if user doesn't have them yet AND advance purchase allowed
+        """
+        # Find the non-expired user subscription for this config
+        start_date_options = []
+        user_subscriptions = user.subscriptions.filter(config=self, expiry_date__gt=timezone.now())
+        if self.start_options == "signup_date":
+            active_user_subscriptions = user.subscriptions.filter(config=self, start_date__lt=timezone.now(), expiry_date__gt=timezone.now())
+            if not active_user_subscriptions:
+                start_date_options.append(start_of_day_in_utc(timezone.now()))
+            elif self.advance_purchase_allowed or active_user_subscriptions.first().expires_soon():
+                current_subscription = active_user_subscriptions.first()
+                next_start = self.calculate_next_start_date(current_subscription.start_date)
+                start_date_options.append(next_start)
+
+        elif self.start_options == "first_booking_date":
+            pending_user_subscriptions = user.subscriptions.filter(config=self, start_date__isnull=True)
+            active_user_subscriptions = user.subscriptions.filter(config=self, start_date__isnull=False, expiry_date__gt=timezone.now())
+            if not active_user_subscriptions.exists() and not pending_user_subscriptions.exists():
+                # no subscriptions
+                start_date_options.append(None)
+            elif active_user_subscriptions.exists() and not pending_user_subscriptions.exists():
+                # has an active subscription but no pending, check if allowed to buy another
+                if self.advance_purchase_allowed or active_user_subscriptions.first().expires_soon():
+                    start_date_options.append(None)
+
+        elif self.start_options == "start_date":
+            current_subscription_start_date = self.get_subscription_period_start_date()
+            next_subscription_start_date = self.get_subscription_period_start_date(next=True)
+            user_has_current = user_subscriptions.filter(start_date=current_subscription_start_date).exists()
+            user_has_next = user_subscriptions.filter(start_date=next_subscription_start_date).exists()
+            if not user_has_current and current_subscription_start_date >= self.start_date:
+                start_date_options.append(current_subscription_start_date)
+            if not user_has_next:
+                # can purchase in advance, or next subscription start is within 3 days
+                if self.advance_purchase_allowed or ((next_subscription_start_date - start_of_day_in_utc(timezone.now())).days <= 3):
+                    start_date_options.append(next_subscription_start_date)
+        return start_date_options
+
+    def calculate_next_start_date(self, input_datetime):
+        if self.duration_units == "weeks":
+            return input_datetime + timedelta(weeks=self.duration)
+        else:
+            return input_datetime + relativedelta(months=self.duration)
+
+    def get_subscription_period_start_date(self, next=False):
+        # replace expiry date with very end of day in local time
+        if self.start_options == "start_date":
+            # find most recent matching start date from config
+            if self.duration_units == "weeks":
+                # recurs on the same day of the week
+                weekday = self.start_date.weekday()
+                if timezone.now().weekday() == weekday:
+                    calculated_start = start_of_day_in_utc(Delorean(timezone.now(), timezone="utc").datetime)
+                else:
+                    weekday_method = f"{'next' if next else 'last'}_{calendar.day_name[weekday].lower()}"
+                    calculated_start = getattr(Delorean(timezone.now(), timezone="utc"), weekday_method)()
+                    calculated_start = start_of_day_in_utc(calculated_start.datetime)
+                # get time in weeks between calculated weekday and start
+                time_diff = (calculated_start - self.start_date).days / 7
+                remainder = time_diff % self.duration
+                if next:
+                    # we calculated the next weekday
+                    if self.duration > 1:
+                        remainder = self.duration - remainder
+                    return calculated_start + timedelta(weeks=remainder)
+                else:
+                    return calculated_start - timedelta(weeks=remainder)
+            else:
+                # recurs monthly
+                now = timezone.now()
+                day_of_month = self.start_date.day
+                if now.day >= day_of_month:
+                    start_month = now.month + 1 if next else now.month
+                else:
+                    start_month = now.month if next else now.month - 1
+                calculated_start = start_of_day_in_utc(
+                    datetime(day=day_of_month, month=start_month, year=now.year, tzinfo=timezone.utc)
+                )
+                time_diff = relativedelta(calculated_start, self.start_date)
+                # in case of DST differences
+                remainder = time_diff.months % self.duration
+                if next:
+                    return calculated_start + relativedelta(months=remainder)
+                else:
+                    return calculated_start - relativedelta(months=remainder)
+
+    def clean(self):
+        # 1. if partial_purchase_allowed, cost per week is required
+        # 2. if partial_purchase_allowed, start_options must be start_date
+        # 3. if start_options is start_date, start date is required
+        if self.partial_purchase_allowed and not self.cost_per_week:
+            raise ValidationError({'cost_per_week': _('Required when partial purchase is allowed.')})
+        if self.partial_purchase_allowed and self.start_options != "start_date":
+            raise ValidationError({'start_date': _('Must be start_date when partial purchase is allowed.')})
+        if self.start_options == "start_date" and not self.start_date:
+            raise ValidationError({'start_date': _('This field is required.')})
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        if self.start_date:
+            if self.recurrence and self.start_options == "start_date" and self.duration_units == "months" and self.start_date.day > 28:
+                self.start_date = self.start_date.replace(day=28)
+            # Keep the start date in UTC, otherwise calculating the current/next subscription periods is insanely compilcated
+            self.start_date = start_of_day_in_utc(self.start_date)
+        super(SubscriptionConfig, self).save(*args, **kwargs)
+
+
+class Subscription(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="subscriptions")
+    config = models.ForeignKey(SubscriptionConfig, on_delete=models.CASCADE)
+    invoice = models.ForeignKey(
+        Invoice, null=True, blank=True, on_delete=models.SET_NULL, related_name="subscriptions"
+    )
+    paid = models.BooleanField(default=False)
+    status = models.CharField(
+        max_length=20,
+        default="active",
+        choices=(("pending", "pending"), ("active", "active"), ("paused", "paused"), ("cancelled", "cancelled"))
+    )
+    purchase_date = models.DateTimeField(default=timezone.now)
+    # start date should be specified on instantiation
+    start_date = models.DateTimeField(null=True, blank=True)
+    # set during save
+    expiry_date = models.DateTimeField(null=True, blank=True)
+
+    reminder_sent = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"{self.user.username} -- {self.config.name} -- starts {self.start_date.strftime('%d %b %Y')} -- expires {self.expiry_date.strftime('%d %b %Y')}"
+
+    def valid_for_event(self, event):
+        if event.course:
+            return False
+        if not self.paid:
+            return False
+        if self.config.bookable_event_types:
+            bookable_event_type = self.config.bookable_event_types.get(event.event_type.id)
+            if bookable_event_type:
+                # check event date is within subscription dates
+                if self.start_date and self.start_date > event.start:
+                    # subscription starts after event
+                    return False
+                if self.expiry_date and self.expiry_date < event.start:
+                    # subscription expires before event
+                    return False
+                # check usages
+                allowed_number = bookable_event_type["allowed_number"]
+                if allowed_number is None:
+                    # no max
+                    return True
+                allowed_unit = bookable_event_type["allowed_unit"]
+                if allowed_unit == "day":
+                    # find existing open bookings, excluding ones for this event, on the same day
+                    # no-show bookings don't count in usage
+                    existing_bookings = self.bookings.filter(
+                        event__start__date=event.start.date, status="OPEN", no_show=False
+                    ).exclude(event_id=event.id)
+                    return len(existing_bookings) < allowed_number
+                else:
+                    if allowed_unit == "week":
+                        subscription_start_weekday = self.start_date.weekday()
+                        # calculate start and end dates for the week of the event, starting on the start_weekday
+                        # find existing open bookings within those dates, excluding ones for this event
+                        # no-show bookings don't count in usage
+                        days_from_start = subscription_start_weekday - event.start.weekday()
+                        start = start_of_day_in_utc(event.start + timedelta(days_from_start))
+                        end = start_of_day_in_utc(start + timedelta(weeks=1))
+                    elif allowed_unit == "month":
+                        subscription_start_day = self.start_date.day
+                        # calculate start and end dates for the month of the event, starting on the start_day
+                        # find existing open bookings within those dates, excluding ones for this event
+                        # no-show bookings don't count in usage
+                        if event.start.day >= subscription_start_day:
+                            start = event.start.replace(day=subscription_start_day)
+                        else:
+                            event_month = event.start.month
+                            start = event.start.replace(month=event_month - 1, day=subscription_start_day)
+                        start = start_of_day_in_utc(start)
+                        end = start_of_day_in_utc(start + relativedelta(months=1))
+                    existing_bookings = self.bookings.filter(
+                        event__start__gte=start, event__start__lt=end, status="OPEN", no_show=False
+                    ).exclude(event_id=event.id)
+                    return len(existing_bookings) < allowed_number
+        return False
+
+    def set_start_date_from_bookings(self):
+        """For subscriptions that start on the date of first booking"""
+        if self.config.start_options == "first_booking_date":
+            first_booking = self.bookings.filter(status="OPEN").first("start_date")
+            if first_booking:
+                self.start_date = first_booking.event.start
+            else:
+                self.start_date = None
+            self.save()
+
+    def calculate_cost_as_of_today(self):
+        if self.config.partial_purchase_allowed:
+            date_of_purchase = start_of_day_in_utc(timezone.now())
+            if self.start_date < (date_of_purchase - timedelta(weeks=1)):
+                # purchasing the current period more than a week after the start date
+                # calculate the number of weeks/partial weeks left in the subscription period
+                time_to_expiry = relativedelta(self.expiry_date, date_of_purchase)
+                weeks = time_to_expiry.weeks
+                remaining_days = time_to_expiry.days % 7
+                if remaining_days > 1:
+                    # if there's only one day in a partial week, don't charge a full week for it
+                    weeks += 1
+                return weeks * self.config.cost_per_week
+        return self.config.cost
+
+    def expires_soon(self):
+        if self.expiry_date:
+            return (self.expiry_date - timezone.now()) <= 3
+        return False
+
+    def has_started(self):
+        return self.start_date < timezone.now()
+
+    def get_expiry_date(self):
+        # replace expiry date with very end of day in UTC
+        if self.config.duration_units == "weeks":
+            delta = relativedelta(weeks=self.config.duration)
+        else:
+            delta = relativedelta(months=self.config.duration)
+        expiry_datetime = self.start_date + delta
+        return end_of_day_in_utc(expiry_datetime)
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        # for an existing subscription, if changed to paid, update purchase date and start date to now
+        # start date will be re-calculated
+        # (in case a user leaves it sitting in basket for a while)
+        if self.id:
+            pre_save_subscription = Subscription.objects.get(id=self.id)
+            if not pre_save_subscription.paid and self.paid:
+                self.purchase_date = timezone.now()
+                # only reset the start date for signup start options where the start date hasn't been explicitly
+                # set to a future date
+                if self.config.start_options == "signup_date" and self.start_date < timezone.now():
+                    self.start_date = start_of_day_in_utc(timezone.now())
+                self.status = "active"
+
+        if not self.paid:
+            self.status = "pending"
+
+        self.expiry_date = self.get_expiry_date()
         super().save(*args, **kwargs)
 
 
@@ -500,6 +847,9 @@ class Booking(models.Model):
 
     block = models.ForeignKey(
         Block, related_name='bookings', null=True, blank=True, on_delete=models.SET_NULL
+    )
+    subscription = models.ForeignKey(
+        Subscription, related_name='bookings', null=True, blank=True, on_delete=models.SET_NULL
     )
     status = models.CharField(max_length=255, choices=STATUS_CHOICES, default='OPEN')
     attended = models.BooleanField(default=False, help_text='Student has attended this event')
@@ -585,74 +935,6 @@ class Booking(models.Model):
         elif old_block:
             old_block.set_start_date()
 
-
-class WaitingListUser(models.Model):
-    """
-    A model to represent a single user on a waiting list for an event
-    """
-    user = models.ForeignKey(
-        User, related_name='waitinglists', on_delete=models.CASCADE
-    )
-    event = models.ForeignKey(
-        Event, related_name='waitinglistusers', on_delete=models.CASCADE
-    )
-    # date user joined the waiting list
-    date_joined = models.DateTimeField(default=timezone.now)
-
-    class Meta:
-        indexes = [
-            models.Index(fields=['user', 'event'])
-        ]
-
-
-class GiftVoucherType(models.Model):
-    block_config = models.ForeignKey(
-        BlockConfig, null=True, blank=True, on_delete=models.SET_NULL, related_name="gift_vouchers"
-    )
-    active = models.BooleanField(default=True, help_text="Display on site; set to False instead of deleting unused voucher types")
-
-    @cached_property
-    def cost(self):
-        return self.block_config.cost
-
-    def __str__(self):
-        return f"{self.block_config} -  £{self.cost}"
-
-
-class Subscription(models.Model):
-    name = models.CharField(max_length=255, unique=True)
-    description = models.TextField(null=True, blank=True)
-    cost = models.DecimalField(max_digits=8, decimal_places=2)
-    duration = models.PositiveIntegerField(
-        help_text="How long does the subscription run for (weeks/months) until renewal", default=1
-    )
-    duration_units = models.CharField(max_length=255, default="months", choices=(("weeks", "weeks"), ("months", "months")))
-    start_date = models.DateTimeField(default=timezone.now)
-    recurrence = models.BooleanField(default=True, help_text="Subscription automatically renews and bills students")
-    recur_options = models.CharField(
-        max_length=255,
-        choices=(
-            ("start_date", "Recur from the specified start date"),
-            ("signup_date", "Recur from the date students sign up")
-        ),
-        help_text="Control when subscription renews and bills.  Choose start date to run the subscription for a set "
-                  "time period (e.g. from the 1st of each month).  Choose sign up date to have the subscription renew "
-                  "for each student from the date they first signed up."
-    )
-    purchasable = models.BooleanField(default=True, help_text="Visible on site and available to purchase")
-    status = models.CharField(
-        max_length=20,
-        default="active",
-        choices=(("active", "active"), ("paused", "paused"), ("cancelled", "cancelled"))
-    )
-
-
-class PurchasedSubscription(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    subscription = models.ForeignKey(Subscription, on_delete=models.CASCADE)
-    paid = models.BooleanField(default=False)
-    status = models.CharField(
-        max_length=20,
-        default="active",
-        choices=(("active", "active"), ("paused", "paused"), ("cancelled", "cancelled"))
-    )
+        # if there is a subscription on the booking, make sure its start date is updated
+        if self.subscription:
+            self.subscription.set_start_date_from_bookings()

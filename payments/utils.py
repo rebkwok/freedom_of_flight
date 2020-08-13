@@ -21,8 +21,9 @@ def get_paypal_form(request, invoice):
     }
 
     blocks = invoice.blocks.all()
+    subscriptions = invoice.subscriptions.all()
     # TODO products - for later
-    for i, block in enumerate(blocks):
+    for i, block in enumerate(blocks, start=1):
         if block.voucher:
             amount = block.cost_with_voucher
         else:
@@ -30,9 +31,17 @@ def get_paypal_form(request, invoice):
         item_name = str(block.block_config)
         paypal_dict.update(
             {
-                'item_name_{}'.format(i + 1): item_name,
-                'amount_{}'.format(i + 1): amount,
-                'quantity_{}'.format(i + 1): 1,
+                'item_name_{}'.format(i): item_name,
+                'amount_{}'.format(i): amount,
+                'quantity_{}'.format(i): 1,
+            }
+        )
+    for i, subscription in enumerate(subscriptions, start=len(blocks) + 1):
+        paypal_dict.update(
+            {
+                'item_name_{}'.format(i): f"{subscription.subscription.name} (subscription)",
+                'amount_{}'.format(i): subscription.config.cost,
+                'quantity_{}'.format(i): 1,
             }
         )
 

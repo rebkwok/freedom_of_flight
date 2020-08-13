@@ -10,5 +10,5 @@ Paypal Transaction id: {{ invoice.transaction_id }}
 User: {{ user.first_name}} {{ user.last_name}}
 Purchased:
 {% for block in invoice.blocks.all %}-{{ block }}{% endfor %}
-
+{% for subscription in invoice.subscription.all %}{{ subscription }}{% endfor %}
 {% endblock %}

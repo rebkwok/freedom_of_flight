@@ -2,7 +2,7 @@ from django.contrib import admin
 
 from .models import (
     Block, BlockConfig, Booking, BlockVoucher, GiftVoucherType,
-    Course, Event, EventType, Track, WaitingListUser
+    Course, Event, EventType, Track, WaitingListUser, SubscriptionConfig, Subscription
 )
 
 
@@ -41,6 +41,11 @@ class CourseAdmin(admin.ModelAdmin):
     inlines = (EventInline,)
 
 
+class SubscriptionAdmin(admin.ModelAdmin):
+    model = Subscription
+    inlines = (BookingInline,)
+
+
 admin.site.site_header = "Freedom of Flight Admin"
 admin.site.register(Event, EventAdmin)
 admin.site.register(Track, TrackAdmin)
@@ -52,3 +57,5 @@ admin.site.register(EventType)
 admin.site.register(WaitingListUser)
 admin.site.register(BlockVoucher)
 admin.site.register(GiftVoucherType)
+admin.site.register(Subscription, SubscriptionAdmin)
+admin.site.register(SubscriptionConfig)

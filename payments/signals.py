@@ -30,6 +30,9 @@ def process_ipn(sender, **kwargs):
                     for block in invoice.blocks.all():
                         block.paid = True
                         block.save()
+                    for subscription in invoice.subscriptions.all():
+                        subscription.paid = True
+                        subscription.save()
                     invoice.transaction_id = ipn_obj.txn_id
                     invoice.save()
                     # SEND EMAILS
