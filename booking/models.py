@@ -639,8 +639,7 @@ class SubscriptionConfig(models.Model):
 
     def get_subscription_period_start_date(self, next=False):
         if not self.recurring:
-            return self.start_date
-
+            return self.start_date if not next else None
         # replace expiry date with very end of day in local time
         if self.start_options == "start_date":
             # find most recent matching start date from config
@@ -648,7 +647,13 @@ class SubscriptionConfig(models.Model):
                 # recurs on the same day of the week
                 weekday = self.start_date.weekday()
                 if timezone.now().weekday() == weekday:
-                    calculated_start = start_of_day_in_utc(Delorean(timezone.now(), timezone="utc").datetime)
+                    if next:
+                        calculated_start = getattr(
+                            Delorean(timezone.now(), timezone="utc"), f"{'next'}_{calendar.day_name[weekday].lower()}"
+                        )()
+                        calculated_start = start_of_day_in_utc(calculated_start.datetime)
+                    else:
+                        calculated_start = start_of_day_in_utc(Delorean(timezone.now(), timezone="utc").datetime)
                 else:
                     weekday_method = f"{'next' if next else 'last'}_{calendar.day_name[weekday].lower()}"
                     calculated_start = getattr(Delorean(timezone.now(), timezone="utc"), weekday_method)()
@@ -822,21 +827,12 @@ class Subscription(models.Model):
 
     def expires_soon(self):
         if self.expiry_date:
-            return (self.expiry_date - timezone.now()) <= 3
+            return (self.expiry_date - timezone.now()).days <= 3
         return False
-
-    def has_started(self):
-        return self.start_date < timezone.now()
 
     def get_expiry_date(self):
         if self.start_date:
-            # replace expiry date with very end of day in UTC
-            if self.config.duration_units == "weeks":
-                delta = relativedelta(weeks=self.config.duration)
-            else:
-                delta = relativedelta(months=self.config.duration)
-            expiry_datetime = self.start_date + delta
-            return end_of_day_in_utc(expiry_datetime)
+            return self.config.calculate_next_start_date(self.start_date)
 
     def save(self, *args, **kwargs):
         self.full_clean()
