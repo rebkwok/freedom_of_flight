@@ -519,7 +519,7 @@ class SubscriptionConfig(models.Model):
         help_text="Date that this subscription first starts.  If subscription recurs monthly, set to a date 1st-28th to "
                   "ensure consistent recurral."
     )
-    recurrence = models.BooleanField(default=True, help_text="Subscription automatically renews and bills students")
+    recurring = models.BooleanField(default=True, help_text="Subscription automatically renews and bills students")
     start_options = models.CharField(
         max_length=255,
         default="start_date",
@@ -566,6 +566,14 @@ class SubscriptionConfig(models.Model):
     def __str__(self):
         return f"{self.name} ({'active' if self.active else 'inactive'})"
 
+    def is_purchaseable(self):
+        """A subscription is purchaseable is it's active and recurring, or it's one-off and hasn't exipred yet"""
+        if self.active:
+            if self.recurring:
+                return True
+            return self.calculate_next_start_date(self.start_date) > timezone.now()
+        return False
+
     def get_start_options_for_user(self, user):
         """
         Get the purchasable subscriptions for this user
@@ -585,7 +593,12 @@ class SubscriptionConfig(models.Model):
         # Find the non-expired user subscription for this config
         start_date_options = []
         user_subscriptions = user.subscriptions.filter(config=self, expiry_date__gt=timezone.now())
-        if self.start_options == "signup_date":
+        if not self.recurring:
+            # Not recurring, only one subscription period, start on config start date
+            if not user_subscriptions.exists():
+                start_date_options.append(self.start_date)
+
+        elif self.start_options == "signup_date":
             active_user_subscriptions = user.subscriptions.filter(config=self, start_date__lt=timezone.now(), expiry_date__gt=timezone.now())
             if not active_user_subscriptions:
                 start_date_options.append(start_of_day_in_utc(timezone.now()))
@@ -625,6 +638,9 @@ class SubscriptionConfig(models.Model):
             return input_datetime + relativedelta(months=self.duration)
 
     def get_subscription_period_start_date(self, next=False):
+        if not self.recurring:
+            return self.start_date
+
         # replace expiry date with very end of day in local time
         if self.start_options == "start_date":
             # find most recent matching start date from config
@@ -670,17 +686,23 @@ class SubscriptionConfig(models.Model):
         # 1. if partial_purchase_allowed, cost per week is required
         # 2. if partial_purchase_allowed, start_options must be start_date
         # 3. if start_options is start_date, start date is required
+        # 4. if recurring is False, start date is required and start_options must be start_date
         if self.partial_purchase_allowed and not self.cost_per_week:
             raise ValidationError({'cost_per_week': _('Required when partial purchase is allowed.')})
         if self.partial_purchase_allowed and self.start_options != "start_date":
-            raise ValidationError({'start_date': _('Must be start_date when partial purchase is allowed.')})
+            raise ValidationError({'start_options': _('Must be start_date when partial purchase is allowed.')})
         if self.start_options == "start_date" and not self.start_date:
             raise ValidationError({'start_date': _('This field is required.')})
+        if not self.recurring:
+            if self.start_options != "start_date":
+                raise ValidationError({'start_options': _('Must be start_date for one-off subscriptions.')})
+            if not self.start_date:
+                raise ValidationError({'start_date': _('This field is required for one-off subscription.')})
 
     def save(self, *args, **kwargs):
         self.full_clean()
         if self.start_date:
-            if self.recurrence and self.start_options == "start_date" and self.duration_units == "months" and self.start_date.day > 28:
+            if self.recurring and self.start_options == "start_date" and self.duration_units == "months" and self.start_date.day > 28:
                 self.start_date = self.start_date.replace(day=28)
             # Keep the start date in UTC, otherwise calculating the current/next subscription periods is insanely compilcated
             self.start_date = start_of_day_in_utc(self.start_date)
@@ -708,7 +730,11 @@ class Subscription(models.Model):
     reminder_sent = models.BooleanField(default=False)
 
     def __str__(self):
-        return f"{self.user.username} -- {self.config.name} -- starts {self.start_date.strftime('%d %b %Y')} -- expires {self.expiry_date.strftime('%d %b %Y')}"
+        if self.start_date:
+            dates_string = f"starts {self.start_date.strftime('%d %b %Y')} -- expires {self.expiry_date.strftime('%d %b %Y')}"
+        else:
+            dates_string = "not started yet"
+        return f"{self.user.username} -- {self.config.name} -- {dates_string} ({'paid' if self.paid else 'unpaid'})"
 
     def valid_for_event(self, event):
         if event.course:
@@ -767,10 +793,13 @@ class Subscription(models.Model):
 
     def set_start_date_from_bookings(self):
         """For subscriptions that start on the date of first booking"""
+        # called when a booking is made to ensure subscription start/expiry is updated to the
+        # date of the first open booked event
+        # Check for ANY open booking - no-shows still count towards start dates
         if self.config.start_options == "first_booking_date":
-            first_booking = self.bookings.filter(status="OPEN").first("start_date")
-            if first_booking:
-                self.start_date = first_booking.event.start
+            open_bookings = self.bookings.filter(status="OPEN").order_by("event__start")
+            if open_bookings.exists():
+                self.start_date = start_of_day_in_utc(open_bookings.first().event.start)
             else:
                 self.start_date = None
             self.save()
@@ -784,8 +813,9 @@ class Subscription(models.Model):
                 time_to_expiry = relativedelta(self.expiry_date, date_of_purchase)
                 weeks = time_to_expiry.weeks
                 remaining_days = time_to_expiry.days % 7
-                if remaining_days > 1:
-                    # if there's only one day in a partial week, don't charge a full week for it
+                if remaining_days > 1 and weeks > 0:
+                    # if there's only one day in a partial week, don't charge a full week for it (unless it's the last
+                    # week)
                     weeks += 1
                 return weeks * self.config.cost_per_week
         return self.config.cost
@@ -799,13 +829,14 @@ class Subscription(models.Model):
         return self.start_date < timezone.now()
 
     def get_expiry_date(self):
-        # replace expiry date with very end of day in UTC
-        if self.config.duration_units == "weeks":
-            delta = relativedelta(weeks=self.config.duration)
-        else:
-            delta = relativedelta(months=self.config.duration)
-        expiry_datetime = self.start_date + delta
-        return end_of_day_in_utc(expiry_datetime)
+        if self.start_date:
+            # replace expiry date with very end of day in UTC
+            if self.config.duration_units == "weeks":
+                delta = relativedelta(weeks=self.config.duration)
+            else:
+                delta = relativedelta(months=self.config.duration)
+            expiry_datetime = self.start_date + delta
+            return end_of_day_in_utc(expiry_datetime)
 
     def save(self, *args, **kwargs):
         self.full_clean()
