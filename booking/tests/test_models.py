@@ -1532,6 +1532,35 @@ class TestSubscription:
         )
         assert subscription.valid_for_event(event) is True
 
+    def test_valid_for_event_booking_restrictions_include_no_shows(self, student_user, event_type):
+        event = baker.make(Event, event_type=event_type, start=datetime(2020, 9, 3, 14, 0, tzinfo=timezone.utc))
+        subscription_kwargs = {
+            "config__bookable_event_types": {event_type.id: {"allowed_number": 1, "allowed_unit": "day"}},
+            "config__duration": 1,
+            "config__duration_units": "months",
+            "config__start_date": datetime(2020, 8, 1, 0, 0, tzinfo=timezone.utc),
+            "config__include_no_shows_in_usage": False,
+            "start_date": datetime(2020, 9, 1, 0, 0, tzinfo=timezone.utc),
+        }
+        subscription = baker.make(
+            Subscription, user=student_user, paid=True, **subscription_kwargs,
+        )
+        # open booking for same event type, same day
+        booking = baker.make(
+            Booking, user=student_user, subscription=subscription, status="OPEN", no_show=False,
+            event__event_type=event_type, event__start=datetime(2020, 9, 3, 12, 0, tzinfo=timezone.utc)
+        )
+        assert subscription.valid_for_event(event) is False
+
+        # no-show booking not included in usage by default
+        booking.no_show = True
+        booking.save()
+        assert subscription.valid_for_event(event) is True
+        
+        subscription.config.include_no_shows_in_usage = True
+        subscription.config.save()
+        assert subscription.valid_for_event(event) is False
+
     def test_calculate_cost_as_of_today(self):
         pass
 

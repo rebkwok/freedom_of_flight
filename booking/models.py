@@ -562,6 +562,10 @@ class SubscriptionConfig(models.Model):
     # subscriptions = user.subscriptions.filter(config__bookable_event_types__has_key(event.event_type.id)).order_by("expiry_date", "start_date", "purchase_date")
     # Then check usages, get the next subscription that is allowed.  Usually there'll only be one, but just in case
     bookable_event_types = JSONField(null=True, blank=True)
+    include_no_shows_in_usage = models.BooleanField(
+        default=False,
+        help_text="For subscription with limits on bookings: count no-shows "
+                  "(i.e. cancellations after the cancellation period has passed) in subscription usage")
 
     def __str__(self):
         return f"{self.name} ({'active' if self.active else 'inactive'})"
@@ -767,10 +771,16 @@ class Subscription(models.Model):
                     return True
                 allowed_unit = bookable_event_type["allowed_unit"]
                 # find existing open bookings on this subscription for same event type, excluding ones for this event
-                # no-show bookings don't count in usage
-                existing_bookings = self.bookings.filter(
-                    event__event_type=event.event_type, status="OPEN", no_show=False
-                ).exclude(event_id=event.id)
+                if self.config.include_no_shows_in_usage:
+                    # All open bookings, including no-shows
+                    existing_bookings = self.bookings.filter(event__event_type=event.event_type, status="OPEN").exclude(event_id=event.id)
+                else:
+                    # Open bookings, not including no-shows (the config default)
+                    existing_bookings = self.bookings.filter(
+                        event__event_type=event.event_type, status="OPEN", no_show=False
+                    ).exclude(event_id=event.id)
+                if not self.config.include_no_shows_in_usage:
+                    existing_bookings = existing_bookings.filter(no_show=False)
                 if not existing_bookings.exists():
                     return True
                 if allowed_unit == "day":
