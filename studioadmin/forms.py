@@ -15,11 +15,12 @@ from django.utils import timezone
 from crispy_forms.bootstrap import InlineCheckboxes, AppendedText, PrependedText
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Button, Layout, Submit, Row, Column, Field, Fieldset, Hidden, HTML
+from .form_utils import Formset
 
 from accounts.admin import CookiePolicyAdminForm, DataPrivacyPolicyAdminForm, DisclaimerContentAdminForm
 from accounts.models import CookiePolicy, DisclaimerContent, DataPrivacyPolicy
 from booking.models import (
-    Booking, Block, Event, Course, EventType, COMMON_LABEL_PLURALS, BlockConfig
+    Booking, Block, Event, Course, EventType, COMMON_LABEL_PLURALS, BlockConfig, SubscriptionConfig
 )
 from common.utils import full_name
 from timetable.models import TimetableSession
@@ -562,6 +563,86 @@ class BlockConfigForm(forms.ModelForm):
             Submit('submit', f'Save', css_class="btn btn-success"),
             HTML(f'<a class="btn btn-outline-dark" href="{back_url}">Back</a>')
         )
+
+
+class BookableEventTypesForm(forms.Form):
+    event_type = forms.ModelChoiceField(queryset=EventType.objects.all(), required=False)
+    allowed_number = forms.ChoiceField(choices=[(None, "No limit"), *[(i, i) for i in range(100)]], required=False)
+    allowed_unit = forms.ChoiceField(choices=(("day", "day"), ("week", "week"), ("month", "month")), required=False)
+
+
+class SubscriptionConfigForm(forms.ModelForm):
+    class Meta:
+        model = SubscriptionConfig
+        fields = ("recurring", "name", "description", "duration", "duration_units", "cost", "start_date",
+                  "start_options", "advance_purchase_allowed", "partial_purchase_allowed",
+                  "cost_per_week", "active", "include_no_shows_in_usage")
+
+    def __init__(self, *args, **kwargs):
+        recurring = kwargs.pop("recurring")
+        super().__init__(*args, **kwargs)
+        self.fields["description"].help_text = "This will be displayed to users when purchasing subscriptions."
+        self.fields["name"].help_text = "A short name for the subscription"
+        self.fields["active"].help_text = "Active subscriptions are available for purchase by users and will be displayed " \
+                                          "on the subscriptions purchase page."
+
+        if not recurring:
+            self.fields["start_date"].required = True
+            self.fields["start_date"].help_text = "Date the subscription starts"
+            self.fields["advance_purchase_allowed"].help_text = "Allow students to purchase the subscription before the start date."
+            self.fields["partial_purchase_allowed"].help_text = "Allow purchase of the subscription at a reduced price after the first week"
+
+        self.helper = FormHelper()
+        back_url = reverse('studioadmin:subscription_configs')
+        self.helper.layout = Layout(
+            Hidden("recurring", recurring),
+            Fieldset(
+                "Subscription Details",
+                "name",
+                "description",
+            ),
+            Fieldset(
+                "Duration and start",
+                Row(
+                    Column("duration", css_class="col-6"),
+                    Column("duration_units", css_class="col-6")
+                ),
+                "start_options" if recurring else Hidden("start_options", "start_date"),
+                "start_date",
+            ),
+            Fieldset(
+                "Payment settings",
+                PrependedText('cost', '£'),
+                "advance_purchase_allowed",
+                "partial_purchase_allowed",
+                PrependedText('cost_per_week', '£'),
+            ),
+            "active",
+            Fieldset(
+                "Usage (optional)",
+                "include_no_shows_in_usage",
+                Formset("bookable_event_types_formset"),
+            ),
+
+            Submit('submit', f'Save', css_class="btn btn-success"),
+            HTML(f'<a class="btn btn-outline-dark" href="{back_url}">Back</a>')
+        )
+
+    def clean(self):
+        total_formset_forms = int(self.data['form-TOTAL_FORMS'])
+        seen = set()
+        for i in range(total_formset_forms):
+            event_type = self.data[f"form-{i}-event_type"]
+            if event_type:
+                if self.cleaned_data["duration_units"] == "weeks":
+                    allowed_unit = self.data[f"form-{i}-allowed_unit"]
+                    if allowed_unit == "month":
+                        self.add_error("__all__", f"Cannot specify monthly usage for a subscription with a weekly duration. Specify usage per week instead.")
+                if event_type in seen:
+                    duplicate_event_type = EventType.objects.get(id=int(event_type))
+                    self.add_error("__all__", f"Usage specified twice for event type {duplicate_event_type.name} (track {duplicate_event_type.track})")
+                seen.add(event_type)
+        return super().clean()
 
 
 class StudioadminCookiePolicyForm(CookiePolicyAdminForm):

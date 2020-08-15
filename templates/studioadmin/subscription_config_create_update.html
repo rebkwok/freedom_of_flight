@@ -11,14 +11,9 @@
 
 {% block content %}
     {% if creating %}
-    <h1>Creating new {{ block_config_type }} credit block</h1>
+    <h1>Creating new {{ config_type }} subscription</h1>
     {% else %}
-        <h1>Updating {{ block_config_type }} credit block: {{ form.instance.name }}</h1>
-        {% if form.existing_blocks %}
-            <p class="text-danger">
-                NOTE: blocks of this type have already been purchased; cannot update event type, size or duration.
-            </p>
-        {% endif %}
+        <h1>Updating {{ config_type }} subscription: {{ form.instance.name }}</h1>
     {% endif %}
 
     {% if form.errors %}

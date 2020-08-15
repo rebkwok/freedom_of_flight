@@ -16,6 +16,8 @@ from studioadmin.views import (
     choose_track_for_event_type, EventTypeCreateView, EventTypeUpdateView, event_type_delete_view,
     block_config_list_view, ajax_toggle_block_config_active, block_config_delete_view, choose_block_config_type,
     BlockConfigCreateView, BlockConfigUpdateView,
+    subscription_config_list_view, ajax_toggle_subscription_config_active, subscription_config_delete_view,
+    choose_subscription_config_type, SubscriptionConfigCreateView, SubscriptionConfigUpdateView,
     CookiePolicyListView, DataPrivacyPolicyListView, DisclaimerContentListView,
     CookiePolicyDetailView, DataPrivacyPolicyDetailView, DisclaimerContentDetailView,
     DisclaimerContentCreateView, DisclaimerContentUpdateView, CookiePolicyCreateView, DataPrivacyPolicyCreateView,
@@ -81,6 +83,14 @@ urlpatterns = [
     path('site-config/credit-block/create/', choose_block_config_type, name="choose_block_config_type"),
     path('site-config/credit-block/<block_config_type>/create/', BlockConfigCreateView.as_view(), name="add_block_config"),
     path('site-config/credit-block/<int:pk>/update/', BlockConfigUpdateView.as_view(), name="edit_block_config"),
+    # subscription configs
+    path('site-config/subscription-configs/', subscription_config_list_view, name="subscription_configs"),
+    path('site-config/ajax-toggle-subscription-config-active/', ajax_toggle_subscription_config_active, name="ajax_toggle_subscription_config_active"),
+    path('site-config/subscription-config/<int:subscription_config_id>/delete/', subscription_config_delete_view, name="delete_subscription_config"),
+    path('site-config/subscription-config/create/', choose_subscription_config_type, name="choose_subscription_config_type"),
+    path('site-config/subscription-config/<subscription_config_type>/create/', SubscriptionConfigCreateView.as_view(), name="add_subscription_config"),
+    path('site-config/subscription-config/<int:pk>/update/', SubscriptionConfigUpdateView.as_view(), name="edit_subscription_config"),
+
     # policies
     path('policies/cookie-policies/', CookiePolicyListView.as_view(), name="cookie_policies"),
     path('policies/data-privacy-policies/', DataPrivacyPolicyListView.as_view(), name="data_privacy_policies"),

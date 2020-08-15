@@ -2,6 +2,7 @@ from django import forms
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
+from django.forms.models import formset_factory
 from django.template.loader import render_to_string
 from django.template.response import TemplateResponse
 from django.shortcuts import get_object_or_404, render, HttpResponseRedirect
@@ -12,10 +13,10 @@ from django.urls import reverse
 from braces.views import LoginRequiredMixin
 
 from activitylog.models import ActivityLog
-from booking.models import Track, EventType, BlockConfig
+from booking.models import Track, EventType, BlockConfig, SubscriptionConfig
 from common.utils import full_name
 
-from ..forms import EventTypeForm, BlockConfigForm
+from ..forms import EventTypeForm, BlockConfigForm, SubscriptionConfigForm, BookableEventTypesForm
 from .utils import staff_required, StaffUserMixin, is_instructor_or_staff
 
 
@@ -234,3 +235,126 @@ class BlockConfigUpdateView(LoginRequiredMixin, StaffUserMixin, UpdateView):
 
     def get_success_url(self):
         return reverse("studioadmin:block_configs")
+
+
+@login_required
+@staff_required
+def subscription_config_list_view(request):
+    subscription_configs = SubscriptionConfig.objects.all().order_by("-active")
+    context = {"subscription_configs": subscription_configs}
+    return render(request, "studioadmin/subscription_configs.html", context)
+
+
+@require_http_methods(['POST'])
+def ajax_toggle_subscription_config_active(request):
+    subscription_config_id = request.POST["subscription_config_id"]
+    subscription_config = get_object_or_404(SubscriptionConfig, pk=subscription_config_id)
+    subscription_config.active = not subscription_config.active
+    subscription_config.save()
+    ActivityLog.objects.create(
+        log=f"Subscription config '{subscription_config.name}' "
+            f"set to {'active' if subscription_config.active else 'not active'} by admin user {full_name(request.user)}"
+    )
+    return render(
+        request, "studioadmin/includes/ajax_toggle_subscription_config_active_btn.html",
+      {"subscription_config": subscription_config}
+    )
+
+
+@login_required
+@staff_required
+def subscription_config_delete_view(request, subscription_config_id):
+    subscription_config = get_object_or_404(SubscriptionConfig, pk=subscription_config_id)
+    if subscription_config.subscription_set.filter(paid=True).exists():
+        return HttpResponseBadRequest("Subscription has already been purchased, cannot delete")
+    ActivityLog.objects.create(
+        log=f"Subscription config {subscription_config.name} (id {subscription_config_id}) deleted by admin user {full_name(request.user)}"
+    )
+    subscription_config.delete()
+    return JsonResponse({"deleted": True, "alert_msg": "Subscription deleted"})
+
+
+@login_required
+@staff_required
+def choose_subscription_config_type(request):
+    if request.method == "POST":
+        if "one_off" in request.POST:
+            subscription_type = "one_off"
+        elif "recurring" in request.POST:
+            subscription_type = "recurring"
+        return HttpResponseRedirect(reverse("studioadmin:add_subscription_config", args=(subscription_type,)))
+    return render(request, "studioadmin/includes/subscription-config-add-modal.html")
+
+
+class SubscriptionConfigMixin(LoginRequiredMixin, StaffUserMixin):
+    model = SubscriptionConfig
+    template_name = "studioadmin/subscription_config_create_update.html"
+    form_class = SubscriptionConfigForm
+
+    def get_form_kwargs(self):
+        form_kwargs = super().get_form_kwargs()
+        form_kwargs["recurring"] = self.recurring
+        return form_kwargs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["config_type"] = "recurring" if self.recurring else "one-off"
+        return context
+
+    def form_invalid(self, form):
+        context = self.get_context_data(form=form)
+        context["bookable_event_types_formset"] = formset_factory(BookableEventTypesForm, extra=1, can_delete=True)(self.request.POST)
+        return self.render_to_response(context)
+
+    def form_valid(self, form):
+        subscription_config = form.save(commit=False)
+        total_formset_forms = int(form.data['form-TOTAL_FORMS'])
+        bookable_event_types = {}
+        for i in range(total_formset_forms):
+            event_type = form.data[f"form-{i}-event_type"]
+            if event_type:
+                allowed_number = form.data[f"form-{i}-allowed_number"]
+                allowed_unit = form.data[f"form-{i}-allowed_unit"]
+                bookable_event_types[int(event_type)] = {"allowed_number": allowed_number, "allowed_unit": allowed_unit}
+        subscription_config.bookable_event_types = bookable_event_types
+        subscription_config.save()
+        return HttpResponseRedirect(self.get_success_url())
+
+    def get_success_url(self):
+        return reverse("studioadmin:subscription_configs")
+
+
+class SubscriptionConfigCreateView(SubscriptionConfigMixin, CreateView):
+
+    def dispatch(self, request, *args, **kwargs):
+        self.recurring = kwargs["subscription_config_type"] == "recurring"
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["creating"] = True
+        total_event_types = EventType.objects.count()
+        context["bookable_event_types_formset"] = formset_factory(BookableEventTypesForm, extra=max(3, total_event_types))()
+        return context
+
+
+class SubscriptionConfigUpdateView(SubscriptionConfigMixin, UpdateView):
+
+    def dispatch(self, request, *args, **kwargs):
+        self.recurring = self.get_object().recurring
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        config = self.get_object()
+        total_event_types = EventType.objects.count()
+        if config.bookable_event_types:
+            initial = [
+                {"event_type": key, "allowed_number": usuage["allowed_number"], "allowed_unit": usuage["allowed_unit"]}
+                for key, usuage in config.bookable_event_types.items()
+            ]
+            formset = formset_factory(BookableEventTypesForm, extra=min(3, total_event_types-len(initial)), can_delete=True)(initial=initial)
+        else:
+            formset = formset_factory(BookableEventTypesForm, extra=max(3, total_event_types))()
+        context["bookable_event_types_formset"] = formset
+        return context

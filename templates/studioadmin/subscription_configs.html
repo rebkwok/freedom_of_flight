@@ -1,0 +1,100 @@
+{%  extends "studioadmin/base.html" %}
+
+{% load studioadmintags static %}
+
+{% block extra_head %}
+{% include 'common/includes/ajax_head.html' %}
+{% endblock %}
+
+{% block subnav-xs %}
+    {%  include "studioadmin/includes/navs/xs/site_config_subnav.html" %}
+{% endblock %}
+{% block precontent %}
+    {%  include "studioadmin/includes/navs/site_config_subnav.html" %}
+{% endblock %}
+
+{% block content %}
+    <h1>Subscriptions/Memberships</h1>
+    <p>
+        Subscriptions/Memberships set up one-off or recurring payment plans.  Subscriptions can be one-off (starting
+        on a specific date only) or recurring.  Recurring subscriptions have the option to start from a specific date,
+        from the date purchased by the student, or from the date of first use (for subscription that allow bookings).
+    </p>
+    <p>
+        Subscriptions can be linked to bookings; a daily/weekly/monthly limit can be specified to restrict booking on
+        specific event types under one subscription.  (If students reach their limit for a subscription, they are still
+        able to purchase other options e.g. credit blocks for additional bookings).
+    </p>
+    <p>Note that a subscription can only be deleted if no purchases have been made yet.</p>
+
+    <!-- Modals -->
+        <div class="modal fade" id="AddSubscriptionConfigModal" tabindex="-1" role="dialog" aria-labelledby="AddSubscriptionConfigModalLabel"></div>
+        <!-- /.modal -->
+
+    {% if not subscription_configs %}
+        <p>No subscriptions created yet</p>
+    {% else %}
+
+        <table class="table table-sm">
+            <thead>
+                <tr>
+                    <th>Name<br/><span class="helptext">Click to edit</span></th>
+                    <th class="text-center">Active</th>
+                    <th class="text-center">Recurring</th>
+                    <th class="text-center">Duration</th>
+                    <th class="text-center">Cost</th>
+                    <th class="text-center">Purchased</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for subscription_config in subscription_configs %}
+                <tr id="row-{{ subscription_config.id }}">
+                    <td><a href="{% url 'studioadmin:edit_subscription_config' subscription_config.id %}">{{ subscription_config.name }}</a></td>
+                    <td class="text-center">
+                        <span
+                          id="active-{{ subscription_config.id }}"
+                          data-subscription_config_id={{ subscription_config.id }}
+                          class="active-btn"
+                          >
+                          {% include "studioadmin/includes/ajax_toggle_subscription_config_active_btn.html" %}
+                        </span>
+                    </td>
+                    <td class="text-center">{{ subscription_config.recurring|yesno|title }}</td>
+                    <td class="text-center">{{ subscription_config.duration }} {{ subscription_config.duration_units }}</td>
+                    <td class="text-center">£{{ subscription_config.cost }}</td>
+                    <td class="text-center">{{ subscription_config.subscriptions_purchased }}</td>
+                    <td class="text-center">
+                        {% if not subscription_config.subscriptions_purchased %}
+                            <div
+                                class="subscription-config-delete-btn"
+                                data-subscription_config_id="{{ subscription_config.id }}"
+                            >
+                                <span class="btn btn-sm btn-danger pt-0 pb-0"><i class="far fa-trash-alt"></i></span>
+                            </div>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+        </table>
+    {% endif %}
+     <a
+        id="add-subscription-config-btn"
+        class="add-subscription-config"
+        href="#" data-form="{% url 'studioadmin:choose_subscription_config_type' %}"
+        title="add subscription"
+    ><div class="btn btn-success">Add new subscription</div></a>
+
+{% endblock %}
+
+
+{% block extra_js %}
+{# Load from local if in dev mode (debug on) and not specifically set #}
+{% if use_cdn %}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.form/4.3.0/jquery.form.min.js" integrity="sha512-YUkaLm+KJ5lQXDBdqBqk7EVhJAdxRnVdT2vtCzwPHSweCzyMgYV/tgGF4/dCyqtCC2eCphz0lRQgatGVdfR0ww==" crossorigin="anonymous"></script>
+{% else %}
+    <script type='text/javascript' src="{% static 'js/jquery.form-4.3.0.min.js' %}"></script>
+{% endif %}
+<script type='text/javascript' src="{% static 'studioadmin/js/subscription_config_ajax-v1.js' %}"></script>
+{% endblock %}

@@ -541,8 +541,8 @@ class SubscriptionConfig(models.Model):
     )
     partial_purchase_allowed = models.BooleanField(
         default=False,
-        help_text="For subscriptions with a specific start date, allow purchase of the current subscription period at"
-                  "a reduced price per remaining week."
+        help_text="For subscriptions with a specific start date, allow purchase of the current subscription period at "
+                  "a reduced price after the first week."
     )
     cost_per_week = models.DecimalField(
         max_digits=8, decimal_places=2, null=True, blank=True,
@@ -577,6 +577,9 @@ class SubscriptionConfig(models.Model):
                 return True
             return self.calculate_next_start_date(self.start_date) > timezone.now()
         return False
+
+    def subscriptions_purchased(self):
+        return self.subscription_set.filter(paid=True).count()
 
     def get_start_options_for_user(self, user):
         """

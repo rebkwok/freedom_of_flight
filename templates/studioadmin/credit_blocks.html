@@ -20,12 +20,13 @@
     </p>
     <p>Note that a credit block can only be deleted if no purchases have been made yet.</p>
 
+    <!-- Modals -->
+        <div class="modal fade" id="AddBlockConfigModal" tabindex="-1" role="dialog" aria-labelledby="AddBlockConfigModalLabel"></div>
+        <!-- /.modal -->
+
     {% if not block_config_groups %}
         <p>No credit blocks created yet</p>
     {% else %}
-        <!-- Modals -->
-        <div class="modal fade" id="AddBlockConfigModal" tabindex="-1" role="dialog" aria-labelledby="AddBlockConfigModalLabel"></div>
-        <!-- /.modal -->
 
         <table class="table table-sm">
             <thead>
@@ -73,20 +74,18 @@
                     </tr>
                 {% endfor %}
             {% endfor %}
-        <tr>
-            <td colspan="6">
-                <a
-                        id="add-block-config-btn"
-                        class="add-block-config"
-                        href="#" data-form="{% url 'studioadmin:choose_block_config_type' %}"
-                        title="add credit block"
-                    ><div class="btn btn-success">Add new credit block</div></a>
-            </td>
-        </tr>
+
             </tbody>
 
         </table>
     {% endif %}
+
+    <a
+        id="add-block-config-btn"
+        class="add-block-config"
+        href="#" data-form="{% url 'studioadmin:choose_block_config_type' %}"
+        title="add credit block"
+    ><div class="btn btn-success">Add new credit block</div></a>
 
 {% endblock %}
 
