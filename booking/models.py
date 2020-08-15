@@ -694,6 +694,26 @@ class SubscriptionConfig(models.Model):
                     result = calculated_start - relativedelta(months=remainder)
             return result if result >= self.start_date else None
 
+    def calculate_current_period_cost_as_of_today(self):
+        if self.partial_purchase_allowed:
+            purchase_datetime = timezone.now()
+            current_start = self.get_subscription_period_start_date()
+            # current start could be None if the config hasn't started yet
+            if current_start and current_start < (purchase_datetime - timedelta(days=6)):
+                # purchasing the current period more than a week after the start date
+                # calculate the number of weeks/partial weeks left in the subscription period
+                time_to_expiry = relativedelta(self.calculate_next_start_date(current_start), purchase_datetime)
+                weeks = time_to_expiry.weeks
+                remaining_days = time_to_expiry.days % 7
+                if weeks > 0 and remaining_days == 0:
+                    # if there's less than one full day in a partial week, don't charge a full week for it
+                    # (unless it's the last week)
+                    weeks_to_charge = weeks
+                else:
+                    weeks_to_charge = weeks + 1
+                return weeks_to_charge * self.cost_per_week
+        return self.cost
+
     def clean(self):
         # 1. if partial_purchase_allowed, cost per week is required
         # 2. if partial_purchase_allowed, start_options must be start_date
@@ -801,8 +821,7 @@ class Subscription(models.Model):
                         if event.start.day >= subscription_start_day:
                             start = event.start.replace(day=subscription_start_day)
                         else:
-                            event_month = event.start.month
-                            start = event.start.replace(month=event_month - 1, day=subscription_start_day)
+                            start = event.start.replace(day=subscription_start_day) - relativedelta(months=1)
                         start = start_of_day_in_utc(start)
                         end = start_of_day_in_utc(start + relativedelta(months=1))
                     # find bookings within dates
@@ -822,22 +841,6 @@ class Subscription(models.Model):
             else:
                 self.start_date = None
             self.save()
-
-    def calculate_cost_as_of_today(self):
-        if self.config.partial_purchase_allowed:
-            date_of_purchase = start_of_day_in_utc(timezone.now())
-            if self.start_date < (date_of_purchase - timedelta(weeks=1)):
-                # purchasing the current period more than a week after the start date
-                # calculate the number of weeks/partial weeks left in the subscription period
-                time_to_expiry = relativedelta(self.expiry_date, date_of_purchase)
-                weeks = time_to_expiry.weeks
-                remaining_days = time_to_expiry.days % 7
-                if remaining_days > 1 and weeks > 0:
-                    # if there's only one day in a partial week, don't charge a full week for it (unless it's the last
-                    # week)
-                    weeks += 1
-                return weeks * self.config.cost_per_week
-        return self.config.cost
 
     def expires_soon(self):
         if self.expiry_date:

@@ -1192,6 +1192,54 @@ class TestStartDatesOfferedToUser:
 
 
 @pytest.mark.django_db
+@pytest.mark.parametrize(
+    "now_value,expected_cost",
+    [
+        (datetime(2020, 9, 1, 10, 0, tzinfo=timezone.utc), 20),
+        (datetime(2020, 9, 5, 10, 0, tzinfo=timezone.utc), 20),
+        (datetime(2020, 9, 7, 10, 0, tzinfo=timezone.utc), 15),
+        (datetime(2020, 9, 20, 10, 0, tzinfo=timezone.utc), 10),
+        (datetime(2020, 9, 26, 10, 0, tzinfo=timezone.utc), 5),
+        (datetime(2020, 9, 28, 10, 0, tzinfo=timezone.utc), 5),
+    ],
+    ids=[
+        "1. 4 weeks left",
+        "2. 3 + weeks left, still full cost",
+        "3. 3 weeks + 1 day left, 3 week cost",
+        "4. 1+ weeks left, rounds up to 2 week cost",
+        "5. <1 weeks left, rounds up to 1 week cost",
+        "6. 1 day left, still charges 1 week cost",
+    ]
+)
+def test_subscription_config_calculate_current_period_cost_as_of_today(mocker, now_value, expected_cost):
+    mock_tz = mocker.patch("booking.models.timezone.now")
+    mock_tz.return_value = now_value
+    subscription_config_kwargs = {
+        "duration": 4,
+        "duration_units": "weeks",
+        "partial_purchase_allowed": True,
+        "cost": 20,
+        "cost_per_week": 5,
+        "start_date": datetime(2020, 9, 1, 0, 0, tzinfo=timezone.utc),
+    }
+    config = baker.make(
+        SubscriptionConfig, **subscription_config_kwargs,
+    )
+    assert config.calculate_current_period_cost_as_of_today() == expected_cost
+
+    # if partial purchase not allowed, always return full cost
+    config.partial_purchase_allowed = False
+    config.save()
+    assert config.calculate_current_period_cost_as_of_today() == 20
+
+    # if config hasn't started yet, always return full cost
+    config.partial_purchase_allowed = True
+    config.start_date = datetime(2020, 10, 1, 0, 0, tzinfo=timezone.utc)
+    config.save()
+    assert config.calculate_current_period_cost_as_of_today() == 20
+
+
+@pytest.mark.django_db
 class TestSubscription:
 
     @pytest.mark.parametrize(
@@ -1448,6 +1496,15 @@ class TestSubscription:
                 {"allowed_number": 1, "allowed_unit": "month"}, {}, [datetime(2020, 10, 1, 14, 0, tzinfo=timezone.utc)],
                 True
             ),
+            (
+                {"allowed_number": 1, "allowed_unit": "month"},
+                {
+                    "config__start_date": datetime(2020, 8, 2, 0, 0, tzinfo=timezone.utc),
+                    "start_date": datetime(2020, 9, 2, 0, 0, tzinfo=timezone.utc)
+                },
+                [datetime(2020, 9, 2, 14, 0, tzinfo=timezone.utc)],
+                False
+            ),
         ],
         ids=[
             "1. no bookings for same event type",
@@ -1460,6 +1517,7 @@ class TestSubscription:
             "8. 1 per week allowed, 1 booking first day of next week",
             "9. 1 per month allowed, 1 booking first day of same month",
             "10. 1 per month allowed, 1 booking first day of next month",
+            "11. 1 per month allowed, 1 booking already, start day before event day",
         ]
     )
     def test_valid_for_event_booking_restrictions(
@@ -1556,13 +1614,11 @@ class TestSubscription:
         booking.no_show = True
         booking.save()
         assert subscription.valid_for_event(event) is True
-        
+
         subscription.config.include_no_shows_in_usage = True
         subscription.config.save()
         assert subscription.valid_for_event(event) is False
 
-    def test_calculate_cost_as_of_today(self):
-        pass
 
 # class GiftVoucherTypeTests(TestCase):
 #
