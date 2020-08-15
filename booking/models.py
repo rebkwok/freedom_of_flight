@@ -621,14 +621,17 @@ class SubscriptionConfig(models.Model):
         elif self.start_options == "start_date":
             current_subscription_start_date = self.get_subscription_period_start_date()
             next_subscription_start_date = self.get_subscription_period_start_date(next=True)
-            user_has_current = user_subscriptions.filter(start_date=current_subscription_start_date).exists()
-            user_has_next = user_subscriptions.filter(start_date=next_subscription_start_date).exists()
-            if not user_has_current and current_subscription_start_date >= self.start_date:
-                start_date_options.append(current_subscription_start_date)
-            if not user_has_next:
-                # can purchase in advance, or next subscription start is within 3 days
-                if self.advance_purchase_allowed or ((next_subscription_start_date - start_of_day_in_utc(timezone.now())).days <= 3):
-                    start_date_options.append(next_subscription_start_date)
+            if current_subscription_start_date is not None:
+                user_has_current = user_subscriptions.filter(start_date=current_subscription_start_date).exists()
+                if not user_has_current and current_subscription_start_date >= self.start_date:
+                    start_date_options.append(current_subscription_start_date)
+
+            if next_subscription_start_date is not None:
+                user_has_next = user_subscriptions.filter(start_date=next_subscription_start_date).exists()
+                if not user_has_next:
+                    # can purchase in advance, or next subscription start is within 3 days
+                    if self.advance_purchase_allowed or ((next_subscription_start_date - start_of_day_in_utc(timezone.now())).days <= 3):
+                        start_date_options.append(next_subscription_start_date)
         return start_date_options
 
     def calculate_next_start_date(self, input_datetime):
@@ -662,47 +665,48 @@ class SubscriptionConfig(models.Model):
                 time_diff = (calculated_start - self.start_date).days / 7
                 remainder = time_diff % self.duration
                 if next:
-                    # we calculated the next weekday
+                    # we calculated the next weekday already
                     if self.duration > 1:
                         remainder = self.duration - remainder
-                    return calculated_start + timedelta(weeks=remainder)
+                    result = calculated_start + timedelta(weeks=remainder)
                 else:
-                    return calculated_start - timedelta(weeks=remainder)
+                    result = calculated_start - timedelta(weeks=remainder)
             else:
                 # recurs monthly
                 now = timezone.now()
                 day_of_month = self.start_date.day
+                datetime_this_month = datetime(day=day_of_month, month=now.month, year=now.year, tzinfo=timezone.utc)
                 if now.day >= day_of_month:
-                    start_month = now.month + 1 if next else now.month
+                    calculated_start = datetime_this_month + relativedelta(months=1) if next else datetime_this_month
                 else:
-                    start_month = now.month if next else now.month - 1
-                calculated_start = start_of_day_in_utc(
-                    datetime(day=day_of_month, month=start_month, year=now.year, tzinfo=timezone.utc)
-                )
+                    calculated_start = datetime_this_month if next else datetime_this_month - relativedelta(months=1)
+                calculated_start = start_of_day_in_utc(calculated_start)
                 time_diff = relativedelta(calculated_start, self.start_date)
                 # in case of DST differences
                 remainder = time_diff.months % self.duration
                 if next:
-                    return calculated_start + relativedelta(months=remainder)
+                    result = calculated_start + relativedelta(months=remainder)
                 else:
-                    return calculated_start - relativedelta(months=remainder)
+                    result = calculated_start - relativedelta(months=remainder)
+            return result if result >= self.start_date else None
 
     def clean(self):
         # 1. if partial_purchase_allowed, cost per week is required
         # 2. if partial_purchase_allowed, start_options must be start_date
         # 3. if start_options is start_date, start date is required
         # 4. if recurring is False, start date is required and start_options must be start_date
+        if not self.recurring:
+            if self.start_options != "start_date":
+                raise ValidationError({'start_options': _('Must be start_date for one-off subscriptions.')})
+            if not self.start_date:
+                raise ValidationError({'start_date': _('This field is required for one-off subscription.')})
+
         if self.partial_purchase_allowed and not self.cost_per_week:
             raise ValidationError({'cost_per_week': _('Required when partial purchase is allowed.')})
         if self.partial_purchase_allowed and self.start_options != "start_date":
             raise ValidationError({'start_options': _('Must be start_date when partial purchase is allowed.')})
         if self.start_options == "start_date" and not self.start_date:
             raise ValidationError({'start_date': _('This field is required.')})
-        if not self.recurring:
-            if self.start_options != "start_date":
-                raise ValidationError({'start_options': _('Must be start_date for one-off subscriptions.')})
-            if not self.start_date:
-                raise ValidationError({'start_date': _('This field is required for one-off subscription.')})
 
     def save(self, *args, **kwargs):
         self.full_clean()
@@ -762,27 +766,28 @@ class Subscription(models.Model):
                     # no max
                     return True
                 allowed_unit = bookable_event_type["allowed_unit"]
+                # find existing open bookings on this subscription for same event type, excluding ones for this event
+                # no-show bookings don't count in usage
+                existing_bookings = self.bookings.filter(
+                    event__event_type=event.event_type, status="OPEN", no_show=False
+                ).exclude(event_id=event.id)
+                if not existing_bookings.exists():
+                    return True
                 if allowed_unit == "day":
-                    # find existing open bookings, excluding ones for this event, on the same day
-                    # no-show bookings don't count in usage
-                    existing_bookings = self.bookings.filter(
-                        event__start__date=event.start.date, status="OPEN", no_show=False
-                    ).exclude(event_id=event.id)
+                    # find bookings on same day
+                    existing_bookings = existing_bookings.filter(event__start__date=event.start.date())
                     return len(existing_bookings) < allowed_number
                 else:
                     if allowed_unit == "week":
-                        subscription_start_weekday = self.start_date.weekday()
                         # calculate start and end dates for the week of the event, starting on the start_weekday
-                        # find existing open bookings within those dates, excluding ones for this event
-                        # no-show bookings don't count in usage
+                        # we always use the day of the week that the subscription starts on as the start point
+                        subscription_start_weekday = self.start_date.weekday()
                         days_from_start = subscription_start_weekday - event.start.weekday()
                         start = start_of_day_in_utc(event.start + timedelta(days_from_start))
                         end = start_of_day_in_utc(start + timedelta(weeks=1))
                     elif allowed_unit == "month":
                         subscription_start_day = self.start_date.day
                         # calculate start and end dates for the month of the event, starting on the start_day
-                        # find existing open bookings within those dates, excluding ones for this event
-                        # no-show bookings don't count in usage
                         if event.start.day >= subscription_start_day:
                             start = event.start.replace(day=subscription_start_day)
                         else:
@@ -790,9 +795,8 @@ class Subscription(models.Model):
                             start = event.start.replace(month=event_month - 1, day=subscription_start_day)
                         start = start_of_day_in_utc(start)
                         end = start_of_day_in_utc(start + relativedelta(months=1))
-                    existing_bookings = self.bookings.filter(
-                        event__start__gte=start, event__start__lt=end, status="OPEN", no_show=False
-                    ).exclude(event_id=event.id)
+                    # find bookings within dates
+                    existing_bookings = existing_bookings.filter(event__start__gte=start, event__start__lt=end)
                     return len(existing_bookings) < allowed_number
         return False
 
