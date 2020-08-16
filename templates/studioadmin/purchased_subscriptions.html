@@ -1,0 +1,70 @@
+{%  extends "studioadmin/base.html" %}
+
+{% load studioadmintags accounttags email_obfuscator static %}
+
+{% block subnav-xs %}
+    {%  include "studioadmin/includes/navs/xs/site_config_subnav.html" %}
+{% endblock %}
+{% block precontent %}
+    {%  include "studioadmin/includes/navs/site_config_subnav.html" %}
+{% endblock %}
+
+{% block content %}
+    <h1>Purchased Subscriptions for {{ subscription_config.name|title }}</h1>
+    {% if show_all %}
+        <p>Showing all purchased subscriptions.  <a class="btn btn-sm btn-outline-primary" href="{% url 'studioadmin:purchased_subscriptions' subscription_config.id %}">Show active only</a></p>
+    {% else %}
+        <p>Showing only active/upcoming subscriptions.  <a class="btn btn-sm btn-outline-primary" href="{% url 'studioadmin:purchased_subscriptions' subscription_config.id %}?show-all=True">Show all</a></p>
+    {% endif %}
+
+    {% if not subscriptions %}
+        <p>No subscriptions purchased yet</p>
+    {% else %}
+        <table class="table table-sm tablesorter" id="sortTable">
+            <thead>
+                <tr>
+                    <th>Student <span class="fa fa-sort"></span></th>
+                    <th>Managed by</th>
+                    <th>Email</th>
+                    <th class="text-right" >Purchased</th>
+                    <th class="sort-col"><span class="fa fa-sort"></span></th>
+                    <th class="text-right" >Start</th>
+                    <th class="sort-col"><span class="fa fa-sort"></span></th>
+                    <th class="text-right">Expiry</th>
+                    <th class="sort-col"><span class="fa fa-sort"></span></th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for subscription in subscriptions %}
+                <tr {% if subscription.has_expired %}class="expired"{% endif %}>
+                    <td>{{ subscription.user|full_name }}</td>
+                    <td>
+                        {% if subscription.user.manager_user %}
+                            {{ subscription.user.manager_user|full_name }}
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if subscription.user.manager_user %}
+                            {{ subscription.user.manager_user.email|obfuscate_mailto }}
+                        {% else %}
+                            {{ subscription.user.email|obfuscate_mailto }}
+                        {% endif %}
+                    </td>
+                    <td class="text-right">{{ subscription.purchase_date|date:"d-M-Y" }}</td>
+                    <td class="sort-col">{{ subscription.purchase_date|date:"dmY" }}</td>
+                    <td class="text-right">{{ subscription.start_date|date:"d-M-Y" }}</td>
+                    <td class="sort-col">{{ subscription.start_date|date:"dmY" }}</td>
+                    <td class="text-right">{{ subscription.expiry_date|date:"d-M-Y" }}</td>
+                    <td class="sort-col">{{ subscription.expiry_date|date:"dmY" }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+        </table>
+
+      {% include 'common/includes/single_page_pagination.html' %}
+
+    {% endif %}
+
+{% endblock %}

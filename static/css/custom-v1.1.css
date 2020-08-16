@@ -361,3 +361,16 @@ div.anchor {
   top: -100px;
   visibility: hidden;
 }
+
+.sort-col {
+  max-width: 10px;
+  margin: 0;
+  padding: 0;
+  text-align: left;
+}
+
+td.sort-col {
+  color: transparent;
+  font-size: 1px;
+}
+

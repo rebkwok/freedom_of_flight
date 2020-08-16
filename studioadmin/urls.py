@@ -18,6 +18,7 @@ from studioadmin.views import (
     BlockConfigCreateView, BlockConfigUpdateView,
     subscription_config_list_view, ajax_toggle_subscription_config_active, subscription_config_delete_view,
     choose_subscription_config_type, SubscriptionConfigCreateView, SubscriptionConfigUpdateView, clone_subscription_config_view,
+    SubscriptionListView,
     CookiePolicyListView, DataPrivacyPolicyListView, DisclaimerContentListView,
     CookiePolicyDetailView, DataPrivacyPolicyDetailView, DisclaimerContentDetailView,
     DisclaimerContentCreateView, DisclaimerContentUpdateView, CookiePolicyCreateView, DataPrivacyPolicyCreateView,
@@ -90,7 +91,9 @@ urlpatterns = [
     path('site-config/subscription-config/<int:subscription_config_id>/delete/', subscription_config_delete_view, name="delete_subscription_config"),
     path('site-config/subscription-config/create/', choose_subscription_config_type, name="choose_subscription_config_type"),
     path('site-config/subscription-config/<subscription_config_type>/create/', SubscriptionConfigCreateView.as_view(), name="add_subscription_config"),
-    path('site-config/subscription-config/<int:pk>/update/', SubscriptionConfigUpdateView.as_view(), name="edit_subscription_config"),
+    path('site-config/<int:pk>/update/', SubscriptionConfigUpdateView.as_view(), name="edit_subscription_config"),
+    path('site-config/subscription-config/<int:config_id>/subscriptions/', SubscriptionListView.as_view(),
+         name="purchased_subscriptions"),
 
     # policies
     path('policies/cookie-policies/', CookiePolicyListView.as_view(), name="cookie_policies"),

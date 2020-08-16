@@ -9,11 +9,12 @@ from django.shortcuts import get_object_or_404, render, HttpResponseRedirect
 from django.views.decorators.http import require_http_methods
 from django.views.generic import ListView, CreateView, UpdateView
 from django.urls import reverse
+from django.utils import timezone
 
 from braces.views import LoginRequiredMixin
 
 from activitylog.models import ActivityLog
-from booking.models import Track, EventType, BlockConfig, SubscriptionConfig
+from booking.models import Track, EventType, BlockConfig, SubscriptionConfig, Subscription
 from common.utils import full_name
 
 from ..forms import EventTypeForm, BlockConfigForm, SubscriptionConfigForm, BookableEventTypesForm
@@ -393,3 +394,28 @@ def clone_subscription_config_view(request, subscription_config_id):
         log=f"Subscription config {config_to_clone.name} (id {config_to_clone.id}) created by admin user {full_name(request.user)}"
     )
     return HttpResponseRedirect(reverse("studioadmin:subscription_configs"))
+
+
+class SubscriptionListView(LoginRequiredMixin, StaffUserMixin, ListView):
+
+    model = Subscription
+    template_name = "studioadmin/purchased_subscriptions.html"
+    context_object_name = "subscriptions"
+    paginate_by = 30
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        if self.request.GET.get("show-all"):
+            return queryset.filter(
+                paid=True, config_id=self.kwargs["config_id"]
+            ).order_by("-expiry_date", "-start_date", "-purchase_date")
+        return queryset.filter(
+            paid=True, config_id=self.kwargs["config_id"], expiry_date__gte=timezone.now()
+        ).order_by("-expiry_date", "-start_date", "-purchase_date")
+
+    def get_context_data(self, *args, **kwargs):
+        context = super().get_context_data(*args, **kwargs)
+        context["subscription_config"] = SubscriptionConfig.objects.get(id=self.kwargs["config_id"])
+        if self.request.GET.get("show-all"):
+            context["show_all"] = True
+        return context

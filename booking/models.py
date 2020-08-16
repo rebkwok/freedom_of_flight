@@ -850,6 +850,11 @@ class Subscription(models.Model):
                 self.start_date = None
             self.save()
 
+    def has_expired(self):
+        if self.expiry_date:
+            return self.expiry_date < timezone.now()
+        return False
+
     def expires_soon(self):
         if self.expiry_date:
             return (self.expiry_date - timezone.now()).days <= 3
