@@ -189,4 +189,18 @@ jQuery(document).ready(function () {
         }
     )
 
+    // SUBSCRIPTON ADD/EDIT
+    jQuery('#id_start_date').datetimepicker({
+        format:'d-M-Y',
+        formatDate:'d-M-Y',
+        timepicker: false,
+        closeOnDateSelect: true,
+        scrollMonth: false,
+        scrollTime: false,
+        scrollInput: false,
+    });
+    $('#id_start_date_open').click(function(){
+        $('#id_start_date').datetimepicker('show');
+    });
+
 });

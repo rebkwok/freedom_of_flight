@@ -39,11 +39,12 @@
             <thead>
                 <tr>
                     <th>Name<br/><span class="helptext">Click to edit</span></th>
-                    <th class="text-center">Active</th>
-                    <th class="text-center">Recurring</th>
+                    <th class="text-center">Active<br/><span class="helptext">Click to change</span></th>
+                    <th class="text-center">Type</th>
                     <th class="text-center">Duration</th>
                     <th class="text-center">Cost</th>
                     <th class="text-center">Purchased</th>
+                    <th></th>
                     <th></th>
                 </tr>
             </thead>
@@ -60,10 +61,20 @@
                           {% include "studioadmin/includes/ajax_toggle_subscription_config_active_btn.html" %}
                         </span>
                     </td>
-                    <td class="text-center">{{ subscription_config.recurring|yesno|title }}</td>
-                    <td class="text-center">{{ subscription_config.duration }} {{ subscription_config.duration_units }}</td>
+                    <td class="text-center">
+                        {% if subscription_config.recurring %}
+                            <span class="badge badge-info">Recurring</span>
+                        {% else %}
+                            <span class="badge badge-warning">One-off</span>
+                        {% endif %}</td>
+                    <td class="text-center">{{ subscription_config.duration }} {{ subscription_config.duration_units|slice:":-1" }}{{ subscription_config.duration|pluralize }}</td>
                     <td class="text-center">£{{ subscription_config.cost }}</td>
                     <td class="text-center">{{ subscription_config.subscriptions_purchased }}</td>
+                    <td class="pr-0 pl-1">
+                        <div data-toggle="tooltip" data-placement="top" title="Clone this subscription">
+                        <a href="{% url 'studioadmin:clone_subscription_config' subscription_config.id %}"><i class="far fa-clone"></i></a>
+                        </div>
+                    </td>
                     <td class="text-center">
                         {% if not subscription_config.subscriptions_purchased %}
                             <div

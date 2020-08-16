@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from datetime import datetime
 from model_bakery import baker
 import json
 import pytest
@@ -8,7 +9,7 @@ from django.urls import reverse
 from django.test import TestCase
 from django.utils import timezone
 
-from booking.models import Block, Course, Track, EventType, BlockConfig
+from booking.models import Block, Course, Track, EventType, BlockConfig, SubscriptionConfig, Subscription
 from common.test_utils import EventTestMixin, TestUsersMixin
 
 
@@ -407,3 +408,360 @@ class DeleteBlockConfigViewTests(EventTestMixin, TestUsersMixin, TestCase):
         block.save()
         self.client.post(self.url)
         assert BlockConfig.objects.filter(id=self.block_config.id).exists() is False
+
+
+class SubscriptionConfigListView(TestUsersMixin, TestCase):
+
+    def setUp(self):
+        self.create_users()
+        self.create_admin_users()
+        self.login(self.staff_user)
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.url = reverse("studioadmin:subscription_configs")
+
+    def test_staff_only(self):
+        self.user_access_test(["staff"], self.url)
+
+    def test_shows_all_subscription_configs(self):
+        baker.make(SubscriptionConfig, active=False)
+        baker.make(SubscriptionConfig, active=True)
+        baker.make(SubscriptionConfig, active=False)
+        resp = self.client.get(self.url)
+        subscription_configs = resp.context["subscription_configs"]
+        assert len(subscription_configs) == 3
+        # active first
+        assert subscription_configs[0].active is True
+
+    def test_shows_purchased_subscriptions(self):
+        config = baker.make(SubscriptionConfig, active=False)
+        baker.make(Subscription, config=config, _quantity=2)
+        baker.make(Subscription, config=config, paid=True, _quantity=7)
+        resp = self.client.get(self.url)
+        assert "7" in resp.content.decode("utf-8")
+
+
+class ToggleActiveSubscriptionConfigViewTests(TestUsersMixin, TestCase):
+
+    def setUp(self):
+        self.create_users()
+        self.create_admin_users()
+        self.login(self.staff_user)
+        self.subscription_config = baker.make(SubscriptionConfig, name="test")
+        self.url = reverse("studioadmin:ajax_toggle_subscription_config_active")
+
+    def test_toggle_block_config(self):
+        # default is True
+        assert self.subscription_config.active is True
+
+        self.client.post(self.url, {"subscription_config_id": self.subscription_config.id})
+        self.subscription_config.refresh_from_db()
+        assert self.subscription_config.active is False
+
+        self.client.post(self.url, {"subscription_config_id": self.subscription_config.id})
+        self.subscription_config.refresh_from_db()
+        assert self.subscription_config.active is True
+
+
+class AddSubscriptionConfigViewTests(EventTestMixin, TestUsersMixin, TestCase):
+
+    def setUp(self):
+        self.create_users()
+        self.create_admin_users()
+        self.login(self.staff_user)
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.create_cls_tracks_and_event_types()
+
+    def test_staff_only(self):
+        url = reverse("studioadmin:add_subscription_config", args=("one_off",))
+        self.user_access_test(["staff"], url)
+
+        url = reverse("studioadmin:add_subscription_config", args=("recurring",))
+        self.user_access_test(["staff"], url)
+
+    def test_choose_type_for_subscription_config(self):
+        url = reverse("studioadmin:choose_subscription_config_type")
+        resp = self.client.get(url)
+        assert "Adding New Subscription/Membership" in resp.content.decode("utf-8")
+
+    def test_choose_type_for_subscription_config_redirect(self):
+        url = reverse("studioadmin:choose_subscription_config_type")
+        resp = self.client.post(url, {"one_off": "One-off"})
+        assert resp.url == reverse("studioadmin:add_subscription_config", args=("one_off",))
+
+        resp = self.client.post(url, {"recurring": "Recurring"})
+        assert resp.url == reverse("studioadmin:add_subscription_config", args=("recurring",))
+
+    def test_bookable_event_type_options(self):
+        url = reverse("studioadmin:add_subscription_config", args=("one_off",))
+        resp = self.client.get(url)
+        formset = resp.context_data["bookable_event_types_formset"]
+        assert len(formset.forms) == EventType.objects.count()
+        form = formset.forms[0]
+        assert sorted(evtype.id for evtype in form.fields["event_type"].queryset) == sorted(EventType.objects.values_list("id", flat=True))
+
+    def test_add_one_off_subscription_config(self):
+        assert SubscriptionConfig.objects.exists() is False
+        url = reverse("studioadmin:add_subscription_config", args=("one_off",))
+        data = {
+            "name": "Test subscription",
+            "description": "test",
+            "duration": 1,
+            "duration_units": "months",
+            "start_date": "01-Mar-2020",
+            "start_options": "start_date",
+            "recurring": False,
+            "cost": 20,
+            "active": False,
+            "form-TOTAL_FORMS": 1,
+            "form-INITIAL_FORMS": 1,
+            "form-MAX_FORMS": 1,
+            "form-0-event_type": "",
+            "form-0-allowed_number": "",
+            "form-0-allowed_unit": "",
+        }
+        self.client.post(url, data)
+        assert SubscriptionConfig.objects.filter(name="Test subscription").exists()
+        config = SubscriptionConfig.objects.first()
+        assert config.start_date == datetime(2020, 3, 1, 0, 0, tzinfo=timezone.utc)
+        assert config.bookable_event_types == {}
+
+    def test_add_recurring_subscription_config(self):
+        assert SubscriptionConfig.objects.exists() is False
+        url = reverse("studioadmin:add_subscription_config", args=("recurring",))
+        data = {
+            "name": "Test subscription",
+            "description": "test",
+            "duration": 1,
+            "duration_units": "months",
+            "start_date": "",
+            "start_options": "signup_date",
+            "recurring": True,
+            "cost": 20,
+            "active": False,
+            "form-TOTAL_FORMS": 1,
+            "form-INITIAL_FORMS": 1,
+            "form-MAX_FORMS": 1,
+            "form-0-event_type": "",
+            "form-0-allowed_number": "",
+            "form-0-allowed_unit": "",
+        }
+        self.client.post(url, data)
+        assert SubscriptionConfig.objects.filter(name="Test subscription").exists()
+        config = SubscriptionConfig.objects.first()
+        assert not config.start_date
+        assert config.bookable_event_types == {}
+
+    def test_subscription_config_with_bookable_event_types(self):
+        assert SubscriptionConfig.objects.exists() is False
+        url = reverse("studioadmin:add_subscription_config", args=("one_off",))
+        data = {
+            "name": "Test subscription",
+            "description": "test",
+            "duration": 1,
+            "duration_units": "months",
+            "start_date": "01-Mar-2020",
+            "start_options": "start_date",
+            "recurring": False,
+            "cost": 20,
+            "active": False,
+            "form-TOTAL_FORMS": 2,
+            "form-INITIAL_FORMS": 2,
+            "form-MAX_FORMS": 2,
+            "form-0-event_type": self.aerial_event_type.id,
+            "form-0-allowed_number": 2,
+            "form-0-allowed_unit": "day",
+            "form-1-event_type": self.kids_aerial_event_type.id,
+            "form-1-allowed_number": 10,
+            "form-1-allowed_unit": "month",
+        }
+        self.client.post(url, data)
+        config = SubscriptionConfig.objects.first()
+        assert config.bookable_event_types == {
+            # jsonfield keys are always strings
+            str(self.aerial_event_type.id): {"allowed_number": 2, "allowed_unit": "day"},
+            str(self.kids_aerial_event_type.id): {"allowed_number": 10, "allowed_unit": "month"}
+        }
+
+    def test_bookable_event_type_validation(self):
+        url = reverse("studioadmin:add_subscription_config", args=("one_off",))
+        data = {
+            "name": "Test subscription",
+            "description": "test",
+            "duration": 1,
+            "duration_units": "months",
+            "start_date": "01-Mar-2020",
+            "start_options": "start_date",
+            "recurring": False,
+            "cost": 20,
+            "active": False,
+            "form-TOTAL_FORMS": 1,
+            "form-INITIAL_FORMS": 1,
+            "form-MAX_FORMS": 1,
+            "form-0-event_type": self.aerial_event_type.id,
+            "form-0-allowed_number": 2,
+            "form-0-allowed_unit": "week",
+        }
+
+        # monthly/weekly units must match
+        resp = self.client.post(url, data)
+        form = resp.context_data["form"]
+        assert form.errors == {
+            "__all__": [
+                "Cannot specify weekly usage for a subscription with a monthly duration. Specify usage per month instead."
+            ]
+        }
+
+        # monthly/weekly units must match
+        resp = self.client.post(url, {**data, "duration_units": "weeks", "form-0-allowed_unit": "month"})
+        form = resp.context_data["form"]
+        assert form.errors == {
+            "__all__": [
+                "Cannot specify monthly usage for a subscription with a weekly duration. Specify usage per week instead."
+            ]
+        }
+
+        # can't specify same event type twice
+        updated = {
+            "duration_units": "weeks",
+            "form-TOTAL_FORMS": 2,
+            "form-INITIAL_FORMS": 2,
+            "form-MAX_FORMS": 2,
+            "form-1-event_type": self.aerial_event_type.id,
+            "form-1-allowed_number": 2,
+            "form-1-allowed_unit": "week"
+        }
+        resp = self.client.post(url, {**data, **updated})
+        form = resp.context_data["form"]
+        assert form.errors == {
+            "__all__": [
+                f"Usage specified twice for event type {self.aerial_event_type.name} (track {self.adult_track})"
+            ]
+        }
+
+        # ignore validation for units if no max number
+        resp = self.client.post(url, {**data, "form-0-allowed_number": ""})
+        assert resp.status_code == 302
+
+
+class UpdateSubscriptionConfigViewTests(EventTestMixin, TestUsersMixin, TestCase):
+    def setUp(self):
+        self.create_users()
+        self.create_admin_users()
+        self.login(self.staff_user)
+        self.subscription_config = baker.make(SubscriptionConfig, name="test")
+        self.url = reverse("studioadmin:edit_subscription_config", args=(self.subscription_config.id,))
+        self.form_data = {
+            "id": self.subscription_config.id,
+            "name": "Test subscription",
+            "description": "test",
+            "duration": 1,
+            "duration_units": "months",
+            "start_date": "01-Mar-2020",
+            "start_options": "start_date",
+            "recurring": False,
+            "cost": 20,
+            "active": True,
+            "form-TOTAL_FORMS": 1,
+            "form-INITIAL_FORMS": 1,
+            "form-MAX_FORMS": 1,
+            "form-0-event_type": self.aerial_event_type.id,
+            "form-0-allowed_number": 2,
+            "form-0-allowed_unit": "day",
+        }
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.create_cls_tracks_and_event_types()
+
+    def test_staff_only(self):
+        self.user_access_test(["staff"], self.url)
+
+    def test_edit_subscription_config(self):
+        self.client.post(self.url, self.form_data)
+        self.subscription_config.refresh_from_db()
+        assert self.subscription_config.name == "Test subscription"
+
+    def test_can_delete_bookable_event_type(self):
+        self.client.post(self.url, {**self.form_data, "form-0-DELETE": True})
+        self.subscription_config.refresh_from_db()
+        assert self.subscription_config.bookable_event_types == {}
+
+    def test_start_date_disable_for_one_off_with_purchased_subscriptions(self):
+        # no subscriptions
+        self.subscription_config.recurring = False
+        self.subscription_config.save()
+        resp = self.client.get(self.url)
+        assert "readonly" not in resp.context_data["form"].fields["start_date"].widget.attrs
+
+        # unpaid subscription
+        subscription = baker.make(Subscription, config=self.subscription_config, paid=False)
+        resp = self.client.get(self.url)
+        assert "readonly" not in resp.context_data["form"].fields["start_date"].widget.attrs
+
+        # paid subscription
+        subscription.paid = True
+        subscription.save()
+        resp = self.client.get(self.url)
+        assert "readonly" in resp.context_data["form"].fields["start_date"].widget.attrs
+
+        # recurring config
+        self.subscription_config.recurring = True
+        self.subscription_config.save()
+        resp = self.client.get(self.url)
+        assert "readonly" not in resp.context_data["form"].fields["start_date"].widget.attrs
+
+
+class DeleteSubscriptionConfigViewTests(TestUsersMixin, TestCase):
+
+    def setUp(self):
+        self.create_users()
+        self.create_admin_users()
+        self.login(self.staff_user)
+        self.subscription_config = baker.make(SubscriptionConfig, name="test")
+        self.url = reverse("studioadmin:delete_subscription_config", args=(self.subscription_config.id,))
+
+    def test_staff_only(self):
+        self.user_access_test(["staff"], self.url)
+
+    def test_delete_subscription_config(self):
+        self.client.post(self.url)
+        assert SubscriptionConfig.objects.filter(id=self.subscription_config.id).exists() is False
+
+    def test_delete_subscription_config_if_subscriptions_paid(self):
+        subscription = baker.make(Subscription, config=self.subscription_config, paid=True)
+        resp = self.client.post(self.url)
+        assert resp.status_code == 400
+        assert SubscriptionConfig.objects.filter(id=self.subscription_config.id).exists() is True
+
+        subscription.paid = False
+        subscription.save()
+        self.client.post(self.url)
+        assert SubscriptionConfig.objects.filter(id=self.subscription_config.id).exists() is False
+
+
+class CloneSubscriptionConfigViewTests(TestUsersMixin, TestCase):
+
+    def setUp(self):
+        self.create_users()
+        self.create_admin_users()
+        self.login(self.staff_user)
+        self.subscription_config = baker.make(SubscriptionConfig, name="test")
+        self.url = reverse("studioadmin:clone_subscription_config", args=(self.subscription_config.id,))
+
+    def test_staff_only(self):
+        self.user_access_test(["staff"], self.url, expected_redirect=reverse("studioadmin:subscription_configs"))
+
+    def test_clone_subscription_config(self):
+        assert SubscriptionConfig.objects.count() == 1
+        self.client.post(self.url)
+        assert SubscriptionConfig.objects.count() == 2
+        assert SubscriptionConfig.objects.latest("id").name == "Copy of test"
+        assert SubscriptionConfig.objects.latest("id").active is False
+
+        self.client.post(self.url)
+        assert SubscriptionConfig.objects.count() == 3
+        assert SubscriptionConfig.objects.latest("id").name == "Copy of Copy of test"

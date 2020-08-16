@@ -166,7 +166,7 @@ class TestUsersMixin:
                 make_disclaimer_content(version=1)
             return make_online_disclaimer(user=user, version=DisclaimerContent.current_version())
 
-    def user_access_test(self, allowed, url):
+    def user_access_test(self, allowed, url, expected_redirect=None):
         users = {
             "student": self.student_user,
             "staff": self.staff_user,
@@ -176,7 +176,11 @@ class TestUsersMixin:
             self.login(user)
             resp = self.client.get(url)
             if user_type in allowed:
-                assert resp.status_code == 200
+                if expected_redirect is not None:
+                    assert resp.status_code == 302
+                    assert resp.url == expected_redirect
+                else:
+                    assert resp.status_code == 200
             else:
                 assert resp.status_code == 302
                 assert resp.url == reverse("booking:permission_denied")

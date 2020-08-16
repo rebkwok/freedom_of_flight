@@ -312,12 +312,17 @@ class SubscriptionConfigMixin(LoginRequiredMixin, StaffUserMixin):
         bookable_event_types = {}
         for i in range(total_formset_forms):
             event_type = form.data[f"form-{i}-event_type"]
-            if event_type:
+            deleting = form.data.get(f"form-{i}-DELETE")
+            if event_type and not deleting:
                 allowed_number = form.data[f"form-{i}-allowed_number"]
+                if allowed_number:
+                    allowed_number = int(allowed_number)
                 allowed_unit = form.data[f"form-{i}-allowed_unit"]
-                bookable_event_types[int(event_type)] = {"allowed_number": allowed_number, "allowed_unit": allowed_unit}
+                bookable_event_types[event_type] = {"allowed_number": allowed_number, "allowed_unit": allowed_unit}
         subscription_config.bookable_event_types = bookable_event_types
         subscription_config.save()
+        self.log_success(subscription_config)
+        messages.success(self.request, "Subscription saved")
         return HttpResponseRedirect(self.get_success_url())
 
     def get_success_url(self):
@@ -334,8 +339,14 @@ class SubscriptionConfigCreateView(SubscriptionConfigMixin, CreateView):
         context = super().get_context_data(**kwargs)
         context["creating"] = True
         total_event_types = EventType.objects.count()
-        context["bookable_event_types_formset"] = formset_factory(BookableEventTypesForm, extra=max(3, total_event_types))()
+        context["bookable_event_types_formset"] = formset_factory(BookableEventTypesForm, extra=min(4, total_event_types))()
         return context
+
+    def log_success(self, subscription_config):
+        ActivityLog.objects.create(
+            log=f"Subscription config {subscription_config.name} (id {subscription_config.id}) "
+                f"created by admin user {full_name(self.request.user)}"
+        )
 
 
 class SubscriptionConfigUpdateView(SubscriptionConfigMixin, UpdateView):
@@ -353,8 +364,32 @@ class SubscriptionConfigUpdateView(SubscriptionConfigMixin, UpdateView):
                 {"event_type": key, "allowed_number": usuage["allowed_number"], "allowed_unit": usuage["allowed_unit"]}
                 for key, usuage in config.bookable_event_types.items()
             ]
-            formset = formset_factory(BookableEventTypesForm, extra=min(3, total_event_types-len(initial)), can_delete=True)(initial=initial)
+            formset = formset_factory(BookableEventTypesForm, extra=min(4, total_event_types-len(initial)), can_delete=True)(initial=initial)
         else:
-            formset = formset_factory(BookableEventTypesForm, extra=max(3, total_event_types))()
+            formset = formset_factory(BookableEventTypesForm, extra=min(4, total_event_types))()
         context["bookable_event_types_formset"] = formset
         return context
+
+    def log_success(self, subscription_config):
+        ActivityLog.objects.create(
+            log=f"Subscription config {subscription_config.name} (id {subscription_config.id}) "
+                f"updated by admin user {full_name(self.request.user)}"
+        )
+
+
+@login_required
+@staff_required
+def clone_subscription_config_view(request, subscription_config_id):
+    config_to_clone = get_object_or_404(SubscriptionConfig, id=subscription_config_id)
+    config_to_clone.id = None
+    cloned_name = f"Copy of {config_to_clone.name}"
+    config_to_clone.active = False
+    while SubscriptionConfig.objects.filter(name=cloned_name).exists():
+        cloned_name = f"Copy of {cloned_name}"
+    config_to_clone.name = cloned_name
+    config_to_clone.save()
+    messages.success(request, f"Subscription cloned with name {cloned_name}")
+    ActivityLog.objects.create(
+        log=f"Subscription config {config_to_clone.name} (id {config_to_clone.id}) created by admin user {full_name(request.user)}"
+    )
+    return HttpResponseRedirect(reverse("studioadmin:subscription_configs"))

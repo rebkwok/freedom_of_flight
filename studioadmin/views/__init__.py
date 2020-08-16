@@ -18,7 +18,7 @@ from .site_config_views import (
     block_config_list_view, ajax_toggle_block_config_active, block_config_delete_view, choose_block_config_type,
     BlockConfigCreateView, BlockConfigUpdateView,
     subscription_config_list_view, ajax_toggle_subscription_config_active, subscription_config_delete_view,
-    choose_subscription_config_type, SubscriptionConfigCreateView, SubscriptionConfigUpdateView
+    choose_subscription_config_type, SubscriptionConfigCreateView, SubscriptionConfigUpdateView, clone_subscription_config_view,
 )
 from .register_views import RegisterListView, register_view, ajax_add_register_booking, ajax_toggle_attended
 from .timetable_views import (

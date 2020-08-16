@@ -20,7 +20,7 @@ from .form_utils import Formset
 from accounts.admin import CookiePolicyAdminForm, DataPrivacyPolicyAdminForm, DisclaimerContentAdminForm
 from accounts.models import CookiePolicy, DisclaimerContent, DataPrivacyPolicy
 from booking.models import (
-    Booking, Block, Event, Course, EventType, COMMON_LABEL_PLURALS, BlockConfig, SubscriptionConfig
+    Booking, Block, Event, Course, EventType, COMMON_LABEL_PLURALS, BlockConfig, SubscriptionConfig, Subscription
 )
 from common.utils import full_name
 from timetable.models import TimetableSession
@@ -586,11 +586,21 @@ class SubscriptionConfigForm(forms.ModelForm):
         self.fields["active"].help_text = "Active subscriptions are available for purchase by users and will be displayed " \
                                           "on the subscriptions purchase page."
 
+        self.fields["start_date"].widget = forms.DateInput(attrs={"autocomplete": "off"}, format='%d-%b-%Y')
+        self.fields["start_date"].input_formats = ['%d-%b-%Y']
+
+        if self.instance.id and not recurring:
+            disable_start_date = Subscription.objects.filter(config=self.instance, paid=True).exists()
+        else:
+            disable_start_date = False
+
         if not recurring:
             self.fields["start_date"].required = True
             self.fields["start_date"].help_text = "Date the subscription starts"
             self.fields["advance_purchase_allowed"].help_text = "Allow students to purchase the subscription before the start date."
             self.fields["partial_purchase_allowed"].help_text = "Allow purchase of the subscription at a reduced price after the first week"
+        else:
+            self.fields["start_date"].initial = ""
 
         self.helper = FormHelper()
         back_url = reverse('studioadmin:subscription_configs')
@@ -608,7 +618,14 @@ class SubscriptionConfigForm(forms.ModelForm):
                     Column("duration_units", css_class="col-6")
                 ),
                 "start_options" if recurring else Hidden("start_options", "start_date"),
-                "start_date",
+                HTML(
+                    "<small>Note: cannot update start date for this subscription as it has already been purchased. "
+                    "If you want to make a new subscription period, amke a copy of this subscription instead.</small>"
+                ) if disable_start_date else HTML(""),
+                AppendedText(
+                    'start_date',
+                    f"<i id='id_start_date_open' class='start_date_open far fa-calendar'></i>"
+                ) if not disable_start_date else Field('start_date', readonly=True),
             ),
             Fieldset(
                 "Payment settings",
@@ -620,6 +637,13 @@ class SubscriptionConfigForm(forms.ModelForm):
             "active",
             Fieldset(
                 "Usage (optional)",
+                HTML(
+                    "<small class='form-text text-muted'>Specify event types which can be booked with this subscription, with optional limits on use.<br/>"
+                    "Subscriptions are not valid for courses.<br/>"
+                    "Note that weekly/monthly allowed must match subscription duration (i.e. specify a weekly allowance for "
+                    "subscriptions lasting a set number of weeks, and a monthly allowance for subscriptions lasting a set "
+                    "number of months).  Daily limits can be set on any subscription.</small><br/>"
+                ),
                 "include_no_shows_in_usage",
                 Formset("bookable_event_types_formset"),
             ),
@@ -630,14 +654,22 @@ class SubscriptionConfigForm(forms.ModelForm):
 
     def clean(self):
         total_formset_forms = int(self.data['form-TOTAL_FORMS'])
+        duration_units = self.cleaned_data["duration_units"]
         seen = set()
         for i in range(total_formset_forms):
             event_type = self.data[f"form-{i}-event_type"]
-            if event_type:
-                if self.cleaned_data["duration_units"] == "weeks":
-                    allowed_unit = self.data[f"form-{i}-allowed_unit"]
-                    if allowed_unit == "month":
-                        self.add_error("__all__", f"Cannot specify monthly usage for a subscription with a weekly duration. Specify usage per week instead.")
+            allowed_unit = self.data[f"form-{i}-allowed_unit"]
+            allowed_number = self.data[f"form-{i}-allowed_number"]
+            # don't bother validating items we're deleting
+            deleting = self.data.get(f"form-{i}-DELETE")
+            if event_type and not deleting:
+                if allowed_number and allowed_unit != "day":
+                    # Don't bother validating week/month units if no max number specified
+                    duration_unit = duration_units.rstrip("s")
+                    if allowed_unit != duration_unit:
+                        self.add_error(
+                            "__all__", f"Cannot specify {allowed_unit}ly usage for a subscription with a {duration_unit}ly duration. "
+                                       f"Specify usage per {duration_unit} instead.")
                 if event_type in seen:
                     duplicate_event_type = EventType.objects.get(id=int(event_type))
                     self.add_error("__all__", f"Usage specified twice for event type {duplicate_event_type.name} (track {duplicate_event_type.track})")

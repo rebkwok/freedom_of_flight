@@ -728,12 +728,12 @@ class SubscriptionConfig(models.Model):
             if not self.start_date:
                 raise ValidationError({'start_date': _('This field is required for one-off subscription.')})
 
-        if self.partial_purchase_allowed and not self.cost_per_week:
-            raise ValidationError({'cost_per_week': _('Required when partial purchase is allowed.')})
-        if self.partial_purchase_allowed and self.start_options != "start_date":
-            raise ValidationError({'start_options': _('Must be start_date when partial purchase is allowed.')})
         if self.start_options == "start_date" and not self.start_date:
-            raise ValidationError({'start_date': _('This field is required.')})
+            raise ValidationError({'start_date': _('This field is required for subscriptions starting from a specific date.')})
+        if self.partial_purchase_allowed and self.start_options != "start_date":
+            raise ValidationError({'partial_purchase_allowed': _('Only valid for subscriptions starting from a specific date.')})
+        if self.partial_purchase_allowed and not self.cost_per_week:
+            raise ValidationError({'cost_per_week': _('Must be greater than 0 when partial purchase is allowed.')})
 
     def save(self, *args, **kwargs):
         self.full_clean()
@@ -742,6 +742,8 @@ class SubscriptionConfig(models.Model):
                 self.start_date = self.start_date.replace(day=28)
             # Keep the start date in UTC, otherwise calculating the current/next subscription periods is insanely compilcated
             self.start_date = start_of_day_in_utc(self.start_date)
+        if not self.partial_purchase_allowed and self.cost_per_week is not None:
+            self.cost_per_week = None
         super(SubscriptionConfig, self).save(*args, **kwargs)
 
 
@@ -778,7 +780,10 @@ class Subscription(models.Model):
         if not self.paid:
             return False
         if self.config.bookable_event_types:
-            bookable_event_type = self.config.bookable_event_types.get(event.event_type.id)
+            bookable_event_type = self.config.bookable_event_types.get(str(event.event_type.id))
+            if not bookable_event_type:
+                # jsonfield keys should always be strings, but check for the int anyway, just in case
+                bookable_event_type = self.config.bookable_event_types.get(event.event_type.id)
             if bookable_event_type:
                 # check event date is within subscription dates
                 if self.start_date and self.start_date > event.start:
@@ -788,8 +793,8 @@ class Subscription(models.Model):
                     # subscription expires before event
                     return False
                 # check usages
-                allowed_number = bookable_event_type["allowed_number"]
-                if allowed_number is None:
+                allowed_number = bookable_event_type.get("allowed_number")
+                if not allowed_number:  # can be None or empty string
                     # no max
                     return True
                 allowed_unit = bookable_event_type["allowed_unit"]
@@ -865,7 +870,7 @@ class Subscription(models.Model):
                 self.purchase_date = timezone.now()
                 # only reset the start date for signup start options where the start date hasn't been explicitly
                 # set to a future date
-                if self.config.start_options == "signup_date" and self.start_date < timezone.now():
+                if self.config.start_options == "signup_date" and (not self.start_date or self.start_date < timezone.now()):
                     self.start_date = start_of_day_in_utc(timezone.now())
                 self.status = "active"
 

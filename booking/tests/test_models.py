@@ -1234,6 +1234,8 @@ def test_subscription_config_calculate_current_period_cost_as_of_today(mocker, n
 
     # if config hasn't started yet, always return full cost
     config.partial_purchase_allowed = True
+    # reset the cost per week - setting partial_purchase_allowed to False will have changed it to None again
+    config.cost_per_week = 5
     config.start_date = datetime(2020, 10, 1, 0, 0, tzinfo=timezone.utc)
     config.save()
     assert config.calculate_current_period_cost_as_of_today() == 20
@@ -1407,9 +1409,9 @@ class TestSubscription:
         "bookable_event_types,other_bookable_event_types,kwargs,is_course,expected",
         [
             (None, {}, {}, False, False),
-            (None, {99: {"allowed_number": None}}, {}, False, False),
-            (None, {}, {}, True, False),
-            ({"allowed_number": None}, {}, {}, False, True),
+            (None, {"99": {"allowed_number": None}}, {}, False, False),
+            ({}, {}, {}, True, False),
+            ({"allowed_number": ""}, {}, {}, False, True),
             ({"allowed_number": None}, {}, {}, True, False),
             ({"allowed_number": None}, {}, {"paid": False}, False, False),
             (
@@ -1421,7 +1423,7 @@ class TestSubscription:
                 False, False
             ),
             (
-                {"allowed_number": None}, {}, {"start_date": datetime(2020, 8, 20, 0, 0, tzinfo=timezone.utc)},
+                {"allowed_number": "", "allowed_unit": "day"}, {}, {"start_date": datetime(2020, 8, 20, 0, 0, tzinfo=timezone.utc)},
                 False, True
             ),
         ],
@@ -1434,7 +1436,7 @@ class TestSubscription:
             "6. valid, no restrictions, unpaid",
             "7. valid, no restrictions, start date after event start",
             "8. valid, no restrictions, expiry date before event start",
-            "9. valid, no restrictions, event within allowed dates",
+            "9. valid, no restrictions (unit ignored), event within allowed dates",
         ]
     )
     def test_valid_for_event(
@@ -1528,7 +1530,8 @@ class TestSubscription:
         # Subscription starts on Tuesday, so week of the current event is beginning of previous Tues to next Tues
         # i.e. beg 1 Sep - beg 8 Sep
         subscription_kwargs = {
-            "config__bookable_event_types": {event_type.id: bookable_event_types},
+            # jsonfield keys are always strings
+            "config__bookable_event_types": {str(event_type.id): bookable_event_types},
             "config__duration": 1,
             "config__duration_units": "months",
             "config__start_date": datetime(2020, 8, 1, 0, 0, tzinfo=timezone.utc),
@@ -1574,7 +1577,7 @@ class TestSubscription:
         # existing booking for event we're checking don't count
         event = baker.make(Event, event_type=event_type, start=datetime(2020, 9, 3, 14, 0, tzinfo=timezone.utc))
         subscription_kwargs = {
-            "config__bookable_event_types": {event_type.id: {"allowed_number": 1, "allowed_unit": "day"}},
+            "config__bookable_event_types": {str(event_type.id): {"allowed_number": 1, "allowed_unit": "day"}},
             "config__duration": 1,
             "config__duration_units": "months",
             "config__start_date": datetime(2020, 8, 1, 0, 0, tzinfo=timezone.utc),
@@ -1593,7 +1596,7 @@ class TestSubscription:
     def test_valid_for_event_booking_restrictions_include_no_shows(self, student_user, event_type):
         event = baker.make(Event, event_type=event_type, start=datetime(2020, 9, 3, 14, 0, tzinfo=timezone.utc))
         subscription_kwargs = {
-            "config__bookable_event_types": {event_type.id: {"allowed_number": 1, "allowed_unit": "day"}},
+            "config__bookable_event_types": {str(event_type.id): {"allowed_number": 1, "allowed_unit": "day"}},
             "config__duration": 1,
             "config__duration_units": "months",
             "config__start_date": datetime(2020, 8, 1, 0, 0, tzinfo=timezone.utc),
