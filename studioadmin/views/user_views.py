@@ -15,10 +15,10 @@ from braces.views import LoginRequiredMixin
 
 from activitylog.models import ActivityLog
 from booking.email_helpers import send_bcc_emails, send_user_and_studio_emails, send_waiting_list_email
-from booking.models import Booking, Block, Course, Event, WaitingListUser
+from booking.models import Booking, Block, Course, Event, WaitingListUser, SubscriptionConfig, Subscription
 from common.utils import full_name
 
-from ..forms import EmailUsersForm, SearchForm, AddEditBookingForm, AddEditBlockForm
+from ..forms import EmailUsersForm, SearchForm, AddEditBookingForm, AddEditBlockForm, AddEditSubscriptionForm
 from .utils import staff_required, InstructorOrStaffUserMixin
 
 
@@ -48,6 +48,20 @@ def email_course_users_view(request, course_slug):
             return HttpResponseRedirect(reverse("studioadmin:courses") + f"?track={course.event_type.track_id}")
     context = {"form": form, "course": course}
     return TemplateResponse(request, "studioadmin/email_course_users.html", context)
+
+
+@login_required
+@staff_required
+def email_subscription_users_view(request, subscription_config_id):
+    subscription_config = get_object_or_404(SubscriptionConfig, id=subscription_config_id)
+    form = EmailUsersForm(subscription_config=subscription_config)
+    if request.method == "POST":
+        form = EmailUsersForm(request.POST, subscription_config=subscription_config)
+        if form.is_valid():
+            process_form_and_send_email(request, form)
+            return HttpResponseRedirect(reverse("studioadmin:subscription_configs"))
+    context = {"form": form, "subscription_config": subscription_config}
+    return TemplateResponse(request, "studioadmin/email_subscription_users.html", context)
 
 
 def process_form_and_send_email(request, form):
@@ -314,6 +328,11 @@ class BlockMixin:
 
         if form.is_valid():
             block.save()
+            ActivityLog.objects.create(
+                log=f"Block id {block.id} for user {full_name(block.user)} {self.action} by admin user {full_name(self.request.user)}"
+            )
+            messages.success(self.request, f"Block {self.action}")
+
             return HttpResponse(
                 render_to_string(
                     'studioadmin/includes/modal-success.html'
@@ -327,6 +346,7 @@ class BlockMixin:
 
 class BlockEditView(LoginRequiredMixin, InstructorOrStaffUserMixin, BlockMixin, UpdateView):
     template_name = 'studioadmin/includes/user-block-modal.html'
+    action = "updated"
 
     def get_form_kwargs(self, *args, **kwargs):
         kwargs = super().get_form_kwargs(*args, **kwargs)
@@ -336,6 +356,7 @@ class BlockEditView(LoginRequiredMixin, InstructorOrStaffUserMixin, BlockMixin, 
 
 class BlockAddView(LoginRequiredMixin, InstructorOrStaffUserMixin, BlockMixin, CreateView):
     template_name = 'studioadmin/includes/user-block-add-modal.html'
+    action = "created"
 
     def dispatch(self, request, *args, **kwargs):
         self.block_user = User.objects.get(id=kwargs['user_id'])
@@ -361,3 +382,93 @@ def ajax_block_delete(request, block_id):
     )
     block.delete()
     return JsonResponse({"deleted": True, "alert_msg": "Block deleted"})
+
+
+class UserSubscriptionsListView(LoginRequiredMixin, InstructorOrStaffUserMixin, ListView):
+    model = Subscription
+    context_object_name = "subscriptions"
+    template_name = "studioadmin/user_subscriptions_list.html"
+    paginate_by = 20
+
+    def dispatch(self, request, *args, **kwargs):
+        self.user = get_object_or_404(User, pk=kwargs["user_id"])
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, *args, **kwargs):
+        context = super().get_context_data(*args, **kwargs)
+        context["account_user"] = self.user
+        return context
+
+    def get_queryset(self):
+        return self.user.subscriptions.all().order_by("-expiry_date", "-start_date", "-purchase_date")
+
+
+class SubscriptionMixin:
+    form_class = AddEditSubscriptionForm
+    model = Subscription
+
+    def form_valid(self, form):
+        subscription = form.save(commit=False)
+        subscription_config_options = form.cleaned_data["subscription"]
+        subscription_config_id, start_date = subscription_config_options.rsplit("_", 1)
+        config = SubscriptionConfig.objects.get(id=subscription_config_id)
+        start_date = datetime.strptime(start_date, "%d-%b-%Y")
+        subscription.config = config
+        subscription.start_date = start_date
+        # TODO if config has changed, check if subscription had bookings that are no longer valid?
+        if form.is_valid():
+            subscription.save()
+            ActivityLog.objects.create(
+                log=f"Subscription id {subscription.id} ({subscription.config.name}) "
+                    f"for user {full_name(subscription.user)} {self.action} by admin user {full_name(self.request.user)}"
+            )
+            messages.success(self.request, f"Subscription {self.action}")
+            return HttpResponse(
+                render_to_string(
+                    'studioadmin/includes/modal-success.html'
+                )
+            )
+        else:
+            context = self.get_context_data()
+            context["form"] = form
+            return render(self.request, self.template_name, context)
+
+
+class SubscriptionEditView(LoginRequiredMixin, InstructorOrStaffUserMixin, SubscriptionMixin, UpdateView):
+    template_name = 'studioadmin/includes/user-subscription-modal.html'
+    action = "updated"
+
+    def get_form_kwargs(self, *args, **kwargs):
+        kwargs = super().get_form_kwargs(*args, **kwargs)
+        kwargs['user'] = self.object.user
+        return kwargs
+
+
+class SubscriptionAddView(LoginRequiredMixin, InstructorOrStaffUserMixin, SubscriptionMixin, CreateView):
+    template_name = 'studioadmin/includes/user-subscription-add-modal.html'
+    action = "created"
+
+    def dispatch(self, request, *args, **kwargs):
+        self.subscription_user = User.objects.get(id=kwargs['user_id'])
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_form_kwargs(self, *args, **kwargs):
+        kwargs = super().get_form_kwargs(*args, **kwargs)
+        kwargs['user'] = self.subscription_user
+        return kwargs
+
+    def get_context_data(self, *args, **kwargs):
+        context = super().get_context_data(*args, **kwargs)
+        context["subscription_user"] = self.subscription_user
+        return context
+
+
+def ajax_subscription_delete(request, subscription_id):
+    subscription = Subscription.objects.get(id=subscription_id)
+    if subscription.paid:
+        return HttpResponseBadRequest("Cannot delete a paid subscription")
+    ActivityLog.objects.create(
+        log=f"Subscription {subscription.config} (id {subscription_id}) for {full_name(subscription.user)} deleted by admin user {full_name(request.user)}"
+    )
+    subscription.delete()
+    return JsonResponse({"deleted": True, "alert_msg": "Subscription deleted"})

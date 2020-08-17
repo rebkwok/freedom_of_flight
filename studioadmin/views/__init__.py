@@ -30,6 +30,8 @@ from .user_views import (
     email_event_users_view, email_course_users_view, UserListView, UserDetailView, UserBookingsListView,
     UserBookingsHistoryListView, BookingAddView, BookingEditView,
     UserBlocksListView, BlockAddView, BlockEditView, ajax_block_delete,
+    email_subscription_users_view,
+    UserSubscriptionsListView, SubscriptionAddView, SubscriptionEditView, ajax_subscription_delete,
 )
 
 from .waiting_list import ajax_remove_from_waiting_list, event_waiting_list_view

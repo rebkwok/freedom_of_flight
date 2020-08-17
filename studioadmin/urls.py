@@ -25,6 +25,8 @@ from studioadmin.views import (
     UserListView, UserDetailView, UserBookingsListView, BookingAddView, BookingEditView,
     UserBookingsHistoryListView,
     UserBlocksListView, BlockAddView, BlockEditView, ajax_block_delete,
+    email_subscription_users_view,
+    UserSubscriptionsListView, SubscriptionAddView, SubscriptionEditView, ajax_subscription_delete,
 )
 
 app_name = 'studioadmin'
@@ -94,6 +96,7 @@ urlpatterns = [
     path('site-config/<int:pk>/update/', SubscriptionConfigUpdateView.as_view(), name="edit_subscription_config"),
     path('site-config/subscription-config/<int:config_id>/subscriptions/', SubscriptionListView.as_view(),
          name="purchased_subscriptions"),
+    path('site-config/subscription-config/<int:subscription_config_id>/email-students/', email_subscription_users_view, name="email_subscription_users"),
 
     # policies
     path('policies/cookie-policies/', CookiePolicyListView.as_view(), name="cookie_policies"),
@@ -121,6 +124,10 @@ urlpatterns = [
     path('user/<int:user_id>/block/add/', BlockAddView.as_view(), name="blockadd"),
     path('user/block/<int:pk>/edit/', BlockEditView.as_view(), name="blockedit"),
     path('user/block/<int:block_id>/delete/', ajax_block_delete, name="blockdelete"),
+    path('user/<int:user_id>/subscriptions/', UserSubscriptionsListView.as_view(), name="user_subscriptions"),
+    path('user/<int:user_id>/subscription/add/', SubscriptionAddView.as_view(), name="subscriptionadd"),
+    path('user/subscription/<int:pk>/edit/', SubscriptionEditView.as_view(), name="subscriptionedit"),
+    path('user/subscription/<int:subscription_id>/delete/', ajax_subscription_delete, name="subscriptiondelete"),
 
     # help
     path('help/', help, name="help"),

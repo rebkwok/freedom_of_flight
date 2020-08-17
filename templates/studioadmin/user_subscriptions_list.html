@@ -1,0 +1,76 @@
+{%  extends "studioadmin/base.html" %}
+
+{% load accounttags studioadmintags static %}
+
+{% block precontent %}
+    {%  include "studioadmin/includes/navs/user_detail_subnav.html" %}
+{% endblock %}
+
+{% block content %}
+
+    <h2>{{ account_user|full_name }}: Subscriptions</h2>
+
+    <a class="subscriptionadd btn btn-success btn-sm mb-2" href="#" data-form="{% url 'studioadmin:subscriptionadd' account_user.id %}" title="add subscription">Add new subscription</a>
+
+    <!-- Modal -->
+    <div class="modal fade" id="UserSubscriptionModal" tabindex="-1" role="dialog" aria-labelledby="UserSubscriptionModalLabel"></div>
+    <div class="modal fade" id="UserSubscriptionAddModal" tabindex="-1" role="dialog" aria-labelledby="UserSubscriptionAddModalLabel"></div>
+    <!-- /.modal -->
+
+    {% if subscriptions %}
+        <table class="table">
+            <thead>
+            <tr>
+                <th></th>
+                <th class="text-center">Status</th>
+                <th class="text-center">Name</th>
+                <th class="text-center">Bookings</th>
+                <th class="text-center">Purchased</th>
+                <th class="text-center">Start</th>
+                <th class="text-center">Expiry</th>
+                <th class="text-center">Delete<br/><span class="helptext">Unpaid only</span></th>
+            </tr>
+            </thead>
+
+            <tbody>
+                {% for subscription in subscriptions %}
+                    <tr id="row-subscription-{{ subscription.id }}" {% if subscription.has_expired %}class="expired"{% endif %}>
+                        <td>
+                            <a class="subscriptionedit" href="#"
+                                   data-form="{% url 'studioadmin:subscriptionedit' subscription.id %}"
+                                   title="edit subscription">Edit</a>
+                        </td>
+                        <td class="text-center">{{ subscription.status }}</td>
+                        <td class="text-center">{{ subscription.config.name }}</td>
+                        <td class="text-center">{{ subscription.bookings.count }}</td>
+                        <td class="text-center">{% if subscription.paid %}{{ subscription.purchase_date|date:"d-M-y" }}{% endif %}</td>
+                        <td class="text-center">{{ subscription.start_date|date:"d-M-y" }}</td>
+                        <td class="text-center">{{ subscription.expiry_date|date:"d-M-y" }}</td>
+                        <td class="text-center">
+                            {% if not subscription.paid %}
+                                <span
+                                    class="subscription-delete-btn"
+                                    data-subscription_id={{ subscription.id }}
+                                    >
+                                <span class="btn btn-sm btn-danger pt-0 pb-0"><i class="far fa-trash-alt"></i></span>
+                                </span>
+                            {% endif %}
+                        </td>
+                    </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+
+     {% include 'common/includes/single_page_pagination.html' %}
+
+    {% else %}
+        <p>No subscriptions</p>
+    {% endif %}
+
+{% endblock content %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.form/4.2.2/jquery.form.min.js" integrity="sha384-FzT3vTVGXqf7wRfy8k4BiyzvbNfeYjK+frTVqZeNDFl8woCbF0CYG6g2fMEFFo/i" crossorigin="anonymous"></script>
+<script type='text/javascript' src="{% static 'studioadmin/js/user_subscriptions_ajax-v1.js' %}"></script>
+
+{% endblock %}

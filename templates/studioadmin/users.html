@@ -18,11 +18,11 @@
         <thead>
         <tr>
             <th class="text-center">
-                Name
+                Name <span class="fa fa-sort"></span>
                 {% if request.user.is_staff %}
-                    </br><span class="helptext">Click for bookings</span>
+                    </br><span class="helptext">Click to view activity</span>
                 {% endif %}
-                <span class="fa fa-sort"></span></th>
+                </th>
             <th class="text-center">Role</th>
             <th class="text-center">Managed by <span class="fa fa-sort"></span></th>
             <th class="text-center">Disclaimer</th>

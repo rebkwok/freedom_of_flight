@@ -15,6 +15,8 @@ from django.utils import timezone
 from crispy_forms.bootstrap import InlineCheckboxes, AppendedText, PrependedText
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Button, Layout, Submit, Row, Column, Field, Fieldset, Hidden, HTML
+from delorean import Delorean
+
 from .form_utils import Formset
 
 from accounts.admin import CookiePolicyAdminForm, DataPrivacyPolicyAdminForm, DisclaimerContentAdminForm
@@ -436,29 +438,44 @@ class EmailUsersForm(forms.Form):
     def __init__(self, *args, **kwargs):
         event = kwargs.pop("event", None)
         course = kwargs.pop("course", None)
+        subscription_config = kwargs.pop("subscription_config", None)
         super().__init__(*args, **kwargs)
-        target = "event" if event else "course"
+        target = "event" if event else "course" if course else "subscription"
         if course:
             # flattened list of all bookings
             bookings = sum([list(event.bookings.all()) for event in course.events.all()], [])
             cancelled_bookings = []
-        else:
+        elif event:
             bookings = event.bookings.filter(status="OPEN", no_show=False)
             cancelled_bookings = event.bookings.filter(Q(status="CANCELLED") | Q(no_show=True))
-        choices = [
-            # a set for the first bunch of choices, because courses will have duplicates
-            *{(booking.user.id, f"{full_name(booking.user)}") for booking in bookings},
-            *((booking.user.id, f"{full_name(booking.user)} (cancelled)") for booking in cancelled_bookings)
-       ]
+
+        if subscription_config:
+            not_expired = subscription_config.subscription_set.filter(paid=True, expiry_date__gte=timezone.now())
+            not_expired_user_ids = not_expired.distinct("user_id").values_list("user_id", flat=True)
+            expired = subscription_config.subscription_set.filter(paid=True).exclude(user_id__in=not_expired_user_ids)
+            choices = [
+                *{(subscription.user.id, f"{full_name(subscription.user)}") for subscription in not_expired},
+                *{(subscription.user.id, f"{full_name(subscription.user)} (expired)") for subscription in expired}
+            ]
+            students_label = "The following students have purchased subscriptions."
+            students_initial = {subscription.user.id for subscription in not_expired}
+        else:
+            choices = [
+                # a set for the first bunch of choices, because courses will have duplicates
+                *{(booking.user.id, f"{full_name(booking.user)}") for booking in bookings},
+                *((booking.user.id, f"{full_name(booking.user)} (cancelled)") for booking in cancelled_bookings)
+            ]
+            students_label = f"The following students have booked for this {target}."
+            students_initial = {booking.user.id for booking in bookings}
         self.fields["students"] = forms.MultipleChoiceField(
             widget=forms.CheckboxSelectMultiple(attrs={"class": "form-check-input"}),
             choices=choices,
             required=False,
-            label=f"The following students have booked for this {target}.",
-            initial={booking.user.id for booking in bookings},
+            label=students_label,
+            initial=students_initial,
         )
 
-        self.fields["subject"].initial = event if target == "event" else course.name
+        self.fields["subject"].initial = event if target == "event" else course.name if target == "course" else subscription_config.name
 
         self.helper = FormHelper()
         self.helper.layout = Layout(
@@ -652,6 +669,19 @@ class SubscriptionConfigForm(forms.ModelForm):
             HTML(f'<a class="btn btn-outline-dark" href="{back_url}">Back</a>')
         )
 
+    def clean_start_date(self):
+        start_date = self.cleaned_data["start_date"]
+        if start_date:
+            # At this point start date is in local time, interpreted by the form
+            # add the UTC offset, if there is one and convert it to UTC now, so that the model's save doesn't convert it
+            # in local time
+            utc_offset = start_date.utcoffset()
+            start_date = Delorean(start_date)
+            start_date = start_date + utc_offset
+            start_date.shift("utc")
+            start_date = start_date.datetime
+        return start_date
+
     def clean(self):
         total_formset_forms = int(self.data['form-TOTAL_FORMS'])
         duration_units = self.cleaned_data["duration_units"]
@@ -758,10 +788,13 @@ class AddEditBookingForm(forms.ModelForm):
         )
 
     def __init__(self, *args, **kwargs):
-        self.user = kwargs.pop('user', None)
+        self.user = kwargs.pop('user')
         super().__init__(*args, **kwargs)
-        if self.user is not None:
-            self.fields['user'].initial = self.user.id
+        self.fields['user'] = forms.ModelChoiceField(
+            widget=forms.HiddenInput(),
+            queryset=User.objects.filter(id=self.user.id),
+            initial=self.user.id
+        )
 
         if self.instance.id:
             already_booked = self.user.bookings.exclude(event_id=self.instance.event.id).values_list("event_id", flat=True)
@@ -871,5 +904,59 @@ class AddEditBlockForm(forms.ModelForm):
                  "If required, you can override it here with a manually set date.</p>"),
             HTML(f"<p>Expiry date: <b>{self.instance.expiry_date.strftime('%d-%b-%y')}</b></p>") if self.instance.id and self.instance.expiry_date else "",
             "manual_expiry_date",
+            Submit('submit', 'Save')
+        )
+
+
+class AddEditSubscriptionForm(forms.ModelForm):
+
+    class Meta:
+        model = Subscription
+        fields = ('user', 'paid')
+
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        # add field for subscriptions with start options for user
+        configs = SubscriptionConfig.objects.filter(active=True)
+        config_choices = []
+
+        def _format_option(option):
+            if not option:
+                return "None"
+            return option.strftime("%d-%b-%Y")
+
+        def _format_option_display(config, option):
+            if not option:
+                if config.start_options == "signup_date":
+                    return "starts on purchase date"
+                elif config.start_options == "first_booking_date":
+                    return "starts on date of first use"
+            return f"start {option.strftime('%d-%b-%Y')}"
+
+        for config in configs:
+            options = config.get_start_options_for_user(self.user)
+            config_choices.extend([(f"{config.id}_{_format_option(option)}", f"{config.name} - {_format_option_display(config, option)}") for option in options])
+        if self.instance.id:
+            current_value = f"{self.instance.config.id}_{_format_option(self.instance.start_date)}"
+            config_choices.insert(
+                0,
+                (
+                    current_value,
+                    f"{self.instance.config.name} - {_format_option_display(self.instance.config, self.instance.start_date)}"
+                )
+            )
+        self.fields["subscription_options"] = forms.ChoiceField(
+            choices=config_choices,
+            help_text="Select the subscription and start date (if applicable) that you want to add. Note this only shows "
+                      "options that are available to this user. For subscriptions that recur from a specific date and "
+                      "allow advance purchase, a user can have one for both the current and next period"
+        )
+        self.helper = FormHelper()
+        self.helper.layout = Layout(
+            Hidden("user", self.user.id),
+            "subscription_options",
+            HTML(f"<p>Purchase date: <b>{self.instance.purchase_date.strftime('%d-%b-%y')}</b></p>") if self.instance.id else HTML(""),
+            "paid",
             Submit('submit', 'Save')
         )

@@ -689,7 +689,6 @@ class SubscriptionConfig(models.Model):
                     calculated_start = datetime_this_month if next else datetime_this_month - relativedelta(months=1)
                 calculated_start = start_of_day_in_utc(calculated_start)
                 time_diff = relativedelta(calculated_start, self.start_date)
-                # in case of DST differences
                 remainder = time_diff.months % self.duration
                 if next:
                     result = calculated_start + relativedelta(months=remainder)
