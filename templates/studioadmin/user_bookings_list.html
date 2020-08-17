@@ -36,7 +36,7 @@
                 <th>Event</th>
                 <th>Track</th>
                 <th>Status</th>
-                <th>Block assigned</th>
+                <th>Block/Subscription used</th>
             </tr>
             </thead>
 
@@ -52,7 +52,16 @@
                         <td>{{ booking.event.name }} {% if booking.event.course %}({{ booking.event.course.name }}){% endif %}</td>
                         <td>{{ booking.event.event_type.track }}</td>
                         <td>{{ booking.status }}</td>
-                        <td>{% if booking.block %}Yes{% else %}-{% endif %}</td>
+                        <td>
+                            {% if booking.block %}
+                                <div class="badge badge-info" data-toggle="tooltip" data-placement="top" title="{{ booking.block.block_config.name }} (block)">
+                                    Yes
+                                </div>
+                            {% elif booking.subscription %}
+                                <div class="badge badge-warning" data-toggle="tooltip" data-placement="top" title="{{ booking.subscription.config.name }} (subscription)">
+                                    Yes
+                                </div>
+                            {% else %}-{% endif %}</td>
                     </tr>
             {% endfor %}
             </tbody>

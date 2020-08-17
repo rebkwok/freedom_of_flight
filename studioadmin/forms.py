@@ -45,6 +45,24 @@ def get_user_choices(event):
     return callable
 
 
+def _obj_date_string(obj):
+    if obj.start_date:
+        dates_string = f"starts {obj.start_date.strftime('%d %b %Y')} -- expires {obj.expiry_date.strftime('%d %b %Y')}"
+    else:
+        dates_string = "not started yet"
+    return dates_string
+
+
+class BlockModelChoiceField(forms.ModelChoiceField):
+    def label_from_instance(self, obj):
+        return f"{obj.block_config.name} - {_obj_date_string(obj)}"
+
+
+class SubscriptionModelChoiceField(forms.ModelChoiceField):
+    def label_from_instance(self, obj):
+        return f"{obj.config.name} - {_obj_date_string(obj)}"
+
+
 class AddRegisterBookingForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
@@ -784,7 +802,7 @@ class AddEditBookingForm(forms.ModelForm):
     class Meta:
         model = Booking
         fields = (
-            'user', 'event', 'status', 'no_show', 'attended', 'block',
+            'user', 'event', 'status', 'no_show', 'attended', 'block', 'subscription'
         )
 
     def __init__(self, *args, **kwargs):
@@ -810,12 +828,22 @@ class AddEditBookingForm(forms.ModelForm):
         )
 
         active_user_blocks = [
-            block.id for block in self.user.blocks.all() if block.active_block
+            block.id for block in self.user.blocks.all() if block.active_block or block == self.instance.block
         ]
-        self.has_available_block = True if active_user_blocks else False
-
-        self.fields['block'] = (forms.ModelChoiceField(
+        self.fields['block'] = (BlockModelChoiceField(
             queryset=self.user.blocks.filter(id__in=active_user_blocks),
+            widget=forms.Select(attrs={'class': 'form-control input-sm'}),
+            required=False,
+            empty_label="--------None--------"
+        ))
+
+        active_user_subscriptions = [
+            subscription.id for subscription in self.user.subscriptions.filter(
+                paid=True, start_date__lte=timezone.now(), expiry_date__gte=timezone.now()
+            ) if subscription.config.bookable_event_types
+        ]
+        self.fields['subscription'] = (SubscriptionModelChoiceField(
+            queryset=self.user.subscriptions.filter(id__in=active_user_subscriptions),
             widget=forms.Select(attrs={'class': 'form-control input-sm'}),
             required=False,
             empty_label="--------None--------"
@@ -827,9 +855,12 @@ class AddEditBookingForm(forms.ModelForm):
         Add form validation for cancelled bookings
         """
         block = self.cleaned_data.get('block')
+        subscription = self.cleaned_data.get('subscription')
         event = self.cleaned_data.get('event')
         status = self.cleaned_data.get('status')
         no_show = self.cleaned_data.get('no_show')
+        if block and subscription:
+            self.add_error("__all__", "Assign booking to EITHER a block or a subscription, not both")
         if block:
             # check block validity; this will check both events and courses
             if not block.valid_for_event(event):
@@ -839,6 +870,15 @@ class AddEditBookingForm(forms.ModelForm):
                 self.add_error(
                     "block", f"Block cannot be assigned for cancelled booking.  "
                              f"Set to open and no_show if a block should be used.")
+        if subscription:
+            # check subscription validity; this will check both events and courses
+            if not subscription.valid_for_event(event):
+                if event.course:
+                    msg = "Subscriptions are not valid for courses"
+                else:
+                    msg = f"Subscription is not valid for this {event.event_type.label} (invalid event type, usage limits " \
+                          f"reached, or expired by date of {event.event_type.label})"
+                self.add_error("subscription", msg)
 
         # full event
         if not event.spaces_left:
@@ -932,6 +972,8 @@ class AddEditSubscriptionForm(forms.ModelForm):
                     return "starts on purchase date"
                 elif config.start_options == "first_booking_date":
                     return "starts on date of first use"
+                else:
+                    return ""
             return f"start {option.strftime('%d-%b-%Y')}"
 
         for config in configs:

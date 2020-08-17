@@ -245,8 +245,8 @@ def process_user_booking_updates(form, request, user):
                     f"Block cannot be updated; applies to all {booking.event.event_type.pluralized_label} in the course."
                 )
 
-            if not booking.block and booking.status == "OPEN":
-                messages.error(request, "NOTE: This booking does not have a credit block assigned.")
+            if not (booking.block or booking.subscription) and booking.status == "OPEN":
+                messages.error(request, "NOTE: This booking does not have a credit block or subscription assigned as payment.")
             booking.save()
 
             if 'send_confirmation' in form.changed_data:
@@ -409,10 +409,13 @@ class SubscriptionMixin:
 
     def form_valid(self, form):
         subscription = form.save(commit=False)
-        subscription_config_options = form.cleaned_data["subscription"]
+        subscription_config_options = form.cleaned_data["subscription_options"]
         subscription_config_id, start_date = subscription_config_options.rsplit("_", 1)
         config = SubscriptionConfig.objects.get(id=subscription_config_id)
-        start_date = datetime.strptime(start_date, "%d-%b-%Y")
+        try:
+            start_date = datetime.strptime(start_date, "%d-%b-%Y").replace(tzinfo=timezone.utc)
+        except ValueError:
+            start_date = None
         subscription.config = config
         subscription.start_date = start_date
         # TODO if config has changed, check if subscription had bookings that are no longer valid?
