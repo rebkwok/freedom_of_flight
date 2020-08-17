@@ -359,8 +359,9 @@ class UserBookingAddViewTests(TestUsersMixin, TestCase):
         assert mail.outbox[0].to == [self.student_user.email]
 
     def test_send_email_confirmation_managed_user(self):
+        url = reverse("studioadmin:bookingadd", args=(self.child_user.id,))
         self.client.post(
-            self.url,
+            url,
             {
                 "user": self.child_user.id, "event": self.event.id, "block": "", "status": "OPEN",
                 "no_show": False, "send_confirmation": True
