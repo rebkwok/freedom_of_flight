@@ -20,19 +20,28 @@
       <li class="nav-item">
           <a class="nav-link" href="{% url 'studioadmin:user_blocks' account_user.id %}">Blocks</a>
       </li>
+      <li class="nav-item">
+          <a class="nav-link" href="{% url 'studioadmin:user_subscriptions' account_user.id %}">Subscriptions</a>
+      </li>
     </ul>
   </div>
 </nav>
 </div>
 
-<li class="nav-item dropdown d-block d-md-none" id="userDetailsNavbarDropdownContainer">
-    <a class="nav-link dropdown-toggle" href="#" id="userDetailsNavbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-      Options
-    </a>
-    <div class="dropdown-menu" aria-labelledby="userDetailsNavbarDropdown">
-      <a class="dropdown-item" href="{% url 'studioadmin:user_detail' account_user.id %}">Details & Disclaimer</a>
-      <a class="dropdown-item" href="{% url 'studioadmin:user_bookings' account_user.id %}">Bookings</a>
-      <a class="dropdown-item" href="{% url 'studioadmin:past_user_bookings' account_user.id %}">Booking History</a>
-      <a class="dropdown-item" href="{% url 'studioadmin:user_blocks' account_user.id %}">Blocks</a>
-    </div>
-</li>
+<div class="d-block d-md-none">
+<ul class="nav">
+    <li class="nav-item dropdown" id="userDetailsNavbarDropdownContainer">
+        <a class="nav-link dropdown-toggle userDetailsNavbar" href="#" id="userDetailsNavbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+          Menu
+        </a>
+        <div class="dropdown-menu" aria-labelledby="userDetailsNavbarDropdown">
+          <a class="dropdown-item" href="{% url 'studioadmin:user_detail' account_user.id %}">Details & Disclaimer</a>
+          <a class="dropdown-item" href="{% url 'studioadmin:user_bookings' account_user.id %}">Bookings</a>
+          <a class="dropdown-item" href="{% url 'studioadmin:past_user_bookings' account_user.id %}">Booking History</a>
+          <a class="dropdown-item" href="{% url 'studioadmin:user_blocks' account_user.id %}">Blocks</a>
+          <a class="dropdown-item" href="{% url 'studioadmin:user_subscriptions' account_user.id %}">Subscriptions</a>
+        </div>
+    </li>
+    <li class="nav-item"><a class="nav-link userDetailsNavbar" href="{% url 'studioadmin:users' %}">Student list</a></li>
+</ul>
+</div>

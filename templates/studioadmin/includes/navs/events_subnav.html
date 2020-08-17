@@ -22,3 +22,20 @@
   </div>
 </nav>
 </div>
+
+<div class="d-block d-md-none">
+<ul class="nav">
+    <li class="nav-item dropdown">
+        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+          Events Menu
+        </a>
+        <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+          <a class="dropdown-item" href="{% url 'studioadmin:registers' %}">Registers</a>
+          <a class="dropdown-item" href="{% url 'studioadmin:choose_event_type_to_create' %}">Add event</a>
+          <a class="dropdown-item" href="{% url 'studioadmin:events' %}">View/Edit</a>
+          <a class="dropdown-item" href="{% url 'studioadmin:past_events' %}">Past events</a>
+        </div>
+    </li>
+        <li class="nav-item"><a class="nav-link" href="{% url 'studioadmin:timetable' %}">Events list</a></li>
+</ul>
+</div>

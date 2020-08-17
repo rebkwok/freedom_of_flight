@@ -1,10 +1,10 @@
-{% load crispy_forms_tags %}
+{% load accounttags crispy_forms_tags %}
 
 <div class="modal-dialog modal-md">
     <div class="modal-content">
-        <form id="user-block-add-form" method='post' class="form" role="form" action='{% url "studioadmin:blockadd" block_user.id %}'>
+        <form id="user-subscription-add-form" method='post' class="form" role="form" action='{% url "studioadmin:subscriptionadd" subscription_user.id %}'>
             <div class="modal-header">
-                <h4 class="modal-title" id="UserBlockAddModalLabel">Adding block for {{ block_user.first_name }} {{ block_user.last_name}}</h4>
+                <h4 class="modal-title" id="UserSubscriptionAddModalLabel">Adding subscription for {{ subscription_user|full_name }}</h4>
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
             </div>
             <div class="container-fluid">
@@ -21,20 +21,12 @@
 
         <script>
             var form_options = {
-                target: '#UserBlockAddModal',
+                target: '#UserSubscriptionAddModal',
                 success: function() { }
             };
 
-            $('#user-block-add-form').ajaxForm(form_options);
-            $('#id_manual_expiry_date').datetimepicker({
-                format:'d-M-Y',
-                formatDate:'d-M-Y',
-                timepicker: false,
-                closeOnDateSelect: true,
-                scrollMonth: false,
-                scrollTime: false,
-                scrollInput: false
-            });
+            $('#user-subscription-add-form').ajaxForm(form_options);
+
         </script>
 
     </div><!-- /.modal-content -->

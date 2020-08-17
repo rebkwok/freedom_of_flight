@@ -47,6 +47,7 @@
                     <th class="text-center">Purchased<br/><span class="helptext">Click to view</span></th>
                     <th></th>
                     <th></th>
+                    <th></th>
                 </tr>
             </thead>
             <tbody>
@@ -86,6 +87,13 @@
                         <div data-toggle="tooltip" data-placement="top" title="Clone this subscription">
                         <a href="{% url 'studioadmin:clone_subscription_config' subscription_config.id %}"><i class="far fa-clone"></i></a>
                         </div>
+                    </td>
+                    <td>
+                        {% if subscription_config.subscriptions_purchased %}
+                            <div data-toggle="tooltip" data-placement="top" title="Email students who have purchased subscriptions">
+                                <a href="{% url 'studioadmin:email_subscription_users' subscription_config.id %}"><i class="far fa-envelope"></i></a>
+                            </div>
+                        {% endif %}
                     </td>
                     <td class="text-center">
                         {% if not subscription_config.subscriptions_purchased %}

@@ -8,7 +8,15 @@
 
 {% block content %}
 
-    <a class="blockadd btn btn-success btn-sm mb-2" href="#" data-form="{% url 'studioadmin:blockadd' user.id %}" title="add block">Add new block</a>
+    <h2>{{ account_user|full_name }}: Blocks</h2>
+
+    <a class="blockadd btn btn-success btn-sm mb-2" href="#" data-form="{% url 'studioadmin:blockadd' account_user.id %}" title="add block">Add new block</a>
+
+    <!-- Modal -->
+    <div class="modal fade" id="UserBlockModal" tabindex="-1" role="dialog" aria-labelledby="UserBlockModalLabel"></div>
+    <div class="modal fade" id="UserBlockAddModal" tabindex="-1" role="dialog" aria-labelledby="UserBlockAddModalLabel"></div>
+    <!-- /.modal -->
+
     {% if blocks %}
         <table class="table">
             <thead>
@@ -25,11 +33,6 @@
             </tr>
             </thead>
 
-            <!-- Modal -->
-            <div class="modal fade" id="UserBlockModal" tabindex="-1" role="dialog" aria-labelledby="UserBlockModalLabel"></div>
-            <div class="modal fade" id="UserBlockAddModal" tabindex="-1" role="dialog" aria-labelledby="UserBlockAddModalLabel"></div>
-            <!-- /.modal -->
-
             <tbody>
                 {% for block in blocks %}
                     <tr id="row-block-{{ block.id }}" {% if block.expired or block.full %}class="expired"{% endif %}>
@@ -45,7 +48,7 @@
                                 EXPIRED
                             {% else %}
                                 UNPAID
-                            {% endif %}</td>
+                            {% endif %}
                         </td>
                         <td class="text-center">{{ block.block_config }}</td>
                         <td class="text-center">{{ block.block_config.size }}</td>
@@ -71,7 +74,7 @@
      {% include 'common/includes/single_page_pagination.html' %}
 
     {% else %}
-        No blocks
+        <p>No blocks</p>
     {% endif %}
 
 {% endblock content %}
