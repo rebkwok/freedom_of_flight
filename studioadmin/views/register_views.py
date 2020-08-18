@@ -14,7 +14,7 @@ from braces.views import LoginRequiredMixin
 from activitylog.models import ActivityLog
 from booking.email_helpers import send_waiting_list_email
 from booking.models import Booking, Event, WaitingListUser
-from booking.utils import get_active_user_block
+from booking.utils import get_active_user_block, get_available_user_subscription
 
 from ..forms import AddRegisterBookingForm
 from .event_views import BaseEventAdminListView
@@ -91,12 +91,11 @@ def process_event_booking_updates(form, event, request):
         booking.no_show = False
         action = 'reopened'
 
-    if not booking.block:  # reopened no-show could already have block
-        active_block = get_active_user_block(booking.user, booking.event)
-        if booking.has_available_block:
-            booking.block = active_block
-        else:
-            messages.warning(request, "User does not have a valid block for this event")
+    # if there's no subscription OR block, look for available ones.  Don't change what's set on an existing booking already.
+    if not booking.subscription and not booking.block:
+        booking.assign_next_available_subscription_or_block()
+        if not booking.subscription and not booking.block:
+            messages.warning(request, "User does not have a valid subscription or block for this event")
     booking.save()
 
     messages.success(request, f'Booking for {booking.event} has been {action}.')

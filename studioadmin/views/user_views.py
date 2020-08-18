@@ -203,8 +203,12 @@ class BookingAddView(LoginRequiredMixin, InstructorOrStaffUserMixin, CreateView)
 
 
 def process_user_booking_updates(form, request, user):
-    if form.has_changed():
-        if form.changed_data == ['send_confirmation']:
+    changed = form.changed_data
+    if "auto_assign_available_subscription_or_block" in changed:
+        # we don't care whether this field has changed
+        changed.remove('auto_assign_available_subscription_or_block')
+    if form.has_changed() or form.cleaned_data["auto_assign_available_subscription_or_block"]:
+        if changed == ['send_confirmation']:
             messages.info(
                 request,  "'Send confirmation' checked but no changes were made; email has not been sent to user."
             )
@@ -236,6 +240,9 @@ def process_user_booking_updates(form, request, user):
             elif 'no_show' in form.changed_data and action == 'updated' and booking.status == 'OPEN':
                 action = 'cancelled' if booking.no_show else 'reopened'
                 messages.success(request, f"Booking {action} as 'no-show'")
+            if form.cleaned_data["auto_assign_available_subscription_or_block"] and action != "cancelled":
+                # auto-assign to next available subscription or block
+                booking.assign_next_available_subscription_or_block()
 
             if action == "updated" and "block" in form.changed_data and not booking.block and booking.event.course:
                 # Don't remove blocks from course events

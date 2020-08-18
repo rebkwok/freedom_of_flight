@@ -23,7 +23,7 @@ from activitylog.models import ActivityLog
 from common.utils import start_of_day_in_utc, end_of_day_in_utc, end_of_day_in_local_time
 from payments.models import Invoice
 
-from .utils import has_available_block as has_available_block_util
+from .utils import has_available_block, has_available_subscription, get_active_user_block, get_available_user_subscription
 
 logger = logging.getLogger(__name__)
 
@@ -909,7 +909,7 @@ class Booking(models.Model):
     )
     status = models.CharField(max_length=255, choices=STATUS_CHOICES, default='OPEN')
     attended = models.BooleanField(default=False, help_text='Student has attended this event')
-    no_show = models.BooleanField(default=False, help_text='Student paid but did not attend')
+    no_show = models.BooleanField(default=False, help_text='Student booked but did not attend, or cancelled after the allowed cancellation period')
 
     class Meta:
         unique_together = ('user', 'event')
@@ -935,7 +935,24 @@ class Booking(models.Model):
 
     @property
     def has_available_block(self):
-        return has_available_block_util(self.user, self.event)
+        return has_available_block(self.user, self.event)
+
+    @property
+    def has_available_subscription(self):
+        return has_available_subscription(self.user, self.event)
+
+    def assign_next_available_subscription_or_block(self):
+        """
+        Checks for and assigns next available subscription or block.
+        NOTE: Does not save booking now
+        """
+        available_subscription = get_available_user_subscription(self.user, self.event)
+        if available_subscription:
+            self.subscription = available_subscription
+        else:
+            active_block = get_active_user_block(self.user, self.event)
+            if active_block:
+                self.block = active_block
 
     def _old_booking(self):
         if self.pk:

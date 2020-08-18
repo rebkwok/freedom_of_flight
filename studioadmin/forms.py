@@ -802,23 +802,28 @@ class AddEditBookingForm(forms.ModelForm):
     class Meta:
         model = Booking
         fields = (
-            'user', 'event', 'status', 'no_show', 'attended', 'block', 'subscription'
+            'user', 'event', 'status', 'no_show', 'attended', 'block', 'subscription',
         )
 
     def __init__(self, *args, **kwargs):
         self.user = kwargs.pop('user')
         super().__init__(*args, **kwargs)
-        self.fields['user'] = forms.ModelChoiceField(
-            widget=forms.HiddenInput(),
-            queryset=User.objects.filter(id=self.user.id),
-            initial=self.user.id
-        )
 
         if self.instance.id:
             already_booked = self.user.bookings.exclude(event_id=self.instance.event.id).values_list("event_id", flat=True)
         else:
             already_booked = self.user.bookings.values_list("event_id", flat=True)
 
+        self.fields['auto_assign_available_subscription_or_block'] = forms.BooleanField(
+            initial=False, required=False,
+            help_text="If user has a valid subscription/block for the selected event, assign it automatically.  "
+                      "Subscriptions are used before blocks, if both exist.  Any entries in the subscription/block "
+                      "fields below will be ignored."
+        )
+        if self.instance.id and (self.instance.block or self.instance.subscription):
+            self.fields['auto_assign_available_subscription_or_block'].widget = forms.HiddenInput()
+        else:
+            self.fields['auto_assign_available_subscription_or_block'].initial = True
         self.fields['event'] = forms.ModelChoiceField(
             queryset=Event.objects.filter(
                 start__gte=timezone.now()
@@ -849,36 +854,58 @@ class AddEditBookingForm(forms.ModelForm):
             empty_label="--------None--------"
         ))
 
+        self.helper = FormHelper()
+        self.helper.layout = Layout(
+            Hidden("user", self.user.id),
+            "event",
+            "status",
+            "no_show",
+            "attended",
+            "auto_assign_available_subscription_or_block",
+            "subscription",
+            "block",
+            Submit('submit', 'Save')
+        )
+
     def clean(self):
         """
         make sure that block selected is for the correct event type
         Add form validation for cancelled bookings
         """
+        auto_assign_available_subscription_or_block = self.cleaned_data.get("auto_assign_available_subscription_or_block")
         block = self.cleaned_data.get('block')
         subscription = self.cleaned_data.get('subscription')
         event = self.cleaned_data.get('event')
         status = self.cleaned_data.get('status')
         no_show = self.cleaned_data.get('no_show')
-        if block and subscription:
-            self.add_error("__all__", "Assign booking to EITHER a block or a subscription, not both")
-        if block:
-            # check block validity; this will check both events and courses
-            if not block.valid_for_event(event):
-                msg = f"{event.event_type.pluralized_label} on this course" if event.course else f"this {event.event_type.label}"
-                self.add_error("block", f"Block is not valid for {msg} (wrong event type or expired by date of {event.event_type.label})")
-            if status == "CANCELLED" and not no_show and not event.course:
-                self.add_error(
-                    "block", f"Block cannot be assigned for cancelled booking.  "
-                             f"Set to open and no_show if a block should be used.")
-        if subscription:
-            # check subscription validity; this will check both events and courses
-            if not subscription.valid_for_event(event):
-                if event.course:
-                    msg = "Subscriptions are not valid for courses"
-                else:
-                    msg = f"Subscription is not valid for this {event.event_type.label} (invalid event type, usage limits " \
-                          f"reached, or expired by date of {event.event_type.label})"
-                self.add_error("subscription", msg)
+        if not auto_assign_available_subscription_or_block:
+            # We'll ignore any assigned blocks/subscriptions if auto-assigning
+            if block and subscription:
+                self.add_error("__all__", "Assign booking to EITHER a block or a subscription, not both")
+            if block:
+                # check block validity; this will check both events and courses
+                if not block.valid_for_event(event):
+                    msg = f"{event.event_type.pluralized_label} on this course" if event.course else f"this {event.event_type.label}"
+                    self.add_error("block", f"Block is not valid for {msg} (wrong event type or expired by date of {event.event_type.label})")
+                if status == "CANCELLED" and not no_show and not event.course:
+                    self.add_error(
+                        "block", f"Block cannot be assigned for cancelled booking.  "
+                                 f"Set to open and no_show if a block should be used.")
+            if subscription:
+                # check subscription validity; this will check both events and courses
+                if not subscription.valid_for_event(event):
+                    if event.course:
+                        msg = "Subscriptions are not valid for courses"
+                    else:
+                        msg = f"Subscription is not valid for this {event.event_type.label} (invalid event type, usage limits " \
+                              f"reached, or expired by date of {event.event_type.label})"
+                    self.add_error("subscription", msg)
+        else:
+            # unset and entered block and subscription values if auto-assigning
+            if block:
+                self.cleaned_data["block"] = None
+            if subscription:
+                self.cleaned_data["subscription"] = None
 
         # full event
         if not event.spaces_left:

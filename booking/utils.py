@@ -60,7 +60,7 @@ def get_block_status(block):
 
 
 def has_available_subscription(user, event):
-    return any(True for subscription in user.subscription.all() if subscription.valid_for_event(event))
+    return any(True for subscription in user.subscriptions.all() if subscription.valid_for_event(event))
 
 
 def get_available_user_subscription(user, event):

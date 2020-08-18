@@ -30,7 +30,7 @@
                 <th scope="col" class="text-center" >Status</th>
                 <th scope="col" class="text-center">User</th>
                 <th scope="col" class="text-center">Disclaimer</th>
-                <th scope="col" class="text-center">Block</th>
+                <th scope="col" class="text-center">Block/Subscription</th>
             </tr>
 
             <!-- Modal -->
@@ -75,9 +75,17 @@
                     </td>
                     <td class="text-center">
                         {% if booking.block %}
-                            {{ booking.block.block_config }} <span class="helptext">(exp: {{ booking.block.expiry_date|date:"d M y" }})</span>
+                            {{ booking.block.block_config }} <span class="helptext">(exp: {{ booking.block.expiry_date|date:"d-M-y" }})</span>
+                        {% elif booking.subscription %}
+                            {{ booking.subscription.config }} <span class="helptext">(exp: {{ booking.subscription.expiry_date|date:"d-M-y" }})</span>
                         {% else %}
-                            {% if booking.status != "CANCELLED" and not booking.user|has_available_block:booking.event %}WARNING: USER HAS NO ACTIVE BLOCK{% endif %}
+                            {% if booking.status == "OPEN" and not booking.no_show %}
+                                {% if booking.has_available_subscription or booking.has_available_block %}
+                                    WARNING: USER'S SUBSCRIPTION/BLOCK NOT ASSIGNED
+                                {% else  %}
+                                    WARNING: USER HAS NO SUBSCRIPTION/BLOCK
+                                {% endif %}
+                            {% endif %}
                         {% endif %}
                     </td>
 

@@ -12,7 +12,7 @@
             <div class="container-fluid">
                 <div class="modal-body">
                 {% csrf_token %}
-                {{ form|crispy }}
+                {% crispy form %}
                 </div>
             </div>
             <div class="modal-footer">

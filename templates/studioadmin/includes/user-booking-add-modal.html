@@ -11,12 +11,11 @@
             <div class="container-fluid">
                 <div class="modal-body">
                 {% csrf_token %}
-                {{ form|crispy }}
+                {% crispy form %}
                 </div>
             </div>
             <div class="modal-footer">
                 <input type="button" class="btn btn-sm btn-secondary" data-dismiss="modal" value="Cancel" />
-                <input type="submit" class="btn btn-sm btn-success" value="Save" />
             </div>
         </form>
 

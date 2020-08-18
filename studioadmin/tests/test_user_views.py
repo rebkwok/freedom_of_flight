@@ -9,7 +9,7 @@ from django.urls import reverse
 from django.test import TestCase
 from django.utils import timezone
 
-from booking.models import Booking, Block, BlockConfig, Course, WaitingListUser
+from booking.models import Booking, Block, BlockConfig, Course, WaitingListUser, Subscription
 from accounts.models import has_active_disclaimer
 from common.test_utils import EventTestMixin, TestUsersMixin, make_disclaimer_content
 
@@ -290,16 +290,84 @@ class UserBookingAddViewTests(TestUsersMixin, TestCase):
         assert booking.event == self.event
         assert booking.block == block
 
-    def test_add_booking_with_invalid_block(self):
+    def test_add_booking_and_auto_assign_block(self):
+        assert self.student_user.bookings.exists() is False
+        block = baker.make(Block, user=self.student_user, block_config__event_type=self.event.event_type, paid=True)
+        self.client.post(
+            self.url,
+            {
+                "user": self.student_user.id, "event": self.event.id, "status": "OPEN", "no_show": False,
+                "auto_assign_available_subscription_or_block": True
+            }
+        )
+        assert self.student_user.bookings.count() == 1
+        booking = self.student_user.bookings.first()
+        assert booking.event == self.event
+        assert booking.block == block
+
+    def test_add_booking_and_auto_assign_subscription(self):
+        assert self.student_user.bookings.exists() is False
+        subscription = baker.make(
+            Subscription, user=self.student_user, paid=True, config__start_options="first_booking_date",
+            config__bookable_event_types={str(self.event.event_type.id): {"allowed_number": ""}}
+        )
+        self.client.post(
+            self.url,
+            {
+                "user": self.student_user.id, "event": self.event.id, "status": "OPEN", "no_show": False,
+                "auto_assign_available_subscription_or_block": True
+            }
+        )
+        assert self.student_user.bookings.count() == 1
+        booking = self.student_user.bookings.first()
+        assert booking.event == self.event
+        assert booking.subscription == subscription
+
+    def test_add_booking_and_auto_assign_subscription_before_block(self):
+        assert self.student_user.bookings.exists() is False
+        block = baker.make(Block, user=self.student_user, block_config__event_type=self.event.event_type, paid=True)
+        subscription = baker.make(
+            Subscription, user=self.student_user, paid=True, config__start_options="first_booking_date",
+            config__bookable_event_types={str(self.event.event_type.id): {"allowed_number": ""}}
+        )
+        self.client.post(
+            self.url,
+            {
+                "user": self.student_user.id, "event": self.event.id, "status": "OPEN", "no_show": False,
+                "auto_assign_available_subscription_or_block": True
+            }
+        )
+        assert self.student_user.bookings.count() == 1
+        booking = self.student_user.bookings.first()
+        assert booking.event == self.event
+        assert booking.subscription == subscription
+        assert booking.block is None
+
+    def test_add_booking_dont_auto_assign_invalid_block(self):
+        assert self.student_user.bookings.exists() is False
+        baker.make(Block, user=self.student_user, paid=True)
+        self.client.post(
+            self.url,
+            {
+                "user": self.student_user.id, "event": self.event.id, "status": "OPEN", "no_show": False,
+                "auto_assign_available_subscription_or_block": True
+            }
+        )
+        assert self.student_user.bookings.count() == 1
+        assert self.student_user.bookings.first().block is None
+
+    def test_add_booking_ignore_invalid_block_if_auto_assign_checked(self):
         assert self.student_user.bookings.exists() is False
         block = baker.make(Block, user=self.student_user, paid=True)
-        resp = self.client.post(
+        self.client.post(
             self.url,
-            {"user": self.student_user.id, "event": self.event.id, "block": block.id, "status": "OPEN", "no_show": False}
+            {
+                "user": self.student_user.id, "block": block.id, "event": self.event.id, "status": "OPEN", "no_show": False,
+                "auto_assign_available_subscription_or_block": True
+            }
         )
-        assert self.student_user.bookings.count() == 0
-        form = resp.context_data["form"]
-        assert form.errors == {"block": ["Block is not valid for this class (wrong event type or expired by date of class)"]}
+        assert self.student_user.bookings.count() == 1
+        assert self.student_user.bookings.first().block is None
 
     def test_add_booking_with_expired_block(self):
         assert self.student_user.bookings.exists() is False
@@ -404,6 +472,7 @@ class UserBookingEditViewTests(TestUsersMixin, TestCase):
             "event": self.event.id,
             "status": self.booking.status,
             "no_show": self.booking.no_show,
+            "auto_assign_available_subscription_or_block": False,
         }
 
     def test_instructor_and_staff_can_access(self):
