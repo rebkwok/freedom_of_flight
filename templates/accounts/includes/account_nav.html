@@ -1,5 +1,6 @@
+{% load accounttags %}
 <div class="accounts-subnav d-none d-lg-block">
-<nav class="navbar fixed-top fixed-top-subnav navbar-expand navbar-light bg-light">
+<nav class="navbar navbar-expand navbar-light bg-light">
   <a class="navbar-brand" href="#">Account</a>
   <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
     <span class="navbar-toggler-icon"></span>
@@ -31,4 +32,26 @@
     </ul>
   </div>
 </nav>
+</div>
+
+
+<div class="d-block d-md-none">
+<ul class="nav bg-light">
+    <li class="nav-item dropdown" id="userDetailsNavbarDropdownContainer">
+        <a class="nav-link dropdown-toggle" href="#" id="navbarAccountDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+          Account Menu
+        </a>
+        <div class="dropdown-menu" aria-labelledby="navbarAccountDropdown">
+         <span class="dropdown-item helptext">Logged in as {{ request.user|full_name }}</span>
+          <a class="dropdown-item" href="{% url 'accounts:profile' %}">Profile</a>
+          <a class="dropdown-item" href="{% url 'booking:blocks' %}">Credit Blocks</a>
+          <a class="dropdown-item" href="{% url 'booking:bookings' %}">Bookings</a>
+          <a class="dropdown-item" href="{% url 'booking:past_bookings' %}">Booking History</a>
+          <a class="dropdown-item" href="#"><em>Payment History</em></a>
+          <a class="dropdown-item" href="{% url 'account_change_password' %}">Change password</a>
+          <a class="dropdown-item" href="{% url 'account_logout' %}">Log out</a>
+        </div>
+    </li>
+    <li class="nav-item"><a class="nav-link" href="{% url 'booking:schedule' %}">Back to schedule</a></li>
+</ul>
 </div>
