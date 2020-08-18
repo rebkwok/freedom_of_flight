@@ -1,62 +1,37 @@
 {% extends "account/base.html" %}
 
-{% load bookingtags static %}
+{% load accounttags bookingtags static %}
 
 {% block extra_head %}
 {% include 'common/includes/ajax_head.html' %}
 {% endblock %}
 
 {% block content %}
-    {% if active_blocks_by_config %}
-        <h2 class="mt-1">Active Credit Blocks</h2>
-        {% for config, blocks in active_blocks_by_config.items  %}
-            <div class="list-group mb-2">
-                <div class="list-group-item list-group-item-dark pt-1 pb-1">{{ config }}</div>
-                {% for block in blocks %}
-                    <div class="list-group-item">
-                        Purchased: {{ block.purchase_date | date:"d M Y" }}<br/>
-                        User: {{ block.user.first_name }} {{ block.user.last_name }}<br/>
-                        {{ block|block_expiry_text }}<br/>
-                        Bookings: {% if not block.bookings.exists %}N/A{% endif %}
-                        <ul>
-                            {% for booking in block.bookings.all %}
-                                <li>{{ booking.event.name }} | {{ booking.event.start|date:"D d M Y, H:i" }}</li>
-                            {% endfor %}
-                        </ul>
-                        </div>
-                {% endfor %}
+
+    <h1>Credit Blocks</h1>
+    <form class="form-inline pb-3" method="post">
+        {% csrf_token %}
+        {{ available_users_form }}
+    </form>
+
+    {% if blocks %}
+        {% for block in blocks %}
+        <div class="list-group mb-2">
+            <div class="list-group-item list-group-item-dark pt-1 pb-1">{{ block.block_config }}
+                <a href="{% url 'booking:block_detail' block.id %}" class="btn btn-sm btn-dark float-right pt-0 pb-0">View details</a>
             </div>
-        {% endfor %}
-    {% endif %}
-    {% if expired_blocks_by_config %}
-        <h2 class="mt-1">Used/Expired Credit Blocks</h2>
-        {% for config, blocks in expired_blocks_by_config.items  %}
-            <div class="list-group mb-2">
-                <div class="list-group-item list-group-item-dark pt-1 pb-1">{{ config }}</div>
-                {% for block in blocks %}
-                    <div class="list-group-item">
-                        Purchased: {{ block.purchase_date | date:"d M Y" }}<br/>
-                        User: {{ block.user.first_name }} {{ block.user.last_name }}<br/>
-                        {{ block|block_expiry_text }}<br/>
-                        Bookings: {% if not block.bookings.exists %}N/A{% endif %}
-                        <ul>
-                            {% for booking in block.bookings.all %}
-                                <li>{{ booking.event.name }} | {{ booking.event.start|date:"D d M Y, H:i" }}</li>
-                            {% endfor %}
-                        </ul>
-                        </div>
-                {% endfor %}
+            <div class="list-group-item {% if not block.active_block %}list-group-item-secondary{% endif %} pb-0 pt-0">
+                Purchased: {{ block.purchase_date | date:"d-M-Y" }} - {{ block|block_expiry_text }}<br/>
+                Uses: {{ block.bookings.count }}
             </div>
+        </div>
         {% endfor %}
+
+    {% else %}
+        <p>{{ view_as_user|full_name }} does not have any credit blocks.</p>
     {% endif %}
 
-    {% if not active_blocks_by_config and not expired_blocks %}
-        <p>You do not have any active blocks.</p>
-    {% endif %}
+    {% include 'common/includes/single_page_pagination.html' %}
+
 
 {% endblock content %}
-
-
-{% block extra_js %}
-<script type='text/javascript' src="{% static 'booking/js/events_booking_ajax-v1.js' %}"></script>
-{% endblock %}

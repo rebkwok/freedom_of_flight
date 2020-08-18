@@ -7,7 +7,7 @@ from booking.views import (
     EventListView, EventDetailView,
     permission_denied, dropin_block_purchase_view,
     course_block_purchase_view, block_purchase_view,
-    ajax_block_purchase, shopping_basket, ajax_checkout
+    ajax_block_purchase, shopping_basket, ajax_checkout, BlockDetailView,
 )
 
 
@@ -34,7 +34,8 @@ urlpatterns = [
     path('bookings/past/', BookingHistoryListView.as_view(), name="past_bookings"),
 
     # BLOCKS
-    path('blocks/active/', BlockListView.as_view(), name="blocks"),
+    path('blocks/', BlockListView.as_view(), name="blocks"),
+    path('block/<pk>/', BlockDetailView.as_view(), name="block_detail"),
     path("blocks/purchase-options/dropin/<slug:event_slug>/", dropin_block_purchase_view, name="dropin_block_purchase"),
     path("blocks/purchase-options/course/<slug:course_slug>/", course_block_purchase_view, name="course_block_purchase"),
     path("blocks/purchase-options/", block_purchase_view, name="block_purchase"),

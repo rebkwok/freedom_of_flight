@@ -98,49 +98,47 @@ class BlockListViewTests(TestUsersMixin, TestCase):
     def setUp(self):
         self.create_users()
         self.make_data_privacy_agreement(self.student_user)
+        self.make_data_privacy_agreement(self.student_user1)
         self.make_data_privacy_agreement(self.manager_user)
         self.make_disclaimer(self.student_user)
+        self.make_disclaimer(self.student_user1)
         self.make_disclaimer(self.child_user)
 
-    def test_only_list_users_and_managed_users_blocks(self):
-        baker.make(Block, user=self.student_user, block_config__size=2, paid=True)
-        baker.make(Block, user=self.manager_user, block_config__size=2, paid=True)
-        baker.make(Block, user=self.child_user, block_config__size=2, paid=True)
+    def tearDown(self):
+        del self.client.session["user_id"]
+
+    def test_list_logged_in_users_blocks_by_default(self):
+        baker.make(Block, user=self.student_user, block_config__size=1, paid=True)
+        baker.make(Block, user=self.student_user1, block_config__size=1, paid=True)
 
         self.login(self.student_user)
         resp = self.client.get(self.url)
-        assert len(resp.context_data["active_blocks_by_config"]) == 1
-        assert len(list(resp.context_data["active_blocks_by_config"].values())[0]) == 1
+        assert len(resp.context_data["blocks"]) == 1
+        assert resp.context_data["blocks"][0].user == self.student_user
 
-        self.login(self.manager_user)
+        self.login(self.student_user1)
         resp = self.client.get(self.url)
-        assert len(resp.context_data["active_blocks_by_config"]) == 2
-        for group in resp.context_data["active_blocks_by_config"].values():
-            assert len(group) == 1
-
-    def test_blocks_grouped_by_block_config(self):
-        block = baker.make(Block, user=self.student_user, block_config__size=2, paid=True)
-        block_config1 = block.block_config
-        block1 = baker.make(Block, user=self.student_user, block_config=block_config1, paid=True)
-        block2 = baker.make(Block, user=self.student_user, block_config__size=2, paid=True)
-
-        self.login(self.student_user)
-        resp = self.client.get(self.url)
-        blocks_by_config = resp.context_data["active_blocks_by_config"]
-        assert len(blocks_by_config) == 2 # 3 blocks, in 2 groups by config
-        for config, blocks in blocks_by_config.items():
-            if config == block_config1:
-                assert len(blocks) == 2
-                assert sorted([block.id for block in blocks]) == sorted([block.id, block1.id])
-            else:
-                assert len(blocks) == 1
-                assert blocks[0] == block2
+        assert len(resp.context_data["blocks"]) == 1
+        assert resp.context_data["blocks"][0].user == self.student_user1
 
     def test_unpaid_blocks_not_listed(self):
-        paid_block = baker.make(Block, user=self.student_user, block_config__size=2, paid=True)
+        baker.make(Block, user=self.student_user, block_config__size=2, paid=True)
         baker.make(Block, user=self.student_user, block_config__size=2)
         self.login(self.student_user)
         resp = self.client.get(self.url)
-        blocks_by_config = resp.context_data["active_blocks_by_config"]
-        assert len(blocks_by_config) == 1
-        assert list(blocks_by_config.values())[0] == [paid_block]
+        blocks = resp.context_data["blocks"]
+        assert len(blocks) == 1
+
+    def test_block_list_by_managed_user(self):
+        baker.make(Block, user=self.child_user, block_config__size=1, paid=True)
+        # by default view_as_user for manager user is child user
+        self.login(self.manager_user)
+        resp = self.client.get(self.url)
+        assert len(resp.context_data["blocks"]) == 1
+        assert self.client.session["user_id"] == self.child_user.id
+        assert resp.context_data["blocks"][0].user == self.child_user
+
+        # post sets the session user id and redirects to the booking page again
+        resp = self.client.post(self.url, data={"view_as_user": self.manager_user.id}, follow=True)
+        assert self.client.session["user_id"] == self.manager_user.id
+        assert resp.context_data['blocks'].count() == 0

@@ -18,5 +18,5 @@ class AvailableUsersForm(forms.Form):
                 choices=get_available_users(request.user),
             ),
             initial=initial_view_as_user.id,
-            label="Viewing as user"
+            label="Viewing for user"
         )

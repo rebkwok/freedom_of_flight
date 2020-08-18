@@ -5,7 +5,7 @@ from .ajax_views import (
 
 from .block_views import (
     dropin_block_purchase_view, course_block_purchase_view, block_purchase_view,
-    BlockListView
+    BlockListView, BlockDetailView
 )
 from .booking_views import BookingListView, BookingHistoryListView
 from .event_views import CourseEventsListView, EventDetailView, EventListView, home

@@ -1,0 +1,32 @@
+{% extends "account/base.html" %}
+
+{% load accounttags bookingtags static %}
+
+{% block extra_head %}
+{% include 'common/includes/ajax_head.html' %}
+{% endblock %}
+
+{% block content %}
+
+        <div class="list-group mb-2">
+            <div class="list-group-item list-group-item-dark pt-1 pb-1">Credit Block: {{ credit_block.block_config.name }}</div>
+                <div class="list-group-item">
+                    Purchased: {{ credit_block.purchase_date | date:"d-M-Y" }}<br/>
+                    User: {{ credit_block.user.first_name }} {{ credit_block.user.last_name }}<br/>
+                    {{ credit_block|block_expiry_text }}<br/>
+                    Bookings: {% if not credit_block.bookings.exists %}N/A{% endif %}
+                    <ul>
+                        {% for booking in credit_block.bookings.all %}
+                            <li>{{ booking.event.name }} | {{ booking.event.start|date:"D d M Y, H:i" }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% if credit_block.full %}
+                        <strong>Full</strong>
+                    {% elif not credit_block.active_block %}
+                        <strong>Expired</strong>
+                    {% endif %}
+            </div>
+        </div>
+        <a class="btn btn-outline-dark btn-sm" href="{% url 'booking:blocks' %}">Back</a>
+
+{% endblock content %}
