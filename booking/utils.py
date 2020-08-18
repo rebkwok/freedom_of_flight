@@ -106,6 +106,7 @@ def user_can_book_or_cancel(user, event):
     else:
         return False
 
+
 def get_user_booking_info(user, event):
     user_bookings = user.bookings.filter(event=event)
     info = {
@@ -113,7 +114,8 @@ def get_user_booking_info(user, event):
         "has_booked": user_bookings.exists(),
         "on_waiting_list": user.waitinglists.filter(event=event).exists(),
         "can_book_or_cancel": user_can_book_or_cancel(user, event),
-        "available_block": get_active_user_block(user, event)
+        "available_block": get_active_user_block(user, event),
+        "available_subscription": get_available_user_subscription(user, event)
     }
     if event.course:
         info.update({"has_available_course_block": has_available_course_block(user, event.course)})
@@ -121,7 +123,8 @@ def get_user_booking_info(user, event):
         user_booking = user_bookings.first()
         info.update({
             "open": user_booking.status == "OPEN" and not user_booking.no_show,
-            "cancelled": user_booking.status == "CANCELLED" or   user_booking.no_show,
+            "cancelled": user_booking.status == "CANCELLED" or user_booking.no_show,
             "used_block": user_booking.block,
+            "used_subscription": user_booking.subscription,
         })
     return info

@@ -1,10 +1,12 @@
 from django.template.loader import render_to_string
 from django import template
 
+from common.utils import full_name
 from ..models import WaitingListUser
 from ..utils import has_available_block as has_available_block_util
 from ..utils import has_available_course_block as has_available_course_block_util
 from ..utils import get_block_status, user_can_book_or_cancel
+from ..utils import get_user_booking_info
 
 register = template.Library()
 
@@ -35,6 +37,15 @@ def user_block_info(block):
         # Don't show the used/total for course blocks
         return f"<span class='helptext'>{block.user.first_name} {block.user.last_name}: {block.block_config.name}</span>"
     return get_block_info(block)
+
+
+@register.filter
+def user_subscription_info(subscription):
+    base_text = f"<span class='helptext'>{full_name(subscription.user)}: {subscription.config.name}"
+    if subscription.expiry_date:
+        return f"{base_text}; expires {subscription.expiry_date.strftime('%d-%b-%y')}</span>"
+    return f"{base_text}; not started</span>"
+
 
 @register.filter
 def has_unpaid_block(user, block_config):
@@ -75,3 +86,7 @@ def can_book_or_cancel(user, event):
 def lookup_dict(dictionary, key):
     if dictionary:
         return dictionary.get(key)
+
+@register.simple_tag
+def booking_user_info(booking):
+    return get_user_booking_info(booking.user, booking.event)

@@ -85,7 +85,7 @@ def ajax_toggle_booking(request, event_id):
             booking = existing_booking
         booking.status = 'OPEN'
         booking.no_show = False
-        booking.block = get_active_user_block(user, event)
+        booking.assign_next_available_subscription_or_block()
         booking.save()
 
         try:
@@ -143,8 +143,8 @@ def ajax_toggle_booking(request, event_id):
     alert_message['message_type'] = 'info' if requested_action == "cancelled" else 'success'
     alert_message['message'] = f"Booking has been {requested_action}"
 
-    if not has_available_block(user, booking.event) and ref != "course":
-        # We no longer have available blocks, redirect to the same page again to refresh buttons
+    if (not booking.has_available_block and not booking.has_available_subscription) and ref != "course":
+        # We no longer have available blocks or subscriptions, redirect to the same page again to refresh buttons
         # Ignore if we came from the course page
         messages.success(request, f"{event}: {alert_message['message']}")
         if ref == "bookings":
