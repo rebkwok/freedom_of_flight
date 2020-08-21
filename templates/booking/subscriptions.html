@@ -21,7 +21,7 @@
                 <a href="{% url 'booking:subscription_detail' subscription.id %}" class="btn btn-sm btn-dark float-right pt-0 pb-0">View details</a>
             </div>
             <div class="list-group-item {% if subscription.has_expired %}list-group-item-secondary{% endif %} pb-0 pt-0">
-                Purchased: {{ subscription.purchase_date | date:"d-M-Y" }} - {{ subscription|subscription_expiry_text }}<br/>
+                Purchased: {{ subscription.purchase_date | date:"d-M-Y" }} | {{ subscription|subscription_start_text }} | {{ subscription|subscription_expiry_text }}<br/>
                 {%  if subscription.config.bookable_event_types %}Uses: {{ subscription.bookings.count }}{% endif %}
             </div>
         </div>

@@ -103,6 +103,14 @@ def subscription_expiry_text(subscription):
 
 
 @register.filter
+def subscription_start_text(subscription):
+    if subscription.start_date:
+        return f"Starts {subscription.expiry_date.strftime('%d-%b-%y')}"
+    elif subscription.start_options == "first_booking_date":
+        return "Starts on date of first booked class/event"
+
+
+@register.filter
 def can_book_or_cancel(user, event):
     return user_can_book_or_cancel(user, event)
 

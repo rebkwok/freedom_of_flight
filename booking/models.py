@@ -550,6 +550,12 @@ class SubscriptionConfig(models.Model):
                   "week remaining in the current subscription period"
     )
 
+    current_subscriber_info = models.TextField(
+        null=True, blank=True, help_text="Information that will be displayed in the details for "
+                                         "active subscriptions only.  Use this for information that may "
+                                         "change with each subscription period, e.g. passwords to content on other sites"
+    )
+
     # dicts, keyed by event type id
     # indicates event types this subscription can be used for, and restrictions on use
     # {
@@ -888,6 +894,14 @@ class Subscription(models.Model):
         if self.expiry_date:
             return self.expiry_date < timezone.now()
         return False
+
+    def has_started(self):
+        if self.start_date:
+            return self.start_date < timezone.now()
+        return False
+
+    def is_current(self):
+        return self.paid and self.has_started() and not self.has_expired()
 
     def expires_soon(self):
         if self.expiry_date:

@@ -16,6 +16,11 @@
                     User: {{ subscription.user|full_name }}<br/>
                     {{ subscription|subscription_expiry_text }}
                     </p>
+
+                    {% if subscription.config.current_subscriber_info and subscription.is_current %}
+                        <h4>Current subscriber information:</h4>
+                        <p>{{ subscription.config.current_subscriber_info }}</p>
+                    {% endif %}
                     {%  if subscription.config.bookable_event_types %}
                         Valid for:
                         {% format_bookable_event_types subscription.config %}

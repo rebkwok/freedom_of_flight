@@ -609,7 +609,7 @@ class BookableEventTypesForm(forms.Form):
 class SubscriptionConfigForm(forms.ModelForm):
     class Meta:
         model = SubscriptionConfig
-        fields = ("recurring", "name", "description", "duration", "duration_units", "cost", "start_date",
+        fields = ("recurring", "name", "description", "current_subscriber_info", "duration", "duration_units", "cost", "start_date",
                   "start_options", "advance_purchase_allowed", "partial_purchase_allowed",
                   "cost_per_week", "active", "include_no_shows_in_usage")
 
@@ -645,6 +645,7 @@ class SubscriptionConfigForm(forms.ModelForm):
                 "Subscription Details",
                 "name",
                 "description",
+                "current_subscriber_info",
             ),
             Fieldset(
                 "Duration and start",
