@@ -4,6 +4,7 @@ from django.utils import timezone
 
 from .models import Block, Track, Event
 from .utils import get_view_as_user
+from .views.views_utils import total_unpaid_item_count
 
 
 def booking(request):
@@ -17,7 +18,7 @@ def booking(request):
 
     if request.user.is_authenticated:
         available_users = request.user.managed_users
-        cart_item_count = Block.objects.filter(user__in=request.user.managed_users, paid=False).count()
+        cart_item_count = total_unpaid_item_count(request.user)
         view_as_user = get_view_as_user(request)
     else:
         available_users = [request.user]

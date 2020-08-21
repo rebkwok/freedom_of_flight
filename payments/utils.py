@@ -37,10 +37,16 @@ def get_paypal_form(request, invoice):
             }
         )
     for i, subscription in enumerate(subscriptions, start=len(blocks) + 1):
+        invoiced_amount = subscription.cost_as_of_today()
+        # save the invoiced amount to the Subscription instance.  This will get updated if necessary if the
+        # payment isn't processed immediately, but means we can track if a subscription was charged at a
+        # partial cost
+        subscription.invoiced_amount = invoiced_amount
+        subscription.save()
         paypal_dict.update(
             {
-                'item_name_{}'.format(i): f"{subscription.subscription.name} (subscription)",
-                'amount_{}'.format(i): subscription.config.cost,
+                'item_name_{}'.format(i): f"{subscription.config.name} (subscription)",
+                'amount_{}'.format(i): invoiced_amount,
                 'quantity_{}'.format(i): 1,
             }
         )

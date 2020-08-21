@@ -84,7 +84,7 @@ def calculate_user_cart_total(unpaid_blocks=None, unpaid_subscriptions=None):
     if unpaid_blocks:
         block_cost = sum(_block_cost(block) for block in unpaid_blocks)
     if unpaid_subscriptions:
-        subscription_cost = sum(subscription.calculate_cost_as_of_today() for subscription in unpaid_subscriptions)
+        subscription_cost = sum(subscription.cost_as_of_today() for subscription in unpaid_subscriptions)
     return block_cost + subscription_cost
 
 

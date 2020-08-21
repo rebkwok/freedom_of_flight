@@ -15,7 +15,7 @@ from payments.utils import get_paypal_form
 
 from ..models import Block, BlockVoucher
 from ..utils import calculate_user_cart_total
-from .views_utils import data_privacy_required, get_unpaid_user_managed_blocks
+from .views_utils import data_privacy_required, get_unpaid_user_managed_blocks, get_unpaid_user_managed_subscriptions
 
 logger = logging.getLogger(__name__)
 
@@ -104,6 +104,8 @@ def shopping_basket(request):
     for block in unpaid_blocks:
         unpaid_blocks_by_user.setdefault(block.user, []).append(block)
 
+    unpaid_subscriptions = get_unpaid_user_managed_subscriptions(request.user)
+
     if request.method == "POST":
         code = request.POST.get("code")
         # remove any extraneous whitespace
@@ -159,10 +161,22 @@ def shopping_basket(request):
     applied_voucher_codes_and_discount = Block.objects.filter(id__in=unpaid_block_ids, voucher__isnull=False)\
         .order_by("voucher__code").distinct("voucher__code").values_list("voucher__code", "voucher__discount")
 
+    # calculate the unpaid subscription costs, including any partial reduced costs for current subscription periods
+    unpaid_subscription_info = [
+        {
+            "subscription": subscription,
+            "full_cost": subscription.config.cost,
+            "cost": subscription.cost_as_of_today(),
+        }
+        for subscription in unpaid_subscriptions
+    ]
+
     context.update({
+        "unpaid_items": unpaid_block_info or unpaid_subscription_info,
         "unpaid_block_info": unpaid_block_info,
         "applied_voucher_codes_and_discount": applied_voucher_codes_and_discount,
-        "total_cost": calculate_user_cart_total(unpaid_blocks)
+        "unpaid_subscription_info": unpaid_subscription_info,
+        "total_cost": calculate_user_cart_total(unpaid_blocks, unpaid_subscriptions)
     })
 
     return TemplateResponse(
@@ -181,8 +195,9 @@ def ajax_checkout(request):
     """
     total = Decimal(request.POST.get("cart_total"))
     unpaid_blocks = get_unpaid_user_managed_blocks(request.user)
+    unpaid_subscriptions = get_unpaid_user_managed_subscriptions(request.user)
 
-    if not unpaid_blocks:
+    if not (unpaid_blocks or unpaid_subscriptions):
         messages.warning(request, "Your cart is empty")
         url = reverse("booking:shopping_basket")
         return JsonResponse({"redirect": True, "url": url})
@@ -197,13 +212,15 @@ def ajax_checkout(request):
             except VoucherValidationError:
                 block.voucher = None
                 block.save()
-    check_total = calculate_user_cart_total(unpaid_blocks)
+    check_total = calculate_user_cart_total(unpaid_blocks=unpaid_blocks, unpaid_subscriptions=unpaid_subscriptions)
     if total != check_total:
         messages.error(request, "Some cart items changed; please check and try again")
         url = reverse('booking:shopping_basket')
         return JsonResponse({"redirect": True, "url": url})
 
-    if total == 0:
+    if unpaid_blocks and calculate_user_cart_total(unpaid_blocks=unpaid_blocks) == 0:
+        # vouchers apply to blocks only; if we have blocks in the cart and the total for blocks only is 0, then a
+        # voucher has been applied to all blocks and we can mark them as paid now
         for block in unpaid_blocks:
             block.paid = True
             block.save()
@@ -216,19 +233,24 @@ def ajax_checkout(request):
     def _get_matching_invoice(invoices):
         for invoice in invoices:
             invoice_blocks = invoice.blocks.all()
-            if unpaid_blocks.count() == invoice.blocks.count():
-                if all(True for invoice_block in invoice_blocks if invoice_block in unpaid_blocks):
+            invoice_subscriptions = invoice.subscriptions.all()
+            if unpaid_blocks.count() == invoice.blocks.count() and unpaid_subscriptions.count() == invoice.subscriptions.count():
+                if all(True for invoice_block in invoice_blocks if invoice_block in unpaid_blocks) \
+                        and all(True for invoice_subscription in invoice_subscriptions if invoice_subscription in unpaid_subscriptions):
                     return invoice
 
     # check for an existing unpaid invoice with this user and amount
     invoices = Invoice.objects.filter(username=request.user.username, amount=Decimal(total), transaction_id__isnull=True)
-    # if any exist, check for one where the blocks are the same
+    # if any exist, check for one where the blocks and subscriptions are the same
     invoice = _get_matching_invoice(invoices)
     if invoice is None:
         invoice = Invoice.objects.create(invoice_id=Invoice.generate_invoice_id(), amount=Decimal(total), username=request.user.username)
         for block in unpaid_blocks:
             block.invoice = invoice
             block.save()
+        for subscription in unpaid_subscriptions:
+            subscription.invoice = invoice
+            subscription.save()
 
     # encrypted custom field so we can verify it on return from paypal
     paypal_form = get_paypal_form(request, invoice)

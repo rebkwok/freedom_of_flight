@@ -57,7 +57,7 @@ class BookingToggleAjaxViewTests(EventTestMixin, TestUsersMixin, TestCase):
         assert Booking.objects.exists() is False
         resp = self.client.post(self.url(self.aerial_events[0].id), data={"user_id": self.student_user.id})
         assert resp.status_code == 200
-        redirect_url = reverse('booking:dropin_block_purchase', args=(self.aerial_events[0].slug,))
+        redirect_url = reverse('booking:event_purchase_options', args=(self.aerial_events[0].slug,))
         assert resp.json() == {"redirect": True, "url": redirect_url}
 
     def test_create_booking(self):
@@ -338,7 +338,7 @@ class BookingAjaxCourseBookingViewTests(EventTestMixin, TestUsersMixin, TestCase
     def test_book_course_no_available_block(self):
         resp = self.client.post(self.url(self.course.id), data={"user_id": self.student_user.id}).json()
         assert resp["redirect"] is True
-        redirect_url = reverse('booking:course_block_purchase', args=(self.course.slug,))
+        redirect_url = reverse('booking:course_purchase_options', args=(self.course.slug,))
         assert resp["url"] == redirect_url
 
     def test_book_course(self):
@@ -443,7 +443,7 @@ class WaitinglistToggleAjaxViewTests(EventTestMixin, TestUsersMixin, TestCase):
         assert WaitingListUser.objects.filter(user=self.child_user, event=self.event).exists() is False
 
 
-class AjaxBlockDeleteView(TestUsersMixin, TestCase):
+class AjaxCartItemDeleteView(TestUsersMixin, TestCase):
 
     def setUp(self):
         self.create_users()
@@ -451,8 +451,8 @@ class AjaxBlockDeleteView(TestUsersMixin, TestCase):
 
     def test_delete_block(self):
         block = baker.make_recipe("booking.dropin_block", user=self.student_user)
-        url = reverse("booking:ajax_block_delete", args=(block.id,))
-        resp = self.client.post(url).json()
+        url = reverse("booking:ajax_cart_item_delete")
+        resp = self.client.post(url, {"item_type": "block", "item_id": block.id}).json()
         assert Block.objects.exists() is False
         assert resp["cart_total"] == 0
         assert resp["cart_item_menu_count"] == 0
@@ -484,8 +484,8 @@ class AjaxBlockDeleteView(TestUsersMixin, TestCase):
             paid=True
         )
 
-        url = reverse("booking:ajax_block_delete", args=(block.id,))
-        resp = self.client.post(url).json()
+        url = reverse("booking:ajax_cart_item_delete")
+        resp = self.client.post(url, {"item_type": "block", "item_id": block.id}).json()
         assert Block.objects.filter(id=block.id).exists() is False
         # 3 blocks still in cart (2 for manager, 1 for child) - not the deleted one or the paid ones
         # cost
@@ -494,8 +494,8 @@ class AjaxBlockDeleteView(TestUsersMixin, TestCase):
 
     def test_delete_course_block(self):
         block = baker.make_recipe("booking.course_block", user=self.student_user)
-        url = reverse("booking:ajax_block_delete", args=(block.id,))
-        resp = self.client.post(url).json()
+        url = reverse("booking:ajax_cart_item_delete")
+        resp = self.client.post(url, {"item_type": "block", "item_id": block.id}).json()
         assert Block.objects.exists() is False
         assert resp["cart_total"] == 0
         assert resp["cart_item_menu_count"] == 0

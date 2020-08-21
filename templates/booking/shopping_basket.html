@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
-{% load bookingtags %}
+{% load accounttags bookingtags %}
 
 {% block extra_head %}
 {% include 'common/includes/ajax_head.html' %}
@@ -13,19 +13,22 @@
     <div class="row">
         <h3 class="mt-1">Shopping Basket</h3>
     
-        {% if unpaid_block_info %}
+        {% if unpaid_items %}
 
             <table class="table table-bordered">
-              <thead class="thead-light">
+              <thead class="thead-dark">
                 <tr>
-                  <th>Block</th>
+                  <th>Item</th>
                   <th>Cost</th>
                 </tr>
               </thead>
               <tbody>
+                {% if unpaid_block_info %}
+                    <tr><td colspan="2" class="table-secondary"><strong>Credit Blocks</strong></td></tr>
+                {% endif %}
                 {% for block_info in unpaid_block_info %}
                     <tr id="cart-row-{{ block_info.block.id }}">
-                        <td class="p-1">{{ block_info.block.block_config }} <span class="badge badge-info">{{ block_info.block.user.first_name }} {{ block_info.block.user.last_name }}</span></td>
+                        <td class="p-1">{{ block_info.block.block_config }} <span class="badge badge-info">{{ block_info.block.user|full_name }}</span></td>
                         <td class="p-1">
                             <div>Cost: {% if block_info.voucher_applied.discounted_cost is not None %}
                                     <span class="superceded-cost">£{{ block_info.original_cost }}</span> £{{ block_info.voucher_applied.discounted_cost }}
@@ -46,6 +49,39 @@
                         </td>
                     </tr>
                 {% endfor %}
+
+              {% if unpaid_subscription_info %}
+                    <tr><td colspan="2" class="table-secondary"><strong>Subscriptions/Memberships</strong></td></tr>
+                {% endif %}
+                {% for subscription_info in unpaid_subscription_info %}
+                    <tr id="cart-row-{{ subscription_info.subscription.id }}">
+                        <td class="p-1">{{ subscription_info.subscription.config.name }}
+                            <span class="badge badge-info">{{ subscription_info.subscription.user|full_name }}</span><br/>
+                            Start date: {% if subscription_info.subscription.start_date %}
+                                {{ subscription_info.subscription.start_date|date:"d-M-y" }}
+                                {% if subscription_info.cost != subscription_info.full_cost %}(partial period){% endif %}
+                            {% elif subscription_info.subscription.config.start_options == "signup_date" %}
+                                date of purchase
+                            {% elif subscription_info.subscription.config.start_options == "first_booking_date" %}
+                                date of first booked class/event
+                            {% endif %}
+                        </td>
+                        <td class="p-1">
+                            <div>Cost: {% if subscription_info.cost != subscription_info.full_cost %}
+                                <span class="superceded-cost">£{{ subscription_info.full_cost }}</span> {% endif %}
+                                £{{ subscription_info.cost }}
+                                <span
+                                        id="remove-subscription-{{ subscription_info.subscription.id }}"
+                                        class="remove-subscription float-right"
+                                        data-subscription_id="{{ subscription_info.subscription.id }}"
+                                        >
+                                    <a class="btn btn-sm btn-danger" href="#"><i class="fas fa-trash-alt"></i></a>
+                                </span>
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+
               </tbody>
               <tfoot>
               <tr>
@@ -61,7 +97,7 @@
 
                       <span id="paypal-btn-wrapper"><span id="paypal-checkout-btn"></span></span>
 
-                      <a class="btn btn-xs btn-outline-primary" href="{% url 'booking:block_purchase' %}">Add more items</a>
+                      <a class="btn btn-xs btn-outline-primary" href="{% url 'booking:purchase_options' %}">Add more items</a>
                       <hr>
                           <form name="block_voucher_form" class="form-inline" method="post" action="">
                             {% csrf_token %}
@@ -92,7 +128,7 @@
 {% else %}
     <div class="col-12">
     <p>Your cart is empty</p>
-    <p><a class="btn btn-xs btn-outline-primary" href="{% url 'booking:block_purchase' %}">Add items</a></p>
+    <p><a class="btn btn-xs btn-outline-primary" href="{% url 'booking:purchase_options' %}">Add items</a></p>
     </div>
 {% endif %}
 </div>

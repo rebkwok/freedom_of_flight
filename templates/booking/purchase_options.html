@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+
+{% load accounttags bookingtags static %}
+
+{% block extra_head %}
+{% include 'common/includes/ajax_head.html' %}
+{% endblock %}
+
+{% block content %}
+    <h2 class="mt-1">Payment Options: Credit Blocks, Subscriptions and Memberships</h2>
+        {% if related_item %}<h4>Highlighted options are valid for {{ related_item }}</h4>{% endif %}
+      <div class="mb-2">
+          <a class="btn btn-outline-primary btn-xs" href="{% url 'booking:shopping_basket' %}"><span>View cart <i class="fas fa-shopping-cart"></i></span></a>
+      </div>
+
+      <h2>Credit Blocks</h2>
+        {% if available_blocks %}
+            <table class="table table-sm">
+              <thead>
+                <th style="width: 80%"></th>
+                <th style="width: 10%"></th>
+                <th style="width: 10%"></th>
+              </thead>
+              <tbody>
+                {% for title, blocklist in available_blocks.items %}
+                    <tr class="table-secondary">
+                        <td class="pl-2">{{ title }}</td>
+                        <td class="text-center">User</td>
+                        <td></td>
+                    </tr>
+                    {% for available_block_config in blocklist %}
+                    <tr {% if available_block_config.id in target_block_config_ids %}class="table-success"{% endif %}>
+                        <td class="pl-2 pb-0">
+                            <p><strong>{{ available_block_config }}</strong></p>
+                            <p class="mb-0">{% if available_block_config.description %}{{ available_block_config.description }}{% endif %}<br/>
+                            £{{ available_block_config.cost }} |
+                                {% if available_block_config.duration %} Expires after {{ available_block_config.duration }} week{{ available_block_config.duration|pluralize }}{% else %}Never expires {% endif %} |
+                                {{ available_block_config.size }} use{{ available_block_config.size|pluralize }}<br/>
+                                {% active_block_info user_active_blocks available_block_config %}
+                            </p>
+                        </td>
+                        <td>
+                            {% for available_user in available_users %}
+                            <div class="purchase_option_badge_container">
+                                <span class="badge badge-pill badge-light pt-2 mt-1 mb-1"><span class="helptext">{{ available_user|full_name|truncatechars:20 }}</span></span>
+                            </div>
+                            {% endfor %}
+                        </td>
+                        <td class="table-purchase-td">
+                            {% for available_user in available_users %}
+                            <span
+                                id="block_config_{{ available_block_config.id }}_{{ available_user.id }}"
+                                data-user_id="{{ available_user.id }}"
+                                data-block_config_id="{{ available_block_config.id }}"
+                                data-block_config_type="{% if available_block_config.course %}course{% else %}dropin{% endif %}"
+                                class="float-right ajax_blocks_btn">
+                                {% include "booking/includes/blocks_button.txt" %}
+                            </span><br/>
+                            {% endfor %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% endfor %}
+              </tbody>
+         </table>
+        {% else %}
+            <p>No blocks are available for purchase</p>
+        {% endif %}
+
+      <h2>Subscriptions/Memberships</h2>
+        {% if subscription_configs %}
+            <table class="table table-sm">
+              <thead>
+                <th style="width: 80%"></th>
+                <th style="width: 10%"></th>
+                <th style="width: 10%"></th>
+              </thead>
+              <tbody>
+                    <tr class="table-secondary">
+                        <td class="pl-2">{{ title }}</td>
+                        <td class="text-center">User & Options</td>
+                        <td></td>
+                    </tr>
+                    {% for subscription_config in subscription_configs %}
+                    <tr {% if subscription_config.config.id in target_subscription_config_ids %}class="table-success"{% endif %}>
+                        <td class="pl-2 pb-2">
+                            <p><strong>{{ subscription_config.config.name|title }}</strong></p>
+                            <p>{% if subscription_config.config.description %}{{ subscription_config.config.description }}{% endif %}</p>
+                            <p class="mb-0">
+                                {% if subscription_config.current_period_cost != subscription_config.config.cost %}
+                                    £{{ subscription_config.config.cost }} (£{{ subscription_config.current_period_cost }})<br/>
+                                    <small><em>Remainder of current period can be purchased at a reduced cost</em></small><br/>
+                                {% else %}
+                                    £{{ subscription_config.config.cost }}<br/>
+                                {% endif %}
+                                    Expires after {{ subscription_config.config.duration }} {{ subscription_config.config.duration_units|slice:":-1" }}{{ subscription_config.config.duration|pluralize }}<br/>
+                                    {{ subscription_config|format_subscription_config_start_options|safe }}
+                                <br/>
+                                {% active_subscription_info user_active_subscriptions subscription_config.config %}
+                            </p>
+                        </td>
+                        <td>
+                            {% for available_user in available_users %}
+                                {% for subscription_start_option in  available_user|subscription_start_options:subscription_config.config %}
+                                    <div class="purchase_option_badge_container">
+                                        <span class="badge badge-pill badge-light pt-2 mt-1 mb-1"><span class="helptext">{{ available_user|full_name|truncatechars:20 }}{% if subscription_start_option %} - {{ subscription_start_option|date:"d-M-y" }}{% endif %}</span></span>
+                                    </div>
+                                {% endfor %}
+                            {% endfor %}
+                        </td>
+                        <td class="table-purchase-td">
+                            {% for available_user in available_users %}
+                                {% for subscription_start_option in  available_user|subscription_start_options:subscription_config.config %}
+                                    <span
+                                        id="subscription_config_{{ subscription_config.config.id }}_{{ available_user.id }}_{{ subscription_start_option|date:'d' }}"
+                                        data-user_id="{{ available_user.id }}"
+                                        data-subscription_config_id="{{ subscription_config.config.id }}"
+                                        data-subscription_start_date="{{ subscription_start_option|date:"d-M-y" }}"
+                                        data-subscription_start_day="{{ subscription_start_option|date:"d" }}"
+                                        class="float-right ajax_subscriptions_btn">
+                                        {% include "booking/includes/subscriptions_button.txt" %}
+                                    </span><br/>
+                                {% endfor %}
+                            {% endfor %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+              </tbody>
+         </table>
+        {% else %}
+            <p>No subscriptions are available for purchase</p>
+        {% endif %}
+{% endblock content %}
+
+
+{% block extra_js %}
+<script type='text/javascript' src="{% static 'booking/js/events_blocks_ajax-v1.js' %}"></script>
+<script type='text/javascript' src="{% static 'booking/js/events_subscriptions_ajax-v1.js' %}"></script>
+{% endblock %}

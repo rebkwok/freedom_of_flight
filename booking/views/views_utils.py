@@ -2,7 +2,7 @@ from django.urls import reverse
 from django.shortcuts import HttpResponseRedirect
 
 from accounts.models import DataPrivacyPolicy, has_active_disclaimer, has_active_data_privacy_agreement
-from booking.models import Block
+from booking.models import Block, Subscription
 
 
 class DisclaimerRequiredMixin:
@@ -42,3 +42,18 @@ def data_privacy_required(view_func):
 
 def get_unpaid_user_managed_blocks(user):
     return Block.objects.filter(user__in=user.managed_users, paid=False).order_by('user_id')
+
+
+def get_unpaid_user_managed_subscriptions(user):
+    return Subscription.objects.filter(user__in=user.managed_users, paid=False).order_by('user_id')
+
+
+def get_unpaid_user_managed_items(user):
+    return {
+        "blocks": get_unpaid_user_managed_blocks(user),
+        "subscription": get_unpaid_user_managed_subscriptions(user)
+    }
+
+
+def total_unpaid_item_count(user):
+    return sum([queryset.count() for queryset in get_unpaid_user_managed_items(user).values()])

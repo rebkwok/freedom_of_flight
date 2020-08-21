@@ -561,7 +561,7 @@ class SubscriptionConfig(models.Model):
     # order by next expiry date first (in case of None values, secondary ordering by start and purchase dates
     # subscriptions = user.subscriptions.filter(config__bookable_event_types__has_key(event.event_type.id)).order_by("expiry_date", "start_date", "purchase_date")
     # Then check usages, get the next subscription that is allowed.  Usually there'll only be one, but just in case
-    bookable_event_types = JSONField(null=True, blank=True)
+    bookable_event_types = JSONField(null=True, blank=True, default=dict)
     include_no_shows_in_usage = models.BooleanField(
         default=False,
         help_text="For subscription with limits on bookings: count no-shows "
@@ -571,17 +571,44 @@ class SubscriptionConfig(models.Model):
         return f"{self.name} ({'active' if self.active else 'inactive'})"
 
     def is_purchaseable(self):
-        """A subscription is purchaseable is it's active and recurring, or it's one-off and hasn't exipred yet"""
+        """
+        A subscription is purchaseable if:
+          - it's active
+          - it starts from sign up or booking date
+          - it starts from a start date AND
+            - advance purchase is allowed OR
+            - has a current period which hasn't exipred yet OR
+            - has a next period which starts within the next 3 days
+        """
         if self.active:
-            if self.recurring:
+            if self.start_options in ["signup_date", "first_booking_date"]:
                 return True
-            return self.calculate_next_start_date(self.start_date) > timezone.now()
+            if self.expired():
+                # one-off and past now
+                return False
+            if self.advance_purchase_allowed:
+                return True
+            current_period_start = self.get_subscription_period_start_date()
+            # if advance purchase not allowed, the subscription is purchaseable if there's a
+            # there's a current period...
+            if current_period_start:
+                return True
+            # ...or if the next period starts within the next 3 days
+            next_period_start = self.get_subscription_period_start_date(next=True)
+            return (next_period_start - start_of_day_in_utc(timezone.now())).days <= 3
+        return False
+
+    def expired(self):
+        # An expired config is a one-off config that's past
+        if not self.recurring:
+            expiry = self.calculate_next_start_date(self.start_date)
+            return expiry < timezone.now()
         return False
 
     def subscriptions_purchased(self):
         return self.subscription_set.filter(paid=True).count()
 
-    def get_start_options_for_user(self, user):
+    def get_start_options_for_user(self, user, ignore_unpaid=False):
         """
         Get the purchasable subscriptions for this user
         start_options = signup_date:
@@ -599,14 +626,18 @@ class SubscriptionConfig(models.Model):
         """
         # Find the non-expired user subscription for this config
         start_date_options = []
-        user_subscriptions = user.subscriptions.filter(config=self, expiry_date__gt=timezone.now())
+        # ignore_unpaid = check for existing subscription that are paid ONLY
+        user_subscriptions = user.subscriptions.filter(config=self, expiry_date__gt=timezone.now(), paid=ignore_unpaid)
         if not self.recurring:
             # Not recurring, only one subscription period, start on config start date
             if not user_subscriptions.exists():
                 start_date_options.append(self.start_date)
 
         elif self.start_options == "signup_date":
-            active_user_subscriptions = user.subscriptions.filter(config=self, start_date__lt=timezone.now(), expiry_date__gt=timezone.now())
+            # ignore_unpaid = check for existing subscription that are paid ONLY
+            active_user_subscriptions = user.subscriptions.filter(
+                config=self, start_date__lt=timezone.now(), expiry_date__gt=timezone.now(), paid=ignore_unpaid
+            )
             if not active_user_subscriptions:
                 start_date_options.append(start_of_day_in_utc(timezone.now()))
             elif self.advance_purchase_allowed or active_user_subscriptions.first().expires_soon():
@@ -615,8 +646,11 @@ class SubscriptionConfig(models.Model):
                 start_date_options.append(next_start)
 
         elif self.start_options == "first_booking_date":
-            pending_user_subscriptions = user.subscriptions.filter(config=self, start_date__isnull=True)
-            active_user_subscriptions = user.subscriptions.filter(config=self, start_date__isnull=False, expiry_date__gt=timezone.now())
+            # ignore_unpaid = check for existing subscription that are paid ONLY
+            pending_user_subscriptions = user.subscriptions.filter(config=self, start_date__isnull=True, paid=ignore_unpaid)
+            active_user_subscriptions = user.subscriptions.filter(
+                config=self, start_date__isnull=False, expiry_date__gt=timezone.now(), paid=ignore_unpaid
+            )
             if not active_user_subscriptions.exists() and not pending_user_subscriptions.exists():
                 # no subscriptions
                 start_date_options.append(None)
@@ -643,9 +677,9 @@ class SubscriptionConfig(models.Model):
 
     def calculate_next_start_date(self, input_datetime):
         if self.duration_units == "weeks":
-            return input_datetime + timedelta(weeks=self.duration)
+            return start_of_day_in_utc(input_datetime + timedelta(weeks=self.duration))
         else:
-            return input_datetime + relativedelta(months=self.duration)
+            return start_of_day_in_utc(input_datetime + relativedelta(months=self.duration))
 
     def get_subscription_period_start_date(self, next=False):
         if not self.recurring:
@@ -697,7 +731,7 @@ class SubscriptionConfig(models.Model):
             return result if result >= self.start_date else None
 
     def calculate_current_period_cost_as_of_today(self):
-        if self.partial_purchase_allowed:
+        if self.start_options == "start_date" and self.partial_purchase_allowed:
             purchase_datetime = timezone.now()
             current_start = self.get_subscription_period_start_date()
             # current start could be None if the config hasn't started yet
@@ -752,6 +786,7 @@ class Subscription(models.Model):
     invoice = models.ForeignKey(
         Invoice, null=True, blank=True, on_delete=models.SET_NULL, related_name="subscriptions"
     )
+    invoiced_amount = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
     paid = models.BooleanField(default=False)
     status = models.CharField(
         max_length=20,
@@ -862,6 +897,13 @@ class Subscription(models.Model):
     def get_expiry_date(self):
         if self.start_date:
             return self.config.calculate_next_start_date(self.start_date)
+
+    def cost_as_of_today(self):
+        if self.start_date and self.start_date == self.config.get_subscription_period_start_date():
+            # it's for the current period. This will return the calculated current period costs for any
+            # config with a start_date start_option and which allows partial purchase
+            return self.config.calculate_current_period_cost_as_of_today()
+        return self.config.cost
 
     def save(self, *args, **kwargs):
         self.full_clean()

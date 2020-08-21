@@ -1,0 +1,38 @@
+{% extends "account/base.html" %}
+
+{% load accounttags bookingtags static %}
+
+{% block extra_head %}
+{% include 'common/includes/ajax_head.html' %}
+{% endblock %}
+
+{% block content %}
+
+        <div class="list-group mb-2">
+            <div class="list-group-item list-group-item-dark pt-1 pb-1">Subscription: {{ subscription.config.name }}</div>
+                <div class="list-group-item">
+                    <p>
+                    Purchased: {{ subscription.purchase_date | date:"d-M-Y" }}<br/>
+                    User: {{ subscription.user|full_name }}<br/>
+                    {{ subscription|subscription_expiry_text }}
+                    </p>
+                    {%  if subscription.config.bookable_event_types %}
+                        Valid for:
+                        {% format_bookable_event_types subscription.config %}
+
+                        Bookings: {% if not subscription.bookings.exists %}N/A{% endif %}
+                        <ul>
+                            {% for booking in subscription.bookings.all %}
+                                <li>{{ booking.event.name }} | {{ booking.event.start|date:"D d M Y, H:i" }}</li>
+                            {% endfor %}
+                        </ul>
+
+                    {% endif %}
+                    {% if subscription.has_expired %}
+                        <strong>Expired</strong>
+                    {% endif %}
+            </div>
+        </div>
+        <a class="btn btn-outline-dark btn-sm" href="{% url 'booking:subscriptions' %}">Back</a>
+
+{% endblock content %}

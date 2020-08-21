@@ -6,7 +6,7 @@ from django.urls import reverse
 
 from braces.views import LoginRequiredMixin
 
-from ..models import Block
+from booking.models import Subscription
 from ..forms import AvailableUsersForm
 from .views_utils import DataPolicyAgreementRequiredMixin
 from ..utils import get_view_as_user
@@ -15,11 +15,11 @@ from ..utils import get_view_as_user
 logger = logging.getLogger(__name__)
 
 
-class BlockListView(DataPolicyAgreementRequiredMixin, LoginRequiredMixin, ListView):
+class SubscriptionListView(DataPolicyAgreementRequiredMixin, LoginRequiredMixin, ListView):
 
-    model = Block
-    template_name = 'booking/blocks.html'
-    context_object_name = "blocks"
+    model = Subscription
+    template_name = 'booking/subscriptions.html'
+    context_object_name = "subscriptions"
     paginate_by = 20
 
     def set_user_on_session(self, request):
@@ -28,11 +28,11 @@ class BlockListView(DataPolicyAgreementRequiredMixin, LoginRequiredMixin, ListVi
 
     def post(self, request, *args, **kwargs):
         self.set_user_on_session(request)
-        return HttpResponseRedirect(reverse("booking:blocks"))
+        return HttpResponseRedirect(reverse("booking:subscriptions"))
 
     def get_queryset(self):
         view_as_user = get_view_as_user(self.request)
-        return view_as_user.blocks.filter(paid=True).order_by("expiry_date", "-purchase_date")
+        return view_as_user.subscriptions.filter(paid=True).order_by("expiry_date", "-purchase_date")
 
     def get_context_data(self, **kwargs):
         # Call the base implementation first to get a context
@@ -41,8 +41,10 @@ class BlockListView(DataPolicyAgreementRequiredMixin, LoginRequiredMixin, ListVi
         return context
 
 
-class BlockDetailView(DataPolicyAgreementRequiredMixin, LoginRequiredMixin, DetailView):
+class SubscriptionDetailView(DataPolicyAgreementRequiredMixin, LoginRequiredMixin, DetailView):
 
-    model = Block
-    template_name = 'booking/block_detail.html'
-    context_object_name = "credit_block"
+    model = Subscription
+    template_name = 'booking/subscription_detail.html'
+    context_object_name = "subscription"
+
+

@@ -89,10 +89,53 @@ var processRemoveBlock = function()  {
 
    $.ajax(
        {
-          url: '/ajax-block-delete/' + block_id + "/",
+          url: '/ajax-cart-item-delete/',
           dataType: 'json',
           type: 'POST',
-          data: {csrfmiddlewaretoken: window.CSRF_TOKEN},
+          data: {csrfmiddlewaretoken: window.CSRF_TOKEN, item_type: "block", item_id: block_id},
+          success: processResult,
+          //Should also have a "fail" call as well.
+          error: processFailure
+       }
+    );
+
+};
+
+
+var processRemoveSubscription = function()  {
+
+    //In this scope, "this" is the button just clicked on.
+    //The "this" in processResult is *not* the button just clicked
+    //on.
+    var $button_just_clicked_on = $(this);
+
+    //The value of the "data-event_id" attribute.
+    var subscription_id = $button_just_clicked_on.data('subscription_id');
+
+    var processResult = function(
+       result, status, jqXHR)  {
+      //console.log("sf result='" + result + "', status='" + status + "', jqXHR='" + jqXHR + "'");
+    $('#cart-row-' + subscription_id).html("");
+    $('#cart_item_menu_count').text(result.cart_item_menu_count);
+    $('#total').text(result.cart_total);
+    $('#checkout-btn').data('total', result.cart_total);
+    $('#payment-btn').html(result.payment_button_html);
+   };
+
+    var processFailure = function(
+       result, status, jqXHR)  {
+      //console.log("sf result='" + result + "', status='" + status + "', jqXHR='" + jqXHR + "'");
+      if (result.responseText) {
+        vNotify.error({text:result.responseText,title:'Error',position: 'bottomRight'});
+      }
+   };
+
+   $.ajax(
+       {
+          url: '/ajax-cart-item-delete/',
+          dataType: 'json',
+          type: 'POST',
+          data: {csrfmiddlewaretoken: window.CSRF_TOKEN, item_type: "subscription", item_id: subscription_id},
           success: processResult,
           //Should also have a "fail" call as well.
           error: processFailure
@@ -133,6 +176,7 @@ $(document).ready(function()  {
   $('.ajax-checkout-btn').click(_.debounce(processCheckoutRequest, MILLS_TO_IGNORE, true));
 
   $('.remove-block').click(_.debounce(processRemoveBlock, MILLS_TO_IGNORE, true));
+  $('.remove-subscription').click(_.debounce(processRemoveSubscription, MILLS_TO_IGNORE, true));
 
   // delegate events for the paypal form input
   $( "#paypal-btn-wrapper" ).on('click', 'input[type=image]', function( event ) {

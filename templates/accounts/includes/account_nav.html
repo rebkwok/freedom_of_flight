@@ -13,6 +13,9 @@
       <li class="nav-item">
         <a class="nav-link" href="{% url 'booking:blocks' %}">Credit Blocks</a>
       </li>
+       <li class="nav-item">
+        <a class="nav-link"  href="{% url 'booking:subscriptions' %}">Subscriptions</a>
+       </li>
     <li class="nav-item">
         <a class="nav-link" href="{% url 'booking:bookings' %}">Bookings</a>
       </li>
@@ -45,6 +48,7 @@
          <span class="dropdown-item helptext">Logged in as {{ request.user|full_name }}</span>
           <a class="dropdown-item" href="{% url 'accounts:profile' %}">Profile</a>
           <a class="dropdown-item" href="{% url 'booking:blocks' %}">Credit Blocks</a>
+          <a class="dropdown-item" href="{% url 'booking:subscriptions' %}">Subscriptions</a>
           <a class="dropdown-item" href="{% url 'booking:bookings' %}">Bookings</a>
           <a class="dropdown-item" href="{% url 'booking:past_bookings' %}">Booking History</a>
           <a class="dropdown-item" href="#"><em>Payment History</em></a>

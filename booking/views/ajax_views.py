@@ -1,21 +1,25 @@
+from datetime import datetime
 import logging
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
+from django.db.models import Q
 from django.http import HttpResponseBadRequest, JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.urls import reverse
 from django.shortcuts import get_object_or_404, render
 from django.template.loader import render_to_string
+from django.utils import timezone
 
 from accounts.models import has_active_disclaimer
 from activitylog.models import ActivityLog
 
-from ..models import Booking, Block, Course, Event, WaitingListUser, BlockConfig
+from common.utils import full_name, start_of_day_in_utc
+from ..models import Booking, Block, Course, Event, WaitingListUser, BlockConfig, Subscription, SubscriptionConfig
 from ..utils import calculate_user_cart_total, has_available_block, get_active_user_block, get_user_booking_info
 from ..email_helpers import send_waiting_list_email, send_user_and_studio_emails
-from .views_utils import get_unpaid_user_managed_blocks
+from .views_utils import total_unpaid_item_count
 
 
 logger = logging.getLogger(__name__)
@@ -67,7 +71,7 @@ def ajax_toggle_booking(request, event_id):
             return JsonResponse({"redirect": True, "url": url})
 
         if not has_available_block(user, event) and not event.course:
-            url = reverse("booking:dropin_block_purchase", args=(event.slug,))
+            url = reverse("booking:event_purchase_options", args=(event.slug,))
             return JsonResponse({"redirect": True, "url": url})
 
         # OPENING/REOPENING
@@ -213,7 +217,7 @@ def ajax_course_booking(request, course_id):
     course = Course.objects.get(id=course_id)
 
     if not has_available_block(user, course.events.first()):
-        url = reverse('booking:course_block_purchase', args=(course.slug,))
+        url = reverse('booking:course_purchase_options', args=(course.slug,))
         return JsonResponse({"redirect": True, "url": url})
 
     if course.full or course.cancelled:
@@ -255,20 +259,28 @@ def ajax_course_booking(request, course_id):
     return JsonResponse({"redirect": True, "url": url})
 
 
+ITEM_TYPE_MODEL_MAPPING = {
+    "block": Block,
+    "subscription": Subscription
+}
+
 @login_required
 @require_http_methods(['POST'])
-def ajax_block_delete(request, block_id):
-    block = get_object_or_404(Block, pk=block_id)
-    block.delete()
+def ajax_cart_item_delete(request):
+    item_type = request.POST.get("item_type")
+    item_id = request.POST.get("item_id")
+    item = get_object_or_404(ITEM_TYPE_MODEL_MAPPING[item_type], pk=item_id)
+    item.delete()
     unpaid_blocks = Block.objects.filter(paid=False, user__in=request.user.managed_users)
-    total = calculate_user_cart_total(unpaid_blocks)
+    unpaid_subscriptions = Subscription.objects.filter(paid=False, user__in=request.user.managed_users)
+    total = calculate_user_cart_total(unpaid_blocks, unpaid_subscriptions)
     payment_button_html = render(
         request, f"booking/includes/payment_button.txt", {"total_cost": total}
     )
     return JsonResponse(
         {
             "cart_total": total,
-            "cart_item_menu_count": unpaid_blocks.count(),
+            "cart_item_menu_count": total_unpaid_item_count(request.user),
             "payment_button_html": payment_button_html.content.decode("utf-8")
         })
 
@@ -306,6 +318,77 @@ def process_block_purchase(request, block, new, block_config):
     return JsonResponse(
         {
             "html": html.content.decode("utf-8"),
-            "cart_item_menu_count": get_unpaid_user_managed_blocks(request.user).count(),
+            "cart_item_menu_count": total_unpaid_item_count(request.user),
+        }
+    )
+
+
+@login_required
+@require_http_methods(['POST'])
+def ajax_subscription_purchase(request, subscription_config_id):
+    user_id = request.POST["user_id"]
+    subscription_start_date = request.POST["subscription_start_date"]
+
+    if subscription_start_date:
+        start_date = datetime.strptime(subscription_start_date, "%d-%b-%y").replace(tzinfo=timezone.utc)
+        start_date = start_of_day_in_utc(start_date)
+    else:
+        start_date = None
+
+    user = get_object_or_404(User, pk=user_id)
+    subscription_config = get_object_or_404(SubscriptionConfig, pk=subscription_config_id)
+
+    if start_date and subscription_config.start_options == "signup_date" and start_date == start_of_day_in_utc(timezone.now()):
+        # for a signup date subscription, user could have a previous unpaid one.  The start date should be None,
+        # but in case it was set at some point, check for an earlier start as well as None
+        matching = user.subscriptions.filter(
+            Q(paid=False, config=subscription_config) & (Q(start_date__lte=start_date) | Q(start_date__isnull=True))
+        )
+        if matching.exists():
+            subscription = matching.first()
+            # make sure the start is set to None, as we expect
+            if subscription.start_date is not None:
+                subscription.start_date = None
+                subscription.save()
+            new = False
+        else:
+            # start_date is today's date, but since this is a signup_date subscription, we create it with
+            # None as the start date.  Actual start date will be set when it's paid.
+            subscription = Subscription.objects.create(
+                user=user, config=subscription_config, start_date=None, paid=False
+            )
+            new = True
+    else:
+        subscription, new = Subscription.objects.get_or_create(
+            user=user, config=subscription_config, start_date=start_date, paid=False
+        )
+    return process_subscription_purchase(request, subscription, new, subscription_config)
+
+
+def process_subscription_purchase(request, subscription, new, subscription_config):
+    subscription_user = subscription.user
+    subscription_user_name = full_name(subscription_user)
+    if not new:
+        subscription.delete()
+        alert_message = {
+            "message_type": "info",
+            "message": f"Subscription removed from cart for {subscription_user_name}"
+        }
+    else:
+        alert_message = {
+            "message_type": "success",
+            "message": f"Subscription added to cart for {subscription_user_name}"
+        }
+    context = {
+        "subscription_start_option": subscription.start_date,
+        "subscription_config": {"config": subscription_config},
+        "available_user": subscription_user,
+        "alert_message": alert_message
+    }
+    html = render(request, f"booking/includes/subscriptions_button.txt", context)
+    return JsonResponse(
+        {
+            "html": html.content.decode("utf-8"),
+            "cart_item_menu_count": total_unpaid_item_count(request.user),
         }
     )
