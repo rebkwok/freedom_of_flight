@@ -136,7 +136,7 @@ class ShoppingBasketViewTests(TestUsersMixin, TestCase):
         voucher.activated = True
         voucher.save()
         resp = self.client.post(self.url, data={"add_voucher_code": "add_voucher_code", "code": "test"})
-        assert resp.context_data["voucher_add_error"] == ["Code is not valid for any blocks in your cart"]
+        assert resp.context_data["voucher_add_error"] == ["Code test is not valid for any blocks in your cart"]
         assert resp.context_data["total_cost"] == 20
 
         # voucher not started
@@ -166,7 +166,7 @@ class ShoppingBasketViewTests(TestUsersMixin, TestCase):
         )
         resp = self.client.post(self.url, data={"add_voucher_code": "add_voucher_code", "code": "test"})
         assert resp.context_data["voucher_add_error"] == [
-            "Student User has already used this voucher the maximum number of times (1)"]
+            "Student User has already used voucher code test the maximum number of times (1)"]
 
         assert resp.context_data["total_cost"] == 20
 
@@ -179,7 +179,7 @@ class ShoppingBasketViewTests(TestUsersMixin, TestCase):
         # voucher used for only some block before it's used up
         resp = self.client.post(self.url, data={"add_voucher_code": "add_voucher_code", "code": "test"})
         assert resp.context_data["voucher_add_error"] == [
-            "Voucher has limited number of uses and expired before it could be used for all your applicable blocks"
+            "Voucher code test has limited number of total uses and expired before it could be used for all applicable blocks"
         ]
         assert resp.context_data["total_cost"] == 20
 

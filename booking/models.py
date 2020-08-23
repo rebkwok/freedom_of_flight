@@ -848,8 +848,8 @@ class Subscription(models.Model):
                 # OPEN and NOT no-show
                 # We include bookings for the current event here - we'll already have returned above if an existing
                 # booking is fully open, and we want to keep any no-show/cancelled ones in the counts for usage checks
-                existing_open_bookings = self.bookings.filter(event__event_type=event.event_type, status="OPEN", no_show=False)
-                # If no existing fully open bookings at all then it's definitely valid
+                existing_open_bookings = self.bookings.filter(event__event_type=event.event_type, status="OPEN")
+                # If no existing open bookings, no-show or no no-show, then it's definitely valid
                 if not existing_open_bookings.exists():
                     return True
 
