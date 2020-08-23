@@ -10,13 +10,10 @@ from activitylog.models import ActivityLog
 
 def send_waiting_list_email(event, waiting_list_users, host):
     if waiting_list_users:
-        user_emails = []
-        for waitinglistuser in waiting_list_users:
-            if hasattr(waitinglistuser.user, "childuserprofile"):
-                # send waiting list email to manager user
-                user_emails.append(waitinglistuser.user.childuserprofile.parent_user_profile.user.email)
-            else:
-                user_emails.append(waitinglistuser.user.email)
+        user_emails = [
+            waiting_list_user.user.manager_user.email if waiting_list_user.user.manager_user else waiting_list_user.user.email
+            for waiting_list_user in waiting_list_users
+        ]
 
         msg = EmailMultiAlternatives(
             '{} {}'.format(settings.ACCOUNT_EMAIL_SUBJECT_PREFIX, event),

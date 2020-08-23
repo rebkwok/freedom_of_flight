@@ -5,8 +5,7 @@ Thank you for your payment
 -----------------------------
 Invoice number: {{ invoice.invoice_id }}</p>
 Paypal Transaction id: {{ invoice.transaction_id }}
-User: {{ user.first_name}} {{ user.last_name}}
 Purchased:
-{% for block in invoice.blocks.all %}-{{ block }}{% endfor %}
-{% for subscription in invoice.subscription.all %}-{{ subscription }}{% endfor %}
+{% for block in invoice.blocks.all %}-{{ block.block_config.name }} ({{ block.user.first_name }} {{ block.user.last_name }}){% endfor %}
+{% for subscription in invoice.subscription.all %}-{{ subscription.config.name }} ({{ subscription.user.first_name }} {{ subscription.user.last_name }}){% endfor %}
 {% endblock %}

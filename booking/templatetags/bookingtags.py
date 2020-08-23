@@ -4,7 +4,6 @@ from django.db.models import Q
 from django.utils import timezone
 from common.utils import full_name, start_of_day_in_utc
 from ..models import EventType, WaitingListUser
-from ..utils import has_available_block as has_available_block_util
 from ..utils import has_available_course_block as has_available_course_block_util
 from ..utils import (
     get_block_status, user_can_book_or_cancel, get_user_booking_info, user_subscription_info,
@@ -12,10 +11,6 @@ from ..utils import (
 )
 
 register = template.Library()
-
-@register.filter
-def has_available_block(user, event):
-    return has_available_block_util(user, event)
 
 
 @register.filter

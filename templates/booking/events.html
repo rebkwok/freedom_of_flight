@@ -32,7 +32,7 @@
                         data-ref="course"
                         data-course_id="{{ course.id }}"
                         data-has_started={{ course.has_started|yesno:"1,0" }}
-                        data-has_available_block={{ has_available_course_block|yesno:"1,0" }}
+                        data-has_available_block={{ course|has_available_course_block|yesno:"1,0" }}
                         data-already_booked={{ already_booked|yesno:"1,0" }}
                         class="ajax_course_events_btn">
                         {% include "booking/includes/course_events_button.txt" %}

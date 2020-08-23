@@ -4,14 +4,13 @@
 <h2>Thank you for your payment.</h2>
 <p><strong>Invoice number:</strong> {{ invoice.invoice_id }}</p>
 <p><strong>Paypal Transaction id:</strong> {{ invoice.transaction_id }}</p>
-<p><strong>User: {{ user.first_name}} {{ user.last_name}}</strong></p>
 <p><strong>Purchased:</strong>
     <ul>
         {% for block in invoice.blocks.all %}
-            <li>{{ block }}</li>
+            <li>{{ block.block_config.name }} ({{ block.user.first_name }} {{ block.user.last_name }})</li>
         {% endfor %}
         {% for subscription in invoice.subscription.all %}
-            <li>{{ subscription }}</li>
+            <li>{{ subscription.config.name }} ({{ subscription.user.first_name }} {{ subscription.user.last_name }})</li>
         {% endfor %}
     </ul>
 </p>
