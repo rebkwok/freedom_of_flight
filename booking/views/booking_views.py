@@ -61,7 +61,7 @@ class BookingHistoryListView(BookingListView):
     def get_queryset(self):
         cutoff_time = timezone.now() - timedelta(minutes=10)
         view_as_user = get_view_as_user(self.request)
-        return view_as_user.bookings.filter(event__start__lte=cutoff_time).order_by('event__start__date', 'event__start__time')
+        return view_as_user.bookings.filter(event__start__lte=cutoff_time).order_by('-event__start__date', 'event__start__time')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data()

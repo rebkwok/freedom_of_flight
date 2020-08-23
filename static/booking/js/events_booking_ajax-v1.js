@@ -21,27 +21,10 @@ var processBookingToggleRequest = function()  {
     var event_id = $button_just_clicked_on.data('event_id');
     var user_id = $button_just_clicked_on.data('user_id');
     var ref = $button_just_clicked_on.data('ref');
-    var can_cancel = $button_just_clicked_on.data('can_cancel');
+    var show_warning = $button_just_clicked_on.data('show_warning');
     var cancellation_allowed = $button_just_clicked_on.data('cancellation_allowed');
-    var show_payment_options = $button_just_clicked_on.data('show_payment_options');
-    var on_course = $button_just_clicked_on.data('on_course');
-    var is_course = $button_just_clicked_on.data('is_course');
 
-    var ask_for_confirmation = function () {
-        if (on_course) {
-            return false
-        } else if (is_course) {
-            return false
-        } else if (show_payment_options) {
-            return false
-        } else if (!cancellation_allowed) {
-            return true
-        } else {
-            return !can_cancel
-        }
-    };
-
-    if (ask_for_confirmation()) {
+    if (show_warning) {
           $('#confirm-dialog').dialog({
             height: "auto",
             width: 500,
@@ -52,9 +35,9 @@ var processBookingToggleRequest = function()  {
             open: function() {
               var contentText;
               if (!cancellation_allowed) {
-                  contentText = "Cancellation is not allowed; if you choose to cancel you will not receive any credit back to your block or any refund.";
+                  contentText = "Cancellation is not allowed; if you choose to cancel you will not receive any credit back to your block/subscription or any refund.";
               } else {
-                  contentText = 'The allowed cancellation period has passed; if you choose to cancel you will not receive any credit back to your block or any refund.';
+                  contentText = 'The allowed cancellation period has passed; if you choose to cancel you will not receive any credit back to your block/subscription or any refund.';
               }
               $(this).html(contentText + "<br>Please confirm you want to continue.");
             },

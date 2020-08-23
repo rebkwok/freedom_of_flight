@@ -17,7 +17,10 @@ from activitylog.models import ActivityLog
 
 from common.utils import full_name, start_of_day_in_utc
 from ..models import Booking, Block, Course, Event, WaitingListUser, BlockConfig, Subscription, SubscriptionConfig
-from ..utils import calculate_user_cart_total, has_available_block, get_active_user_block, get_user_booking_info
+from ..utils import (
+    calculate_user_cart_total, has_available_block, has_available_subscription, get_active_user_block,
+    get_user_booking_info, get_available_user_subscription
+)
 from ..email_helpers import send_waiting_list_email, send_user_and_studio_emails
 from .views_utils import total_unpaid_item_count
 
@@ -31,6 +34,46 @@ REQUESTED_ACTIONS = {
     ("OPEN", True): "reopened",
     ("OPEN", False): "cancelled",
 }
+
+
+def other_same_day_unbooked_events(booking):
+    open_booked_event_ids = set(booking.user.bookings.filter(
+        event__start__date=booking.event.start.date(), status="OPEN", no_show=False
+    ).values_list("event_id", flat=True))
+    open_booked_event_ids.add(booking.event.id)
+    return Event.objects.filter(
+        event_type=booking.event.event_type, start__date=booking.event.start.date(), cancelled=False
+    ).filter(start__gte=timezone.now()).exclude(id__in=open_booked_event_ids)
+
+
+def has_subscription_availability_changed(booking, action, subscription_use_pre_change):
+    # we only check this if there's a valid subscription, so subscription_use_pre_change is never None
+    subscription_availability_changed = False
+    event = booking.event
+    usage_limits = booking.subscription.usage_limits(event.event_type)
+    if usage_limits:
+        allowed_number, allowed_unit = usage_limits
+        # we've booked/rebooked and used a subscription and the usage is now at max
+        # OR
+        # we've cancelled and the usage was previuosly at max
+        # check if the subscription use was at max prior to booking
+        subscription_use = booking.subscription.usage_for_event_type_and_date(event.event_type, event.start)
+        check_usage = False
+
+        if action in ["opened", "reopened"] and subscription_use == allowed_number:
+            check_usage = subscription_use_pre_change < allowed_number
+        elif action == "cancelled":
+            check_usage = subscription_use_pre_change == allowed_number
+        if check_usage:
+            # We only check the actual uses for same-day limits, for others (weekly/monthly) it's likely there will be
+            # other bookable events, so just assume we need to reload
+            if allowed_unit == "day":
+                other_events = other_same_day_unbooked_events(booking)
+                subscription_availability_changed = other_events.exists()
+            else:
+                subscription_availability_changed = True
+    return subscription_availability_changed
+
 
 @login_required
 @require_http_methods(['POST'])
@@ -49,6 +92,12 @@ def ajax_toggle_booking(request, event_id):
 
     event = Event.objects.get(id=event_id)
     event_was_full = not event.course and event.spaces_left == 0
+    block_availability_changed = False
+    subscription_availability_changed = False
+    subscription_use_pre_change = None
+    available_subscription = get_available_user_subscription(user, event)
+    if available_subscription:
+        subscription_use_pre_change = available_subscription.usage_for_event_type_and_date(event.event_type, event.start)
 
     try:
         existing_booking = Booking.objects.get(user=user, event=event)
@@ -63,14 +112,13 @@ def ajax_toggle_booking(request, event_id):
     host = f'http://{request.META.get("HTTP_HOST")}'
 
     if requested_action in ["opened", "reopened"]:
-
         if event.course and requested_action == "opened":
             # First time booking for a course event - redirect to book course
             # rebookings can be done from events page
             url = reverse('booking:course_events', args=(event.course.slug,))
             return JsonResponse({"redirect": True, "url": url})
 
-        if not has_available_block(user, event) and not event.course:
+        if not (has_available_block(user, event) or has_available_subscription(user, event)) and not event.course:
             url = reverse("booking:event_purchase_options", args=(event.slug,))
             return JsonResponse({"redirect": True, "url": url})
 
@@ -91,6 +139,10 @@ def ajax_toggle_booking(request, event_id):
         booking.no_show = False
         booking.assign_next_available_subscription_or_block()
         booking.save()
+        if booking.block and booking.block.full:
+            block_availability_changed = True
+        if booking.subscription:
+            subscription_availability_changed = has_subscription_availability_changed(booking, requested_action, subscription_use_pre_change)
 
         try:
             waiting_list_user = WaitingListUser.objects.get(user=booking.user, event=booking.event)
@@ -103,6 +155,9 @@ def ajax_toggle_booking(request, event_id):
 
     else:
         booking = existing_booking
+        block_pre_cancel = booking.block
+        block_pre_cancel_was_full = block_pre_cancel.full if block_pre_cancel else False
+
         if event.course:
             booking.no_show = True
         elif not event.event_type.allow_booking_cancellation:
@@ -114,6 +169,12 @@ def ajax_toggle_booking(request, event_id):
             else:
                 booking.no_show = True
         booking.save()
+        if block_pre_cancel_was_full:
+            if not block_pre_cancel.full:
+                block_availability_changed = True
+        elif booking.subscription:
+            subscription_availability_changed = has_subscription_availability_changed(booking, requested_action, subscription_use_pre_change)
+
         if event_was_full:
             waiting_list_users = WaitingListUser.objects.filter(event=event)
             send_waiting_list_email(event, waiting_list_users, host)
@@ -147,15 +208,16 @@ def ajax_toggle_booking(request, event_id):
     alert_message['message_type'] = 'info' if requested_action == "cancelled" else 'success'
     alert_message['message'] = f"Booking has been {requested_action}"
 
-    if (not booking.has_available_block and not booking.has_available_subscription) and ref != "course":
-        # We no longer have available blocks or subscriptions, redirect to the same page again to refresh buttons
-        # Ignore if we came from the course page
-        messages.success(request, f"{event}: {alert_message['message']}")
-        if ref == "bookings":
-            url = reverse("booking:bookings")
-        else:
-            url = reverse("booking:events", args=(event.event_type.track.slug,))
-        return JsonResponse({"redirect": True, "url": url})
+    if ref != "course":
+        if block_availability_changed or subscription_availability_changed:
+            # subscription or block have changed, redirect to the same page again to refresh buttons
+            # Ignore if we came from the course page
+            messages.success(request, f"{event}: {alert_message['message']}")
+            if ref == "bookings":
+                url = reverse("booking:bookings")
+            else:
+                url = reverse("booking:events", args=(event.event_type.track.slug,))
+            return JsonResponse({"redirect": True, "url": url})
     user_info = get_user_booking_info(user, event)
     context = {
         "event": event,

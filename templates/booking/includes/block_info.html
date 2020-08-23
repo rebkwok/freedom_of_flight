@@ -1,23 +1,29 @@
 {% load bookingtags %}
 
-{% if user_info.used_subscription  %}
-    | <span class="helptext">Subscription used</span>
-    <span data-toggle="tooltip" data-html="true" title="<span class='helptext'>{{ user_info.used_subscription|user_subscription_info }}</span>">
-      <i class="fas fa-info-circle"></i>
-    </span>
-{% elif user_info.used_block  %}
-    | <span class="helptext">Credit block used</span>
-    <span data-toggle="tooltip" data-html="true" title="<span class='helptext'>{{ user_info.used_block|user_block_info }}</span>">
-      <i class="fas fa-info-circle"></i>
-    </span>
-{% elif user_info.has_available_subscription  %}
-    | <span class="helptext">Subscription available</span>
-    <span data-toggle="tooltip" data-html="true" title="<span class='helptext'>{{ user_info.available_subscription|user_subscription_info }}</span>">
-      <i class="fas fa-info-circle"></i>
-    </span>
-{% elif user_info.has_available_block  %}
-    | <span class="helptext">Credit available</span>
-    <span data-toggle="tooltip" data-html="true" title="<span class='helptext'>{{ user_info.available_block|user_block_info }}</span>">
-      <i class="fas fa-info-circle"></i>
-    </span>
+{% if user_info.open %}
+    {% if user_info.used_block  %}
+        | <span class="helptext">Credit block used</span>
+        <span data-toggle="tooltip" data-html="true" title="<span class='helptext'>{{ user_info.used_block|user_block_info:0 }}</span>">
+          <i class="fas fa-info-circle"></i>
+        </span>
+    {% elif user_info.used_subscription  %}
+        | <span class="helptext">Subscription used</span>
+        <span data-toggle="tooltip" data-html="true" title="<span class='helptext'>{{ user_info.used_subscription_info }}</span>">
+          <i class="fas fa-info-circle"></i>
+        </span>
+    {% endif %}
+{% else %}
+    {% if not history %}
+        {% if user_info.has_available_subscription  %}
+            | <span class="helptext">Subscription available</span>
+            <span data-toggle="tooltip" data-html="true" title="<span class='helptext'>{{ user_info.available_subscription_info }}</span>">
+              <i class="fas fa-info-circle"></i>
+            </span>
+        {% elif user_info.has_available_block  %}
+            | <span class="helptext">Credit available</span>
+            <span data-toggle="tooltip" data-html="true" title="<span class='helptext'>{{ user_info.available_block|user_block_info:0 }}</span>">
+              <i class="fas fa-info-circle"></i>
+            </span>
+        {% endif %}
+    {% endif %}
 {% endif %}

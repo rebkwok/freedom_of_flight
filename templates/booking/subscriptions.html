@@ -22,7 +22,7 @@
             </div>
             <div class="list-group-item {% if subscription.has_expired %}list-group-item-secondary{% endif %} pb-0 pt-0">
                 Purchased: {{ subscription.purchase_date | date:"d-M-Y" }} | {{ subscription|subscription_start_text }} | {{ subscription|subscription_expiry_text }}<br/>
-                {%  if subscription.config.bookable_event_types %}Uses: {{ subscription.bookings.count }}{% endif %}
+                {%  if subscription.config.bookable_event_types %}Used: {{ subscription.bookings.count }}{% endif %}
             </div>
         </div>
         {% endfor %}

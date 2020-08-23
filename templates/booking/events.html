@@ -76,10 +76,8 @@
                                                 data-event_id="{{ event.id }}"
                                                 data-user_id="{{ view_as_user.id }}"
                                                 data-ref="events"
-                                                data-can_cancel={{ event.can_cancel|yesno:"1,0" }}
+                                                data-show_warning={{ user_info.show_warning|yesno:"1,0" }}
                                                 data-cancellation_allowed={{ event.event_type.allow_booking_cancellation|yesno:"1,0" }}
-                                                data-show_payment_options={% if user_info.open or user_info.has_available_block %}"0"{% else %}"1"{% endif %}
-                                                data-is_course={{ event.course|yesno:"1,0" }}
                                                 class="ajax_events_btn">
                                                 {% include "booking/includes/events_button.txt" %}
                                                 </span>
@@ -92,6 +90,8 @@
                                                 class="ajax_events_waiting_list_btn">
                                             {% include "booking/includes/waiting_list_button.html" %}
                                             </span>
+                                        {% elif user_info.booking_restricted_pre_event_start %}
+                                            <span class="float-right"><a class="btn btn-xs btn-secondary" disabled href="#">Booking unavailable</a></span>
                                         {% endif %}
                                     </span>
                                 {% else %}
@@ -103,7 +103,8 @@
                                             data-event_id="{{ event.id }}"
                                             data-user_id="{{ view_as_user.id }}"
                                             data-ref="course"
-                                            data-on_course={% if event.course %}"1"{% else %}"0"{% endif %}
+                                            data-show_warning={{ user_info.show_warning|yesno:"1,0" }}
+                                            data-cancellation_allowed={{ event.event_type.allow_booking_cancellation|yesno:"1,0" }}
                                             class="ajax_events_btn">
                                             {% include "booking/includes/events_button.txt" %}
                                         </span>

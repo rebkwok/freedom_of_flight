@@ -115,7 +115,7 @@ def ajax_toggle_course_visible(request, course_id):
 def cancel_course_view(request, slug):
     course = get_object_or_404(Course, slug=slug)
     bookings_to_cancel = Booking.objects.filter(event__in=course.events.all())
-    bookings_to_cancel_users = bookings_to_cancel.distinct("user")
+    bookings_to_cancel_users = bookings_to_cancel.order_by().distinct("user")
     if request.method == 'POST':
         if 'confirm' in request.POST:
             additional_message = request.POST["additional_message"]

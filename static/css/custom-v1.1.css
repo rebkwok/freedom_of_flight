@@ -256,6 +256,10 @@ div#CookielawBanner {
   min-width: 150px;
 }
 
+/*.purchase_option_badge_container > span.badge {*/
+/*  margin-bottom: 5px;*/
+/*}*/
+
 .disclaimer-badge {
   width: 150px;
   font-weight: normal;

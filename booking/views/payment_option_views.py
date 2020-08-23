@@ -121,6 +121,10 @@ def subscription_config_context(request, event_type=None):
         {
             "config": config,
             "start_options": allowed_start_dates(config),
+            "start_options_for_users": {
+                managed_user.id: config.get_start_options_for_user(managed_user, ignore_unpaid=True)
+                for managed_user in request.user.managed_users
+            },
             "current_period_cost": config.calculate_current_period_cost_as_of_today()
         } for config in subscription_configs
     ]

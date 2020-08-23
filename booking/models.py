@@ -837,45 +837,90 @@ class Subscription(models.Model):
                 if not allowed_number:  # can be None or empty string
                     # no max
                     return True
-                allowed_unit = bookable_event_type["allowed_unit"]
-                # find existing open bookings on this subscription for same event type, excluding ones for this event
-                if self.config.include_no_shows_in_usage:
-                    # All open bookings, including no-shows
-                    existing_bookings = self.bookings.filter(event__event_type=event.event_type, status="OPEN").exclude(event_id=event.id)
-                else:
-                    # Open bookings, not including no-shows (the config default)
-                    existing_bookings = self.bookings.filter(
-                        event__event_type=event.event_type, status="OPEN", no_show=False
-                    ).exclude(event_id=event.id)
-                if not self.config.include_no_shows_in_usage:
-                    existing_bookings = existing_bookings.filter(no_show=False)
-                if not existing_bookings.exists():
+
+                this_event_booking = self.bookings.filter(event_id=event.id).first()
+                # An OPEN, not no-show booking for this event already is automatically valid
+                if this_event_booking is not None and this_event_booking.status == "OPEN" and not this_event_booking.no_show:
                     return True
+
+                allowed_unit = bookable_event_type["allowed_unit"]
+                # find existing open bookings on this subscription for same event type
+                # OPEN and NOT no-show
+                # We include bookings for the current event here - we'll already have returned above if an existing
+                # booking is fully open, and we want to keep any no-show/cancelled ones in the counts for usage checks
+                existing_open_bookings = self.bookings.filter(event__event_type=event.event_type, status="OPEN", no_show=False)
+                # If no existing fully open bookings at all then it's definitely valid
+                if not existing_open_bookings.exists():
+                    return True
+
+                # If DON'T include no-shows in usage (the default), we remove the no-shows here before we
+                # count uses
+                existing_bookings = existing_open_bookings
+                if not self.config.include_no_shows_in_usage:
+                    existing_bookings = existing_open_bookings.filter(no_show=False)
+
                 if allowed_unit == "day":
                     # find bookings on same day
                     existing_bookings = existing_bookings.filter(event__start__date=event.start.date())
                     return len(existing_bookings) < allowed_number
                 else:
-                    if allowed_unit == "week":
-                        # calculate start and end dates for the week of the event, starting on the start_weekday
-                        # we always use the day of the week that the subscription starts on as the start point
-                        subscription_start_weekday = self.start_date.weekday()
-                        days_from_start = subscription_start_weekday - event.start.weekday()
-                        start = start_of_day_in_utc(event.start + timedelta(days_from_start))
-                        end = start_of_day_in_utc(start + timedelta(weeks=1))
-                    elif allowed_unit == "month":
-                        subscription_start_day = self.start_date.day
-                        # calculate start and end dates for the month of the event, starting on the start_day
-                        if event.start.day >= subscription_start_day:
-                            start = event.start.replace(day=subscription_start_day)
-                        else:
-                            start = event.start.replace(day=subscription_start_day) - relativedelta(months=1)
-                        start = start_of_day_in_utc(start)
-                        end = start_of_day_in_utc(start + relativedelta(months=1))
+                    start, end = self.subscription_usage_period_dates_for_event(event.start, allowed_unit)
                     # find bookings within dates
                     existing_bookings = existing_bookings.filter(event__start__gte=start, event__start__lt=end)
                     return len(existing_bookings) < allowed_number
         return False
+
+    def subscription_usage_period_dates_for_event(self, event_start_date, allowed_unit):
+        if allowed_unit == "week":
+            # calculate start and end dates for the week of the event, starting on the start_weekday
+            # we always use the day of the week that the subscription starts on as the start point
+            subscription_start_weekday = self.start_date.weekday()
+            days_from_start = subscription_start_weekday - event_start_date.weekday()
+            start = start_of_day_in_utc(event_start_date + timedelta(days_from_start))
+            end = start_of_day_in_utc(start + timedelta(weeks=1))
+        elif allowed_unit == "month":
+            subscription_start_day = self.start_date.day
+            # calculate start and end dates for the month of the event, starting on the start_day
+            if event_start_date.day >= subscription_start_day:
+                start = event_start_date.replace(day=subscription_start_day)
+            else:
+                start = event_start_date.replace(day=subscription_start_day) - relativedelta(months=1)
+            start = start_of_day_in_utc(start)
+            end = start_of_day_in_utc(start + relativedelta(months=1))
+        return start, end
+
+    def usage_limits(self, event_type):
+        # None means either the it's not valid for the event type (but we expect to have checked that already)
+        # or usage is unlimited
+        usage = self.config.bookable_event_types.get(str(event_type.id), {})
+        if usage.get("allowed_number"):
+            return usage.get("allowed_number"), usage.get("allowed_unit")
+
+    def usage_for_event_type_and_date(self, event_type, event_date):
+        bookable_event_type = self.config.bookable_event_types.get(str(event_type.id))
+        existing_open_bookings = self.bookings.filter(event__event_type=event_type, status="OPEN", no_show=False)
+        # If no existing fully open bookings at all then usage is 0
+        if not existing_open_bookings.exists():
+            return 0
+
+        # If DON'T include no-shows in usage (the default), we remove the no-shows here before we
+        # count uses
+        existing_bookings = existing_open_bookings
+        if not self.config.include_no_shows_in_usage:
+            existing_bookings = existing_open_bookings.filter(no_show=False)
+        if not existing_bookings.exists():
+            return 0
+
+        allowed_number = bookable_event_type.get("allowed_number")
+        allowed_unit = bookable_event_type.get("allowed_unit")
+        if allowed_unit == "day":
+            # find bookings on same day
+            existing_bookings = existing_bookings.filter(event__start__date=event_date.date())
+        else:
+            start, end = self.subscription_usage_period_dates_for_event(event_date, allowed_unit)
+            # find bookings within dates
+            existing_bookings = existing_bookings.filter(event__start__gte=start, event__start__lt=end)
+        return existing_bookings.count()
 
     def set_start_date_from_bookings(self):
         """For subscriptions that start on the date of first booking"""
@@ -976,6 +1021,7 @@ class Booking(models.Model):
             models.Index(fields=['event', 'user', 'status']),
             models.Index(fields=['block']),
         ]
+        ordering = ("event__start",)
 
     def __str__(self):
         return f"{self.event.name} - {self.user.username} - {self.event.start.strftime('%d%b%Y %H:%M')}"

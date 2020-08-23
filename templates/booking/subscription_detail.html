@@ -12,8 +12,9 @@
             <div class="list-group-item list-group-item-dark pt-1 pb-1">Subscription: {{ subscription.config.name }}</div>
                 <div class="list-group-item">
                     <p>
-                    Purchased: {{ subscription.purchase_date | date:"d-M-Y" }}<br/>
+                    Purchased: {{ subscription.purchase_date | date:"d-M-y" }}<br/>
                     User: {{ subscription.user|full_name }}<br/>
+                    {{ subscription|subscription_start_text }}<br/>
                     {{ subscription|subscription_expiry_text }}
                     </p>
 
@@ -28,7 +29,11 @@
                         Bookings: {% if not subscription.bookings.exists %}N/A{% endif %}
                         <ul>
                             {% for booking in subscription.bookings.all %}
-                                <li>{{ booking.event.name }} | {{ booking.event.start|date:"D d M Y, H:i" }}</li>
+                                <li>{{ booking.event.name }} | {{ booking.event.start|date:"D d M Y, H:i" }}
+                                {% if booking.status == "CANCELLED" %} (Cancelled)
+                                {% elif booking.no_show %} (No-show / Cancelled after allowed time)
+                                {% endif %}
+                                </li>
                             {% endfor %}
                         </ul>
 

@@ -5,7 +5,8 @@
       data-toggle="tooltip" 
       data-html="true" 
       data-html="true" 
-      title='{% for subscription_info in subscription_info_texts %}{% if forloop.counter0 != 0 %}<hr class="tooltip-hr">{% endif %}{{ subscription_info }}{% endfor %}'
+      title='{% for subscription_info in subscription_info_texts %}
+        {% if forloop.counter0 != 0 %}<hr class="tooltip-hr">{% endif %}{{ subscription_info }}{% endfor %}'
     >
       <span class="badge badge-pill badge-active-block">You have active subscriptions</span>
     </span>

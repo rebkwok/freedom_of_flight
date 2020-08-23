@@ -6,8 +6,10 @@ from common.utils import full_name, start_of_day_in_utc
 from ..models import EventType, WaitingListUser
 from ..utils import has_available_block as has_available_block_util
 from ..utils import has_available_course_block as has_available_course_block_util
-from ..utils import get_block_status, user_can_book_or_cancel
-from ..utils import get_user_booking_info
+from ..utils import (
+    get_block_status, user_can_book_or_cancel, get_user_booking_info, user_subscription_info,
+    booking_restricted_pre_event_start, show_warning
+)
 
 register = template.Library()
 
@@ -21,9 +23,13 @@ def has_available_course_block(user, course):
     return has_available_course_block_util(user, course)
 
 
-def get_block_info(block):
+def get_block_info(block, include_user=True):
+    if include_user:
+        user_info_text = f"{full_name(block.user)}: "
+    else:
+        user_info_text = ""
     used, total = get_block_status(block)
-    base_text = f"<span class='helptext'>{block.user.first_name} {block.user.last_name}: {block.block_config.name} ({total - used}/{total} remaining)"
+    base_text = f"<span class='helptext'>{user_info_text}{block.block_config.name} ({total - used}/{total} remaining)"
     if block.expiry_date:
         return f"{base_text}; expires {block.expiry_date.strftime('%d-%b-%y')}</span>"
     elif block.block_config.duration:
@@ -33,19 +39,16 @@ def get_block_info(block):
 
 
 @register.filter
-def user_block_info(block):
+def user_block_info(block, include_user=True):
+    include_user = bool(include_user)
+    if include_user:
+        user_info_text = f"{full_name(block.user)}: "
+    else:
+        user_info_text = ""
     if block.block_config.course:
         # Don't show the used/total for course blocks
-        return f"<span class='helptext'>{block.user.first_name} {block.user.last_name}: {block.block_config.name}</span>"
-    return get_block_info(block)
-
-
-@register.filter
-def user_subscription_info(subscription):
-    base_text = f"<span class='helptext'>{full_name(subscription.user)}: {subscription.config.name}"
-    if subscription.expiry_date:
-        return f"{base_text}; expires {subscription.expiry_date.strftime('%d-%b-%y')}</span>"
-    return f"{base_text}; not started</span>"
+        return f"<span class='helptext'>{user_info_text}{block.block_config.name}</span>"
+    return get_block_info(block, include_user)
 
 
 @register.filter
@@ -105,14 +108,23 @@ def subscription_expiry_text(subscription):
 @register.filter
 def subscription_start_text(subscription):
     if subscription.start_date:
-        return f"Starts {subscription.expiry_date.strftime('%d-%b-%y')}"
+        return f"Starts {subscription.start_date.strftime('%d-%b-%y')}"
     elif subscription.start_options == "first_booking_date":
         return "Starts on date of first booked class/event"
 
 
 @register.filter
-def can_book_or_cancel(user, event):
-    return user_can_book_or_cancel(user, event)
+def can_book_or_cancel(booking):
+    return user_can_book_or_cancel(event=booking.event, user_booking=booking)
+
+
+@register.filter
+def show_booking_warning(booking):
+    return show_warning(event=booking.event, user_booking=booking)
+
+@register.filter
+def booking_restricted(event):
+    return booking_restricted_pre_event_start(event)
 
 
 @register.filter
@@ -123,12 +135,6 @@ def lookup_dict(dictionary, key):
 @register.simple_tag
 def booking_user_info(booking):
     return get_user_booking_info(booking.user, booking.event)
-
-
-@register.filter
-def subscription_start_options(subscription_user, subscription_config):
-    return subscription_config.get_start_options_for_user(subscription_user, ignore_unpaid=True)
-
 
 @register.filter
 def format_subscription_config_start_options(subscription_config_dict):
@@ -153,7 +159,7 @@ def format_subscription_config_start_options(subscription_config_dict):
 def format_bookable_event_types(subscription_config):
     bookable_event_types = subscription_config.bookable_event_types or {}
     formatted_bookable_event_types = {
-        EventType.objects.get(id=key).name.title(): f"{value['allowed_number']} per {value['allowed_unit']}" if value["allowed_number"] else "unlimited"
+        EventType.objects.get(id=key): f"{value['allowed_number']} per {value['allowed_unit']}" if value["allowed_number"] else "unlimited"
         for key, value in bookable_event_types.items()
     }
     return {"bookable_event_types": formatted_bookable_event_types}
