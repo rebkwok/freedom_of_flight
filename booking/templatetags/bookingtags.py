@@ -109,7 +109,7 @@ def subscription_expiry_text(subscription):
 def subscription_start_text(subscription):
     if subscription.start_date:
         return f"Starts {subscription.start_date.strftime('%d-%b-%y')}"
-    elif subscription.start_options == "first_booking_date":
+    elif subscription.config.start_options == "first_booking_date":
         return "Starts on date of first booked class/event"
 
 

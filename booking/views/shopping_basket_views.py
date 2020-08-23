@@ -13,6 +13,7 @@ from django.urls import reverse
 from payments.models import Invoice
 from payments.utils import get_paypal_form
 
+from common.utils import full_name
 from ..models import Block, BlockVoucher
 from ..utils import calculate_user_cart_total
 from .views_utils import data_privacy_required, get_unpaid_user_managed_blocks, get_unpaid_user_managed_subscriptions
@@ -24,43 +25,61 @@ class VoucherValidationError(Exception):
     pass
 
 
-def validate_voucher(voucher, exclude_block_id=None):
+def validate_voucher_max_total_uses(voucher, paid_only=True, user=None, exclude_block_id=None):
+    if voucher.max_vouchers is not None:
+        used_voucher_blocks = voucher.blocks.all()
+        if exclude_block_id:
+            used_voucher_blocks = used_voucher_blocks.exclude(id=exclude_block_id)
+        if paid_only:
+            used_voucher_blocks = used_voucher_blocks.filter(paid=True)
+        else:
+            user_unpaid_voucher_blocks = used_voucher_blocks.filter(user=user, paid=False)
+            used_voucher_blocks = used_voucher_blocks | user_unpaid_voucher_blocks
+        if used_voucher_blocks.count() >= voucher.max_vouchers:
+            raise VoucherValidationError(
+                f'Voucher code {voucher.code} has limited number of total uses and expired before it could be used for all applicable blocks')
+
+
+def validate_voucher_properties(voucher):
+    """Validate voucher properties that are not specific to number of uses"""
     if voucher.has_expired:
         raise VoucherValidationError("Voucher has expired")
-    elif voucher.max_vouchers is not None:
-        if exclude_block_id is not None:
-            used_vouchers = voucher.blocks.exclude(id=exclude_block_id).count()
-        else:
-            used_vouchers = voucher.blocks.count()
-        if used_vouchers >= voucher.max_vouchers:
-            raise VoucherValidationError('Voucher has limited number of uses and expired before it could be used for all your applicable blocks')
     elif not voucher.activated:
         raise VoucherValidationError('Voucher has not been activated yet')
     elif not voucher.has_started:
         raise VoucherValidationError(f'Voucher code is not valid until {voucher.start_date.strftime("%d %b %y")}')
+    elif voucher.max_vouchers is not None:
+        # validate max vouchers for paid blocks only
+        validate_voucher_max_total_uses(voucher, paid_only=True)
+
+
+def validate_unpaid_voucher_max_total_uses(user, voucher, exclude_block_id=None):
+    if voucher.max_vouchers is not None:
+        validate_voucher_max_total_uses(voucher, user=user, paid_only=False, exclude_block_id=exclude_block_id)
 
 
 def validate_voucher_for_user(voucher, user):
     # Only check blocks that haven't already had this code applied
-    validate_voucher(voucher)
-    if voucher.max_per_user is not None and user.blocks.filter(voucher=voucher).count() >= voucher.max_per_user:
-        raise VoucherValidationError(f'{user.first_name} {user.last_name} has already used this voucher the maximum number of times ({voucher.max_per_user})')
+    validate_voucher_properties(voucher)
+    if voucher.max_per_user is not None and user.blocks.filter(paid=True, voucher=voucher).count() >= voucher.max_per_user:
+        raise VoucherValidationError(f'{full_name(user)} has already used voucher code {voucher.code} the maximum number of times ({voucher.max_per_user})')
 
 
 def validate_voucher_for_block_configs_in_cart(voucher, cart_unpaid_blocks):
     if not any(voucher.check_block_config(block.block_config) for block in cart_unpaid_blocks):
-        raise VoucherValidationError("Code is not valid for any blocks in your cart")
+        raise VoucherValidationError(f"Code {voucher.code} is not valid for any blocks in your cart")
 
 
-def validate_voucher_for_unpaid_block(block):
-    voucher = block.voucher
+def validate_voucher_for_unpaid_block(block, voucher=None):
+    voucher = voucher or block.voucher
     # raise exceptions for all the voucher-related things
-    validate_voucher(voucher)
+    validate_voucher_properties(voucher)
+    validate_unpaid_voucher_max_total_uses(block.user, voucher, exclude_block_id=block.id)
     # raise exception if voucher not valid specifically for this user
     if voucher.max_per_user is not None:
         users_used_vouchers_excluding_this_one = voucher.blocks.filter(user=block.user).exclude(id=block.id).count()
         if users_used_vouchers_excluding_this_one >= voucher.max_per_user:
-            raise VoucherValidationError(f'Voucher code has already been used the maximum number of times ({voucher.max_per_user})')
+            raise VoucherValidationError(f'Voucher code {voucher.code} already used max number of times by {full_name(block.user)} (limited to {voucher.max_per_user} per user)')
     return
 
 
@@ -84,10 +103,8 @@ def get_valid_applied_voucher_info(block):
 
 def apply_voucher_to_unpaid_blocks(voucher, unpaid_blocks):
     # We only do this AFTER checking the voucher is generally valid, so we don't
-    # need to do that again
-    relevant_blocks = [unpaid_block for unpaid_block in unpaid_blocks if voucher.check_block_config(unpaid_block.block_config)]
-    # no need to check counts etc, since the shopping cart view will re-validate all the applied vouchers
-    for relevant_block in relevant_blocks:
+    # need to do that again    # no need to check counts etc, since the shopping cart view will re-validate all the applied vouchers
+    for relevant_block in unpaid_blocks:
         relevant_block.voucher = voucher
         relevant_block.save()
 
@@ -124,14 +141,22 @@ def shopping_basket(request):
             else:
                 try:
                     # check overall user validation, not specific to the block user
-                    validate_voucher(voucher)
+                    validate_voucher_properties(voucher)
                     validate_voucher_for_block_configs_in_cart(voucher, unpaid_blocks)
                     # validate for each block user
                     for user, user_unpaid_blocks in unpaid_blocks_by_user.items():
                         try:
                             validate_voucher_for_user(voucher, user)
+                            blocks_to_apply = []
+                            for block in user_unpaid_blocks:
+                                if voucher.check_block_config(block.block_config):
+                                    try:
+                                        validate_voucher_for_unpaid_block(block, voucher)
+                                        blocks_to_apply.append(block)
+                                    except VoucherValidationError as user_voucher_error:
+                                        voucher_errors.append(str(user_voucher_error))
                             # Passed all validation checks; apply it to blocks
-                            apply_voucher_to_unpaid_blocks(voucher, user_unpaid_blocks)
+                            apply_voucher_to_unpaid_blocks(voucher, blocks_to_apply)
                         except VoucherValidationError as user_voucher_error:
                             voucher_errors.append(str(user_voucher_error))
                 except VoucherValidationError as voucher_error:
@@ -143,7 +168,6 @@ def shopping_basket(request):
                 if block.voucher and block.voucher.code == code:
                     block.voucher = None
                     block.save()
-
     voucher_applied_costs = {
         unpaid_block.id: get_valid_applied_voucher_info(unpaid_block) for unpaid_block in unpaid_blocks
     }
@@ -206,9 +230,13 @@ def ajax_checkout(request):
     for block in unpaid_blocks:
         if block.voucher:
             try:
-                validate_voucher(block.voucher)
+                validate_voucher_properties(block.voucher)
                 validate_voucher_for_block_configs_in_cart(block.voucher, [block])
                 validate_voucher_for_user(block.voucher, block.user)
+                if block.voucher.check_block_config(block.block_config):
+                    validate_voucher_for_unpaid_block(block, block.voucher)
+                else:
+                    raise VoucherValidationError("voucher on block not valid")
             except VoucherValidationError:
                 block.voucher = None
                 block.save()

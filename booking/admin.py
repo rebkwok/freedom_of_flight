@@ -10,6 +10,14 @@ class BookingInline(admin.TabularInline):
     model = Booking
 
 
+class SubscriptionInline(admin.TabularInline):
+    model = Subscription
+
+
+class BlockInline(admin.TabularInline):
+    model = Block
+
+
 class EventInline(admin.TabularInline):
     model = Event
     can_delete = False

@@ -2,7 +2,9 @@
 
 {% block precontent %}
     {{ block.super }}
+    {% if request.user.is_authenticated %}
     {% include 'accounts/includes/account_nav.html' %}
+    {% endif %}
 {% endblock %}
 
 {% block extra_js %}

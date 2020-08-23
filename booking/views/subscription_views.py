@@ -38,6 +38,10 @@ class SubscriptionListView(DataPolicyAgreementRequiredMixin, LoginRequiredMixin,
         # Call the base implementation first to get a context
         context = super().get_context_data(**kwargs)
         context["available_users_form"] = AvailableUsersForm(request=self.request, view_as_user=get_view_as_user(self.request))
+        queryset = list(self.get_queryset())
+        # re-sort so expired are last
+        queryset.sort(key=lambda x: x.has_expired())
+        context["subscriptions"] = queryset
         return context
 
 
