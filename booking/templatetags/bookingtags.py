@@ -134,7 +134,7 @@ def booking_user_info(booking):
 @register.filter
 def format_subscription_config_start_options(subscription_config_dict):
     if subscription_config_dict["config"].start_options == "signup_date":
-        return "Starts from date of purchase"
+        return "Starts from date of purchase (or previous subscription expiry)"
     elif subscription_config_dict["config"].start_options == "first_booking_date":
         return "Starts from date of first use"
     else:

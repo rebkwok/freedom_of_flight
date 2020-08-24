@@ -12,7 +12,7 @@ from model_bakery import baker
 
 from paypal.standard.pdt.models import PayPalPDT
 
-from booking.models import Block
+from booking.models import Block, Subscription
 from common.test_utils import TestUsersMixin
 from ..models import Invoice
 
@@ -73,6 +73,64 @@ class PaypalReturnViewTests(TestUsersMixin, TestCase):
         assert mail.outbox[0].to == [settings.DEFAULT_STUDIO_EMAIL]
         assert mail.outbox[1].to == [self.student_user.email]
         assert "Your payment has been processed" in mail.outbox[1].subject
+
+    @patch("payments.views.process_pdt")
+    def test_return_with_valid_pdt_with_matching_invoice_and_subscription(self, process_pdt):
+        invoice = baker.make(
+            Invoice, invoice_id="foo", amount=10, business_email="testreceiver@test.com",
+            username=self.student_user.username
+        )
+        subscription = baker.make(Subscription, paid=False, invoice=invoice, user=self.student_user)
+        pdt_obj = baker.make(
+            PayPalPDT, invoice="foo", custom=f"{invoice.id}_{invoice.signature()}", txn_id="bar", mc_gross=10,
+            mc_currency="GBP", receiver_email="testreceiver@test.com"
+        )
+        process_pdt.return_value = (pdt_obj, False)
+
+        resp = self.client.get(self.url)
+        assert resp.status_code == 200
+        assert "Payment Processed" in resp.content.decode("utf-8")
+        subscription.refresh_from_db()
+        invoice.refresh_from_db()
+        pdt_obj.refresh_from_db()
+
+        assert subscription.paid is True
+        assert invoice.transaction_id == "bar"
+        assert pdt_obj.invoice == "foo"
+
+        assert len(mail.outbox) == 2
+        assert mail.outbox[0].to == [settings.DEFAULT_STUDIO_EMAIL]
+        assert mail.outbox[1].to == [self.student_user.email]
+        assert "Your payment has been processed" in mail.outbox[1].subject
+
+    @patch("payments.views.process_pdt")
+    def test_return_with_valid_pdt_with_matching_invoice_block_and_subscription(self, process_pdt):
+        invoice = baker.make(
+            Invoice, invoice_id="foo", amount=10, business_email="testreceiver@test.com",
+            username=self.student_user.username
+        )
+        block = baker.make(Block, paid=False, invoice=invoice, user=self.student_user)
+        subscription = baker.make(Subscription, paid=False, invoice=invoice, user=self.student_user)
+        pdt_obj = baker.make(
+            PayPalPDT, invoice="foo", custom=f"{invoice.id}_{invoice.signature()}", txn_id="bar", mc_gross=10,
+            mc_currency="GBP", receiver_email="testreceiver@test.com"
+        )
+        process_pdt.return_value = (pdt_obj, False)
+
+        resp = self.client.get(self.url)
+        assert resp.status_code == 200
+        assert "Payment Processed" in resp.content.decode("utf-8")
+        subscription.refresh_from_db()
+        block.refresh_from_db()
+        invoice.refresh_from_db()
+        pdt_obj.refresh_from_db()
+
+        assert subscription.paid is True
+        assert block.paid is True
+        assert invoice.transaction_id == "bar"
+        assert pdt_obj.invoice == "foo"
+
+        assert len(mail.outbox) == 2
 
     @patch("payments.views.process_pdt")
     def test_return_with_valid_pdt_no_invoice_on_pdt(self, process_pdt):

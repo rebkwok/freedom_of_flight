@@ -401,8 +401,8 @@ def ajax_subscription_purchase(request, subscription_config_id):
     subscription_config = get_object_or_404(SubscriptionConfig, pk=subscription_config_id)
 
     if start_date and subscription_config.start_options == "signup_date" and start_date == start_of_day_in_utc(timezone.now()):
-        # for a signup date subscription, user could have a previous unpaid one.  The start date should be None,
-        # but in case it was set at some point, check for an earlier start as well as None
+        # for a signup date subscription that's calculated to start today, user could have a previous unpaid one.
+        # The start date should be None, but in case it was set at some point, check for an earlier start as well as None
         matching = user.subscriptions.filter(
             Q(paid=False, config=subscription_config) & (Q(start_date__lte=start_date) | Q(start_date__isnull=True))
         )

@@ -1,3 +1,4 @@
+from datetime import timedelta
 from urllib.parse import urlencode
 
 import pytest
@@ -9,8 +10,9 @@ from django.conf import settings
 from django.core import mail
 from django.urls import reverse
 from django.test import TestCase, override_settings
+from django.utils import timezone
 
-from booking.models import Block
+from booking.models import Block, Subscription
 
 from paypal.standard.ipn.models import PayPalIPN
 
@@ -148,6 +150,37 @@ class PaypalSignalsTests(TestUsersMixin, TestCase):
         assert PayPalIPN.objects.count() == 1
         block.refresh_from_db()
         assert block.paid is True
+        assert len(mail.outbox) == 2
+        assert mail.outbox[0].to == [settings.DEFAULT_STUDIO_EMAIL]
+        assert mail.outbox[1].to == [self.student_user.email]
+        assert "Your payment has been processed" in mail.outbox[1].subject
+
+    @patch('paypal.standard.ipn.models.PayPalIPN._postback')
+    def test_valid_ipn_with_matching_invoice_subscription_and_block(self, mock_postback):
+        mock_postback.return_value = b"VERIFIED"
+        invoice = baker.make(
+            Invoice, invoice_id="foo", amount=10, business_email=TEST_RECEIVER_EMAIL,
+            username=self.student_user.username
+        )
+        subscription = baker.make(
+            Subscription, paid=False, invoice=invoice, user=self.student_user, purchase_date=timezone.now() - timedelta(3)
+        )
+        block = baker.make(Block, paid=False, invoice=invoice, user=self.student_user)
+        assert PayPalIPN.objects.exists() is False
+        self.paypal_post(
+            {
+                **IPN_POST_PARAMS,
+                "invoice": b"foo",
+                "custom": f"{invoice.id}_{invoice.signature()}".encode("utf-8"),
+                "mc_gross": b"10.00"
+            }
+        )
+        assert PayPalIPN.objects.count() == 1
+        block.refresh_from_db()
+        subscription.refresh_from_db()
+        assert block.paid is True
+        assert subscription.paid is True
+        assert subscription.purchase_date.date() == timezone.now().date()
         assert len(mail.outbox) == 2
         assert mail.outbox[0].to == [settings.DEFAULT_STUDIO_EMAIL]
         assert mail.outbox[1].to == [self.student_user.email]

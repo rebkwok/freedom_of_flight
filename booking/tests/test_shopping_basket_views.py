@@ -6,7 +6,7 @@ from django.urls import reverse
 from django.test import TestCase
 from django.utils import timezone
 
-from booking.models import Block, BlockConfig, BlockVoucher
+from booking.models import Block, BlockConfig, BlockVoucher, Subscription, SubscriptionConfig
 from common.test_utils import TestUsersMixin
 from payments.models import Invoice
 
@@ -26,6 +26,7 @@ class ShoppingBasketViewTests(TestUsersMixin, TestCase):
         self.login(self.student_user)
         self.dropin_block_config = baker.make(BlockConfig, cost=20)
         self.course_block_config = baker.make(BlockConfig, course=True, cost=40)
+        self.subscription_config = baker.make(SubscriptionConfig, cost=50)
 
     def test_no_unpaid_blocks(self):
         resp = self.client.get(self.url)
@@ -44,10 +45,61 @@ class ShoppingBasketViewTests(TestUsersMixin, TestCase):
         assert list(resp.context_data["applied_voucher_codes_and_discount"]) == []
         assert resp.context_data["total_cost"] == 20
 
-    def test_shows_user_managed_unpaid_blocks(self):
+    def test_with_unpaid_subscriptions(self):
+        block = baker.make_recipe("booking.dropin_block", block_config=self.dropin_block_config, user=self.student_user)
+        subscription = baker.make(Subscription, config=self.subscription_config, user=self.student_user)
+
+        resp = self.client.get(self.url)
+        assert list(resp.context_data["unpaid_block_info"]) == [
+            {"block": block, "original_cost": 20, "voucher_applied": {"code": None, "discounted_cost": None}}
+        ]
+        assert list(resp.context_data["unpaid_subscription_info"]) == [
+            {"subscription": subscription, "full_cost": 50, "cost": 50}
+        ]
+        assert list(resp.context_data["applied_voucher_codes_and_discount"]) == []
+        assert resp.context_data["total_cost"] == 70
+
+    def test_with_unpaid_subscription_with_discount(self):
+        # config does NOT allow partial purchase
+        subscription_config = baker.make(
+            SubscriptionConfig,
+            cost=40,
+            recurring=True,
+            start_options="start_date",
+            start_date=timezone.now()-timedelta(weeks=2),
+            duration=4,
+            duration_units="weeks",
+            partial_purchase_allowed=False,
+        )
+        # an unpaid subscription that's for the current period
+        subscription = baker.make(
+            Subscription, config=subscription_config, user=self.student_user,
+            start_date=subscription_config.get_subscription_period_start_date(),
+        )
+
+        resp = self.client.get(self.url)
+        assert list(resp.context_data["unpaid_block_info"]) == []
+        assert list(resp.context_data["unpaid_subscription_info"]) == [
+            {"subscription": subscription, "full_cost": 40, "cost": 40}
+        ]
+        assert resp.context_data["total_cost"] == 40
+
+        # config DOES allow partial purchase
+        subscription_config.partial_purchase_allowed = True
+        subscription_config.cost_per_week = 10
+        subscription_config.save()
+        resp = self.client.get(self.url)
+        assert list(resp.context_data["unpaid_block_info"]) == []
+        assert list(resp.context_data["unpaid_subscription_info"]) == [
+            {"subscription": subscription, "full_cost": 40, "cost": 20}
+        ]
+        assert resp.context_data["total_cost"] == 20
+
+    def test_shows_user_managed_unpaid_blocks_and_subscriptions(self):
         self.login(self.manager_user)
         block1 = baker.make_recipe("booking.dropin_block", block_config=self.dropin_block_config, user=self.manager_user)
         block2 = baker.make_recipe("booking.dropin_block", block_config__cost=10, user=self.child_user)
+        subscription = baker.make(Subscription, config=self.subscription_config, user=self.child_user)
 
         resp = self.client.get(self.url)
         assert list(resp.context_data["unpaid_block_info"]) == [
@@ -55,7 +107,10 @@ class ShoppingBasketViewTests(TestUsersMixin, TestCase):
             {"block": block2, "original_cost": 10, "voucher_applied": {"code": None, "discounted_cost": None}}
         ]
         assert list(resp.context_data["applied_voucher_codes_and_discount"]) == []
-        assert resp.context_data["total_cost"] == 30
+        assert list(resp.context_data["unpaid_subscription_info"]) == [
+            {"subscription": subscription, "full_cost": 50, "cost": 50}
+        ]
+        assert resp.context_data["total_cost"] == 80
 
     def test_voucher_application(self):
         voucher = baker.make(BlockVoucher, code="test", discount=50)
@@ -269,9 +324,11 @@ class AjaxShoppingBasketCheckoutTests(TestUsersMixin, TestCase):
         self.make_data_privacy_agreement(self.student_user)
         self.make_data_privacy_agreement(self.manager_user)
         self.make_disclaimer(self.student_user)
+        self.make_disclaimer(self.child_user)
         self.login(self.student_user)
         self.dropin_block_config = baker.make(BlockConfig, cost=20)
         self.course_block_config = baker.make(BlockConfig, cost=40)
+        self.subscription_config = baker.make(SubscriptionConfig, cost=50)
 
     def test_rechecks_total(self):
         baker.make_recipe(
@@ -296,20 +353,71 @@ class AjaxShoppingBasketCheckoutTests(TestUsersMixin, TestCase):
         block.refresh_from_db()
         assert block.voucher is None
 
-    def test_creates_invoice_and_applies_to_unpaid_blocks(self):
+    def test_rechecks_partial_subscription_costs(self):
+        subscription_config = baker.make(
+            SubscriptionConfig,
+            cost=40,
+            recurring=True,
+            start_options="start_date",
+            start_date=timezone.now() - timedelta(weeks=2),
+            duration=4,
+            duration_units="weeks",
+            partial_purchase_allowed=True,
+            cost_per_week=10,
+        )
+        # an unpaid subscription that's for the current period
+        subscription = baker.make(
+            Subscription, config=subscription_config, user=self.student_user,
+            start_date=subscription_config.get_subscription_period_start_date(),
+        )
+        # total shows the full subscription price, but it's now half way through
+        resp = self.client.post(self.url, data={"cart_total": 40}).json()
+        # redirects to basket
+        assert resp["redirect"] is True
+        assert resp["url"] == reverse("booking:shopping_basket")
+        resp = self.client.get(reverse("booking:shopping_basket"))
+        # basket shows the correct cost
+        assert resp.context_data["total_cost"] == 20
+
+    def test_creates_invoice_and_applies_to_unpaid_blocks_and_subscriptions(self):
         block = baker.make_recipe(
             "booking.dropin_block", block_config=self.dropin_block_config, user=self.student_user,
         )
+        subscription = baker.make(
+            Subscription, config=self.subscription_config, user=self.student_user
+        )
         assert Invoice.objects.exists() is False
         # total is correct
-        resp = self.client.post(self.url, data={"cart_total": 20}).json()
+        resp = self.client.post(self.url, data={"cart_total": 70}).json()
         block.refresh_from_db()
+        subscription.refresh_from_db()
         assert Invoice.objects.exists()
         invoice = Invoice.objects.first()
         assert invoice.username == self.student_user.username
-        assert invoice.amount == 20
+        assert invoice.amount == 70
         assert block.invoice == invoice
+        assert subscription.invoice == invoice
         assert "paypal_form_html" in resp
+
+    def test_invoice_user_is_manager_user(self):
+        self.login(self.manager_user)
+        block = baker.make_recipe(
+            "booking.dropin_block", block_config=self.dropin_block_config, user=self.child_user,
+        )
+        subscription = baker.make(
+            Subscription, config=self.subscription_config, user=self.child_user
+        )
+        assert Invoice.objects.exists() is False
+        # total is correct
+        self.client.post(self.url, data={"cart_total": 70}).json()
+        block.refresh_from_db()
+        subscription.refresh_from_db()
+        assert Invoice.objects.exists()
+        invoice = Invoice.objects.first()
+        assert invoice.username == self.manager_user.username
+        assert invoice.amount == 70
+        assert block.invoice == invoice
+        assert subscription.invoice == invoice
 
     def test_creates_invoice_and_applies_to_unpaid_blocks_with_vouchers(self):
         voucher = baker.make(BlockVoucher, discount=10)
