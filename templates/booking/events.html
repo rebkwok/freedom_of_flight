@@ -45,8 +45,8 @@
 
         {% if course.description %}
             <div class="list-group mb-2">
-                <div class="list-group-item list-group-item-dark pt-1 pb-1">Details</div>
-                <div class="list-group-item pt-1 pb-1">{{ course.description }}</div>
+                <div class="list-group-item list-group-item-info pt-1 pb-1">Details</div>
+                <div class="list-group-item pt-1 pb-1">{{ course.description|linebreaks }}</div>
             </div>
         {% endif %}
 
