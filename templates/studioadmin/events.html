@@ -72,7 +72,10 @@
                                 <td>{{ event.event_type.name|title }}</td>
                                 {% if event.course %}
                                     <td class="helptext text-center">
-                                        <span class="btn btn-sm btn-visible btn-secondary">{{ event.show_on_site|yesno|title }}</span></td>
+                                    <div data-toggle="tooltip" data-placement="top" title="Visibility can be set on the course list">
+                                        <span class="btn btn-sm btn-visible btn-secondary disabled">{{ event.show_on_site|yesno|title }}</span>
+                                    </div>
+                                    </td>
                                 {% else %}
                                     <td class="text-center">
                                         {% if event.cancelled %}
