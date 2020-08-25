@@ -63,14 +63,15 @@
                             <span class="helptext"> | Availability:
                                 <span id="availability_{{ booking.event.id }}">{% include 'booking/includes/event_availability_badge.html' %}</span>
                             </span>
-                            {% if booking.event.course and not course %}
-                                | <a href="{% url 'booking:course_events' booking.event.course.slug %}"><span class="badge badge-course">Course: {{ booking.event.course.name|truncatechars:15 }}</span></a>
+                            {% if booking.event.course %}
+                                | <a href="{% url 'booking:course_events' booking.event.course.slug %}"><span class="badge badge-course">Course: {{ booking.event.course.name|truncatechars:30 }} ({{ booking.event.course_order }})</span></a>
                             {% endif %}
                             {% if user.is_authenticated %}
                                 {% booking_user_info booking as user_info %}
                                 <span id="block_info_{{booking.event.id}}">
                                     {% include 'booking/includes/block_info.html' %}
                                 </span>
+
                             {% endif %}
                         </div>
                     </div>

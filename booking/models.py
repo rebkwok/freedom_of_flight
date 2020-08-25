@@ -217,6 +217,11 @@ class Event(models.Model):
         time_until_event = time_until_event.total_seconds() / 3600
         return time_until_event > self.event_type.cancellation_period
 
+    def course_order(self):
+        if self.course and self.course.events.exists():
+            events_in_order = self.course.events.order_by("start").values_list("id", flat=True)
+            return f"{list(events_in_order).index(self.id) + 1}/{events_in_order.count()}"
+
     def get_absolute_url(self):
         return reverse("booking:event", kwargs={'slug': self.slug})
 

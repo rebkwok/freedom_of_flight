@@ -4,7 +4,9 @@
         <span id="availability_{{ event.id }}">{% include 'booking/includes/event_availability_badge.html' %}</span>
     </span>
     {% if event.course and not course %}
-        | <a href="{% url 'booking:course_events' event.course.slug %}"><span class="badge badge-course">Course: {{ event.course.name|truncatechars:15 }}</span></a>
+        | <a href="{% url 'booking:course_events' event.course.slug %}">
+        <span class="badge badge-course">Course: {{ event.course.name|truncatechars:30 }} ({{ event.course_order }})
+</span></a>
     {% endif %}
     {% if request.user.is_authenticated %}
         <span id="block_info_{{event.id}}">
@@ -15,6 +17,9 @@
 
 <span class="d-block d-sm-none">
     {% if event.course and not course %}
-        <a href="{% url 'booking:course_events' event.course.slug %}"><span class="badge badge-course">Course: {{ event.course.name|truncatechars:15 }}</span></a>
+        <a href="{% url 'booking:course_events' event.course.slug %}">
+            <span class="badge badge-course">Course: {{ event.course.name|truncatechars:30 }} ({{ event.course_order }})
+            </span>
+        </a>
     {% endif %}
 </span>
