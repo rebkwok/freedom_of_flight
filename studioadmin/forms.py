@@ -578,8 +578,6 @@ class BlockConfigForm(forms.ModelForm):
             self.existing_blocks = False
         self.fields["event_type"].help_text = "Each credit block is associated with a single event type and will be valid " \
                                               "for the number of events you select, for events of that event type only."
-        if self.existing_blocks:
-            self.fields["event_type"].widget.attrs.update({"disabled": "disabled"})
         self.fields["description"].help_text = "This will be displayed to users when purchasing credit blocks."
         self.fields["name"].help_text = "A short name for the credit block"
         self.fields["active"].help_text = "Active credit blocks are available for purchase by users and will be displayed " \
@@ -587,7 +585,9 @@ class BlockConfigForm(forms.ModelForm):
         self.helper = FormHelper()
         back_url = reverse('studioadmin:block_configs')
         self.helper.layout = Layout(
-            Field('event_type', readonly=True) if self.existing_blocks else "event_type",
+            HTML(f"<p><strong>Event Type: {self.instance.event_type.name}</strong></p>")
+            if self.existing_blocks else HTML(""),
+            Hidden('event_type', self.instance.event_type.id) if self.existing_blocks else "event_type",
             "name",
             "description",
             Field('size', readonly=True) if self.existing_blocks else "size",

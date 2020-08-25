@@ -11,7 +11,7 @@
             <h4 class="card-title">{{ event.start|date:"D d M Y, H:i" }}</h4>
             {% if event.description %}
             <h4 class="card-title">Description</h4>
-            <p class="card-text">{{ event.description }}</p>
+            <p class="card-text">{{ event.description|linebreaks }}</p>
             {% endif %}
     </div>
     {% if booking %}
