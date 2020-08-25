@@ -96,7 +96,7 @@
                                     </span>
                                 {% else %}
                                     <span class="float-right">
-                                    {% if user_info.has_booked %}
+                                    {% if user_info.has_booked and not event.is_past %}
                                         <!-- Only show the events_button for course events already booked/cancelled so user can cancel/rebook individual classes -->
                                         <span
                                             id="book_{{ event.id }}"

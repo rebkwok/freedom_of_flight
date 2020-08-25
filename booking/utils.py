@@ -141,10 +141,11 @@ def user_subscription_info(subscription, event=None, include_user=True):
 
 def show_warning(event, user_booking, has_available_payment_method=None):
     """Should we show the warning on booking/rebooking/cancelling?"""
+    if event.course:
+        # never show for course events - they'll always redirect to the course page
+        return False
+
     if user_booking:
-        if event.course:
-            # never show for existing bookings (any status) for course events
-            return False
         if user_booking.subscription and not user_booking.subscription.config.include_no_shows_in_usage:
             # never show for existing bookings (any status) for subscriptions that don't care about no-shows
             return False
