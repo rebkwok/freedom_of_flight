@@ -31,9 +31,23 @@
                     {% for available_block_config in blocklist %}
                     <tr {% if available_block_config.id in target_block_config_ids %}class="table-success"{% endif %}>
                         <td class="pl-2 pb-0">
-                            <p><strong>{{ available_block_config }}</strong></p>
-                            <p class="mb-0">{% if available_block_config.description %}{{ available_block_config.description|linebreaks }}{% endif %}<br/>
-                            £{{ available_block_config.cost }} |
+                            <p>
+                                <strong>{{ available_block_config }} </strong>
+                                {% if available_block_config.description %}
+                                <span class="d-md-none">
+                                    <span data-toggle="tooltip" data-html="true" title="<span class='helptext'>{{ available_block_config.description|linebreaksbr }}</span>">
+                                      <i class="fas fa-info-circle"></i>
+                                    </span>
+                                </span>
+                                {% endif %}
+                            </p>
+
+                        {% if available_block_config.description %}
+                            <p class="d-none d-md-block">{{ available_block_config.description|linebreaksbr}}</p>
+                        {% endif %}
+
+                        <p class="mb-0">
+                                £{{ available_block_config.cost }} |
                                 {% if available_block_config.duration %} Expires after {{ available_block_config.duration }} week{{ available_block_config.duration|pluralize }}{% else %}Never expires {% endif %} |
                                 {{ available_block_config.size }} use{{ available_block_config.size|pluralize }}<br/>
                                 {% active_block_info user_active_blocks available_block_config %}
@@ -84,8 +98,21 @@
                     {% for subscription_config in subscription_configs %}
                     <tr {% if subscription_config.config.id in target_subscription_config_ids %}class="table-success"{% endif %}>
                         <td class="pl-2 pb-2">
-                            <p><strong>{{ subscription_config.config.name|title }}</strong></p>
-                            <p>{% if subscription_config.config.description %}{{ subscription_config.config.description|linebreaks }}{% endif %}</p>
+                            <p>
+                                <strong>{{ subscription_config.config.name|title }} </strong>
+                                <span class="d-md-none">
+                                    {% if subscription_config.config.description %}
+                                        <span data-toggle="tooltip" data-html="true" title="<span class='helptext'>{{ subscription_config.config.description|linebreaksbr }}</span>">
+                                          <i class="fas fa-info-circle"></i>
+                                        </span>
+                                    {% endif %}
+                                </span>
+                            </p>
+
+                            <p class="d-none d-md-block">
+                                {% if subscription_config.config.description %}{{ subscription_config.config.description|linebreaksbr }}{% endif %}
+                            </p>
+
                             {%  if subscription_config.config.bookable_event_types %}
                                 Valid for:
                                 {% format_bookable_event_types subscription_config.config %}

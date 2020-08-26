@@ -301,13 +301,13 @@ hr.tooltip-hr {
 }
 
 .badge-course {
-  font-weight: lighter;
+  font-weight: normal;
   background-color: darkslateblue;
   color: white;
 }
 
 .badge-active-block {
-  font-weight: lighter;
+  font-weight: normal;
   background-color: darkorange;
   color: white;
 }

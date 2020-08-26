@@ -27,7 +27,7 @@
                                 {{ booking.event.start|date:"H:i"  }} {{ booking.event.name }}
                         </a> <em><span id="cancelled-text-{{ booking.event.id}}">
                             {% if not booking.event.cancelled and booking.status == 'CANCELLED' or not booking.event.cancelled and booking.no_show %}
-                                You have cancelled this booking
+                                <br/>You have cancelled this booking
                             {% endif %}
                             </span></em>
                             <span class="float-right">
@@ -55,7 +55,7 @@
                                 {% elif booking.event.cancelled %}
                                     <span>Event Cancelled</span>
                                 {% elif booking.event|booking_restricted %}
-                                    <span class="float-right"><a class="btn btn-xs btn-secondary" disabled href="#">Booking unavailable</a></span>
+                                    <span class="float-right"><a class="btn btn-xs btn-secondary" disabled href="#">Unavailable</a></span>
                             {% endif %}
                             </span>
                         <div>
