@@ -57,8 +57,10 @@ else:  # pragma: no cover
 ALLOWED_HOSTS = [
     'booking.freedomofflightaerial.com',
     'test73623839.freedomofflightaerial.com',
-    'vagrant.booking.freedomofflightaerial.com', 'vagrant.test.freedomofflight.rebkwok.co.uk',
     'test.freedomofflightaerial.rebkwok.co.uk',
+    'vagrant.booking.freedomofflightaerial.com',
+    'vagrant.test73623839.freedomofflightaerial.com',
+    'vagrant.test.freedomofflight.rebkwok.co.uk',
 ]
 if env('LOCAL'):  # pragma: no cover
     ALLOWED_HOSTS = ['*']
