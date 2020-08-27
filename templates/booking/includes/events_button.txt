@@ -20,7 +20,7 @@
      {% elif user_info.has_available_course_block or user_info.used_block %}
          <div class="btn btn-xs btn-success" href="#">Book course</div>
      {% else %}
-         <div class="btn btn-xs btn-outline-success" href="#">Course details</div>
+         <div class="btn btn-xs btn-outline-success" href="#">Course details & payment options</div>
      {% endif %}
 {% elif user_info.can_book_or_cancel %}
     {% if not user_info.has_available_block and not user_info.has_available_subscription %}
