@@ -54,7 +54,7 @@ else:  # pragma: no cover
     DEBUG = False
 
 ALLOWED_HOSTS = [
-    # 'booking.freedomofflightaerial.com',
+    'booking.freedomofflightaerial.com',
     'test73623839.freedomofflightaerial.com',
     'vagrant.booking.freedomofflightaerial.com', 'vagrant.test.freedomofflight.rebkwok.co.uk',
     'test.freedomofflightaerial.rebkwok.co.uk',
