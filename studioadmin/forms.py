@@ -63,6 +63,11 @@ class SubscriptionModelChoiceField(forms.ModelChoiceField):
         return f"{obj.config.name} - {_obj_date_string(obj)}"
 
 
+class BlockConfigModelChoiceField(forms.ModelChoiceField):
+    def label_from_instance(self, obj):
+        return f"{obj.name}{' (not active)' if not obj.active else ''}"
+
+
 class AddRegisterBookingForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
@@ -951,15 +956,17 @@ class AddEditBlockForm(forms.ModelForm):
             help_text="Leave blank to auto-calculate expiry date"
         )
 
-        self.fields["block_config"].label = "Block type"
         if not self.instance.id or not self.instance.bookings.exists():
-            block_type_queryset = BlockConfig.objects.filter(active=True)
+            block_type_queryset = BlockConfig.objects.all().order_by("-active")
+            block_type_help_text = "Active blocks are purchaseable by users. Inactive blocks can be used " \
+                                   "to give students credit or allow purchase at a custom rate.  If you add " \
+                                   "an unpaid block here, it will appear in the user's shopping cart for purchase."
         else:
-            # choices should only include the same event type if there are any events already booking
-            block_type_queryset = BlockConfig.objects.filter(active=True, event_type=self.instance.block_config.event_type)
-            self.fields["block_config"].help_text = "Bookings have already been made using this block; can only change to a block " \
-                                                  "of the same type"
-        self.fields["block_config"].queryset = block_type_queryset
+            # choices should only include the same event type if there are any events already booked
+            block_type_queryset = BlockConfig.objects.filter(active=True, event_type=self.instance.block_config.event_type).order_by("-active")
+            block_type_help_text = "Bookings have already been made using this block; can only change to a block " \
+                                   "of the same type"
+        self.fields["block_config"] = BlockConfigModelChoiceField(label="Block Type", queryset=block_type_queryset, help_text=block_type_help_text)
 
         self.helper = FormHelper()
         self.helper.layout = Layout(
