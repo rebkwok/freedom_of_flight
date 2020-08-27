@@ -2,6 +2,7 @@ from copy import deepcopy
 from datetime import datetime
 
 from django import forms
+from django.contrib.auth.password_validation import get_password_validators, password_validators_help_text_html
 from django.utils.html import mark_safe, linebreaks
 from django.utils import timezone
 
@@ -74,6 +75,7 @@ class SignupForm(CoreAccountFormMixin, AccountFormMixin, forms.Form):
                 required=True,
                 label='I confirm I have read and agree to the terms of the data privacy policy'
             )
+        self.password_help_text = password_validators_help_text_html()
 
     def signup(self, request, user):
         profile_data = self.cleaned_data.copy()

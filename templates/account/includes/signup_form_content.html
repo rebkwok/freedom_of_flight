@@ -18,6 +18,13 @@
                 <label class="form-check-label" for="{{ field.name }}_id">{{  field.label }}</label>
                 {% if field.help_text %}<br/><span class="helptext">{{ field.help_text }}</span>{% endif %}
             </div>
+        {% elif field.name == "password1" %}
+            <div class="form-group">
+                <label for="{{ field.name }}_id">{{ field.label }}{% if field.field.required %}*{% endif %}</label>
+                {{ field }}
+                <span class="helptext">{{ form.password_help_text }}</span>
+                {% if field.errors %}<div class="errorlist">{{ field.errors }}</div>{% endif %}
+            </div>
         {% else %}
             <div class="form-group">
                 <label for="{{ field.name }}_id">{{ field.label }}{% if field.field.required %}*{% endif %}</label>
