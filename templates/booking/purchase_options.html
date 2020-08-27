@@ -50,8 +50,13 @@
                                 £{{ available_block_config.cost }} |
                                 {% if available_block_config.duration %} Expires after {{ available_block_config.duration }} week{{ available_block_config.duration|pluralize }}{% else %}Never expires {% endif %} |
                                 {{ available_block_config.size }} use{{ available_block_config.size|pluralize }}<br/>
+
                                 {% active_block_info user_active_blocks available_block_config %}
-                            </p>
+                            {% if not available_block_config.course %}
+                                <p class="helptext">Please note that drop-in credit blocks are not valid for classes that are part of a course.<p/>
+                            {% endif %}
+
+                        </p>
                         </td>
                         <td>
                             {% for available_user in available_users %}
@@ -129,6 +134,9 @@
                                 <br/>
                                 {% active_subscription_info user_active_subscriptions subscription_config.config %}
                             </p>
+                        {% if subscription_config.config.bookable_event_types %}
+                            <p class="helptext">Please note that subscriptions are not valid for classes that are part of a course.<p/>
+                        {% endif %}
                         </td>
                         <td>
                             {% for available_user in available_users %}
