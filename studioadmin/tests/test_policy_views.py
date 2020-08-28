@@ -122,6 +122,7 @@ class DisclaimerContentViewTests(TestUsersMixin, TestCase):
         self.create_users()
         self.create_admin_users()
         self.login(self.staff_user)
+        self.form_default = {"form_title": "Health Questionnaire", "form": "[]", "form_info": ""}
 
     @classmethod
     def setUpTestData(cls):
@@ -150,7 +151,8 @@ class DisclaimerContentViewTests(TestUsersMixin, TestCase):
     def test_add_disclaimer_content(self):
         DisclaimerContent.objects.all().delete()
         self.client.post(
-            reverse("studioadmin:add_disclaimer_content"), {"disclaimer_terms": "A new policy", "form": "[]", "publish": "Publish"}
+            reverse("studioadmin:add_disclaimer_content"),
+            {**self.form_default, "disclaimer_terms": "A new policy", "publish": "Publish"}
         )
         assert DisclaimerContent.objects.count() == 1
         assert DisclaimerContent.current().disclaimer_terms == "A new policy"
@@ -158,7 +160,7 @@ class DisclaimerContentViewTests(TestUsersMixin, TestCase):
     def test_add_disclaimer_content_no_content_change(self):
         make_disclaimer_content(disclaimer_terms='test', version=None)
         resp = self.client.post(
-            reverse("studioadmin:add_disclaimer_content"), {"disclaimer_terms": "test", "form": "[]", "publish": "Publish"}
+            reverse("studioadmin:add_disclaimer_content"), {**self.form_default, "disclaimer_terms": "test", "publish": "Publish"}
         )
         assert resp.context_data["form"].errors == {
             "__all__": ['No changes made from previous version; new version must update disclaimer content']
@@ -167,7 +169,7 @@ class DisclaimerContentViewTests(TestUsersMixin, TestCase):
     def test_add_disclaimer_content_save_as_draft(self):
         DisclaimerContent.objects.all().delete()
         self.client.post(
-            reverse("studioadmin:add_disclaimer_content"), {"disclaimer_terms": "test", "form": "[]", "save_draft": "Save as draft"}
+            reverse("studioadmin:add_disclaimer_content"), {**self.form_default, "disclaimer_terms": "test", "save_draft": "Save as draft"}
         )
         assert DisclaimerContent.objects.count() == 1
         disclaimer_content = DisclaimerContent.objects.first()
@@ -177,7 +179,7 @@ class DisclaimerContentViewTests(TestUsersMixin, TestCase):
     def test_add_disclaimer_content_publish(self):
         DisclaimerContent.objects.all().delete()
         self.client.post(
-            reverse("studioadmin:add_disclaimer_content"), {"disclaimer_terms": "test", "form": "[]", "publish": "Publish"}
+            reverse("studioadmin:add_disclaimer_content"), {**self.form_default, "disclaimer_terms": "test", "publish": "Publish"}
         )
         assert DisclaimerContent.objects.count() == 1
         disclaimer_content = DisclaimerContent.objects.first()
@@ -188,7 +190,7 @@ class DisclaimerContentViewTests(TestUsersMixin, TestCase):
         DisclaimerContent.objects.all().delete()
         with pytest.raises(ValidationError):
             self.client.post(
-                reverse("studioadmin:add_disclaimer_content"), {"disclaimer_terms": "test", "form": "[]", "foo": "Foo"}
+                reverse("studioadmin:add_disclaimer_content"), {**self.form_default, "disclaimer_terms": "test", "foo": "Foo"}
             )
 
     def test_edit_draft_version(self):
@@ -234,7 +236,7 @@ class DisclaimerContentViewTests(TestUsersMixin, TestCase):
         url = reverse("studioadmin:edit_disclaimer_content", args=(draft_disclaimer_content.version,))
         self.client.post(
             url,
-            {"disclaimer_terms": "test", "form": "[]", "save_draft": "Save as draft", "version": draft_disclaimer_content.version})
+            {**self.form_default, "disclaimer_terms": "test", "save_draft": "Save as draft", "version": draft_disclaimer_content.version})
         draft_disclaimer_content.refresh_from_db()
         assert draft_disclaimer_content.is_draft is True
         assert DisclaimerContent.current_version() == 0
@@ -245,8 +247,10 @@ class DisclaimerContentViewTests(TestUsersMixin, TestCase):
         url = reverse("studioadmin:edit_disclaimer_content", args=(draft_disclaimer_content.version,))
         resp = self.client.post(
             url,
-            {"disclaimer_terms": "Foo", "form": json.dumps(published_disclaimer_content.form),
-             "version": draft_disclaimer_content.version, "save_draft": "Save as draft"}
+            {
+                **self.form_default, "disclaimer_terms": "Foo", "form": json.dumps(published_disclaimer_content.form),
+                "version": draft_disclaimer_content.version, "save_draft": "Save as draft"
+            }
         )
         assert resp.status_code == 200
         assert resp.context_data["form_errors"] == {
@@ -259,7 +263,9 @@ class DisclaimerContentViewTests(TestUsersMixin, TestCase):
         url = reverse("studioadmin:edit_disclaimer_content", args=(draft_disclaimer_content.version,))
         with pytest.raises(ValidationError):
             self.client.post(
-                url, {"disclaimer_terms": "test", "form": "[]", "foo": "Foo", "version": draft_disclaimer_content.version}
+                url,
+                {
+                    **self.form_default, "disclaimer_terms": "test", "foo": "Foo", "version": draft_disclaimer_content.version}
             )
 
     def test_reset_draft(self):
@@ -271,6 +277,7 @@ class DisclaimerContentViewTests(TestUsersMixin, TestCase):
         resp = self.client.post(
             url,
             {
+                **self.form_default,
                 "reset": "Reset to latest published version",
                 "disclaimer_terms": draft_disclaimer_content.disclaimer_terms,
                 "form": json.dumps(draft_disclaimer_content.form),
@@ -289,6 +296,7 @@ class DisclaimerContentViewTests(TestUsersMixin, TestCase):
         self.client.post(
             url,
             {
+                **self.form_default,
                 "publish": "Publish",
                 "disclaimer_terms": draft_disclaimer_content.disclaimer_terms,
                 "form": json.dumps(draft_disclaimer_content.form),

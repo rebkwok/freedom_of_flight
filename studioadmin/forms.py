@@ -757,7 +757,7 @@ class StudioadminDisclaimerContentForm(DisclaimerContentAdminForm):
             "disclaimer_terms",
             HTML(
                 """
-                <h4>Health Questionnaire</h4>
+                <h4>Questionnaire</h4>
                 <div class="helptext">Hover over each question to edit or remove.  To change the question type, you'll need to add a 
                 new one.  Select from various question types in the right hand menu.</div>
                 <div class="helptext">If you choose a question type with options (Select, Checkbox group, Radio Group), the two fields for 
@@ -765,7 +765,9 @@ class StudioadminDisclaimerContentForm(DisclaimerContentAdminForm):
                 in each field.</div>
                 """
             ),
+            "form_title",
             "form",
+            "form_info",
             "version",
             Submit('save_draft', 'Save as draft', css_class="btn btn-primary"),
             Submit('publish', 'Publish', css_class="btn btn-success"),
@@ -775,7 +777,7 @@ class StudioadminDisclaimerContentForm(DisclaimerContentAdminForm):
 
     class Meta:
         model = DisclaimerContent
-        fields = ("disclaimer_terms", "version", "form")
+        fields = ("disclaimer_terms", "version", "form", "form_title", "form_info")
 
 
 class SearchForm(forms.Form):

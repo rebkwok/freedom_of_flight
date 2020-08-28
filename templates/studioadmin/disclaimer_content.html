@@ -13,10 +13,14 @@
     <h1>Disclaimer - Version {{ disclaimer_content.version }} ({{ disclaimer_content.status }})</h1>
     <h3>Issue Date: {{ disclaimer_content.issue_date|date:"d-M-Y H:i" }}</h3>
 
-    <h2>Terms:</h2>
+    <h2>Terms</h2>
     <p>{{ disclaimer_content.disclaimer_terms|linebreaks }}</p>
 
-    <h2>Health Questionnaire</h2>
+    <h2>Questionnaire</h2>
+    <h4>Title</h4>
+    <p>{{ disclaimer_content.form_title }}</p>
+
+    <h4>Questions</h4>
     <ul>
     {% for question in disclaimer_content.form %}
         <li>{{ question.label }} {% if question.required %}(required){% endif %}
@@ -29,10 +33,12 @@
                         {% endif %}
                     {% endfor %}
                 </ul>
+                {% if question.help_text %}<br/>Help text: {{ question.help_text }}{% endif %}
             {% endif %}
         </li>
     {% endfor %}
     </ul>
+    {% if disclaimer_content.form_info %}<h4>Form footer text:</h4><p>{{ disclaimer_content.form_info }}</p>{% endif %}
     </p>
 
 {% endblock content %}

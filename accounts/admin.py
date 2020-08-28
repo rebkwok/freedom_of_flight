@@ -133,6 +133,8 @@ class DisclaimerContentAdminForm(forms.ModelForm):
             if current_content:
                 self.fields['disclaimer_terms'].initial = current_content.disclaimer_terms
                 self.fields['form'].initial = current_content.form
+                self.fields['form_title'].initial = current_content.form_title
+                self.fields['form_info'].initial = current_content.form_info
                 next_default_version = Decimal(floor((DisclaimerContent.current_version() + 1)))
                 self.fields['version'].help_text = f'Current version is {current_content.version}.  Leave ' \
                                            f'blank for next major version ({next_default_version:.1f})'

@@ -218,7 +218,9 @@ class DisclaimerContent(models.Model):
     version = models.DecimalField(unique=True, decimal_places=1, max_digits=100)
     issue_date = models.DateTimeField(default=timezone.now)
 
-    form = FormField(verbose_name="health questionnaire", null=True, blank=True)
+    form = FormField(verbose_name="Questionnaire questions", null=True, blank=True)
+    form_title = models.CharField(max_length=255, default="Health Questionnaire")
+    form_info = models.TextField(null=True, blank=True, verbose_name="Additional questionnaire info", help_text="Optional text to display after the questionnaire questions")
     is_draft = models.BooleanField(default=False)
 
     class Meta:
@@ -245,7 +247,9 @@ class DisclaimerContent(models.Model):
     def save(self, **kwargs):
         if not self.id:
             current = DisclaimerContent.current()
-            if current and current.disclaimer_terms == self.disclaimer_terms and current.form == self.form:
+            if current and current.disclaimer_terms == self.disclaimer_terms \
+                    and current.form == self.form and current.form_title == self.form_title \
+                    and current.form_info == self.form_info:
                 raise ValidationError('No changes made to content; not saved')
 
         if not self.id and not self.version:
