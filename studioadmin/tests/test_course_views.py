@@ -115,7 +115,9 @@ class PastCourseAdminListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         assert resp.context_data["track_courses"] == []
 
         active_course_response = self.client.get(reverse('studioadmin:courses'))
-        assert active_course_response.context_data["track_courses"][0]["page_obj"].object_list == [self.course, course]
+        assert sorted(
+            [course.id for course in active_course_response.context_data["track_courses"][0]["page_obj"].object_list]
+        ) == sorted([self.course.id, course.id])
 
         future_event.start = timezone.now() - timedelta(1)
         future_event.save()
