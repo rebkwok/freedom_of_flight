@@ -121,7 +121,7 @@
         {% endfor %}
     </div> <!-- tab content -->
 {% else %}
-<p>No upcoming scheduled events to display</p>
+<p>No{% if not past %} upcoming scheduled{% endif %} events to display</p>
 {% endif %}
 </div>
 {% endblock content %}

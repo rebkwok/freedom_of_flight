@@ -115,7 +115,7 @@
 
     </div> <!-- tab content -->
     {% else %}
-    No upcoming scheduled courses to display
+    No{% if not past %} upcoming scheduled {% endif %} courses to display
     {% endif %}
 {% endblock content %}
 
