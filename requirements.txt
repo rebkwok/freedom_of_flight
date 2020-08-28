@@ -21,7 +21,6 @@ psycopg2==2.8.4
 python-dateutil==2.8.0
 #PyYAML==5.1.2
 model-bakery==1.0.1
-django-ckeditor==5.9.0
 pillow==7.1.2
 gunicorn==19.7.1
 #static3==0.7.0

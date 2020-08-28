@@ -19,3 +19,7 @@ def permission_denied(request):
 
 def terms_and_conditions(request):
     return render(request, "booking/terms_and_conditions.html")
+
+
+def covid19_policy(request):
+    return render(request, "booking/covid19_policy.html")
