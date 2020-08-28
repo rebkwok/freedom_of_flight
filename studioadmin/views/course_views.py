@@ -104,8 +104,9 @@ class PastCourseAdminListView(CourseAdminListView):
 
 def ajax_toggle_course_visible(request, course_id):
     course = Course.objects.get(id=course_id)
-    course.show_on_site = not course.show_on_site
-    course.save()
+    if course.is_configured():
+        course.show_on_site = not course.show_on_site
+        course.save()
 
     return render(request, "studioadmin/includes/ajax_toggle_course_visible_btn.html", {"course": course})
 
@@ -182,6 +183,11 @@ class CourseCreateUpdateMixin:
             event.course = course
             event.cancelled = course.cancelled
             event.save()
+        if not course.is_configured() and course.show_on_site\
+                :
+            course.show_on_site = False
+            course.save()
+            messages.error(self.request, "ERROR: Course cannot be made visible until it is fully configured")
         return HttpResponseRedirect(self.get_success_url(course.event_type.track_id))
 
     def get_success_url(self, track_id):
@@ -222,6 +228,9 @@ class CourseUpdateView(LoginRequiredMixin, StaffUserMixin, CourseCreateUpdateMix
         for event in new_events:
             if event not in current_course_events:
                 course.events.add(event)
+        if not course.is_configured() and course.show_on_site:
+            course.show_on_site = False
+            messages.error(self.request, "ERROR: Course cannot be made visible until it is fully configured")
         course.save()
         return HttpResponseRedirect(self.get_success_url(course.event_type.track.id))
 

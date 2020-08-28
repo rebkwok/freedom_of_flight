@@ -59,6 +59,8 @@
         not in that course (although they will be able to re-book for the course event).
     </p>
 
+    <div class="anchor" id="payment_plans"> anchor</div>
+    <h1 class="mt-1">Payment Plans</h1>
     <h2>Credit Blocks</h2>
     <p>
         Credit blocks define pricing and come in two varieties
@@ -68,10 +70,30 @@
         </ul>
     </p>
 
+    <h2>Subscriptions</h2>
+    <p>
+        Subscriptions are one-off or recurring plans that can (but don't have to be) linked to event types.  They can be
+        used as a membership that allows students to purchase classes/events of particular types (with limits, if required), or
+        they can be a simple single payment plan for some other service (e.g. access to resources, online videos etc).</p>
+
+    <p> One-off subscription start on a fixed date and run for one period only.  Recurring subscriptions will automatically
+        recur for the next subscription period and will be purchaseable by students as long they remain set as "active".
+        Recurring subscriptions do not automatically bill users; 3 days before a subscription is due for renewal, students will
+        be sent a reminder email, and a subscription for the next period will be automatically created and added to their
+        shopping cart for them to purchase if they choose to.
+    </p>
+
+    <p>
+        Each Subscription has an optional "current subscriber information" field.  This is ONLY visible to current subscribers - useful
+        for subscriptions that involve password access to a resource, for example.  You can change this information at the
+        beginning of a new subscription period, and it will only be available to students who are currently subscribed - it
+        will be hidden for any expired subscriptions.
+    </p>
+
     <div class="anchor" id="scheduling">Scheduling anchor</div>
     <h1>Creating Scheduled Events</h1>
     <p>
-        There are a number of ways to create scheduled events, once your tracks, event types and course types
+        There are a number of ways to create scheduled events, once your tracks and event types
         are set up.
         <ol>
             <li>Go to Events > Add Event to create a one-off event</li>
@@ -100,6 +122,22 @@
         They can be switched to visible on the Events list page when you're happy with them.
     </p>
 
+    <h2>Creating Courses</h2>
+
+    <p>
+    Courses can be set up before or after their scheduled events are created.  The course list page will show you all
+    courses that have been created, and if they have been fully configured (i.e. have the expected number of events assigned
+    to them).  Courses are also initially not visible on the site by default, and cannot be set to visible until fully configured.
+    </p>
+
+    <p>Details that can be set on a course and an event - such as max participants and visiblity - are overriden by
+    course settings when an event is added to a course.  I.e. if you create an event with 10 max participants, and add it
+    to a course that has 8 max participants, the event will be updated with the course setting.
+    </p>
+
+    <p>New courses can also be created by cloning a previous course, to copy over course description and other settings.
+        The new course will not be visible on the site by default, and will have no events assigned to it.</p>
+
     <div class="anchor" id="managing">anchor</div>
     <h1>Managing Events</h1>
     <h2>Cancelling</h2>
@@ -119,4 +157,16 @@
         not attended.  Note that students who cancel after the cancellation period are marked as booked but
         not attended and will be visible (greyed out) on the registers.
     </p>
+
+    <div class="anchor" id="students">anchor</div>
+    <h1>Student Lists</h1>
+    <p>
+    From the student lists page you can access individual students' disclaimer and medical information details, contact details,
+    bookings, blocks and subscriptions.
+    </p>
+
+    <div class="anchor" id="vouchers">anchor</div>
+    <h1>Vouchers</h1>
+    <p>Coming soon :)</p>
+
 {% endblock content %}

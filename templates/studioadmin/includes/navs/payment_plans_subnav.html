@@ -1,14 +1,14 @@
 {#larger sizes sub navbar#}
 <div class="subnav d-none d-md-block">
 <nav class="navbar fixed-top fixed-top-subnav navbar-expand navbar-light" id="navbarSiteConfigSubNavContainer">
-  <a class="navbar-brand" href="#">ADMIN: Site Setup</a>
+  <a class="navbar-brand" href="#">ADMIN: Payment Plans</a>
   <div class="collapse navbar-collapse" id="navbarSiteConfigSubNav">
     <ul class="navbar-nav">
       <li class="nav-item">
-          <a class="nav-link" href="{% url 'studioadmin:tracks' %}">Tracks</a>
+          <a class="nav-link" href="{% url 'studioadmin:block_configs' %}">Credit Blocks</a>
       </li>
       <li class="nav-item">
-          <a class="nav-link" href="{% url 'studioadmin:event_types' %}">Event Types</a>
+          <a class="nav-link" href="{% url 'studioadmin:subscription_configs' %}">Subscriptions</a>
       </li>
     </ul>
   </div>
@@ -22,8 +22,8 @@
       Site Setup Menu
     </a>
     <div class="dropdown-menu" aria-labelledby="navbarDropdown">
-      <a class="dropdown-item" href="{% url 'studioadmin:tracks' %}">Tracks</a>
-      <a class="dropdown-item" href="{% url 'studioadmin:event_types' %}">Event Types</a>
+      <a class="dropdown-item" href="{% url 'studioadmin:block_configs' %}">Credit Blocks</a>
+      <a class="dropdown-item" href="{% url 'studioadmin:subscription_configs' %}">Subscriptions</a>
     </div>
   </li>
 </ul>
