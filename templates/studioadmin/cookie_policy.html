@@ -13,6 +13,6 @@
     <h1>Cookie Policy - Version {{ policy.version }}</h1>
     <h3>Issue Date: {{ policy.issue_date|date:"d-M-Y H:i" }}</h3>
 
-    <p>{{ policy.content|linebreaks }}</p>
+    <p>{{ policy.content|safe }}</p>
 
 {% endblock content %}

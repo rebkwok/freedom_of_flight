@@ -14,7 +14,7 @@
     <h3>Issue Date: {{ disclaimer_content.issue_date|date:"d-M-Y H:i" }}</h3>
 
     <h2>Terms</h2>
-    <p>{{ disclaimer_content.disclaimer_terms|linebreaks }}</p>
+    <p>{{ disclaimer_content.disclaimer_terms|safe }}</p>
 
     <h2>Questionnaire</h2>
     <h4>Title</h4>
@@ -38,7 +38,7 @@
         </li>
     {% endfor %}
     </ul>
-    {% if disclaimer_content.form_info %}<h4>Form footer text:</h4><p>{{ disclaimer_content.form_info }}</p>{% endif %}
+    {% if disclaimer_content.form_info %}<h4>Form footer text:</h4><p>{{ disclaimer_content.form_info|safe }}</p>{% endif %}
     </p>
 
 {% endblock content %}

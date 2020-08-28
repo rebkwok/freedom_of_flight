@@ -4,6 +4,7 @@ Delorean==1.0.0
 dj-database-url==0.5.0
 django-allauth==0.40.0
 django-braces==1.14.0
+django-ckeditor==5.9.0
 django-classy-tags==1.0.0  # for cookie-law
 django-cookie-law==2.0.3
 django-crispy-forms==1.9.1

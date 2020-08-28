@@ -37,6 +37,7 @@
 
         <form method="post" action="" class="dirty-check">
             {% csrf_token %}
+            {{ form.media }}
             {% crispy form %}
         </form>
     </div>

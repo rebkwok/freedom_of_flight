@@ -317,46 +317,6 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 INTERNAL_IPS = ('127.0.0.1', '10.0.2.2')
 
 
-# CKEDITOR
-CKEDITOR_UPLOAD_PATH = "uploads/"
-CKEDITOR_IMAGE_BACKEND = 'pillow'
-CKEDITOR_CONFIGS = {
-    'default': {
-        'toolbar': [
-         ['Source', '-', 'Bold', 'Italic', 'Underline',
-          'TextColor', 'BGColor'],
-         ['NumberedList', 'BulletedList', '-', 'Outdent', 'Indent', '-',
-          'JustifyLeft', 'JustifyCenter', 'JustifyRight', '-',
-          'Table', 'HorizontalRule', 'Smiley', 'SpecialChar'],
-         ['Format', 'Font', 'FontSize']
-        ],
-        # 'height': 300,
-        'width': 350,
-    },
-    'studioadmin': {
-        'toolbar': [
-         ['Source', '-', 'Bold', 'Italic', 'Underline',
-          'TextColor', 'BGColor'],
-         ['NumberedList', 'BulletedList', '-', 'Outdent', 'Indent', '-',
-          'JustifyLeft', 'JustifyCenter', 'JustifyRight', '-',
-          'Table', 'HorizontalRule', 'Smiley', 'Image', 'SpecialChar'],
-         ['Format', 'Font', 'FontSize', 'Link']
-        ],
-        'height': 200,
-        'width': '100%',
-        'max-width': 300,
-    },
-    'studioadmin_min': {
-        'toolbar': [
-            ['Bold', 'Italic', 'Underline', 'FontSize', 'Link']
-        ],
-        'height': 100,
-        'width': '100%',
-        'max-width': 300,
-    },
-}
-
-
 # MAILCATCHER
 if env('USE_MAILCATCHER'):  # pragma: no cover
     EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
@@ -464,3 +424,27 @@ INVOICE_KEY=env("INVOICE_KEY")
 # for dynamic disclaimer form
 CRISPY_TEMPLATE_PACK = 'bootstrap4'
 USE_CRISPY = True
+
+# CKEDITOR
+CKEDITOR_UPLOAD_PATH = "uploads/"
+# CKEDITOR_IMAGE_BACKEND = 'pillow'
+CKEDITOR_CONFIGS = {
+    # 'default': {
+    #     'toolbar': [
+    #      ['Source', '-', 'Bold', 'Italic', 'Underline',
+    #       'TextColor', 'BGColor'],
+    #      ['NumberedList', 'BulletedList', '-', 'Outdent', 'Indent', '-',
+    #       'JustifyLeft', 'JustifyCenter', 'JustifyRight', '-',
+    #       'Table', 'HorizontalRule', 'Smiley', 'SpecialChar'],
+    #      ['Format', 'Font', 'FontSize', 'Link']
+    #     ],
+    #     'width': 350,
+    # },
+    'default': {
+        'toolbar': [
+            ['Format', 'Bold', 'Italic', 'Underline', 'FontSize', 'Link', 'BulletedList']
+        ],
+        # 'width': '100%',
+    },
+}
+CKEDITOR_JQUERY_URL = '//code.jquery.com/jquery-3.5.1.min.js'

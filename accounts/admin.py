@@ -2,6 +2,8 @@ from decimal import Decimal
 import json
 from math import floor
 
+from ckeditor.widgets import CKEditorWidget
+
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import User
@@ -75,7 +77,7 @@ class PolicyAdminFormMixin:
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.PolicyModel = self._meta.model
-        self.fields['content'].widget = forms.Textarea()
+        self.fields['content'].widget = CKEditorWidget(config_name='default')
         self.fields['version'].required = False
         if not self.instance.id:
             current_policy = self.PolicyModel.current()
@@ -128,6 +130,8 @@ class DisclaimerContentAdminForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['version'].required = False
+        self.fields['disclaimer_terms'].widget = CKEditorWidget(config_name='default')
+        self.fields['form_info'].widget = CKEditorWidget(config_name='default')
         if not self.instance.id:
             current_content = DisclaimerContent.current()
             if current_content:

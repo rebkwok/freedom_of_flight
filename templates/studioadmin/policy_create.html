@@ -26,6 +26,7 @@
 
         <form method="post" action="" class="dirty-check">
             {% csrf_token %}
+            {{ form.media }}
             {{ form|crispy }}
             <input type="submit" class="btn btn-sm btn-success" value="Save"/>
             <a class="btn btn-sm btn-dark" href="{{request.META.HTTP_REFERER}}">Back</a>
