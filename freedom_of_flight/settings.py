@@ -442,7 +442,7 @@ CKEDITOR_CONFIGS = {
     # },
     'default': {
         'toolbar': [
-            ['Format', 'Bold', 'Italic', 'Underline', 'FontSize', 'Link', 'BulletedList']
+            ['Format', 'Bold', 'Italic', 'Underline', 'FontSize', 'Link', 'BulletedList', 'NumberedList']
         ],
         # 'width': '100%',
     },
