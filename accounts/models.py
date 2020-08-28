@@ -88,7 +88,6 @@ class ChildUserProfile(BaseUserProfile):
     )
 
 
-
 @has_readonly_fields
 class CookiePolicy(models.Model):
     read_only_fields = ('content', 'version', 'issue_date')
@@ -488,12 +487,22 @@ def has_active_data_privacy_agreement(user):
     return has_active_agreement
 
 
+def managed_users_cache_key(user):
+    return f"managed_users_{user.id}"
+
+
 @property
 def managed_users(self):
-    if self.userprofile:
-        child_users = [childprofile.user for childprofile in self.userprofile.managed_profiles.all()]
-        return [self, *child_users] if self.is_student else [*child_users, self]
-    return [self]
+    cache_key = managed_users_cache_key(self)
+    managed_users = cache.get(cache_key)
+    if not managed_users:
+        if self.userprofile:
+            child_users = [childprofile.user for childprofile in self.userprofile.managed_profiles.all() if childprofile.user.is_active]
+            managed_users = [self, *child_users] if self.is_student else [*child_users, self]
+        else:
+            managed_users = [self]
+        cache.set(cache_key, managed_users, timeout=60*60)
+    return managed_users
 
 
 @property
