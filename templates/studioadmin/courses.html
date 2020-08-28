@@ -36,6 +36,7 @@
                                 <th scope="col">Configured</th>
                                 <th></th>
                                 <th></th>
+                                <th></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -80,6 +81,11 @@
                                     </td>
                                 {% endif %}
                                 <td class="text-center">{{ course.is_configured|yesno|title }}</td>
+                                <td class="pr-0 pl-1 text-center">
+                                    <div data-toggle="tooltip" data-placement="top" title="Clone this course (without associated {{ course.event_type.pluralized_label }})">
+                                        <a href="{% url 'studioadmin:clone_course' course.id %}"><i class="far fa-clone"></i></a>
+                                    </div>
+                                </td>
                                 <td>
                                     {% if not past %}
                                         {% if course.cancelled %}

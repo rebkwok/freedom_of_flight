@@ -65,7 +65,7 @@
                         <span id="booked_tick_{{ event.id }}" {% if not user_info.open %}class="hidden"{% endif %}>
                         <i class="text-success fas fa-check-circle"></i>
                         </span>
-                        <a href="{% url 'booking:event' event.slug %}"> {{ event.start|date:"H:i"  }} {{ event.name }}</a>
+                        <a href="{% url 'booking:event' event.slug %}"> {{ event.start|date:"H:i"  }} - {{ event.end|date:"H:i" }}  {{ event.name }}</a>
                             <span class="d-inline-block d-sm-none" id="event_info_xs_{{event.id}}">
                             {% include 'booking/includes/event_info_xs.html' %}
                             </span>

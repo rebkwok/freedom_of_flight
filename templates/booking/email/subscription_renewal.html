@@ -3,14 +3,14 @@
 
 {% block messagecontent %}
 
-    <p>Subscription for {{ subscription.config.name|title }} (for user {{ subscription.user.first_name }} {{ subscription.user.last_name }})
+    <p>Subscription for {{ subscription.config.name|title }} ({{ subscription.user.first_name }} {{ subscription.user.last_name }})
         expires on {{ subscription.expiry_date|date:"d-M-Y" }}.</p>
 
     <p>
         A subscription for the next period has been created for you and automatically added to your shopping cart.
-        To renew this subscription, please visit the booking site to submit payment.<br/>
-    </p>
+        To renew this subscription, please visit the <a href="https://booking.freedomofflightaerial.com/shopping-cart/">booking site</a>
+        to submit payment.<br/>
 
-    You have been registered for all course classes.</p>
+    </p>
 
 {% endblock %}

@@ -8,7 +8,7 @@ from studioadmin.views import (
     ajax_remove_from_waiting_list, event_waiting_list_view, cancel_event_view,
     event_create_choice_view, EventCreateView, EventUpdateView, clone_event, PastEventAdminListView,
     CourseAdminListView, course_create_choice_view, CourseCreateView, CourseUpdateView, PastCourseAdminListView,
-    ajax_toggle_course_visible, cancel_course_view,
+    ajax_toggle_course_visible, cancel_course_view, clone_course_view,
     TimetableSessionListView, ajax_timetable_session_delete, timetable_session_create_choice_view,
     TimetableSessionCreateView, TimetableSessionUpdateView, clone_timetable_session_view,
     upload_timetable_view, email_event_users_view, email_course_users_view,
@@ -59,6 +59,7 @@ urlpatterns = [
     path('course/<int:event_type_id>/create/', CourseCreateView.as_view(), name="create_course"),
     path('course/<slug>/update/', CourseUpdateView.as_view(), name="update_course"),
     path('course/<course_slug>/email-students/', email_course_users_view, name="email_course_users"),
+    path('course/<course_id>/clone/', clone_course_view, name="clone_course"),
 
     path('registers/', RegisterListView.as_view(), name='registers'),
     path('registers/<int:event_id>', register_view, name='register'),

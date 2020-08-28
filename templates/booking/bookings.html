@@ -24,7 +24,7 @@
                 {% for booking in bookings %}
                     <div id="list-item-{{ booking.event.id }}" class="list-group-item pt-1 pb-1 {% if booking.status == 'CANCELLED' or booking.no_show %}list-group-item-secondary text-secondary{% endif %}">
                         <a href="{% url 'booking:event' booking.event.slug %}">
-                                {{ booking.event.start|date:"H:i"  }} {{ booking.event.name }}
+                                {{ booking.event.start|date:"H:i"  }} - {{ booking.event.end|date:"H:i"  }} {{ booking.event.name }}
                         </a> <em><span id="cancelled-text-{{ booking.event.id}}">
                             {% if not booking.event.cancelled and booking.status == 'CANCELLED' or not booking.event.cancelled and booking.no_show %}
                                 <br/>You have cancelled this booking

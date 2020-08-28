@@ -224,3 +224,12 @@ class CourseUpdateView(LoginRequiredMixin, StaffUserMixin, CourseCreateUpdateMix
                 course.events.add(event)
         course.save()
         return HttpResponseRedirect(self.get_success_url(course.event_type.track.id))
+
+
+def clone_course_view(request, course_id):
+    course = get_object_or_404(Course, id=course_id)
+    course.id = None
+    course.show_on_site = False
+    course.save()
+    messages.success(request, f"Course cloned - not visible on site. Click link below to add {course.event_type.pluralized_label}.")
+    return HttpResponseRedirect(reverse('studioadmin:courses') + f"?track={course.event_type.track.id}")

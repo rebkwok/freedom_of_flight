@@ -30,8 +30,7 @@
                             <tr>
                                 <th scope="col">Name{% if not past %}<br/><span class="helptext">Click to edit</span>{% endif %}</th>
                                 <th scope="col" class="text-center">Course</th>
-                                <th scope="col">Time</th>
-                                <th scope="col" class="text-center">Duration</th>
+                                <th scope="col" class="text-center">Time</th>
                                 <th scope="col" class="text-center">Spaces</th>
                                 <th scope="col">Event Type</th>
                                 <th scope="col" class="text-center">Visible</th>
@@ -42,7 +41,7 @@
                         </thead>
                         <tbody>
                         {% for event_date, events in track_obj.events_by_date.items %}
-                            <tr class="table-secondary table-divider"><td colspan="10">{{ event_date|date:"D d M Y" }}</></td></tr>
+                            <tr class="table-secondary table-divider"><td colspan="10">{{ event_date|date:"D d M Y" }}</td></tr>
                             {% for event in events %}
                             <tr {% if event.cancelled %}class="expired"{% endif %}>
                                 <td>
@@ -66,8 +65,7 @@
                                         {% endif %}
                                     {% endif %}
                                 </td>
-                                <td>{{ event.start|date:"H:i" }}</td>
-                                <td class="text-center">{{ event.duration }} mins</td>
+                                <td class="text-center">{{ event.start|date:"H:i" }} - {{ event.end|date:"H:i" }}</td>
                                 <td class="text-center">{{ event.spaces_left }} {% if event.max_participants %}/ {{ event.max_participants }}{% endif %}</td>
                                 <td>{{ event.event_type.name|title }}</td>
                                 {% if event.course %}

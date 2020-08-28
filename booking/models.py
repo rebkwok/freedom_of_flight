@@ -195,6 +195,10 @@ class Event(models.Model):
         ]
 
     @property
+    def end(self):
+        return self.start + timedelta(minutes=self.duration)
+
+    @property
     def spaces_left(self):
         if self.course:
             # No-shows and cancelled count for course event spaces
