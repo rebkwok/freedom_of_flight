@@ -15,3 +15,7 @@ def disclaimer_required(request, user_id):
 
 def permission_denied(request):
     return render(request, 'booking/permission_denied.html')
+
+
+def terms_and_conditions(request):
+    return render(request, "booking/terms_and_conditions.html")

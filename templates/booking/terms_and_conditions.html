@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% load static accounttags email_obfuscator %}
+
+{% block content %}
+
+<div>
+
+    <h2>Terms & Conditions</h2>
+
+    <h4>Course Purchases</h4>
+
+    <ol>
+        <li>All purchases are non-refundable and cannot be exchanged/transferred.</li>
+        <li>Credits are only available with a doctor’s certificate due to injury or illness preventing you from taking part.</li>
+        <li>Cancellations with less than 24 hours’ notice will receive no credit/refund.</li>
+        <li>If class is running and you are not able to attend, you forfeit your class.</li>
+        <li>Any class cancelled by Freedom of Flight Aerial will receive a credit back to your account.</li>
+        <li>Anyone scheduled into a cancelled class will be contacted and given as much notice as possible.</li>
+    </ol>
+
+    <h4>Workshops</h4>
+
+    <ol>
+        <li>All passes are non-refundable and cannot be exchanged/transferred.</li>
+        <li>Credits are only available with a doctor’s certificate due to injury or illness preventing you from taking part.</li>
+        <li>Cancellations with less than 24 hours’ notice will receive no credit/refund.</li>
+        <li>If the workshop is running and you are not able to attend, you forfeit your workshop.</li>
+        <li>Any workshops cancelled by Freedom of Flight Aerial will receive a credit back to your account.</li>
+        <li>Anyone scheduled into a cancelled workshop will be contacted and given as much notice as possible.</li>
+    </ol>
+
+    <h4>Adult and Children's Camps</h4>
+    <ol>
+        <li>All passes are non-refundable and cannot be exchanged/transferred.</li>
+        <li>There are no refunds or transfers available for cancellations or non-attendance.</li>
+        <li>If you cannot attend for any reason, email {{ studio_email|obfuscate_mailto }}, if we are able to sell your space, we may be able to offer a refund/exchange minus 20% transaction fees.</li>
+    </ol>
+
+    <h4>Private/Semi-Private Lessongs</h4>
+
+    <ol>
+        <li>All bookings are non-refundable and cannot be exchanged/transferred.</li>
+        <li>Credits are only available with a doctor’s certificate due to injury or illness preventing you from taking part.</li>
+        <li>Cancellations with less than 24 hours’ notice will receive no credit/refund.</li>
+        <li>If the class is running and you are not able to attend, you forfeit your class.</li>
+        <li>Any lesson cancelled by Freedom of Flight Aerial will receive a credit back to your account.</li>
+        <li>Anyone scheduled into a cancelled lesson will be contacted and given as much notice as possible.</li>
+    </ol>
+
+    <h4>Private Groups (Birthday Parties, Hen Dos)</h4>
+
+    <ol>
+        <li>All payments are non-refundable and cannot be exchanged/transferred.</li>
+        <li>£50 non-refundable deposit is taken to reserve your session.</li>
+        <li>There is a minimum number of 6 participants and maximum of 20.</li>
+        <li>Final numbers must be confirmed 1 week before the session.</li>
+        <li>Full payment is required 1 week before the session.</li>
+        <li>It may be possible to increase numbers at the same per person rate.</li>
+        <li>No refunds are given for reduced numbers/non-attendance.</li>
+    </ol>
+
+</div>
+
+{% endblock content %}
