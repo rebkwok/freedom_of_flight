@@ -28,12 +28,11 @@
                             <tr>
                                 <th scope="col">Name{% if not past %}<br/><span class="helptext">Click to edit</span>{% endif %}</th>
                                 <th scope="col">Start (first event)</th>
-                                <th scope="col" class="text-center">Number of events</th>
+                                <th scope="col" class="text-center">Events in course</th>
                                 <th scope="col" class="text-center">Events configured</th>
                                 <th scope="col" class="text-center">Spaces</th>
                                 <th scope="col">Event Type</th>
                                 <th scope="col" class="text-center">Visible</th>
-                                <th scope="col">Configured</th>
                                 <th></th>
                                 <th></th>
                                 <th></th>
@@ -58,7 +57,7 @@
                                              data-placement="top"
                                              data-html="true"
                                              title="<ul class='helptext pl-0'>{% for event in course.events.all %}<li>{{ event }}</li>{% endfor %}</ul>">
-                                            {{ course.events.count }}
+                                            {{ course.events.count }}/{{ course.number_of_events }}
                                         </div>
                                 </td>
                                 <td class="text-center">{% if course.events.exists %}{{ course.events.first.spaces_left }}{% else %}{{ course.max_participants }}{% endif %} {% if course.max_participants %}/ {{ course.max_participants }}{% endif %}</td>
@@ -78,7 +77,6 @@
                                       </span>
                                     {% endif %}
                                 </td>
-                                <td class="text-center">{{ course.is_configured|yesno|title }}</td>
                                 <td class="pr-0 pl-1 text-center">
                                     <div data-toggle="tooltip" data-placement="top" title="Clone this course (without associated {{ course.event_type.pluralized_label }})">
                                         <a href="{% url 'studioadmin:clone_course' course.id %}"><i class="far fa-clone"></i></a>
