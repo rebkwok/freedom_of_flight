@@ -8,6 +8,8 @@
 {% endblock %}
 
 {% block content %}
+
+    {% if event_types %}
     <h1>Choose the type of course to create:</h1>
     {% for event_type in event_types %}
         <div class="row">
@@ -16,5 +18,10 @@
         </div>
         <hr/>
     {% endfor %}
+
+    {% else %}
+        <p>Create some event types first!</p>
+    {% endif %}
+
 {% endblock %}
 
