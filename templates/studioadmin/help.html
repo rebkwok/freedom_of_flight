@@ -31,7 +31,7 @@
     Event Type must be associated with one Track.
     </p>
     <p>
-    Event Types are used to define pricing for events, and can be associated with multiple Credit Block.
+    Event Types are used to define pricing for events, and can be associated with multiple Credit Blocks.
     For example, you might create an Aerial Class event type, in the Adult Classes track.  You can then set up
     multiple Credit Blocks attached to this event type to allow students to purchase credit in blocks of 1, 4 or 8 classes.
     </p>
@@ -41,17 +41,13 @@
     An Event is a single, scheduled event, which has a specific date and time, and which students can book into.
     </p>
 
-    <h2>Course Types</h2>
-    <p>
-        Course Types define the outline of a Course, and hold the Event Type and the number of events in the course.
-        They can be associated with Credit Blocks for courses, which will only allow students to book for classes in
-        one course.
-    </p>
-
     <h2>Courses</h2>
     <p>
-        A course is a collection of scheduled events.  It is associated with a Course Type, which defines the number of events
-        in the course and, by association with Credit Blocks, pricing for the course.
+        A course is a collection of scheduled events.  All events in a Course must be of the same Event Type.  A course
+        has a specific number of events and is associated with Course Credit Blocks to define pricing for the course.  Some
+        settings are available on a course and an individual event (e.g. max participants/visibility on the site).  A course's
+        settings will override indivdual event settings if they differ.  Cancelling a course will cancel all of it's associated
+        events as well.
     </p>
     <p>
         Students will initially book for a course and will be booked into all of its events.  They can choose to
@@ -66,8 +62,13 @@
         Credit blocks define pricing and come in two varieties
         <ul>
             <li>Drop In Credit Blocks which can be used for a number of events of a specific event type with a fixed time period</li>
-            <li>Course Credit Blocks which can be used for a single course of a specifc course type</li>
+            <li>Course Credit Blocks which can be used for a single course of a particular event type.</li>
         </ul>
+
+        Drop in and Course credit blocks are set up in the same way; each credit block has an event type and a size (number of
+        bookings that the block will be valid for).  For Course credit blocks, the size should match the number of events in the
+        course you want the block to be valid for.  E.g. if you're setting up a credit block for a 4-class Course of Aerial events, set the
+        event type to Aerial, and the block size to 4.
     </p>
 
     <h2>Subscriptions</h2>

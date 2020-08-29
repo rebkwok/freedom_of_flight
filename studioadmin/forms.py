@@ -581,9 +581,14 @@ class BlockConfigForm(forms.ModelForm):
             self.existing_blocks = Block.objects.filter(block_config=self.instance, paid=True).exists()
         else:
             self.existing_blocks = False
-        self.fields["event_type"].help_text = "Each credit block is associated with a single event type and will be valid " \
-                                              "for the number of events you select, for events of that event type only."
-        self.fields["description"].help_text = "This will be displayed to users when purchasing credit blocks."
+        if is_course:
+            self.fields["event_type"].help_text = "Each credit block is associated with a single event type and will be valid " \
+                                          "for one course of that event type."
+            self.fields["size"].help_text = "Number of events in the course."
+        else:
+            self.fields["event_type"].help_text = "Each credit block is associated with a single event type and will be valid " \
+                                                  "for the number of events you select, for events of that event type only."
+            self.fields["description"].help_text = "This will be displayed to users when purchasing credit blocks."
         self.fields["name"].help_text = "A short name for the credit block"
         self.fields["active"].help_text = "Active credit blocks are available for purchase by users and will be displayed " \
                                           "on the credit block purchase page."
