@@ -159,7 +159,7 @@ def cancel_event_view(request, slug):
                 }
                 # send emails to manager user if this is a child user booking
                 user_emails = [
-                    booking.user.manger_user.email if booking.user.manager_user
+                    booking.user.manager_user.email if booking.user.manager_user
                     else booking.user.email for booking in bookings_to_cancel
                 ]
                 send_bcc_emails(

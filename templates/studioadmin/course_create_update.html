@@ -48,7 +48,9 @@
         <form method="post" action="">
         {% csrf_token %}
         {{ form|crispy }}
+        {% if form.events.errors %}<span class="errorlist">{{ form.events.errors }}</span>{% endif %}
         <input class="btn btn-primary" type="submit" value="Save">
+        <a class="btn btn-dark" href="{% url 'studioadmin:courses' %}">Cancel</a>
     </form>
 
 {% endblock %}

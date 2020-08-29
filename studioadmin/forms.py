@@ -222,13 +222,15 @@ class CourseUpdateForm(forms.ModelForm):
         elif self.bookings_exist:
             # bookings already exist; make sure any uncancelled events are still in the events list
             current_events = self.instance.uncancelled_events
+            error = False
             for event in current_events:
                 if event not in events:
+                    error = True
                     self.add_error(
-                        "events", f"{self.event_type.label.title()} has been previuosly booked and cannot be removed from this course")
-                    return
+                        "events", f"{self.instance.event_type.label.title()} {event} has been previously booked and cannot be removed from this course")
+            if error:
+                return
         return events
-
 
 class CourseCreateForm(CourseUpdateForm):
     def __init__(self, *args, **kwargs):

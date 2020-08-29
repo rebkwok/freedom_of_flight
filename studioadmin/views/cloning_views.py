@@ -280,8 +280,7 @@ def clone_timetable_session(request, timetable_session, days, time, name):
             f"{', '.join([cloned_session.get_day_name() for cloned_session in cloned])}, {time.strftime('%H:%M')}"
         )
         ActivityLog.objects.create(
-            log=f"Timetable session id {timetable_session.id} cloned to ids "
-                f"{', '.join(str(cloned_session.id) for cloned_session in cloned)} by admin user {full_name(request.user)}"
+            log=f"Timetable session '{timetable_session.name}' cloned by admin user {full_name(request.user)}"
         )
     if existing:
         messages.error(

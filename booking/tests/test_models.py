@@ -291,7 +291,9 @@ class CourseTests(EventTestMixin, TestCase):
         baker.make_recipe(
             "booking.past_event", event_type=self.course.event_type, course=self.course
         )
-        assert self.course.has_started is True
+        # fetch from db again - depends on cached properties
+        course = Course.objects.get(id=self.course.id)
+        assert course.has_started is True
 
     def test_configured(self):
         # A course is configured if it has the right number of events on it
@@ -304,6 +306,38 @@ class CourseTests(EventTestMixin, TestCase):
         self.event.course = None
         self.event.save()
         assert self.course.is_configured() is False
+
+    def test_configured_with_cancelled_events(self):
+        # A course is configured if it has the right number of uncancelled events on it
+        # Course allows 2 events, already has self.event
+        baker.make_recipe(
+            "booking.future_event", event_type=self.course.event_type, course=self.course,
+            _quantity=1
+        )
+        assert self.course.is_configured() is True
+        self.event.cancelled = True
+        self.event.save()
+        assert self.event.course == self.course
+        assert self.course.is_configured() is False
+
+    def test_can_be_visible(self):
+        # Can only make a course visible if it's configured OR it has the right number of events when taking
+        # cancelled ones into account - we don't want to hide courses if an event is cancelled during the course
+        assert self.course.is_configured() is False
+        assert self.course.can_be_visible() is False
+
+        baker.make_recipe(
+            "booking.future_event", event_type=self.course.event_type, course=self.course,
+            _quantity=1
+        )
+        assert self.course.is_configured() is True
+        assert self.course.can_be_visible() is True
+
+        self.event.cancelled = True
+        self.event.save()
+        assert self.event.course == self.course
+        assert self.course.is_configured() is False
+        assert self.course.can_be_visible() is True
 
     def test_changing_max_participants_updates_linked_events(self):
         event = baker.make_recipe(
