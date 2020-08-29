@@ -49,7 +49,7 @@
                         <p class="mb-0">
                                 £{{ available_block_config.cost }} |
                                 {% if available_block_config.duration %} Expires after {{ available_block_config.duration }} week{{ available_block_config.duration|pluralize }}{% else %}Never expires {% endif %} |
-                                {{ available_block_config.size }} use{{ available_block_config.size|pluralize }}<br/>
+                                Valid for {% if available_block_config.course %}1 course{% else %}{{ available_block_config.size }} use{{ available_block_config.size|pluralize }}{% endif %}<br/>
 
                                 {% active_block_info user_active_blocks available_block_config %}
                             {% if not available_block_config.course %}
