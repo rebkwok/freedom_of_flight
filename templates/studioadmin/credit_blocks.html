@@ -45,6 +45,7 @@
                 <tr class="table-secondary">
                     <td colspan="7">{{ title }}</td>
                 </tr>
+                {% if not block_configs %}<tr><td colspan="7">No {{ title }} created yet</td></tr>{% endif %}
                 {% for block_config in block_configs %}
                     <tr id="row-{{ block_config.id }}">
                         <td><a href="{% url 'studioadmin:edit_block_config' block_config.id %}">{{ block_config.name }}</a></td>
