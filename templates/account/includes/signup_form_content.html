@@ -2,7 +2,7 @@
         {% if field.name  == 'data_privacy_confirmation' %}
     <div class="dp-box pre-scrollable" xmlns="https://www.w3.org/1999/html"><h2>Data Privacy Policy</h2>
             <h5>Version: {{ form.data_privacy_policy.version }}.  Issue date: {{ form.data_privacy_policy.issue_date | date:'d M Y' }}.</h5>
-                {{ form.data_privacy_policy.content|linebreaks|safe }}
+                {{ form.data_privacy_policy.content|safe }}
             </div>
             <div class="form-group">
                <div>
