@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django import forms
@@ -14,6 +15,7 @@ from braces.views import LoginRequiredMixin
 from activitylog.models import ActivityLog
 from booking.email_helpers import send_bcc_emails
 from booking.models import Booking, Course, Event, Track, EventType
+from common.utils import full_name
 
 from ..forms import CourseCreateForm, CourseUpdateForm
 from .utils import is_instructor_or_staff, staff_required, StaffUserMixin, InstructorOrStaffUserMixin
@@ -104,7 +106,7 @@ class PastCourseAdminListView(CourseAdminListView):
 
 def ajax_toggle_course_visible(request, course_id):
     course = Course.objects.get(id=course_id)
-    if course.is_configured():
+    if course.can_be_visible():
         course.show_on_site = not course.show_on_site
         course.save()
 
@@ -175,20 +177,16 @@ class CourseCreateUpdateMixin:
     template_name = "studioadmin/course_create_update.html"
     model = Course
 
-    def form_valid(self, form):
-        course = form.save()
-        event_ids = form.cleaned_data["events"]
-        events = Event.objects.filter(id__in=event_ids)
-        for event in events:
-            event.course = course
-            event.cancelled = course.cancelled
-            event.save()
-        if not course.is_configured() and course.show_on_site\
-                :
+    def _check_visibility_and_save(self, course):
+        if not course.can_be_visible() and course.show_on_site:
             course.show_on_site = False
-            course.save()
             messages.error(self.request, "ERROR: Course cannot be made visible until it is fully configured")
-        return HttpResponseRedirect(self.get_success_url(course.event_type.track_id))
+            course.save()
+        if course.can_be_visible() and not course.is_configured() and course.show_on_site:
+            messages.error(
+                self.request,
+                f"WARNING: Course has cancelled {course.event_type.pluralized_label} and is not fully configured (but is still "
+                f"visible on site)")
 
     def get_success_url(self, track_id):
         return reverse('studioadmin:courses') + f"?track={track_id}"
@@ -209,6 +207,16 @@ class CourseCreateView(LoginRequiredMixin, StaffUserMixin, CourseCreateUpdateMix
         context["event_type"] = EventType.objects.get(id=self.kwargs["event_type_id"])
         return context
 
+    def form_valid(self, form):
+        course = form.save()
+        event_ids = form.cleaned_data["events"]
+        events = Event.objects.filter(id__in=event_ids)
+        for event in events:
+            event.course = course
+            event.save()
+        self._check_visibility_and_save(course)
+        return HttpResponseRedirect(self.get_success_url(course.event_type.track_id))
+
 
 class CourseUpdateView(LoginRequiredMixin, StaffUserMixin, CourseCreateUpdateMixin, UpdateView):
     form_class = CourseUpdateForm
@@ -219,19 +227,36 @@ class CourseUpdateView(LoginRequiredMixin, StaffUserMixin, CourseCreateUpdateMix
         return form_kwargs
 
     def form_valid(self, form):
-        new_events = form.cleaned_data["events"]
         course = form.save(commit=False)
-        current_course_events = course.events.all()
-        for event in current_course_events:
-            if event not in new_events:
-                course.events.remove(event)
-        for event in new_events:
-            if event not in current_course_events:
-                course.events.add(event)
-        if not course.is_configured() and course.show_on_site:
-            course.show_on_site = False
-            messages.error(self.request, "ERROR: Course cannot be made visible until it is fully configured")
-        course.save()
+        if not form.hide_events:
+            new_events = form.cleaned_data.get("events")
+            for event in course.uncancelled_events:
+                if event not in new_events:
+                    course.events.remove(event)
+            for event in new_events:
+                if event not in course.uncancelled_events:
+                    course.events.add(event)
+        self._check_visibility_and_save(course)
+
+        # Make sure all users have a booking for all events (even if cancelled/no-show)
+        booked_users = set(Booking.objects.select_related("event").filter(event__course_id=course.id).order_by().distinct("user").values_list("user", flat=True))
+        updated_users = set()
+        for event in course.events.all():
+            unbooked_users = booked_users - set(event.bookings.values_list("user", flat=True))
+            if unbooked_users:
+                for user_id in unbooked_users:
+                    user = User.objects.get(id=user_id)
+                    updated_users.add(user)
+                    other_booking = user.bookings.filter(event__course=course).first()
+                    Booking.objects.create(
+                        user=user, event=event, status="OPEN" if not event.cancelled else "CANCELLED", block=other_booking.block
+                    )
+        if updated_users:
+            messages.info(
+                self.request, f"Course events have been added; bookings have been added for the following users who were "
+                              f"already booked onto this course: {', '.join([full_name(updated_user) for updated_user in updated_users])}"
+            )
+
         return HttpResponseRedirect(self.get_success_url(course.event_type.track.id))
 
 
