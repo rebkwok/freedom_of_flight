@@ -11,6 +11,7 @@
 
             <div class="container-fluid">
                 <div class="modal-body">
+                <p><strong>{{ booking.event.event_type.label|title }}</strong>: {{ booking.event }}</p>
                 {% csrf_token %}
                 {% crispy form %}
                 </div>

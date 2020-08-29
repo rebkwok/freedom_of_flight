@@ -28,6 +28,18 @@
     </p>
     <p>By default, a newly created course is not visible on the booking site.  Make it visible on creation
         by ticking "show on site", or use the button on the course list page.</p>
+    {% elif form.hide_events %}
+        <p class="text-danger">Bookings have already been made on this course and the course is fully configured with open scheduled
+            {{ form.instance.event_type.pluralized_label }}.  Changing {{ form.instance.event_type.pluralized_label }}
+            assigned to the course is disabled.
+        </p>
+        <p>The following {{ form.instance.event_type.pluralized_label }} are assigned:
+            <ul>
+            {% for event in form.instance.uncancelled_events %}
+                <li>{{ event }}</li>
+            {% endfor %}
+            </ul>
+        </p>
     {% endif %}
 
     {% if form.errors %}
@@ -43,12 +55,13 @@
 
 
 {% block extra_js %}
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-multiselect/0.9.15/js/bootstrap-multiselect.min.js" integrity="sha512-aFvi2oPv3NjnjQv1Y/hmKD7RNMendo4CZ2DwQqMWzoURKxcqAoktj0nNG4LU8m23+Ws9X5uVDD4OXLqpUVXD5Q==" crossorigin="anonymous"></script>
 <script type="text/javascript">
     $(document).ready(function() {
         $('#id_events').multiselect({
             buttonClass: 'btn btn-sm btn-primary',
-            buttonWidth: '100%',
+            buttonWidth: '75%',
             numberDisplayed: 1,
             nonSelectedText: 'Click to choose events',
             enableFiltering: true,

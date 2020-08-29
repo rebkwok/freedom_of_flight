@@ -145,8 +145,6 @@ def cancel_event_view(request, slug):
             if any_bookings:
                 additional_message = request.POST["additional_message"]
                 event.cancelled = True
-                if event_is_part_of_course:
-                    event.course = None
                 for booking in bookings_to_cancel:
                     booking.block = None
                     booking.status = "CANCELLED"
@@ -161,7 +159,7 @@ def cancel_event_view(request, slug):
                 }
                 # send emails to manager user if this is a child user booking
                 user_emails = [
-                    booking.user.childuserprofile.parent_user_profile.user.email if hasattr(booking.user, "childuserprofile")
+                    booking.user.manger_user.email if booking.user.manager_user
                     else booking.user.email for booking in bookings_to_cancel
                 ]
                 send_bcc_emails(
@@ -175,14 +173,12 @@ def cancel_event_view(request, slug):
                     message = 'bookings cancelled and notification emails sent to students'
                 else:
                     message = 'no open bookings'
-                course_message = " and removed from course" if event_is_part_of_course else ""
-                messages.success(request, f'Event cancelled{course_message}; {message}')
+                messages.success(request, f'Event cancelled; {message}')
                 ActivityLog.objects.create(log=f"Event {event} cancelled by admin user {request.user}; {message}")
             else:
                 # no bookings, cancelled or otherwise, we can just delete the event
                 event.delete()
-                course_message = " and removed from course" if event_is_part_of_course else ""
-                messages.success(request, f'Event deleted{course_message}')
+                messages.success(request, f'Event deleted')
                 ActivityLog.objects.create(log=f"Event {event} deleted by admin user {request.user}")
 
         return HttpResponseRedirect(reverse('studioadmin:events') + f"?track={event.event_type.track_id}")

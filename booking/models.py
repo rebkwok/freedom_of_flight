@@ -131,12 +131,25 @@ class Course(models.Model):
         # A course is full if its events are full, INCLUDING no-shows and cancellations (although
         # a course event never really gets cancelled, only set to no-show)
         # Only need to check the first event
-        event = self.events.order_by("start").first()
-        return event.bookings.filter().count() >= event.max_participants
+        return self.booking_count() >= self.max_participants
+
+    @property
+    def spaces_left(self):
+        return self.max_participants - self.booking_count()
+
+    def booking_count(self):
+        # Find the distinct users from all booking on this course.  We don't just look at the first event, in case
+        # a course's events have been updated after start
+        return Booking.objects.select_related("event").filter(event__course_id=self.id).order_by().distinct("user").count()
+
+    @cached_property
+    def start(self):
+        if self.uncancelled_events:
+            return self.uncancelled_events.order_by("start").first().start
 
     @property
     def has_started(self):
-        return self.events.order_by("start").first().start < timezone.now()
+        return self.start < timezone.now()
 
     @cached_property
     def start(self):
@@ -145,12 +158,24 @@ class Course(models.Model):
 
     @cached_property
     def last_event_date(self):
-        last_event = self.events.order_by("start").last()
+        last_event = self.uncancelled_events.order_by("start").last()
         if last_event:
             return last_event.start
 
+    @cached_property
+    def uncancelled_events(self):
+        return self.events.filter(cancelled=False)
+
     def is_configured(self):
-        return self.events.count() == self.number_of_events
+        """A course is configured if it has the right number of un-cancelled events"""
+        return self.uncancelled_events.count() == self.number_of_events
+
+    def can_be_visible(self):
+        """
+        A course can be visible if it has at least the required number of events (it could have more if some are
+        cancelled)
+        """
+        return self.events.count() >= self.number_of_events
 
     def __str__(self):
         return f"{self.name} ({self.event_type} - {self.number_of_events})"
@@ -160,22 +185,24 @@ class Course(models.Model):
         for event in self.events.all():
             if event.max_participants != self.max_participants:
                 event.max_participants = self.max_participants
-                ActivityLog.objects.create(
-                    log=f"Course {self} updated; max participants for linked events have been adjusted to match"
-                )
-            if self.cancelled and not event.cancelled:
-                event.cancelled = True
-                event.save()
-                ActivityLog.objects.create(
-                    log=f"Course {self} cancelled; linked events have cancelled also"
-                )
-            if self.show_on_site and not event.show_on_site:
+            if self.show_on_site != event.show_on_site:
                 event.show_on_site = self.show_on_site
-                event.save()
                 ActivityLog.objects.create(
                     log=f"Course {self} updated; show_on_site for linked events has been adjusted to match"
                 )
+            if self.cancelled and not event.cancelled:
+                # Only cancel events if course is cancelled.  Don't reset cancelled events to the course status if the
+                # course is still open
+                event.cancelled = True
             event.save()
+        if self.events.exists():
+            ActivityLog.objects.create(
+                log=f"Course {self} updated; show_on_site and max participants for linked events have been adjusted to match"
+            )
+            if self.cancelled:
+                ActivityLog.objects.create(
+                    log=f"Course {self} cancelled; linked events have been cancelled also"
+                )
 
 
 class Event(models.Model):
@@ -228,8 +255,10 @@ class Event(models.Model):
 
     def course_order(self):
         if self.course and self.course.events.exists():
-            events_in_order = self.course.events.order_by("start").values_list("id", flat=True)
-            return f"{list(events_in_order).index(self.id) + 1}/{events_in_order.count()}"
+            if not self.cancelled:
+                events_in_order = self.course.uncancelled_events.order_by("start").values_list("id", flat=True)
+                return f"{list(events_in_order).index(self.id) + 1}/{events_in_order.count()}"
+            return "-"
 
     def get_absolute_url(self):
         return reverse("booking:event", kwargs={'slug': self.slug})
@@ -246,7 +275,7 @@ class Event(models.Model):
     def clean(self):
         if self.course and not self.course.event_type == self.event_type:
             raise ValidationError({'course': _('Cannot add this course - event types do not match.')})
-        if self.course and self.course.is_configured() and self not in self.course.events.all():
+        if self.course and self.course.is_configured() and not self.cancelled and self not in self.course.uncancelled_events:
             raise ValidationError({'course': _('Cannot add this course - course is already configured with all its events.')})
 
     def save(self, force_insert=False, force_update=False, using=None, update_fields=None):

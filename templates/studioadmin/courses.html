@@ -56,16 +56,16 @@
                                             data-toggle="tooltip"
                                              data-placement="top"
                                              data-html="true"
-                                             title="<ul class='helptext pl-0'>{% for event in course.events.all %}<li>{{ event }}</li>{% endfor %}</ul>">
-                                            {{ course.events.count }}/{{ course.number_of_events }}
+                                             title="<ul class='helptext pl-0'>{% for event in course.uncancelled_events.all %}<li>{{ event }}</li>{% endfor %}</ul>">
+                                            {{ course.uncancelled_events.count }}/{{ course.number_of_events }}
                                         </div>
                                 </td>
-                                <td class="text-center">{% if course.events.exists %}{{ course.events.first.spaces_left }}{% else %}{{ course.max_participants }}{% endif %} {% if course.max_participants %}/ {{ course.max_participants }}{% endif %}</td>
+                                <td class="text-center">{% if course.uncancelled_events.exists %}{{ course.spaces_left }}{% else %}{{ course.max_participants }}{% endif %} {% if course.max_participants %}/ {{ course.max_participants }}{% endif %}</td>
                                 <td>{{ course.event_type.name|title }}</td>
                                 <td class="text-center">
                                     {% if course.cancelled %}
                                         <span class="btn btn-sm btn-visible btn-secondary disabled">No</span>
-                                    {% elif not course.is_configured %}
+                                    {% elif not course.can_be_visible %}
                                         <span class="btn btn-sm btn-visible btn-secondary disabled">{{ course.show_on_site|yesno|title }}</span>
                                     {% else %}
                                       <span

@@ -196,23 +196,38 @@ class CourseUpdateForm(forms.ModelForm):
                 if name == "description":
                     field.widget.attrs.update({"rows": 10})
 
-        self.fields["events"] = forms.ModelMultipleChoiceField(
-            required=False,
-            queryset=get_course_event_choices(self.event_type, self.instance.id),
-            widget=forms.SelectMultiple(attrs={"class": "form-control"}),
-            label=f"Add {self.event_type.pluralized_label} to this course"
-        )
+        self.hide_events = False
+        self.bookings_exist = False
+        if self.instance.id:
+            self.bookings_exist = Booking.objects.filter(event__in=self.instance.uncancelled_events).exists()
+            if self.instance.is_configured() and self.bookings_exist:
+                self.hide_events = True
 
-        if self.instance:
-            self.fields["events"].initial = [event.id for event in self.instance.events.all()]
+        if not self.hide_events:
+            self.fields["events"] = forms.ModelMultipleChoiceField(
+                required=False,
+                queryset=get_course_event_choices(self.event_type, self.instance.id),
+                widget=forms.SelectMultiple(attrs={"class": "form-control"}),
+                label=f"Add {self.event_type.pluralized_label} to this course"
+            )
+            if self.instance.id:
+                self.fields["events"].initial = [event.id for event in self.instance.uncancelled_events]
 
     def clean_events(self):
         events = self.cleaned_data["events"]
         number_of_events = self.cleaned_data["number_of_events"]
         if len(events) > number_of_events:
             self.add_error("events", f"Too many {self.event_type.pluralized_label} selected; select a maximum of {number_of_events}")
-        else:
-            return events
+            return
+        elif self.bookings_exist:
+            # bookings already exist; make sure any uncancelled events are still in the events list
+            current_events = self.instance.uncancelled_events
+            for event in current_events:
+                if event not in events:
+                    self.add_error(
+                        "events", f"{self.event_type.label.title()} has been previuosly booked and cannot be removed from this course")
+                    return
+        return events
 
 
 class CourseCreateForm(CourseUpdateForm):
@@ -821,11 +836,18 @@ class AddEditBookingForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         self.user = kwargs.pop('user')
         super().__init__(*args, **kwargs)
-
         if self.instance.id:
-            already_booked = self.user.bookings.exclude(event_id=self.instance.event.id).values_list("event_id", flat=True)
+            self.event = self.instance.event
         else:
+            self.event = None
             already_booked = self.user.bookings.values_list("event_id", flat=True)
+            self.fields['event'] = forms.ModelChoiceField(
+                queryset=Event.objects.filter(
+                    start__gte=timezone.now()
+                ).filter(cancelled=False).exclude(id__in=already_booked).order_by('-start'),
+                widget=forms.Select(attrs={'class': 'form-control input-sm'}),
+                required=True
+            )
 
         self.fields['auto_assign_available_subscription_or_block'] = forms.BooleanField(
             initial=False, required=False,
@@ -837,13 +859,6 @@ class AddEditBookingForm(forms.ModelForm):
             self.fields['auto_assign_available_subscription_or_block'].widget = forms.HiddenInput()
         else:
             self.fields['auto_assign_available_subscription_or_block'].initial = True
-        self.fields['event'] = forms.ModelChoiceField(
-            queryset=Event.objects.filter(
-                start__gte=timezone.now()
-            ).filter(cancelled=False).exclude(id__in=already_booked).order_by('-start'),
-            widget=forms.Select(attrs={'class': 'form-control input-sm'}),
-            required=True
-        )
 
         active_user_blocks = [
             block.id for block in self.user.blocks.all() if block.active_block or block == self.instance.block
@@ -870,7 +885,7 @@ class AddEditBookingForm(forms.ModelForm):
         self.helper = FormHelper()
         self.helper.layout = Layout(
             Hidden("user", self.user.id),
-            "event",
+            Hidden("event", self.event.id) if self.event else "event",
             "status",
             "no_show",
             "attended",
@@ -888,7 +903,7 @@ class AddEditBookingForm(forms.ModelForm):
         auto_assign_available_subscription_or_block = self.cleaned_data.get("auto_assign_available_subscription_or_block")
         block = self.cleaned_data.get('block')
         subscription = self.cleaned_data.get('subscription')
-        event = self.cleaned_data.get('event')
+        event = self.event or self.cleaned_data.get('event')
         status = self.cleaned_data.get('status')
         no_show = self.cleaned_data.get('no_show')
         if not auto_assign_available_subscription_or_block:
