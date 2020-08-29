@@ -139,6 +139,11 @@ class Course(models.Model):
         return self.events.order_by("start").first().start < timezone.now()
 
     @cached_property
+    def start(self):
+        if self.events.exists():
+            return self.events.order_by("start").first().start
+
+    @cached_property
     def last_event_date(self):
         last_event = self.events.order_by("start").last()
         if last_event:

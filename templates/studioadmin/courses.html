@@ -49,7 +49,7 @@
                                         {{ course.name }}
                                     {% endif %}
                                 </td>
-                                <td>{{ course.events.first.start|date:"D d M Y, H:i" }}</td>
+                                <td>{{ course.start|date:"D d M Y, H:i" }}</td>
                                 <td class="text-center">{{ course.number_of_events }}</td>
                                 <td class="text-center">
                                         <div
