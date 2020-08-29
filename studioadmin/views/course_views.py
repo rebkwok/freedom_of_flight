@@ -181,7 +181,7 @@ class CourseCreateUpdateMixin:
         if not course.can_be_visible() and course.show_on_site:
             course.show_on_site = False
             messages.error(self.request, "ERROR: Course cannot be made visible until it is fully configured")
-            course.save()
+        course.save()
         if course.can_be_visible() and not course.is_configured() and course.show_on_site:
             messages.error(
                 self.request,

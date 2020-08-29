@@ -275,7 +275,7 @@ class CancelEventViewTests(EventTestMixin, TestUsersMixin, TestCase):
 
     def test_cancel_event_on_course(self):
         # event set to cancel
-        # event removed from course
+        # event NOT removed from course
         # bookings set to cancelled
         # block released from bookings
         # emails sent to manager users
@@ -295,12 +295,14 @@ class CancelEventViewTests(EventTestMixin, TestUsersMixin, TestCase):
         for obj in [self.course_event, open_booking, no_show_booking]:
             obj.refresh_from_db()
         assert self.course_event.cancelled
+        assert self.course_event.course == self.course
+        assert self.course.is_configured() is False
         assert open_booking.status == "CANCELLED"
         assert open_booking.block is None
         assert no_show_booking.status == "CANCELLED"
         assert no_show_booking.block is None
 
-        assert "Event cancelled and removed from course; " \
+        assert "Event cancelled; " \
                "bookings cancelled and notification emails sent to students" in resp.rendered_content
         # emails to open and no-show booking users
         assert len(mail.outbox) == 1
