@@ -24,6 +24,10 @@
         assigned to it.
     </p>
 
+                <!-- Modals -->
+            <div class="modal fade" id="AddEventTypeModal" tabindex="-1" role="dialog" aria-labelledby="AddTrackModalLabel"></div>
+            <!-- /.modal -->
+
 {% if event_types %}
     <div class="container-fluid">
         <table class="table table-sm">
@@ -37,9 +41,7 @@
             </thead>
             <tbody>
 
-            <!-- Modals -->
-            <div class="modal fade" id="AddEventTypeModal" tabindex="-1" role="dialog" aria-labelledby="AddTrackModalLabel"></div>
-            <!-- /.modal -->
+
 
             {% for event_type in event_types %}
                 <tr id="row-event-type-{{ event_type.id }}">
@@ -56,24 +58,22 @@
                     {% endif %}</td>
                 </tr>
             {% endfor %}
-            <tr>
-                <td colspan="5">
-                    <a
+
+            </tbody>
+        </table>
+</div>
+{% else %}
+    <p>No event types created yet</p>
+{% endif %}
+
+    <a
                         id="add-event-type-btn"
                         class="add-event-type"
                         href="#"
                         data-form="{% url 'studioadmin:choose_track_for_event_type' %}"
                         title="add event type"
                     ><div class="btn btn-success">Add new event type</div></a>
-                </td>
-            </tr>
-            </tbody>
-        </table>
-</div>
-{% else %}
-    <p>No tracks created yet</p>
-{% endif %}
-
+    
 {% endblock content %}
 
 
