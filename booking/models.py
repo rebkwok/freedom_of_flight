@@ -286,7 +286,14 @@ class BlockConfig(models.Model):
 
 
 class BaseVoucher(models.Model):
-    discount = models.PositiveIntegerField(help_text="Enter a number between 1 and 100")
+    discount = models.PositiveIntegerField(
+        verbose_name="Percentage discount", help_text="Discount value as a % of the purchased item cost. Enter a number between 1 and 100",
+        null=True, blank=True
+    )
+    discount_amount = models.DecimalField(
+        verbose_name="Exact amount discount", help_text="Discount as an exact amount off the purchased item cost",
+        null=True, blank=True, decimal_places=2, max_digits=6
+    )
     start_date = models.DateTimeField(default=timezone.now)
     expiry_date = models.DateTimeField(null=True, blank=True)
     max_vouchers = models.PositiveIntegerField(
@@ -314,20 +321,18 @@ class BaseVoucher(models.Model):
     def has_started(self):
         return bool(self.start_date < timezone.now() and self.activated)
 
+    def clean(self):
+        if not (self.discount or self.discount_amount):
+            raise ValidationError("One of discount (%) or discount_amount (fixed amount) is required")
+        if self.discount and self.discount_amount:
+            raise ValidationError("Only one of discount (%) or discount_amount (fixed amount) may be specified (not both)")
+
     def save(self, *args, **kwargs):
+        self.full_clean()
         # replace start time with very start of day
-        self.start_date = self.start_date.replace(
-                hour=0, minute=0, second=0, microsecond=0
-            )
+        self.start_date = start_of_day_in_utc(self.start_date)
         if self.expiry_date:
-            # replace time with very end of day
-            # move forwards 1 day and set hrs/min/sec/microsec to 0, then move
-            # back 1 sec
-            next_day = (self.expiry_date + timedelta(
-                days=1)).replace(
-                hour=0, minute=0, second=0, microsecond=0
-            )
-            self.expiry_date = next_day - timedelta(seconds=1)
+            self.expiry_date = end_of_day_in_utc(self.expiry_date)
         super().save(*args, **kwargs)
 
 
@@ -371,8 +376,13 @@ class Block(models.Model):
 
     @property
     def cost_with_voucher(self):
-        percentage_to_pay = (100 - self.voucher.discount) / 100
-        return Decimal(float(self.block_config.cost) * percentage_to_pay).quantize(Decimal('.05'))
+        block_cost = Decimal(float(self.block_config.cost))
+        if self.voucher.discount_amount:
+            if self.voucher.discount_amount > block_cost:
+                return 0
+            return block_cost - Decimal(self.voucher.discount_amount)
+        percentage_to_pay = Decimal((100 - self.voucher.discount) / 100)
+        return (block_cost * percentage_to_pay).quantize(Decimal('.01'))
 
     def get_expiry_date(self):
         # if a manual extended expiry date has been set, use that instead

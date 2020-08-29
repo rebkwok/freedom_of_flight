@@ -368,12 +368,12 @@ class BlockVoucherTests(TestCase):
         # dates are set to end of day
         mock_now = datetime(2016, 1, 5, 16, 30, 30, 30, tzinfo=timezone.utc)
         mock_tz.now.return_value = mock_now
-        voucher = baker.make(BlockVoucher, start_date=mock_now)
+        voucher = baker.make(BlockVoucher, start_date=mock_now, discount=10)
         assert voucher.start_date == datetime(2016, 1, 5, 0, 0, 0, 0, tzinfo=timezone.utc)
 
         voucher.expiry_date = datetime(2016, 1, 6, 18, 30, 30, 30, tzinfo=timezone.utc)
         voucher.save()
-        assert voucher.expiry_date == datetime(2016, 1, 6, 23, 59, 59, 0, tzinfo=timezone.utc)
+        assert voucher.expiry_date == datetime(2016, 1, 6, 23, 59, 59, 999999, tzinfo=timezone.utc)
 
     @patch('booking.models.timezone')
     def test_has_expired(self, mock_tz):
@@ -382,7 +382,8 @@ class BlockVoucherTests(TestCase):
         voucher = baker.make(
             BlockVoucher,
             start_date=datetime(2016, 1, 1, tzinfo=timezone.utc),
-            expiry_date=datetime(2016, 1, 4, tzinfo=timezone.utc)
+            expiry_date=datetime(2016, 1, 4, tzinfo=timezone.utc),
+            discount=10
         )
         assert voucher.has_expired
 
@@ -393,7 +394,7 @@ class BlockVoucherTests(TestCase):
     def test_has_started(self, mock_tz):
         mock_tz.now.return_value = datetime(2016, 1, 5, 12, 30, tzinfo=timezone.utc)
 
-        voucher = baker.make(BlockVoucher, start_date=datetime(2016, 1, 1, tzinfo=timezone.utc))
+        voucher = baker.make(BlockVoucher, start_date=datetime(2016, 1, 1, tzinfo=timezone.utc), discount=10)
         assert voucher.has_started
 
         voucher.start_date = datetime(2016, 1, 6, tzinfo=timezone.utc)
@@ -403,15 +404,22 @@ class BlockVoucherTests(TestCase):
     def test_check_block_config(self):
         dropin_block_configs = baker.make(BlockConfig, _quantity=2)
         course_block_configs = baker.make(BlockConfig, course=True, _quantity=2)
-        voucher = baker.make(BlockVoucher)
+        voucher = baker.make(BlockVoucher, discount=10)
         voucher.block_configs.add(dropin_block_configs[0], course_block_configs[0])
         assert voucher.check_block_config(dropin_block_configs[0]) is True
         assert voucher.check_block_config(course_block_configs[0]) is True
         assert voucher.check_block_config(dropin_block_configs[1]) is False
         assert voucher.check_block_config(dropin_block_configs[1]) is False
 
+    def test_discount_or_amount(self):
+        with pytest.raises(ValidationError):
+            baker.make(BlockVoucher, discount=None, discount_amount=None)
+
+        with pytest.raises(ValidationError):
+            baker.make(BlockVoucher, discount=10, discount_amount=20)
+
     def test_str(self):
-        voucher = baker.make(BlockVoucher, code="testcode")
+        voucher = baker.make(BlockVoucher, code="testcode", discount=10)
         assert str(voucher) == 'testcode'
 
 
@@ -507,6 +515,21 @@ class BlockTests(TestUsersMixin, TestCase):
         self.dropin_block.voucher = voucher
         self.dropin_block.save()
         assert self.dropin_block.cost_with_voucher == 5.00
+
+    def test_cost_with_voucher_amount(self):
+        voucher = baker.make(BlockVoucher, code='123', discount_amount=3)
+        voucher.block_configs.add(self.dropin_block.block_config)
+        self.dropin_block.voucher = voucher
+        self.dropin_block.save()
+        assert self.dropin_block.cost_with_voucher == 7.00
+
+        voucher.discount_amount = 2.75
+        voucher.save()
+        assert self.dropin_block.cost_with_voucher == 7.25
+
+        voucher.discount_amount = 200
+        voucher.save()
+        assert self.dropin_block.cost_with_voucher == 0
 
     def test_start_and_expiry_dates(self):
         # default is None

@@ -108,11 +108,11 @@
                       {% if applied_voucher_codes_and_discount %}
                       <hr class="mb-2">
                       <div><small><strong>Codes applied:</strong></small>
-                          {% for applied_voucher_code, applied_voucher_discount in applied_voucher_codes_and_discount %}
+                          {% for applied_voucher_code, applied_voucher_discount, applied_voucher_discount_amount in applied_voucher_codes_and_discount %}
                                 <form class="form-inline mt-0 mb-1" method="post" action="">
                                     {% csrf_token %}
                                     <input name="code" type="hidden" value="{{ applied_voucher_code }}"/>
-                                    <span class="mr-1 m-0 pb-1 pl-1 pr-1 pt-0 alert alert-info"><small><strong>{{ applied_voucher_code }}</strong> ({{ applied_voucher_discount }}%)</small></span>
+                                    <span class="mr-1 m-0 pb-1 pl-1 pr-1 pt-0 alert alert-info"><small><strong>{{ applied_voucher_code }}</strong> ({% if applied_voucher_discount %}{{ applied_voucher_discount }}% {% else %}£{{ applied_voucher_discount_amount }} off{%  endif %})</small></span>
                                     <button type="submit" name="remove_voucher_code" class="btn btn-sm btn-danger pb-1 pl-2 pr-2 pt-0"><small><i class="fas fa-trash-alt"></i></small></button>
                                 </form>
                             {% endfor %}

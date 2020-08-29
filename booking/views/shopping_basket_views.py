@@ -183,7 +183,7 @@ def shopping_basket(request):
     ]
     # We do this AFTER generating the voucher applied costs, as that may have modified some used vouchers if they weren't valid
     applied_voucher_codes_and_discount = Block.objects.filter(id__in=unpaid_block_ids, voucher__isnull=False)\
-        .order_by("voucher__code").distinct("voucher__code").values_list("voucher__code", "voucher__discount")
+        .order_by("voucher__code").distinct("voucher__code").values_list("voucher__code", "voucher__discount", "voucher__discount_amount")
 
     # calculate the unpaid subscription costs, including any partial reduced costs for current subscription periods
     unpaid_subscription_info = [
