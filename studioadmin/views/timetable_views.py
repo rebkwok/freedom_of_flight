@@ -212,7 +212,8 @@ def upload_timetable(request, track, start_date, end_date, session_ids, show_on_
                 defaults={
                     "description": session.description,
                     "max_participants": session.max_participants,
-                    "show_on_site": show_on_site
+                    "show_on_site": show_on_site,
+                    "duration": session.duration,
                 }
             )
             if created:
