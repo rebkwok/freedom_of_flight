@@ -1,12 +1,14 @@
 from django.conf import settings
 from django.core.mail import send_mail
 from django.contrib.auth.models import User
+from django.contrib.sites.models import Site
 from django.template.loader import get_template
 
 
 def send_processed_payment_emails(invoice):
     user = User.objects.get(username=invoice.username)
     ctx = {
+        'host': f"https://{Site.objects.get_current().domain}",
         'user': user,
         'invoice': invoice,
         "studio_email": settings.DEFAULT_STUDIO_EMAIL
@@ -37,6 +39,7 @@ def send_processed_payment_emails(invoice):
 def send_processed_refund_emails(invoice):
     user = User.objects.get(username=invoice.username)
     ctx = {
+        'host': f"https://{Site.objects.get_current().domain}",
         'user': user,
         'invoice': invoice,
         "studio_email": settings.DEFAULT_STUDIO_EMAIL

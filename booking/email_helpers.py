@@ -1,6 +1,7 @@
 import os
 
 from django.conf import settings
+from django.contrib.sites.models import Site
 from django.core.mail import send_mail
 from django.core.mail.message import EmailMultiAlternatives
 from django.template.loader import get_template
@@ -38,6 +39,8 @@ def send_waiting_list_email(event, waiting_list_users, host):
 
 
 def send_bcc_emails(context, bcc_user_emails, subject, template_without_ext, reply_to=None, cc=False):
+    if "host" not in context:
+        context["host"] = f"https://{Site.objects.get_current().domain}"
     msg = EmailMultiAlternatives(
         subject,
         get_template(f"{template_without_ext}.txt").render(context),
@@ -56,6 +59,8 @@ def send_bcc_emails(context, bcc_user_emails, subject, template_without_ext, rep
 
 
 def send_user_and_studio_emails(context, user, send_to_studio, subjects, template_short_name, template_dir="booking/email"):
+    if "host" not in context:
+        context["host"] = f"https://{Site.objects.get_current().domain}"
     context.update({"studio_email": settings.DEFAULT_STUDIO_EMAIL})
     # send email to user
     send_mail(

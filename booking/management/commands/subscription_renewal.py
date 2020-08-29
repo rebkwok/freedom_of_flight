@@ -1,7 +1,6 @@
 
-from datetime import timedelta
-from django.conf import settings
 from django.utils import timezone
+from django.contrib.sites.models import Site
 from django.core.management.base import BaseCommand
 
 from activitylog.models import ActivityLog
@@ -50,7 +49,7 @@ class Command(BaseCommand):
         for subscription in subscriptions_for_reminders:
             user_to_email = subscription.user.manager_user if subscription.user.manager_user else subscription.user
             subject = f"Subscription expires soon: {subscription.config.name.title()}"
-            context = {"subscription": subscription}
+            context = {"subscription": subscription, "host": f"https://{Site.objects.get_current().domain}",}
             send_user_and_studio_emails(
                 context, user_to_email, send_to_studio=False, subjects={"user": subject}, template_short_name="subscription_renewal"
             )
