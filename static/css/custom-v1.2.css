@@ -231,8 +231,7 @@ div#CookielawBanner {
 @media only screen and (max-width: 768px) {
   .btn-xs {
     width: 105px;
-    padding-left: 1px;
-    padding-right: 1px;
+    padding: 1px;
   }
 }
 
