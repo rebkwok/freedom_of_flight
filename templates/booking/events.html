@@ -17,6 +17,14 @@
         {{ available_users_form }}
     </form>
 
+    {% if request.user.is_authenticated %}
+    <div class="row">
+    <div class="col-12">
+        <span class="float-right"><a href="{% url 'booking:bookings' %}">My Bookings</a></span>
+    </div>
+    </div>
+    {% endif %}
+
     <div class="row">
         <div class="col-12">
         {% if events_by_date %}
