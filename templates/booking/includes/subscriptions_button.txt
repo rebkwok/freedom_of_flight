@@ -15,14 +15,14 @@
 <div class="subscription_purchase_btn">
     {% has_unpaid_subscription user=available_user subscription_config=subscription_config.config start_date=subscription_start_option as unpaid_subscription %}
     {% if unpaid_subscription %}
-        <div href="#" class="btn btn-xs btn-table-xs btn-secondary mt-1 mb-1 p-1">
+        <div href="#" class="btn btn-cart-xs btn-table-xs btn-secondary mt-1 mb-1 p-1">
         <span class="pr-4"><em>In cart</em></span>
         <i id="loader_{{ subscription_config.config.id }}_{{ available_user.id }}_{{ subscription_start_option|date:'d' }}"></i>
         <i class="fas fa-trash-alt"></i>
         </div>
     {% else %}
-        <div href="#" class="btn btn-xs btn-table-xs btn-success mt-1 mb-1 p-1">
+        <div href="#" class="btn btn-cart-xs btn-table-xs btn-success mt-1 mb-1 p-1">
         <i id="loader_{{ subscription_config.config.id }}_{{ available_user.id }}_{{ subscription_start_option|date:'d' }}"></i>
-        Add to cart</div>
+        </i>Add <i class="fas fa-shopping-cart"></i></div>
     {% endif %}
 </div>

@@ -142,7 +142,9 @@ def user_subscription_info(subscription, event=None, include_user=True):
 def show_warning(event, user_booking, has_available_payment_method=None):
     """Should we show the warning on booking/rebooking/cancelling?"""
     if event.course:
-        # never show for course events - they'll always redirect to the course page
+        # always show for course events with open bookings - credit never given
+        if user_booking and user_booking.status == "OPEN" and not user_booking.no_show:
+            return True
         return False
 
     if user_booking:

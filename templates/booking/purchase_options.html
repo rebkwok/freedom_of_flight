@@ -12,7 +12,6 @@
       <div class="mb-2">
           <a class="btn btn-outline-primary btn-xs" href="{% url 'booking:shopping_basket' %}"><span>View cart <i class="fas fa-shopping-cart"></i></span></a>
       </div>
-
       <h2>Credit Blocks</h2>
         {% if available_blocks %}
             <table class="table table-sm">
@@ -61,7 +60,7 @@
                         <td>
                             {% for available_user in available_users %}
                             <div class="purchase_option_badge_container">
-                                <span class="badge badge-pill badge-light pt-1 mt-1 mb-1"><span class="align-middle helptext">{{ available_user|full_name|truncatechars:20 }}</span></span>
+                                <span class="badge badge-pill badge-light pt-1 mt-1 mb-1"><span class="align-middle helptext">{{ available_user|full_name|truncatechars:15 }}</span></span>
                             </div>
                             {% endfor %}
                         </td>
@@ -142,12 +141,12 @@
                             {% for available_user in available_users %}
                                 {% if not subscription_config.start_options_for_users|lookup_dict:available_user.id %}
                                     <div class="purchase_option_badge_container">
-                                        <span class="badge badge-pill badge-light pt-1 mt-1 mb-1"><span class="helptext align-middle">{{ available_user|full_name|truncatechars:20 }}{% if subscription_start_option %} - {{ subscription_start_option|date:"d-M-y" }}{% endif %}</span></span>
+                                        <span class="badge badge-pill badge-light pt-1 mt-1 mb-1"><span class="helptext align-middle">{{ available_user|full_name|truncatechars:15 }}{% if subscription_start_option %} - {{ subscription_start_option|date:"d-M-y" }}{% endif %}</span></span>
                                     </div>
                                 {% endif %}
                                 {% for subscription_start_option in subscription_config.start_options_for_users|lookup_dict:available_user.id %}
                                     <div class="purchase_option_badge_container">
-                                        <span class="badge badge-pill badge-light pt-1 mt-1 mb-1"><span class="helptext align-middle">{{ available_user|full_name|truncatechars:20 }}{% if subscription_start_option %} - {{ subscription_start_option|date:"d-M-y" }}{% endif %}</span></span>
+                                        <span class="badge badge-pill badge-light pt-1 mt-1 mb-1"><span class="helptext align-middle">{{ available_user|full_name|truncatechars:15 }}{% if subscription_start_option %} - {{ subscription_start_option|date:"d-M-y" }}{% endif %}</span></span>
                                     </div>
                                 {% endfor %}
                             {% endfor %}
@@ -156,7 +155,7 @@
                             {% for available_user in available_users %}
                                 {% if not subscription_config.start_options_for_users|lookup_dict:available_user.id %}
                                     <span class="helptext">
-                                        <div href="#" class="btn btn-xs btn-table-xs btn-outline-light mt-1 mb-1 p-1 text-dark">
+                                        <div href="#" class="btn btn-cart-xs btn-table-xs btn-outline-light mt-1 mb-1 p-1 text-dark">
                                             No options available
                                         </div>
                                     </span>

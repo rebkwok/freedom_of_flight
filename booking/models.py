@@ -883,6 +883,9 @@ class Subscription(models.Model):
                 if not self.config.include_no_shows_in_usage:
                     existing_bookings = existing_open_bookings.filter(no_show=False)
 
+                if event.id in existing_bookings.values_list("event_id", flat=True):
+                    allowed_number += 1
+
                 if allowed_unit == "day":
                     # find bookings on same day
                     existing_bookings = existing_bookings.filter(event__start__date=event.start.date())

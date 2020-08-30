@@ -51,7 +51,13 @@
                         <td>{{ booking.event.start|date:"D d M Y, H:i" }}</td>
                         <td>{{ booking.event.name }} {% if booking.event.course %}({{ booking.event.course.name }}){% endif %}</td>
                         <td>{{ booking.event.event_type.track }}</td>
-                        <td>{{ booking.status }}</td>
+                        <td>
+                            {% if booking.status == "OPEN" and booking.no_show %}
+                                CANCELLED (No-show)
+                            {% else %}
+                            {{ booking.status }}
+                            {% endif %}
+                        </td>
                         <td>
                             {% if booking.block %}
                                 <div class="badge badge-info" data-toggle="tooltip" data-placement="top" title="{{ booking.block.block_config.name }} (block)">

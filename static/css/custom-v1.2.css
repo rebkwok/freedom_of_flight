@@ -236,6 +236,20 @@ div#CookielawBanner {
   }
 }
 
+/* Button styles */
+.btn-cart-xs {
+  width: 100px;
+  font-size: 75%;
+}
+
+@media only screen and (max-width: 768px) {
+  .btn-cart-xs {
+    width: 70px;
+    padding-left: 1px;
+    padding-right: 1px;
+  }
+}
+
 .btn-xs-wider {
   width: 130px;
   font-size: 80%;
@@ -253,7 +267,7 @@ div#CookielawBanner {
 .purchase_option_badge_container .badge {
   border: 1px lightgrey solid;
   height: 27px;
-  min-width: 150px;
+  min-width: 100px;
 }
 
 /*.purchase_option_badge_container > span.badge {*/

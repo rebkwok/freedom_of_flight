@@ -4,7 +4,7 @@ import json
 from math import floor
 
 from django.conf import settings
-from datetime import datetime, date
+from datetime import datetime, timedelta
 from django import forms
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
@@ -839,7 +839,7 @@ class AddEditBookingForm(forms.ModelForm):
             self.fields['auto_assign_available_subscription_or_block'].initial = True
         self.fields['event'] = forms.ModelChoiceField(
             queryset=Event.objects.filter(
-                start__gte=timezone.now()
+                start__gte=timezone.now() - timedelta(minutes=30)
             ).filter(cancelled=False).exclude(id__in=already_booked).order_by('-start'),
             widget=forms.Select(attrs={'class': 'form-control input-sm'}),
             required=True
