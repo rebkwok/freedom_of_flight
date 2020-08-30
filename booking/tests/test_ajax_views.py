@@ -521,7 +521,7 @@ class AjaxBlockPurchaseTests(TestUsersMixin, TestCase):
         assert new_block.paid is False
         resp_json = resp.json()
         assert resp_json["cart_item_menu_count"] == 1
-        assert "Add to cart" not in resp_json["html"]
+        assert "Add" not in resp_json["html"]
         assert 'class="fas fa-trash-alt"' in resp_json["html"]
         assert f"Block added to cart for {self.student_user.first_name} {self.student_user.last_name}" in resp_json["html"]
 
@@ -537,7 +537,7 @@ class AjaxBlockPurchaseTests(TestUsersMixin, TestCase):
         assert new_block.paid is False
         resp_json = resp.json()
         assert resp_json["cart_item_menu_count"] == 1
-        assert "Add to cart" not in resp_json["html"]
+        assert "Add" not in resp_json["html"]
         assert 'class="fas fa-trash-alt"' in resp_json["html"]
         assert f"Block added to cart for {self.student_user.first_name} {self.student_user.last_name}" in resp_json["html"]
 
@@ -553,7 +553,7 @@ class AjaxBlockPurchaseTests(TestUsersMixin, TestCase):
         assert new_block.paid is False
         resp_json = resp.json()
         assert resp_json["cart_item_menu_count"] == 2
-        assert "Add to cart" not in resp_json["html"]
+        assert "Add" not in resp_json["html"]
         assert 'class="fas fa-trash-alt"' in resp_json["html"]
         assert f"Block added to cart for {self.child_user.first_name} {self.child_user.last_name}" in resp_json[
             "html"]
@@ -573,7 +573,7 @@ class AjaxBlockPurchaseTests(TestUsersMixin, TestCase):
         assert Block.objects.count() == 2
         resp_json = resp.json()
         assert resp_json["cart_item_menu_count"] == 2
-        assert "Add to cart" in resp_json["html"]
+        assert "Add" in resp_json["html"]
         assert 'class="fas fa-trash-alt"' not in resp_json["html"]
         assert f"Block removed from cart for {self.manager_user.first_name} {self.manager_user.last_name}" in \
                resp_json["html"]
