@@ -2,12 +2,20 @@
 {% load accounttags email_obfuscator %}
 
 {% block content %}
-    <h2 class="panel-title">Disclaimer Form for {{ disclaimer_user.first_name }} {{ disclaimer_user.last_name }}</h2>
-   {% if disclaimer %}
+    <h2 class="panel-title">Disclaimer Form for {{ disclaimer_user|full_name }}</h2>
+   {% if disclaimer_user.manager_user %}
+    <p class="text-danger"><strong>
+    You ({{ request.user|full_name }}) are completing this form on behalf of {{ disclaimer_user|full_name }}.
+    By completing and signing the disclaimer, you confirm that you are {{ disclaimer_user|full_name }}'s parent/guardian
+    and/or have permission to submit this information on their behalf.
+    </strong>
+    </p>
+    {% endif %}
+    {% if disclaimer %}
             {% if disclaimer_user == request.user %}
                 <p>You have already completed a disclaimer.</p>
             {% else %}
-                <p>{{ disclaimer_user.first_name }} {{ disclaimer_user.last_name }} already has a completed disclaimer.</p>
+                <p>{{ disclaimer_user|full_name }} already has a completed disclaimer.</p>
             {% endif %}
            <p>If you have any additional questions or concerns about the data you have provided, please contact {{ studio_email|obfuscate_mailto }}.</p>
     {% else %}
