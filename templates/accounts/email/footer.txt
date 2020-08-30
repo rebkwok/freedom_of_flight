@@ -2,4 +2,4 @@
 ------------------------------------
 FREEDOM OF FLIGHT AERIAL
 http://www.freedomofflightaerial.com
-{{ studio_email|obfuscate }}
+{% if studio_email %}{{ studio_email }}{% else %}freedomofflightaerial@gmail.com{% endif %}

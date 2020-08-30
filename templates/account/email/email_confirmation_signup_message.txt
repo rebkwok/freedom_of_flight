@@ -1,0 +1,20 @@
+{% extends 'email_base.txt' %}{% load account accounttags %}
+{% block messagecontent %}{% with site_name=current_site.name site_domain=current_site.domain %}Welcome to {{ site_name }}!
+
+You're receiving this e-mail because user {{ user|full_name }} has given your e-mail address to register an account on {{ site_domain }}.
+
+To confirm this is correct, go to {{ activate_url }}
+
+GETTING HERE
+Our studio can be hard to find on your first visit as we are off the main road. We have pinned
+directions on our Facebook page to help you.
+https://www.facebook.com/freedomofflightaerial
+Some GPS and sat nav systems may not take you to the correct entrance, so please make sure you check the pinned directions. If you don’t have access
+to Facebook please email for directions.
+
+WHAT TO WEAR TO CLASS
+For aerial class students must remove or cover all jewellery and tie back long hair. We recommend
+you wear comfortable clothing for exercise and extra layers of clothing covering your knees,
+stomach and arm pits are best. Clothing can get damaged on the equipment so please don’t wear your
+best clothes to class. We also recommend you bring a water bottle with you for class.
+{% endwith %}{% endblock %}
