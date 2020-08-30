@@ -17,7 +17,10 @@
 {% elif event.course %}
     {% if user_info.has_booked %}
          <div class="btn btn-xs btn-success" href="#">Rebook</div>
+     {% elif event.course.full %}
+        <span class="helptext">This course is full</span>
      {% elif user_info.has_available_course_block or user_info.used_block %}
+
          <div class="btn btn-xs btn-success" href="#">View/book course</div>
      {% else %}
          <div class="btn btn-xs btn-outline-success" href="#">Course details & payment options</div>
