@@ -9,7 +9,7 @@ from django.urls import reverse
 from django.test import TestCase
 from django.utils import timezone
 
-from booking.models import Booking, Block, BlockConfig, Course, WaitingListUser, Subscription
+from booking.models import Booking, Block, BlockConfig, Course, Event, WaitingListUser, Subscription
 from accounts.models import has_active_disclaimer
 from common.test_utils import EventTestMixin, TestUsersMixin, make_disclaimer_content
 
@@ -398,7 +398,7 @@ class UserBookingAddViewTests(TestUsersMixin, TestCase):
         assert self.student_user.bookings.count() == 0
         form = resp.context_data["form"]
         assert form.errors == {
-            "block": ["Block cannot be assigned for cancelled booking.  Set to open and no_show if a block should be used."]
+            "block": ["Block cannot be assigned for cancelled booking. Set to open and no_show if a block should be used."]
         }
 
     def test_add_booking_for_full_event(self):
@@ -581,6 +581,107 @@ class UserBookingEditViewTests(TestUsersMixin, TestCase):
         self.client.post(self.url, {**self.form_data, "status": "CANCELLED"})
         assert len(mail.outbox) == 1
         assert mail.outbox[0].bcc == [self.student_user1.email, self.manager_user.email]
+
+
+class UserCourseBookingAddViewTests(EventTestMixin, TestUsersMixin, TestCase):
+
+    def setUp(self):
+        self.create_admin_users()
+        self.create_users()
+        self.create_tracks_and_event_types()
+        self.create_events_and_course()
+        self.aerial_event = self.aerial_events[0]
+        self.aerial_event.course = self.course
+        self.aerial_event.save()
+        self.login(self.staff_user)
+        self.url = reverse("studioadmin:coursebookingadd", args=(self.student_user.id,))
+
+    def test_instructor_and_staff_can_access(self):
+        self.user_access_test(["staff", "instructor"], self.url)
+
+    def test_get(self):
+        resp = self.client.get(self.url)
+        assert resp.context["booking_user"] == self.student_user
+
+    def test_add_course_booking(self):
+        assert self.student_user.bookings.exists() is False
+        self.client.post(self.url, {"course": self.course.id})
+        assert self.student_user.bookings.count() == 2
+        for booking in self.student_user.bookings.all():
+            assert booking.event.course == self.course
+
+    def test_add_booking_with_autoassigned_block(self):
+        assert self.student_user.bookings.exists() is False
+        course_config = baker.make(BlockConfig, duration=2, cost=10, event_type=self.course.event_type, course=True, size=self.course.number_of_events)
+        block = baker.make(Block, user=self.student_user, block_config=course_config, paid=True)
+        assert block.valid_for_course(self.course) is True
+        self.client.post(self.url, {"course": self.course.id})
+        assert self.student_user.bookings.count() == 2
+        for booking in self.student_user.bookings.all():
+            assert booking.event.course == self.course
+            assert booking.block == block
+
+class UserBlockChangeCourseTests(EventTestMixin, TestUsersMixin, TestCase):
+
+    def setUp(self):
+        self.create_admin_users()
+        self.create_users()
+        self.create_tracks_and_event_types()
+        self.course1 = baker.make(Course, number_of_events=2, event_type=self.aerial_event_type)
+        self.course2 = baker.make(Course, number_of_events=2, event_type=self.aerial_event_type)
+        for i in range(2):
+            baker.make(Event, event_type=self.aerial_event_type, course=self.course1)
+            baker.make(Event, event_type=self.aerial_event_type, course=self.course2)
+        self.login(self.staff_user)
+
+        course_config = baker.make(
+            BlockConfig, duration=2, cost=10, event_type=self.aerial_event_type, course=True,
+            size=2
+        )
+        self.block = baker.make(Block, user=self.student_user, block_config=course_config, paid=True)
+
+        self.url = reverse("studioadmin:courseblockchange", args=(self.block.id,))
+
+    def test_instructor_and_staff_can_access(self):
+        self.user_access_test(["staff", "instructor"], self.url)
+
+    def test_get(self):
+        resp = self.client.get(self.url)
+        assert resp.context["block"] == self.block
+
+    def test_add_course_to_block(self):
+        assert self.student_user.bookings.exists() is False
+        self.client.post(self.url, {"course": self.course1.id})
+        assert self.student_user.bookings.count() == 2
+        for booking in self.student_user.bookings.all():
+            assert booking.block == self.block
+
+    def test_change_course_on_block(self):
+        for event in self.course1.events.all():
+            baker.make(Booking, event=event, user=self.student_user, block=self.block)
+
+        self.client.post(self.url, {"course": self.course2.id})
+        assert self.student_user.bookings.count() == 4
+        for booking in self.student_user.bookings.filter(event__course=self.course1):
+            assert booking.block is None
+            assert booking.status == "CANCELLED"
+        for booking in self.student_user.bookings.filter(event__course=self.course2):
+            assert booking.block == self.block
+
+    def test_send_email_confirmation(self):
+        self.client.post(self.url, {"course": self.course1.id, "send_confirmation": True})
+        assert len(mail.outbox) == 1
+        assert mail.outbox[0].to == [self.student_user.email]
+
+    def test_send_email_confirmation_managed_user(self):
+        self.block.user=self.child_user
+        self.block.save()
+        url = reverse("studioadmin:courseblockchange", args=(self.block.id,))
+        self.client.post(
+            url, {"course": self.course1.id, "send_confirmation": True}
+        )
+        assert len(mail.outbox) == 1
+        assert mail.outbox[0].to == [self.manager_user.email]
 
 
 class UserBlockListViewTests(TestUsersMixin, TestCase):

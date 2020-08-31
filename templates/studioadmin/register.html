@@ -24,6 +24,7 @@
 
     <div class="table-responsive">
         <table class="table">
+            <thead>
             <tr class="compress">
                 <th scope="col" class="text-center"></th>
                 <th scope="col" class="text-center">Attended</th>
@@ -32,75 +33,87 @@
                 <th scope="col" class="text-center">Disclaimer</th>
                 <th scope="col" class="text-center">Block/Subscription</th>
             </tr>
-
+            </thead>
             <!-- Modal -->
             <div class="modal fade" id="RegisterBookingAddModal" tabindex="-1" role="dialog" aria-labelledby="RegisterBookingAddModalLabel"></div>
             <!-- /.modal -->
 
-            {% for booking in bookings %}
-                <tr id='booking-row-{{ booking.id }}' class="compress{% if booking.no_show or booking.status == 'CANCELLED' %} expired{% endif %}">
-                    {% if status_choice == 'CANCELLED' %}
-                        <td></td>
-                        <td></td>
-                    {% else %}
-                        <td class="text-center">{{ forloop.counter }}.</td>
-                        <td>
-                            <div class="btn-group btn-group-sm" role="group">
-                              <button
-                                      id="booking-attended-{{ booking.id }}"
-                                      data-booking_id="{{ booking.id }}"
-                                      data-attendance="attended"
-                                      type="button"
-                                      class="btn btn-attended {% if booking.attended %}btn-success{% else %}btn-outline-secondary{% endif %}"
-                                      >Yes</button>
-                              <button
-                                      id="booking-noshow-{{ booking.id }}"
-                                      data-booking_id="{{ booking.id }}"
-                                      data-attendance="no-show"
-                                      type="button"
-                                      class="btn btn-noshow {% if booking.no_show %}btn-danger{% else %}btn-outline-secondary{% endif %}"
-                                      >No</button>
-                            </div>
-                        </td>
-                    {% endif %}
-                    <td class="text-center" id="booking-status-{{ booking.id }}">{{ booking.status }}</td>
-                    <td class="text-center"> {{ booking.user.first_name }} {{ booking.user.last_name }}</td>
-                    <td class="text-center">
-                        {% if booking.user|has_disclaimer or booking.user|has_expired_disclaimer %}
-                            <a href="{% url 'studioadmin:user_detail' booking.user.id %}" target="_blank"><span id="disclaimer" class="far fa-file-alt"></span></a>
-                            {% if not booking.user|has_disclaimer %}<span class=helptext">(expired)</span>{% endif %}
+            <tbody>
+            {% if bookings %}
+                {% for booking in bookings %}
+                    <tr id='booking-row-{{ booking.id }}' class="compress{% if booking.no_show or booking.status == 'CANCELLED' %} expired{% endif %}">
+                        {% if status_choice == 'CANCELLED' %}
+                            <td></td>
+                            <td></td>
                         {% else %}
-                            <span id="disclaimer" class="fas fa-times"></span>
+                            <td class="text-center">{{ forloop.counter }}.</td>
+                            <td>
+                                <div class="btn-group btn-group-sm" role="group">
+                                  <button
+                                          id="booking-attended-{{ booking.id }}"
+                                          data-booking_id="{{ booking.id }}"
+                                          data-attendance="attended"
+                                          type="button"
+                                          class="btn btn-attended {% if booking.attended %}btn-success{% else %}btn-outline-secondary{% endif %}"
+                                          >Yes</button>
+                                  <button
+                                          id="booking-noshow-{{ booking.id }}"
+                                          data-booking_id="{{ booking.id }}"
+                                          data-attendance="no-show"
+                                          type="button"
+                                          class="btn btn-noshow {% if booking.no_show %}btn-danger{% else %}btn-outline-secondary{% endif %}"
+                                          >No</button>
+                                </div>
+                            </td>
                         {% endif %}
-                    </td>
-                    <td class="text-center">
-                        {% if booking.block %}
-                            {{ booking.block.block_config }} <span class="helptext">(exp: {{ booking.block.expiry_date|date:"d-M-y" }})</span>
-                        {% elif booking.subscription %}
-                            {{ booking.subscription.config }} <span class="helptext">(exp: {{ booking.subscription.expiry_date|date:"d-M-y" }})</span>
-                        {% else %}
-                            {% if booking.status == "OPEN" and not booking.no_show %}
-                                {% if booking.has_available_subscription or booking.has_available_block %}
-                                    WARNING: USER'S SUBSCRIPTION/BLOCK NOT ASSIGNED
-                                {% else  %}
-                                    WARNING: USER HAS NO SUBSCRIPTION/BLOCK
+                        <td class="text-center" id="booking-status-{{ booking.id }}">{{ booking.status }}</td>
+                        <td class="text-center"> {{ booking.user.first_name }} {{ booking.user.last_name }}</td>
+                        <td class="text-center">
+                            {% if booking.user|has_disclaimer or booking.user|has_expired_disclaimer %}
+                                <a href="{% url 'studioadmin:user_detail' booking.user.id %}" target="_blank"><span id="disclaimer" class="far fa-file-alt"></span></a>
+                                {% if not booking.user|has_disclaimer %}<span class=helptext">(expired)</span>{% endif %}
+                            {% else %}
+                                <span id="disclaimer" class="fas fa-times"></span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            {% if booking.block %}
+                                {{ booking.block.block_config }} <span class="helptext">(exp: {{ booking.block.expiry_date|date:"d-M-y" }})</span>
+                            {% elif booking.subscription %}
+                                {{ booking.subscription.config }} <span class="helptext">(exp: {{ booking.subscription.expiry_date|date:"d-M-y" }})</span>
+                            {% else %}
+                                {% if booking.status == "OPEN" and not booking.no_show %}
+                                    {% if booking.has_available_subscription or booking.has_available_block %}
+                                        WARNING: USER'S SUBSCRIPTION/BLOCK NOT ASSIGNED
+                                    {% else  %}
+                                        WARNING: USER HAS NO SUBSCRIPTION/BLOCK
+                                    {% endif %}
                                 {% endif %}
                             {% endif %}
-                        {% endif %}
-                    </td>
-
-                </tr>
-            {% endfor %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            {% else %}
+                <tr><td colspan="6">No bookings for this {{ event.event_type.label }}</td></tr>
+            {% endif %}
+            </tbody>
+            <tfoot>
             <tr>
                 <td colspan="6">
+                {% if not event.course %}
                     <a
                         id="add-more-btn"
                         class="bookingadd btn btn-success {% if not can_add_more %}disabled{% endif %}"
                         href="#" data-form="{% url 'studioadmin:bookingregisteradd' event.id %}"
                         title="add booking"
                     >Add booking</a>
+                {% else %}
+                    Can't add single {{ event.event_type.label }} bookings for a course. To add a new booking for this entire
+                    course, go to the <a href="{% url 'studioadmin:users' %}">Students</a> list.
+                {% endif %}
                 </td>
             </tr>
+
             {% if event.max_participants %}
                 <tr>
                     <td colspan="6">
@@ -108,6 +121,7 @@
                     </td>
                 </tr>
             {% endif %}
+            </tfoot>
 
         </table>
     </div>

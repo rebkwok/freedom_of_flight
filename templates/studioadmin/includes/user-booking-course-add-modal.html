@@ -2,16 +2,14 @@
 
 <div class="modal-dialog modal-md">
     <div class="modal-content">
-        <form id="user-booking-form" method='post' class="form" role="form" action='{% url "studioadmin:bookingedit" booking.id %}'>
-
+        <form id="user-course-booking-add-form" method='post' class="form" role="form" action='{% url "studioadmin:coursebookingadd" booking_user.id %}'>
             <div class="modal-header">
-                <h4 class="modal-title" id="UserBookingModalLabel">Editing booking for {{ booking.user.first_name }} {{ booking.user.last_name}}</h4>
+                <h4 class="modal-title" id="UserCourseBookingAddModalLabel">Adding course booking for {{ booking_user.first_name }} {{ booking_user.last_name}}</h4>
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
             </div>
 
             <div class="container-fluid">
                 <div class="modal-body">
-                <p><strong>{{ booking.event.event_type.label|title }}</strong>: {{ booking.event }}</p>
                 {% csrf_token %}
                 {% crispy form %}
                 </div>
@@ -24,11 +22,11 @@
 
         <script>
             var form_options = {
-                target: '#UserBookingModal',
+                target: '#UserCourseBookingAddModal',
                 success: function() { }
             };
 
-            $('#user-booking-form').ajaxForm(form_options);
+            $('#user-course-booking-add-form').ajaxForm(form_options);
         </script>
 
     </div><!-- /.modal-content -->

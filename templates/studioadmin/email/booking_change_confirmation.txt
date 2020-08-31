@@ -1,6 +1,6 @@
 {% extends 'email_base.txt' %}
 {% block messagecontent %}
-Your booking for {{ event }} has been {{ action }} by an administrator.
+A booking for {{ event }} ({{ booking_user }}) has been {{ action }} by an administrator.
 
 View your bookings: {{ host }}{% url 'booking:bookings' %}
 {% endblock %}

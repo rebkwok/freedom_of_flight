@@ -1,7 +1,7 @@
 from .cloning_views import clone_event, clone_timetable_session_view
 from .course_views import (
     CourseAdminListView, course_create_choice_view, CourseCreateView, CourseUpdateView,
-    ajax_toggle_course_visible, cancel_course_view, PastCourseAdminListView, clone_course_view
+    ajax_toggle_course_visible, cancel_course_view, PastCourseAdminListView, clone_course_view,
 )
 from .event_views import (
     EventAdminListView, ajax_toggle_event_visible, cancel_event_view, EventCreateView,
@@ -34,6 +34,7 @@ from .user_views import (
     UserBlocksListView, BlockAddView, BlockEditView, ajax_block_delete,
     email_subscription_users_view,
     UserSubscriptionsListView, SubscriptionAddView, SubscriptionEditView, ajax_subscription_delete,
+    course_booking_add_view, course_block_change_view
 )
 
 from .waiting_list import ajax_remove_from_waiting_list, event_waiting_list_view

@@ -27,6 +27,7 @@ from studioadmin.views import (
     UserBlocksListView, BlockAddView, BlockEditView, ajax_block_delete,
     email_subscription_users_view,
     UserSubscriptionsListView, SubscriptionAddView, SubscriptionEditView, ajax_subscription_delete,
+    course_booking_add_view, course_block_change_view,
 )
 
 app_name = 'studioadmin'
@@ -120,10 +121,12 @@ urlpatterns = [
     path('user/<int:user_id>/bookings/', UserBookingsListView.as_view(), name="user_bookings"),
     path('user/<int:user_id>/bookings/history/', UserBookingsHistoryListView.as_view(), name="past_user_bookings"),
     path('user/<int:user_id>/booking/add/', BookingAddView.as_view(), name="bookingadd"),
+    path('user/<int:user_id>/course-booking/add/', course_booking_add_view, name="coursebookingadd"),
     path('user/booking/<int:pk>/edit/', BookingEditView.as_view(), name="bookingedit"),
     path('user/<int:user_id>/blocks/', UserBlocksListView.as_view(), name="user_blocks"),
     path('user/<int:user_id>/block/add/', BlockAddView.as_view(), name="blockadd"),
     path('user/block/<int:pk>/edit/', BlockEditView.as_view(), name="blockedit"),
+    path('user/block/<int:block_id>/change-course/', course_block_change_view, name="courseblockchange"),
     path('user/block/<int:block_id>/delete/', ajax_block_delete, name="blockdelete"),
     path('user/<int:user_id>/subscriptions/', UserSubscriptionsListView.as_view(), name="user_subscriptions"),
     path('user/<int:user_id>/subscription/add/', SubscriptionAddView.as_view(), name="subscriptionadd"),

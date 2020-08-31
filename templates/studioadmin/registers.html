@@ -38,7 +38,7 @@
                             <tr class="table-secondary table-divider"><td colspan="9">{{ event_date|date:"D d M Y" }}</td></tr>
                             {% for event in events %}
                                 <tr>
-                                    <td><a href="{% url 'studioadmin:register' event.id %}">{{ event.name }}</a></td>
+                                    <td><a href="{% url 'studioadmin:register' event.id %}">{{ event.name }} {% if event.course %}({{ event.course.name }}){% endif  %}</a></td>
                                     <td class="text-center">{{ event.start|date:"H:i" }} - {{ event.end|date:"H:i" }}</td>
                                     <td class="text-center">{{ event.spaces_left }} {% if event.max_participants %}/ {{ event.max_participants }}{% endif %}</td>
                                     <td class="text-center">

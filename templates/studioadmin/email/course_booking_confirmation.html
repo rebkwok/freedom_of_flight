@@ -1,0 +1,19 @@
+{% extends 'email_base.html' %}
+
+{% block messagecontent %}
+
+<p>{{ user.first_name }} {{ user.last_name }} has been booked into {{ course }} by an administrator.  This course consists of the
+following {{ course.event_type.pluralized_label }}:</p>
+    <ul>
+    {% for event in course.uncancelled_events %}
+    <li>{{ event }}</li>
+    {% endfor %}
+    </ul>
+
+{% if old_course %}
+    <p>This course replaced a previous booking for the course {{ old_course }}.</p>
+{% endif %}
+
+<a href="{{ host }}{% url 'booking:bookings' %}">View your bookings</a>
+
+{% endblock %}
