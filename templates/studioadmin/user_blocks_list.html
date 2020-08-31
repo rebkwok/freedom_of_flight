@@ -60,12 +60,34 @@
                                 UNPAID
                             {% endif %}
                         </td>
-                        <td class="text-center">{{ block.block_config }}</td>
+                        <td class="text-center"><small>{{ block.block_config }}</small></td>
                         <td class="text-center">{{ block.block_config.size }}</td>
-                        <td class="text-center">{{ block.bookings.count }}</td>
-                        <td class="text-center">{{ block.purchase_date|date:"d-M-y" }}</td>
-                        <td class="text-center">{{ block.start_date|date:"d-M-y" }}</td>
-                        <td class="text-center">{{ block.expiry_date|date:"d-M-y" }}</td>
+                        <td class="text-center">
+                        {% if block.bookings.exists %}
+                            {% if block.block_config.course %}
+                                <div
+                                    class="badge badge-secondary pr-2 pl-2"
+                                    data-toggle="tooltip"
+                                     data-placement="top"
+                                     data-html="true"
+                                     title="<ul class='helptext pl-0'>Starts {{ block.bookings.first.event.course.start|date:"D d-M-Y" }}">
+                                {{ block.bookings.first.event.course.name }}</div>
+                            {% else %}
+                            <div
+                                    class="badge badge-secondary pr-2 pl-2"
+                                    data-toggle="tooltip"
+                                     data-placement="top"
+                                     data-html="true"
+                                     title="<ul class='helptext pl-0'>{% for booking in block.bookings.all %}<li>{{ booking.event }}</li>{% endfor %}</ul>">
+                                {{ block.bookings.count }}</div>
+                            {% endif %}
+                        {% else %}
+                        -
+                        {% endif %}
+                        </td>
+                        <td class="text-center"><small>{{ block.purchase_date|date:"d-M-y" }}</small></td>
+                        <td class="text-center"><small>{{ block.start_date|date:"d-M-y" }}</small></td>
+                        <td class="text-center"><small>{{ block.expiry_date|date:"d-M-y" }}</small></td>
                         <td class="text-center">
                             {% if not block.paid %}
                                 <span

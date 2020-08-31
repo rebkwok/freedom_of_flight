@@ -1112,7 +1112,8 @@ class CourseBookingAddChangeForm(forms.Form):
         )
         self.helper = FormHelper()
         self.helper.layout = Layout(
-            HTML(f"<p><strong>Current course:</strong> {old_course.name + ' - start ' + old_course.start.strftime('%d-%b') if old_course else 'None'}</p>"),
+            HTML(f"<p><strong>Current course:</strong> {old_course.name + ' - start ' + old_course.start.strftime('%d-%b') if old_course else 'None'}</p>")
+            if block else HTML(""),
             "course",
             HTML(
                 f"<p>Changing an existing course on a block will cancel the student's bookings for the old course "

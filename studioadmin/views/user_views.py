@@ -522,7 +522,7 @@ def course_booking_add_view(request, user_id):
                 email_user = user.manager_user if user.manager_user else user
                 send_user_and_studio_emails(
                     ctx, email_user, send_to_studio=False,
-                    subjects={"user": f"You have been booked into the course {course.name}"},
+                    subjects={"user": f"New course booking: {course.name}"},
                     template_dir="studioadmin/email",
                     template_short_name="course_booking_confirmation")
                 send_confirmation_msg = " and confirmation email sent to user"
@@ -592,7 +592,7 @@ def course_block_change_view(request, block_id):
                     email_user = user.manager_user if user.manager_user else user
                     send_user_and_studio_emails(
                         ctx, email_user, send_to_studio=False,
-                        subjects={"user": f"You have been booked into the course {course.name}"},
+                        subjects={"user": f"New course booking: {course.name}"},
                         template_dir="studioadmin/email",
                         template_short_name="course_booking_confirmation")
                     send_confirmation_msg = " and confirmation email sent to user"
