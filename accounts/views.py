@@ -1,11 +1,14 @@
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.core.mail import send_mail
+from django.contrib import messages
 from django.forms.widgets import TextInput
 from django.shortcuts import render, HttpResponseRedirect, get_object_or_404
+from django.views.decorators.debug import sensitive_post_parameters
 from django.views.generic import UpdateView, CreateView, FormView
 from django.views.generic.edit import FormMixin
 from django.contrib.auth.models import User
+from django.utils.decorators import method_decorator
 from django.urls import reverse
 from django.template.loader import get_template
 
@@ -14,6 +17,7 @@ from allauth.account.views import EmailView, LoginView, SignupView
 from braces.views import LoginRequiredMixin
 from shortuuid import ShortUUID
 
+from common.utils import full_name
 from .forms import DisclaimerForm, DataPrivacyAgreementForm, NonRegisteredDisclaimerForm, \
     ProfileForm, DisclaimerContactUpdateForm, RegisterChildUserForm
 from .models import CookiePolicy, DataPrivacyPolicy, SignedDataPrivacy, UserProfile, OnlineDisclaimer, \
@@ -72,6 +76,10 @@ class ChildUserCreateView(LoginRequiredMixin, CreateView):
     template_name = 'accounts/register_child_user.html'
     form_class = RegisterChildUserForm
 
+    @method_decorator(sensitive_post_parameters())
+    def dispatch(self, request, *args, **kwargs):
+        return super().dispatch(request, *args, **kwargs)
+
     def get_form_kwargs(self):
         form_kwargs = super().get_form_kwargs()
         form_kwargs["parent_user_profile"] = self.request.user.userprofile
@@ -93,6 +101,9 @@ class ChildUserCreateView(LoginRequiredMixin, CreateView):
         child_profile.user = child_user
         child_profile.parent_user_profile = self.request.user.userprofile
         child_profile.save()
+        if not self.request.user.is_manager:
+            self.request.user.userprofile.manager = True
+            self.request.user.userprofile.save()
         ActivityLog.objects.create(
             log=f"Managed user account created for {child_user.first_name} {child_user.last_name} by {self.request.user.first_name} { self.request.user.last_name}"
         )
@@ -108,6 +119,7 @@ class DisclaimerContactUpdateView(LoginRequiredMixin, UpdateView):
     template_name = 'accounts/update_emergency_contact.html'
     form_class = DisclaimerContactUpdateForm
 
+    @method_decorator(sensitive_post_parameters())
     def dispatch(self, request, *args, **kwargs):
         self.disclaimer_user = get_object_or_404(User, pk=kwargs["user_id"])
         if not has_active_disclaimer(self.disclaimer_user):
@@ -121,6 +133,9 @@ class DisclaimerContactUpdateView(LoginRequiredMixin, UpdateView):
 
     def get_object(self, *args, **kwargs):
         return OnlineDisclaimer.objects.filter(user=self.disclaimer_user).latest("id")
+
+    def form_valid(self, form):
+        return super().form_valid()
 
     def get_success_url(self):
         return reverse('accounts:profile')
@@ -181,10 +196,14 @@ class DisclaimerCreateView(LoginRequiredMixin, DynamicDisclaimerFormMixin, Creat
     form_class = DisclaimerForm
     template_name = 'accounts/disclaimer_form.html'
 
+    @method_decorator(sensitive_post_parameters())
     def dispatch(self, request, *args, **kwargs):
         if not DisclaimerContent.objects.exists():
             return render(request, "accounts/no_disclaimers.html")
         self.disclaimer_user = get_object_or_404(User, pk=kwargs["user_id"])
+        if has_active_disclaimer(self.disclaimer_user):
+            messages.info(self.request, f"{full_name(self.disclaimer_user)} has a completed disclaimer")
+            return HttpResponseRedirect(reverse("accounts:profile"))
         return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
@@ -214,6 +233,10 @@ class NonRegisteredDisclaimerCreateView(CreateView):
 
     form_class = NonRegisteredDisclaimerForm
     template_name = 'accounts/nonregistered_disclaimer_form.html'
+
+    @method_decorator(sensitive_post_parameters())
+    def dispatch(self, request, *args, **kwargs):
+        return super().dispatch(request, *args, **kwargs)
 
     def form_valid(self, form):
         # email user

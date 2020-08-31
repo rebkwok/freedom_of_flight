@@ -499,6 +499,9 @@ def managed_users(self):
         if self.userprofile:
             child_users = [childprofile.user for childprofile in self.userprofile.managed_profiles.all() if childprofile.user.is_active]
             managed_users = [self, *child_users] if self.is_student else [*child_users, self]
+            if child_users and not self.is_manager:
+                self.userprofile.manager = True
+                self.userprofile.save()
         else:
             managed_users = [self]
         cache.set(cache_key, managed_users, timeout=60*60)

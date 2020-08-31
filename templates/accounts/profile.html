@@ -42,33 +42,26 @@
                {% if user.is_manager %}
                     {% for managed_user in user.managed_users %}
                         {% if managed_user.id != user.id %}
-                       <li>{{ managed_user.first_name }} {{ managed_user.last_name }} (managed account)
-                           {% if managed_user|has_disclaimer %}
-                                {% with managed_user|latest_disclaimer as managed_user_disclaimer %}
-                                <span class="helptext text-secondary">
-                                    <div><strong>Emergency Contact Information</strong>  <a class="btn btn-xs btn-outline-success p-0" href="{% url 'accounts:update_emergency_contact' managed_user.id %}">Change</a></div>
-                                    <div><strong>Name:</strong> {{ managed_user_disclaimer.emergency_contact_name }} </div>
-                                   <div><strong>Phone:</strong> {{ managed_user_disclaimer.emergency_contact_phone }} </div>
-                                   <div><strong>Relationship:</strong> {{ managed_user_disclaimer.emergency_contact_relationship }} </div>
-                                    </span>
-                                {% endwith %}
-
-                           {% endif %}
-                       </li>
+                           <li>{{ managed_user.first_name }} {{ managed_user.last_name }} (managed account)
+                               {% if managed_user|has_disclaimer %}
+                                    {% with managed_user|latest_disclaimer as managed_user_disclaimer %}
+                                    <span class="helptext text-secondary">
+                                        <div><strong>Emergency Contact Information</strong>  <a class="btn btn-xs btn-outline-success p-0" href="{% url 'accounts:update_emergency_contact' managed_user.id %}">Change</a></div>
+                                        <div><strong>Name:</strong> {{ managed_user_disclaimer.emergency_contact_name }} </div>
+                                       <div><strong>Phone:</strong> {{ managed_user_disclaimer.emergency_contact_phone }} </div>
+                                       <div><strong>Relationship:</strong> {{ managed_user_disclaimer.emergency_contact_relationship }} </div>
+                                        </span>
+                                    {% endwith %}
+                               {% endif %}
+                           </li>
                         {% endif %}
                    {% endfor %}
                 </ul>
            {% endif %}
-           {% if user.is_manager %}
-                <div class="card-text"><a class="btn btn-xs btn-success btn-xs-wide" href="{% url 'accounts:register_child_user' %}">Add Managed Account</a></div>
-            {% endif %}
-       {% else %}
-           <div class="card-text">You do not manage accounts for other users.</div>
-           <div class="card-text"><a class="btn btn-xs btn-xs-wide btn-success" href="{% url 'accounts:update_profile' %}">Change</a></div>
-       {% endif %}
-        {% if not user.is_student %}You are not currently registered as a student.
-            <div class="card-text"><a class="btn btn-xs btn-xs-wide btn-success" href="{% url 'accounts:update_profile' %}">Change</a></div>
-        {% endif %}
+        {% endif %}</div>
+       {% if not user.is_manager %}<div class="card-text">You do not currently manage accounts for other users.</div>{% endif %}
+            {% if not user.is_student %}<div class="card-text">You are not currently registered as a student.</div>{% endif %}
+   <div class="card-text"><a class="btn btn-xs btn-success btn-xs-wide" href="{% url 'accounts:register_child_user' %}">Add Managed Account</a></div>
         </div>
    </div>
     <div class="card">
