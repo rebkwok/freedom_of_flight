@@ -480,8 +480,8 @@ class Block(models.Model):
                 and self.block_config.event_type == course.event_type \
                 and self.block_config.size == course.number_of_events:
             # it's valid for courses, event type matches, and it's the right size for the course
-            # check it's valid for the earliest event (hasn't expired)
-            event = event or course.events.order_by("start").first()
+            # check it's valid for the earliest uncancelled event (hasn't expired)
+            event = event or course.uncancelled_events.order_by("start").first()
             valid_for_event = self._valid_and_active_for_event(event)
             if valid_for_event:
                 # make sure it hasn't been used to book events on a different course

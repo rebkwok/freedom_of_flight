@@ -18,7 +18,7 @@ from booking.models import Booking, Course, Event, Track, EventType
 from common.utils import full_name
 
 from ..forms import CourseCreateForm, CourseUpdateForm
-from .utils import is_instructor_or_staff, staff_required, StaffUserMixin, InstructorOrStaffUserMixin
+from .utils import get_current_courses, get_past_courses, staff_required, StaffUserMixin, InstructorOrStaffUserMixin
 
 
 class CourseAdminListView(LoginRequiredMixin, StaffUserMixin, ListView):
@@ -27,17 +27,9 @@ class CourseAdminListView(LoginRequiredMixin, StaffUserMixin, ListView):
     context_object_name = "courses"
     custom_paginate_by = 10
 
-    def _include_course(self, course, start_of_today):
-        if course.last_event_date is None:
-            return True
-        else:
-            return course.last_event_date >= start_of_today
-
     def get_queryset(self):
         queryset = super().get_queryset()
-        start_of_today = timezone.now().replace(hour=0, minute=0, microsecond=0)
-        # Get the courses that have at least one event in the future, or have no events yet
-        return [course for course in queryset if self._include_course(course, start_of_today)]
+        return get_current_courses(queryset)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -92,11 +84,9 @@ class CourseAdminListView(LoginRequiredMixin, StaffUserMixin, ListView):
 
 class PastCourseAdminListView(CourseAdminListView):
 
-    def _include_course(self, course, start_of_today):
-        if course.last_event_date is None:
-            return False
-        else:
-            return course.last_event_date < start_of_today
+    def get_queryset(self):
+        # not super, because the super view filters only to current/future
+        return get_past_courses()
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

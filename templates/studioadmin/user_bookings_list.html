@@ -21,10 +21,12 @@
     {% endif  %}
     </div>
     <a class="bookingadd btn btn-success btn-sm mb-2" href="#" data-form="{% url 'studioadmin:bookingadd' account_user.id %}" title="add booking">Add new booking</a>
+    <a class="coursebookingadd btn btn-success btn-sm mb-2" href="#" data-form="{% url 'studioadmin:coursebookingadd' account_user.id %}" title="add course booking">Add new course booking</a>
 
     <!-- Modal -->
     <div class="modal fade" id="UserBookingModal" tabindex="-1" role="dialog" aria-labelledby="UserBookingModalLabel"></div>
     <div class="modal fade" id="UserBookingAddModal" tabindex="-1" role="dialog" aria-labelledby="UserBookingAddModalLabel"></div>
+    <div class="modal fade" id="UserCourseBookingAddModal" tabindex="-1" role="dialog" aria-labelledby="UserCourseBookingAddModalLabel"></div>
     <!-- /.modal -->
 
     {% if bookings %}
@@ -49,7 +51,7 @@
                                    title="edit booking">Edit</a>
                         </td>
                         <td>{{ booking.event.start|date:"D d M Y, H:i" }}</td>
-                        <td>{{ booking.event.name }} {% if booking.event.course %}({{ booking.event.course.name }}){% endif %}</td>
+                        <td>{{ booking.event.name }} {% if booking.event.course %}({{ booking.event.course.name }}){% endif %}{% if booking.event.cancelled %} (CANCELLED){% endif %}</td>
                         <td>{{ booking.event.event_type.track }}</td>
                         <td>
                             {% if booking.status == "OPEN" and booking.no_show %}
@@ -106,4 +108,17 @@
     });
 
 </script>
+<script>
+    $(".coursebookingadd").click(function(ev) { // for each add url
+        ev.preventDefault(); // prevent navigation
+        var url = $(this).data("form"); // get the form url
+        $("#UserCourseBookingAddModal").load(url, function() { // load the url into the modal
+            $(this).modal('show'); // display the modal on url load
+        });
+
+        return false; // prevent the click propagation
+    });
+
+</script>
+
 {% endblock %}

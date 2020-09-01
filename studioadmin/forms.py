@@ -18,12 +18,13 @@ from crispy_forms.layout import Button, Layout, Submit, Row, Column, Field, Fiel
 from delorean import Delorean
 
 from .form_utils import Formset
-
+from .views.utils import get_current_courses
 from accounts.admin import CookiePolicyAdminForm, DataPrivacyPolicyAdminForm, DisclaimerContentAdminForm
 from accounts.models import CookiePolicy, DisclaimerContent, DataPrivacyPolicy
 from booking.models import (
     Booking, Block, Event, Course, EventType, COMMON_LABEL_PLURALS, BlockConfig, SubscriptionConfig, Subscription
 )
+from booking.utils import has_available_course_block
 from common.utils import full_name
 from timetable.models import TimetableSession
 
@@ -840,16 +841,58 @@ class AddEditBookingForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         if self.instance.id:
             self.event = self.instance.event
+            course_event = self.event.course is not None
         else:
             self.event = None
+            course_event = False
             already_booked = self.user.bookings.values_list("event_id", flat=True)
             self.fields['event'] = forms.ModelChoiceField(
                 queryset=Event.objects.filter(
-                    start__gte=timezone.now()
-                ).filter(cancelled=False).exclude(id__in=already_booked).order_by('-start'),
+                    course__isnull=True, start__gte=timezone.now()
+                ).filter(cancelled=False).exclude(id__in=already_booked).order_by('start'),
                 widget=forms.Select(attrs={'class': 'form-control input-sm'}),
-                required=True
+                required=True,
+                help_text="Only drop-in events can be added here; for course events, use the "
+                          "'Add Course Booking' button"
             )
+
+        if course_event:
+            # editing and existing booking for a course event; we'll hide the block/subscription
+            # fields
+            self.fields['block'] = BlockModelChoiceField(
+                queryset=Block.objects.filter(id=self.instance.block.id) if self.instance.block else Block.objects.none(),
+                required=False,
+            )
+            self.fields['subscription'] = SubscriptionModelChoiceField(
+                queryset=Subscription.objects.none(),
+                required=False,
+            )
+        else:
+            # adding a new booking; include subscription and block fields, limit block options to
+            # non-course blocks
+            active_user_blocks = [
+                block.id for block in self.user.blocks.filter(block_config__course=False)
+                if block.active_block or block == self.instance.block
+
+            ]
+            self.fields['block'] = (BlockModelChoiceField(
+                queryset=self.user.blocks.filter(id__in=active_user_blocks),
+                widget=forms.Select(attrs={'class': 'form-control input-sm'}),
+                required=False,
+                empty_label="--------None--------"
+            ))
+
+            active_user_subscriptions = [
+                subscription.id for subscription in self.user.subscriptions.filter(
+                    paid=True, start_date__lte=timezone.now(), expiry_date__gte=timezone.now()
+                ) if subscription.config.bookable_event_types
+            ]
+            self.fields['subscription'] = (SubscriptionModelChoiceField(
+                queryset=self.user.subscriptions.filter(id__in=active_user_subscriptions),
+                widget=forms.Select(attrs={'class': 'form-control input-sm'}),
+                required=False,
+                empty_label="--------None--------"
+            ))
 
         self.fields['auto_assign_available_subscription_or_block'] = forms.BooleanField(
             initial=False, required=False,
@@ -857,32 +900,10 @@ class AddEditBookingForm(forms.ModelForm):
                       "Subscriptions are used before blocks, if both exist.  Any entries in the subscription/block "
                       "fields below will be ignored."
         )
-        if self.instance.id and (self.instance.block or self.instance.subscription):
+        if (self.instance.id and (self.instance.block or self.instance.subscription)) or course_event:
             self.fields['auto_assign_available_subscription_or_block'].widget = forms.HiddenInput()
         else:
             self.fields['auto_assign_available_subscription_or_block'].initial = True
-
-        active_user_blocks = [
-            block.id for block in self.user.blocks.all() if block.active_block or block == self.instance.block
-        ]
-        self.fields['block'] = (BlockModelChoiceField(
-            queryset=self.user.blocks.filter(id__in=active_user_blocks),
-            widget=forms.Select(attrs={'class': 'form-control input-sm'}),
-            required=False,
-            empty_label="--------None--------"
-        ))
-
-        active_user_subscriptions = [
-            subscription.id for subscription in self.user.subscriptions.filter(
-                paid=True, start_date__lte=timezone.now(), expiry_date__gte=timezone.now()
-            ) if subscription.config.bookable_event_types
-        ]
-        self.fields['subscription'] = (SubscriptionModelChoiceField(
-            queryset=self.user.subscriptions.filter(id__in=active_user_subscriptions),
-            widget=forms.Select(attrs={'class': 'form-control input-sm'}),
-            required=False,
-            empty_label="--------None--------"
-        ))
 
         self.helper = FormHelper()
         self.helper.layout = Layout(
@@ -892,8 +913,11 @@ class AddEditBookingForm(forms.ModelForm):
             "no_show",
             "attended",
             "auto_assign_available_subscription_or_block",
-            "subscription",
-            "block",
+            Hidden("subscription", self.instance.subscription.id if self.instance.subscription else "") if course_event else "subscription",
+            Hidden("block", self.instance.block.id if self.instance.block else "") if course_event else "block",
+            HTML(f"<p class='helptext'>Credit blocks used for courses are not editable on single booking.  "
+                 f"If you want to update the credit block used for this booking, you can change the course "
+                 f"assigned to it in the student's blocks list.</p>") if course_event else HTML(""),
             Submit('submit', 'Save')
         )
 
@@ -908,27 +932,26 @@ class AddEditBookingForm(forms.ModelForm):
         event = self.event or self.cleaned_data.get('event')
         status = self.cleaned_data.get('status')
         no_show = self.cleaned_data.get('no_show')
+        if event.course:
+            # No options to update blocks on courses, no need for further checks here
+            return
+
         if not auto_assign_available_subscription_or_block:
             # We'll ignore any assigned blocks/subscriptions if auto-assigning
             if block and subscription:
                 self.add_error("__all__", "Assign booking to EITHER a block or a subscription, not both")
             if block:
-                # check block validity; this will check both events and courses
+                # check block validity; only needs to be checked on non-courses
                 if not block.valid_for_event(event):
-                    msg = f"{event.event_type.pluralized_label} on this course" if event.course else f"this {event.event_type.label}"
-                    self.add_error("block", f"Block is not valid for {msg} (wrong event type or expired by date of {event.event_type.label})")
-                if status == "CANCELLED" and not no_show and not event.course:
+                    self.add_error("block", f"Block is not valid for this {event.event_type.label} (wrong event type or expired by date of {event.event_type.label})")
+                if status == "CANCELLED" and not no_show:
                     self.add_error(
-                        "block", f"Block cannot be assigned for cancelled booking.  "
-                                 f"Set to open and no_show if a block should be used.")
+                        "block", f"Block cannot be assigned for cancelled booking. Set to open and no_show if a block should be used.")
             if subscription:
                 # check subscription validity; this will check both events and courses
                 if not subscription.valid_for_event(event):
-                    if event.course:
-                        msg = "Subscriptions are not valid for courses"
-                    else:
-                        msg = f"Subscription is not valid for this {event.event_type.label} (invalid event type, usage limits " \
-                              f"reached, or expired by date of {event.event_type.label})"
+                    msg = f"Subscription is not valid for this {event.event_type.label} (invalid event type, usage limits " \
+                          f"reached, or expired by date of {event.event_type.label})"
                     self.add_error("subscription", msg)
         else:
             # unset and entered block and subscription values if auto-assigning
@@ -945,12 +968,11 @@ class AddEditBookingForm(forms.ModelForm):
                     self.add_error("__all__", f"This {event.event_type.label} is full, can't make new booking.")
             else:
                 # if this is an existing booking for a course, booking can be reopened, no need to check
-                if not event.course:
-                    existing_booking = self.user.bookings.get(event=event)
-                    if (status == "OPEN" and not no_show) and (existing_booking.status == "CANCELLED" or existing_booking.no_show):
-                        # trying to reopen cancelled booking for full event
-                        if status == "OPEN" and not no_show:
-                            self.add_error("__all__", f"This {event.event_type.label} is full, can't make new booking.")
+                existing_booking = self.user.bookings.get(event=event)
+                if (status == "OPEN" and not no_show) and (existing_booking.status == "CANCELLED" or existing_booking.no_show):
+                    # trying to reopen cancelled booking for full event
+                    if status == "OPEN" and not no_show:
+                        self.add_error("__all__", f"This {event.event_type.label} is full, can't make new booking.")
 
     def full_clean(self):
         super().full_clean()
@@ -1061,3 +1083,107 @@ class AddEditSubscriptionForm(forms.ModelForm):
             "paid",
             Submit('submit', 'Save')
         )
+
+
+class CourseBookingAddChangeForm(forms.Form):
+
+    send_confirmation = forms.BooleanField(
+        widget=forms.CheckboxInput(attrs={'class': "regular-checkbox", }), initial=False, required=False,
+        help_text="Send confimation email to student"
+    )
+
+    def __init__(self, *args, **kwargs):
+        booking_user = kwargs.pop('booking_user')
+        block = kwargs.pop('block', None)
+        old_course = kwargs.pop('old_course', None)
+        old_course_id = old_course.id if old_course else None
+        super().__init__(*args, **kwargs)
+        if block is None:
+            help_text = "Note that only ongoing/future courses that are fully configured and have " \
+                        "spaces are listed here. You can't make a new course booking for a full course."
+        else:
+            help_text = "Note that only ongoing/future courses that are fully configured, have spaces and are valid for this credit block " \
+            "are listed here. You can't reassign the block to a full course."
+
+        self.helper = FormHelper()
+        course_choices = get_course_choices_for_user(booking_user, block, old_course_id)
+        if not course_choices:
+            self.helper.layout = Layout(
+                HTML(f"<p>Student has no available course credit blocks. Go to their"
+                     f" <a href={reverse('studioadmin:user_blocks', args=(booking_user.id,))}>blocks list</a> to "
+                     f"add one first. You will be able to assign a course to the new block from there.</p>")
+            )
+            self.fields['course'] = forms.ChoiceField(choices=[])
+        else:
+            self.fields['course'] = forms.ChoiceField(
+                choices=course_choices,
+                required=True,
+                help_text=help_text,
+            )
+
+            self.helper.layout = Layout(
+                HTML(f"<p><strong>Current course:</strong> {old_course.name + ' - start ' + old_course.start.strftime('%d-%b') if old_course else 'None'}</p>")
+                if block else HTML(""),
+                "course",
+                HTML(
+                    f"<p>Changing an existing course on a block will cancel the student's bookings for the old course "
+                    f"and create a booking for every {block.block_config.event_type.label} in the new course.</p>"
+                ) if block is not None else HTML(
+                    "<p>The course will be automatically assigned to the student's next available block.</p>"
+                ),
+                "send_confirmation",
+                Submit('submit', 'Save')
+            )
+
+    def full_clean(self):
+        super().full_clean()
+        if self.errors.get("course"):
+            errorlist = [*self.errors["course"]]
+            for i, error in enumerate(self.errors["course"]):
+                # remove the default full booking messages, it's not user friendly and we should have added a nicer one already
+                if "select a valid choice" in error.lower():
+                    course_choice = self.data.get("course")
+                    try:
+                        course = Course.objects.get(id=course_choice)
+                        if course.full:
+                            errorlist.remove(error)
+                            errorlist.insert(i, f"The course {course} is now full")
+                        elif not self.fields["course"].choices:
+                            errorlist.remove(error)
+                            errorlist.insert(i, f"No valid course options")
+                    except Exception:
+                        pass
+            if errorlist != self.errors["course"]:
+                self.errors["course"] = errorlist
+
+
+def get_course_choices_for_user(user, block, current_course_id):
+    if block is not None:
+        # CHANGING COURSE ON A BLOCK
+        # get only courses that that haven't ended yet, match the block's event type and size,
+        # excluding the one it's already used for
+        queryset = Course.objects.filter(event_type=block.block_config.event_type, number_of_events=block.block_config.size)
+        if current_course_id:
+            queryset = queryset.exclude(id=current_course_id)
+        courses = get_current_courses(queryset)
+        # filter out courses that are full and not configured.  We already filtered to courses of the same
+        # event type and size of this block, so any choices are valid switches
+        courses = [course for course in courses if course.is_configured() and not course.full]
+    else:
+        # ADDING A COURSE BOOKING TO AN AVAILABLE BLOCK
+        # get all courses that haven't ended yet and that the user hasn't already booked for
+        user_booked_course_ids = user.bookings.filter(event__course__isnull=False).order_by().distinct("event__course").values_list("event__course_id")
+        queryset = Course.objects.exclude(id__in=user_booked_course_ids)
+        courses = get_current_courses(queryset)
+        # filter out courses that are full and not configured, and limit to ones the student has a
+        # block for
+        courses = [
+            course for course in courses if course.is_configured() and not course.full
+            and has_available_course_block(user, course)
+        ]
+
+    return tuple(
+        [
+            (course.id, f"{course.name} - start {course.start.strftime('%d-%b')}") for course in courses
+        ]
+    )

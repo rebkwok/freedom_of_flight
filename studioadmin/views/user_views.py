@@ -16,10 +16,14 @@ from braces.views import LoginRequiredMixin
 from activitylog.models import ActivityLog
 from booking.email_helpers import send_bcc_emails, send_user_and_studio_emails, send_waiting_list_email
 from booking.models import Booking, Block, Course, Event, WaitingListUser, SubscriptionConfig, Subscription
+from booking.utils import get_active_user_block, has_available_course_block
 from common.utils import full_name
 
-from ..forms import EmailUsersForm, SearchForm, AddEditBookingForm, AddEditBlockForm, AddEditSubscriptionForm
-from .utils import staff_required, InstructorOrStaffUserMixin
+from ..forms import (
+    EmailUsersForm, SearchForm, AddEditBookingForm, AddEditBlockForm, AddEditSubscriptionForm,
+    CourseBookingAddChangeForm
+)
+from .utils import staff_required, is_instructor_or_staff, InstructorOrStaffUserMixin
 
 
 @login_required
@@ -216,7 +220,6 @@ def process_user_booking_updates(form, request, user):
             booking = form.save(commit=False)
             event_was_full = booking.event.spaces_left == 0
             action = 'updated' if form.instance.id else 'created'
-            block_removed = False
 
             if 'status' in form.changed_data and action == 'updated':
                 if booking.status == 'CANCELLED':
@@ -228,7 +231,8 @@ def process_user_booking_updates(form, request, user):
                         booking.block = user.bookings.get(id=booking.id).block
                         messages.info(
                             request,
-                            "Cancelled course event bookings are not refunded to user; booking has been set to no-show instead."
+                            "Cancelled course bookings are not refunded to user or credited back to blocks; "
+                            "booking has been set to no-show instead."
                         )
                     elif booking.block:  # pragma: no cover
                         # Form validation should prevent this, but make sure no block is assigned anyway
@@ -239,7 +243,6 @@ def process_user_booking_updates(form, request, user):
 
             elif 'no_show' in form.changed_data and action == 'updated' and booking.status == 'OPEN':
                 action = 'cancelled' if booking.no_show else 'reopened'
-                messages.success(request, f"Booking {action} as 'no-show'")
             if form.cleaned_data["auto_assign_available_subscription_or_block"] and action != "cancelled":
                 # auto-assign to next available subscription or block
                 booking.assign_next_available_subscription_or_block()
@@ -482,3 +485,148 @@ def ajax_subscription_delete(request, subscription_id):
     )
     subscription.delete()
     return JsonResponse({"deleted": True, "alert_msg": "Subscription deleted"})
+
+
+@login_required
+@is_instructor_or_staff
+def course_booking_add_view(request, user_id):
+    user = get_object_or_404(User, pk=user_id)
+    if request.method == "POST":
+        form = CourseBookingAddChangeForm(request.POST, booking_user=user)
+        if form.is_valid():
+            course = Course.objects.get(pk=form.cleaned_data["course"])
+            course_block = get_active_user_block(user, course.uncancelled_events.first())
+            if course_block is None:
+                messages.error(
+                    request, "NOTE: This course does not have a credit block assigned as payment."
+                )
+
+            new_bookings = 0
+            updated_bookings = 0
+            for event in course.uncancelled_events:
+                booking, created = Booking.objects.get_or_create(user=user, event=event)
+                booking.block = course_block
+                booking.save()
+                if created:
+                    new_bookings += 1
+                else:
+                    updated_bookings += 1
+
+            if 'send_confirmation' in form.changed_data:
+                host = f"http://{request.META.get('HTTP_HOST')}"
+                ctx = {
+                    'host': host,
+                    'course': course,
+                    'user': user,
+                }
+                email_user = user.manager_user if user.manager_user else user
+                send_user_and_studio_emails(
+                    ctx, email_user, send_to_studio=False,
+                    subjects={"user": f"New course booking: {course.name}"},
+                    template_dir="studioadmin/email",
+                    template_short_name="course_booking_confirmation")
+                send_confirmation_msg = " and confirmation email sent to user"
+            else:
+                send_confirmation_msg = ""
+
+            messages.success(
+                request,
+                f'{full_name(user)} has been booked into all {course.event_type.pluralized_label} '
+                f'for course {course}{send_confirmation_msg}'
+            )
+
+            ActivityLog.objects.create(
+                log=f"Booking added for course {course}, user {full_name(user)} by admin user "
+                    f"{full_name(request.user)}; {new_bookings} new bookings created, {updated_bookings} updated; "
+                    f"Credit block {'NOT 'if course_block is None else ''}assigned"
+            )
+            return HttpResponse(render_to_string('studioadmin/includes/modal-success.html'))
+    else:
+        form = CourseBookingAddChangeForm(booking_user=user)
+
+    context = {"booking_user": user, "form": form}
+    return render(request, "studioadmin/includes/user-booking-course-add-modal.html", context)
+
+
+@login_required
+@is_instructor_or_staff
+def course_block_change_view(request, block_id):
+    course_block = get_object_or_404(Block, pk=block_id)
+    existing_bookings = course_block.bookings.all()
+    if existing_bookings:
+        old_course = existing_bookings.first().event.course
+    else:
+        old_course = None
+    user = course_block.user
+    if request.method == "POST":
+        form = CourseBookingAddChangeForm(request.POST, booking_user=user, block=course_block, old_course=old_course)
+        if form.is_valid():
+            course = Course.objects.get(pk=form.cleaned_data["course"])
+            if course == old_course:
+                messages.info(request, "No changes made")
+            else:
+                for booking in existing_bookings:
+                    booking.block = None
+                    booking.status = "CANCELLED"
+                    booking.save()
+
+                new_bookings = 0
+                updated_bookings = 0
+                for event in course.uncancelled_events:
+                    booking, created = Booking.objects.get_or_create(user=user, event=event)
+                    booking.block = course_block
+                    booking.save()
+                    if created:
+                        new_bookings += 1
+                    else:
+                        updated_bookings += 1
+
+                if 'send_confirmation' in form.changed_data:
+                    host = f"http://{request.META.get('HTTP_HOST')}"
+                    ctx = {
+                        'host': host,
+                        'course': course,
+                        'user': user,
+                        'old_course': old_course,
+                    }
+                    email_user = user.manager_user if user.manager_user else user
+                    send_user_and_studio_emails(
+                        ctx, email_user, send_to_studio=False,
+                        subjects={"user": f"New course booking: {course.name}"},
+                        template_dir="studioadmin/email",
+                        template_short_name="course_booking_confirmation")
+                    send_confirmation_msg = " and confirmation email sent to user"
+                else:
+                    send_confirmation_msg = ""
+
+                if old_course:
+                    messages.success(
+                        request,
+                        f'Course has been changed from {old_course.name} '
+                        f'(starts {old_course.start.strftime("%d-%b")}) to {course.name} (starts {course.start.strftime("%d-%b")})'
+                        f'{send_confirmation_msg}. Bookings for the old course have been cancelled.'
+                    )
+
+                    ActivityLog.objects.create(
+                        log=f"Course changed on block {course_block.id}, user {full_name(user)} by admin user "
+                            f"{full_name(request.user)}; {existing_bookings.count()} old bookings cancelled; "
+                            f"{new_bookings} new bookings created, {updated_bookings} updated"
+                    )
+                else:
+                    if old_course:
+                        messages.success(
+                            request,
+                            f'Course {course.name} (starts {course.start.strftime("%d-%b")}) has been assigned to block'
+                            f'{send_confirmation_msg}.'
+                        )
+
+                        ActivityLog.objects.create(
+                            log=f"Course {course} (id {course.id}) assigned to block {course_block.id}, user {full_name(user)} by admin user "
+                                f"{full_name(request.user)}; {new_bookings} new bookings created, {updated_bookings} updated"
+                        )
+
+            return HttpResponse(render_to_string('studioadmin/includes/modal-success.html'))
+    else:
+        form = CourseBookingAddChangeForm(booking_user=user, block=course_block, old_course=old_course)
+    context = {"block": course_block, "form": form}
+    return render(request, "studioadmin/includes/user-booking-course-change-modal.html", context)

@@ -8,6 +8,39 @@ from django.utils import timezone
 
 from delorean import Delorean
 
+from booking.models import Course
+
+
+def _include_future_course(course, start_of_today):
+    if course.last_event_date is None:
+        return True
+    else:
+        return course.last_event_date >= start_of_today
+
+
+def _include_past_course(course, start_of_today):
+    if course.last_event_date is None:
+        return False
+    else:
+        return course.last_event_date < start_of_today
+
+
+def _get_courses(queryset, include_course_function):
+    if queryset is None:
+        queryset = Course.objects.all()
+    start_of_today = timezone.now().replace(hour=0, minute=0, microsecond=0)
+    return [course for course in queryset if include_course_function(course, start_of_today)]
+
+
+def get_current_courses(queryset=None):
+    # for future courses, courses with least one event in the future, or have no events yet
+    return _get_courses(queryset, _include_future_course)
+
+
+def get_past_courses(queryset=None):
+    # for past course, all events before the beginning of today
+    return _get_courses(queryset, _include_past_course)
+
 
 def staff_required(func):
     def decorator(request, *args, **kwargs):

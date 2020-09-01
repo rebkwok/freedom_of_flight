@@ -15,6 +15,8 @@
     <!-- Modal -->
     <div class="modal fade" id="UserBlockModal" tabindex="-1" role="dialog" aria-labelledby="UserBlockModalLabel"></div>
     <div class="modal fade" id="UserBlockAddModal" tabindex="-1" role="dialog" aria-labelledby="UserBlockAddModalLabel"></div>
+    <div class="modal fade" id="UserCourseBlockModal" tabindex="-1" role="dialog" aria-labelledby="UserCourseBlockModalLabel"></div>
+
     <!-- /.modal -->
 
     {% if blocks %}
@@ -35,27 +37,58 @@
 
             <tbody>
                 {% for block in blocks %}
-                    <tr id="row-block-{{ block.id }}" {% if block.expired or block.full %}class="expired"{% endif %}>
+                    <tr id="row-block-{{ block.id }}" {% if block.expired or block.full and not block.block_config.course %}class="expired"{% endif %}>
                         <td>
-                            <a class="blockedit" href="#"
+                            <a class="blockedit btn btn-success btn-xs btn-xs-narrow pt-0 pb-0" href="#"
                                    data-form="{% url 'studioadmin:blockedit' block.id %}"
-                                   title="edit block">Edit</a>
+                               title="edit block">Edit</a>
+
+                            {% if block.block_config.course and block.paid %}
+                                <br/><a class="courseblockchange btn btn-warning btn-xs btn-xs-narrow pt-0 pb-0" href="#"
+                                       data-form="{% url 'studioadmin:courseblockchange' block.id %}"
+                                      title="change course on block">
+                                {% if block.bookings.exists %}Change{% else %}Add{% endif %} Course</a>
+                            {% endif %}
                         </td>
                         <td class="text-center">{{ block.status }}
                             {% if block.active_block %}
                                 ACTIVE
-                            {% elif block.expired or block.full %}
+                            {% elif block.full %}
+                                FULL
+                            {% elif block.expired %}
                                 EXPIRED
                             {% else %}
                                 UNPAID
                             {% endif %}
                         </td>
-                        <td class="text-center">{{ block.block_config }}</td>
+                        <td class="text-center"><small>{{ block.block_config }}</small></td>
                         <td class="text-center">{{ block.block_config.size }}</td>
-                        <td class="text-center">{{ block.bookings.count }}</td>
-                        <td class="text-center">{{ block.purchase_date|date:"d-M-y" }}</td>
-                        <td class="text-center">{{ block.start_date|date:"d-M-y" }}</td>
-                        <td class="text-center">{{ block.expiry_date|date:"d-M-y" }}</td>
+                        <td class="text-center">
+                        {% if block.bookings.exists %}
+                            {% if block.block_config.course %}
+                                <div
+                                    class="badge badge-secondary pr-2 pl-2"
+                                    data-toggle="tooltip"
+                                     data-placement="top"
+                                     data-html="true"
+                                     title="<ul class='helptext pl-0'>Starts {{ block.bookings.first.event.course.start|date:"D d-M-Y" }}">
+                                {{ block.bookings.first.event.course.name }}</div>
+                            {% else %}
+                            <div
+                                    class="badge badge-secondary pr-2 pl-2"
+                                    data-toggle="tooltip"
+                                     data-placement="top"
+                                     data-html="true"
+                                     title="<ul class='helptext pl-0'>{% for booking in block.bookings.all %}<li>{{ booking.event }}</li>{% endfor %}</ul>">
+                                {{ block.bookings.count }}</div>
+                            {% endif %}
+                        {% else %}
+                        -
+                        {% endif %}
+                        </td>
+                        <td class="text-center"><small>{{ block.purchase_date|date:"d-M-y" }}</small></td>
+                        <td class="text-center"><small>{{ block.start_date|date:"d-M-y" }}</small></td>
+                        <td class="text-center"><small>{{ block.expiry_date|date:"d-M-y" }}</small></td>
                         <td class="text-center">
                             {% if not block.paid %}
                                 <span
@@ -81,6 +114,6 @@
 
 {% block extra_js %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.form/4.2.2/jquery.form.min.js" integrity="sha384-FzT3vTVGXqf7wRfy8k4BiyzvbNfeYjK+frTVqZeNDFl8woCbF0CYG6g2fMEFFo/i" crossorigin="anonymous"></script>
-<script type='text/javascript' src="{% static 'studioadmin/js/user_blocks_ajax-v1.js' %}"></script>
+<script type='text/javascript' src="{% static 'studioadmin/js/user_blocks_ajax-v1.1.js' %}"></script>
 
 {% endblock %}

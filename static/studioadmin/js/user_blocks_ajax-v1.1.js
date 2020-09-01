@@ -116,4 +116,14 @@ $(document).ready(function()  {
         return false; // prevent the click propagation
     });
 
+    $(".courseblockchange").click(function(ev) { // for each edit url
+        ev.preventDefault(); // prevent navigation
+        var url = $(this).data("form"); // get the form url
+        $("#UserCourseBlockModal").load(url, function() { // load the url into the modal
+            $(this).modal('show'); // display the modal on url load
+        });
+
+        return false; // prevent the click propagation
+    });
+
 });

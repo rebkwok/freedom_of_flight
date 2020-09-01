@@ -2,7 +2,7 @@
 
 {% block messagecontent %}
 
-<p>Your booking for {{ event }} has been {{ action }} by an administrator.</p>
+<p>A booking for {{ event }} ({{ booking_user }}) has been {{ action }} by an administrator.</p>
 
 <a href="{{ host }}{% url 'booking:bookings' %}">View your bookings</a>
 

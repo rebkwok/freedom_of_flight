@@ -9,7 +9,7 @@ from django.urls import reverse
 from django.test import TestCase
 from django.utils import timezone
 
-from booking.models import Booking, Block, BlockConfig, Course, WaitingListUser, Subscription
+from booking.models import Booking, Block, BlockConfig, Course, Event, WaitingListUser, Subscription
 from accounts.models import has_active_disclaimer
 from common.test_utils import EventTestMixin, TestUsersMixin, make_disclaimer_content
 
@@ -398,7 +398,7 @@ class UserBookingAddViewTests(TestUsersMixin, TestCase):
         assert self.student_user.bookings.count() == 0
         form = resp.context_data["form"]
         assert form.errors == {
-            "block": ["Block cannot be assigned for cancelled booking.  Set to open and no_show if a block should be used."]
+            "block": ["Block cannot be assigned for cancelled booking. Set to open and no_show if a block should be used."]
         }
 
     def test_add_booking_for_full_event(self):
@@ -581,6 +581,200 @@ class UserBookingEditViewTests(TestUsersMixin, TestCase):
         self.client.post(self.url, {**self.form_data, "status": "CANCELLED"})
         assert len(mail.outbox) == 1
         assert mail.outbox[0].bcc == [self.student_user1.email, self.manager_user.email]
+
+
+class UserCourseBookingAddViewTests(EventTestMixin, TestUsersMixin, TestCase):
+
+    def setUp(self):
+        self.create_admin_users()
+        self.create_users()
+        self.create_tracks_and_event_types()
+        self.create_events_and_course()
+
+        # configure the course
+        for i in range(self.course.number_of_events - self.course.uncancelled_events.count()):
+            baker.make(Event, event_type=self.course.event_type, course=self.course)
+        self.unconfigured_course = baker.make(
+            Course, event_type=self.course.event_type, number_of_events=self.course.number_of_events
+        )
+
+        self.course_config = baker.make(BlockConfig, duration=2, cost=10, event_type=self.course.event_type, course=True, size=self.course.number_of_events)
+
+        self.login(self.staff_user)
+        self.url = reverse("studioadmin:coursebookingadd", args=(self.student_user.id,))
+
+    def test_instructor_and_staff_can_access(self):
+        self.user_access_test(["staff", "instructor"], self.url)
+
+    def test_get(self):
+        resp = self.client.get(self.url)
+        assert resp.context["booking_user"] == self.student_user
+
+    def test_add_course_booking_no_available_block(self):
+        assert self.student_user.bookings.exists() is False
+        resp = self.client.get(self.url)
+        assert resp.context["form"].fields["course"].choices == []
+        assert "Student has no available course credit blocks" in resp.content.decode("utf-8")
+
+        # unpaid block, still not allowed to book
+        block = baker.make(Block, user=self.student_user, block_config=self.course_config, paid=False)
+        resp = self.client.get(self.url)
+        assert resp.context["form"].fields["course"].choices == []
+        assert "Student has no available course credit blocks" in resp.content.decode("utf-8")
+
+        # paid block, allowed
+        block.paid = True
+        block.save()
+        resp = self.client.get(self.url)
+        # Only the configured course is an option
+        assert len(resp.context["form"].fields["course"].choices) == 1
+        assert resp.context["form"].fields["course"].choices[0][0] == self.course.id
+
+    def test_course_options(self):
+        def _get_choices_ids(response):
+            return sorted(choice[0] for choice in response.context["form"].fields["course"].choices)
+        # user has paid block valid for self.course and self.unconfigured_course
+        block = baker.make(
+            Block, user=self.student_user, block_config=self.course_config, paid=True
+        )
+        block.save()
+        resp = self.client.get(self.url)
+        # Only the configured course is an option
+        choices = _get_choices_ids(resp)
+        assert len(resp.context["form"].fields["course"].choices) == 1
+        assert choices == [self.course.id]
+
+        # configured course with spaces, but not valid for the user's block, not shown in choices
+        course = baker.make(Course, event_type=self.course.event_type, number_of_events=4)
+        baker.make(Event, course=course, event_type=self.course.event_type, _quantity=4)
+        assert course.is_configured()
+        assert course.full is False
+        assert block.valid_for_course(course) is False
+        resp = self.client.get(self.url)
+        assert _get_choices_ids(resp) == [self.course.id]
+
+        # make a block for the user
+        new_block = baker.make(
+            Block, user=self.student_user, block_config__event_type=self.course.event_type,
+            block_config__course=True, block_config__size=4, paid=True
+        )
+        assert new_block.valid_for_course(course) is True
+        resp = self.client.get(self.url)
+        assert _get_choices_ids(resp) == sorted([self.course.id, course.id])
+
+        # make self.course full
+        for event in self.course.uncancelled_events:
+            baker.make(Booking, event=event, _quantity=self.course.max_participants)
+        assert self.course.full is True
+        resp = self.client.get(self.url)
+        assert _get_choices_ids(resp) == [course.id]
+
+    def test_post_with_no_valid_options(self):
+        resp = self.client.post(self.url, {"course": self.course.id})
+        assert resp.context["form"].errors == {"course": ["No valid course options"]}
+
+    def test_add_booking_with_autoassigned_block(self):
+        assert self.student_user.bookings.exists() is False
+        block = baker.make(Block, user=self.student_user, block_config=self.course_config, paid=True)
+        assert block.valid_for_course(self.course) is True
+        self.client.post(self.url, {"course": self.course.id})
+        assert self.student_user.bookings.count() == self.course.uncancelled_events.count()
+        for booking in self.student_user.bookings.all():
+            assert booking.event.course == self.course
+            assert booking.block == block
+
+
+class UserBlockChangeCourseTests(EventTestMixin, TestUsersMixin, TestCase):
+
+    def setUp(self):
+        self.create_admin_users()
+        self.create_users()
+        self.create_tracks_and_event_types()
+        self.course1 = baker.make(Course, number_of_events=2, event_type=self.aerial_event_type)
+        self.course2 = baker.make(Course, number_of_events=2, event_type=self.aerial_event_type)
+        baker.make(Event, event_type=self.aerial_event_type, course=self.course1, _quantity=2)
+        baker.make(Event, event_type=self.aerial_event_type, course=self.course2, _quantity=2)
+        self.login(self.staff_user)
+
+        course_config = baker.make(
+            BlockConfig, duration=2, cost=10, event_type=self.aerial_event_type, course=True,
+            size=2
+        )
+        self.block = baker.make(Block, user=self.student_user, block_config=course_config, paid=True)
+
+        self.url = reverse("studioadmin:courseblockchange", args=(self.block.id,))
+
+    def test_instructor_and_staff_can_access(self):
+        self.user_access_test(["staff", "instructor"], self.url)
+
+    def test_get(self):
+        resp = self.client.get(self.url)
+        assert resp.context["block"] == self.block
+
+    def test_course_options(self):
+        def _get_choices_ids(response):
+            return sorted(choice[0] for choice in response.context["form"].fields["course"].choices)
+
+        resp = self.client.get(self.url)
+        # Both courses are configured and valid for the block
+        choices = _get_choices_ids(resp)
+        assert choices == sorted([self.course1.id, self.course2.id])
+
+        # book user on course 1
+        for event in self.course1.uncancelled_events:
+            baker.make(Booking, user=self.student_user, event=event, block=self.block)
+        resp = self.client.get(self.url)
+        choices = _get_choices_ids(resp)
+        assert choices == [self.course2.id]
+
+        # configured course with spaces, but not valid for the user's block, not shown in choices
+        course = baker.make(Course, event_type=self.course1.event_type, number_of_events=4)
+        baker.make(Event, course=course, event_type=self.course1.event_type, _quantity=4)
+        assert course.is_configured()
+        assert course.full is False
+        resp = self.client.get(self.url)
+        assert _get_choices_ids(resp) == [self.course2.id]
+
+        # make self.course full
+        for event in self.course2.uncancelled_events:
+            baker.make(Booking, event=event, _quantity=self.course2.max_participants)
+        assert self.course2.full is True
+        resp = self.client.get(self.url)
+        assert _get_choices_ids(resp) == []
+
+    def test_add_course_to_block(self):
+        assert self.student_user.bookings.exists() is False
+        self.client.post(self.url, {"course": self.course1.id})
+        assert self.student_user.bookings.count() == 2
+        for booking in self.student_user.bookings.all():
+            assert booking.block == self.block
+
+    def test_change_course_on_block(self):
+        for event in self.course1.events.all():
+            baker.make(Booking, event=event, user=self.student_user, block=self.block)
+
+        self.client.post(self.url, {"course": self.course2.id})
+        assert self.student_user.bookings.count() == 4
+        for booking in self.student_user.bookings.filter(event__course=self.course1):
+            assert booking.block is None
+            assert booking.status == "CANCELLED"
+        for booking in self.student_user.bookings.filter(event__course=self.course2):
+            assert booking.block == self.block
+
+    def test_send_email_confirmation(self):
+        self.client.post(self.url, {"course": self.course1.id, "send_confirmation": True})
+        assert len(mail.outbox) == 1
+        assert mail.outbox[0].to == [self.student_user.email]
+
+    def test_send_email_confirmation_managed_user(self):
+        self.block.user=self.child_user
+        self.block.save()
+        url = reverse("studioadmin:courseblockchange", args=(self.block.id,))
+        self.client.post(
+            url, {"course": self.course1.id, "send_confirmation": True}
+        )
+        assert len(mail.outbox) == 1
+        assert mail.outbox[0].to == [self.manager_user.email]
 
 
 class UserBlockListViewTests(TestUsersMixin, TestCase):
