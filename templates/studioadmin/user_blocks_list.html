@@ -46,7 +46,8 @@
                             {% if block.block_config.course and block.paid %}
                                 <br/><a class="courseblockchange btn btn-warning btn-xs btn-xs-narrow pt-0 pb-0" href="#"
                                        data-form="{% url 'studioadmin:courseblockchange' block.id %}"
-                                      title="change course on block">Change Course</a>
+                                      title="change course on block">
+                                {% if block.bookings.exists %}Change{% else %}Add{% endif %} Course</a>
                             {% endif %}
                         </td>
                         <td class="text-center">{{ block.status }}
