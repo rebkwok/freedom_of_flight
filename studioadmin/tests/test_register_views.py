@@ -172,9 +172,21 @@ class AjaxToggleAttendedTests(EventTestMixin, TestUsersMixin, TestCase):
         baker.make(Booking, event=event, _quantity=event.max_participants)
 
         url = reverse("studioadmin:ajax_toggle_attended", args=(booking.id,))
-        resp = self.client.post(url, {"attendance": "attended"}).json()
-        assert resp["attended"] is False
-        assert resp["alert_msg"] == "Class is now full, cannot reopen booking."
+        resp = self.client.post(url, {"attendance": "attended"})
+        assert resp.status_code == 400
+        assert resp.content.decode("utf-8") == "Class is now full, cannot reopen booking."
+
+    def test_toggle_attended_course_event_full(self):
+        event = self.course_event
+        booking = baker.make(Booking, event=event, status="OPEN", no_show=True)
+        baker.make(Booking, event=event, _quantity=event.max_participants - 1)
+        assert event.full
+
+        url = reverse("studioadmin:ajax_toggle_attended", args=(booking.id,))
+        resp = self.client.post(url, {"attendance": "attended"})
+        booking.refresh_from_db()
+        assert booking.attended is True
+        assert booking.no_show is False
 
     def test_toggle_no_show_event_full(self):
         event = self.aerial_events[0]

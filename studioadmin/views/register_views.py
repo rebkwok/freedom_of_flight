@@ -126,8 +126,10 @@ def ajax_toggle_attended(request, booking_id):
     alert_msg = None
     event_was_full = booking.event.spaces_left == 0
     if attendance == 'attended':
-        if (booking.no_show or booking.status == 'CANCELLED') and booking.event.spaces_left == 0:
-            alert_msg = f'{booking.event.event_type.label.title()} is now full, cannot reopen booking.'
+        # no need to check for full for course events; users can't cancel out of them, can always reopen
+        if not booking.event.course \
+                and (booking.no_show or booking.status == 'CANCELLED') and booking.event.spaces_left == 0:
+            return HttpResponseBadRequest(f'{booking.event.event_type.label.title()} is now full, cannot reopen booking.')
         else:
             booking.status = 'OPEN'
             booking.attended = True
@@ -142,7 +144,9 @@ def ajax_toggle_attended(request, booking_id):
         f'by admin user {request.user.username}'
     )
 
-    if event_was_full and attendance == 'no-show' and booking.event.start > (timezone.now() + timedelta(hours=1)):
+    # no need to check for full for course events; users can't cancel out of them, can always reopen
+    if not booking.event.course and \
+            event_was_full and attendance == 'no-show' and booking.event.start > (timezone.now() + timedelta(hours=1)):
         # Only send waiting list emails if marking booking as no-show more than 1 hr before the event start
         host = 'http://{}'.format(request.META.get('HTTP_HOST'))
         waiting_list_users = WaitingListUser.objects.filter(event=booking.event)
