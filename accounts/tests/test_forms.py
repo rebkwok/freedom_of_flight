@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import timedelta
 from model_bakery import baker
 
 from django.test import TestCase
@@ -58,6 +58,19 @@ class SignUpFormTests(TestUsersMixin, TestCase):
         form = SignupForm(data=form_data)
         assert form.is_valid() is False
 
+    def test_must_be_over_16(self):
+        form_data = {
+            **self.base_form_data,
+            'date_of_birth': (timezone.now() - timedelta(360*16)).strftime("%d-%b-%Y"),
+        }
+        form = SignupForm(data=form_data)
+        assert form.is_valid() is False
+        form_data = {
+            **self.base_form_data,
+            'date_of_birth': (timezone.now() - timedelta(366 * 16)).strftime("%d-%b-%Y"),
+        }
+        form = SignupForm(data=form_data)
+        assert form.is_valid() is True
 
 # class NonRegisteredDisclaimerFormTests(TestUsersMixin, TestCase):
 #

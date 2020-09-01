@@ -1,7 +1,7 @@
 from datetime import timedelta
 from model_bakery import baker
 
-from django.contrib.auth.models import Group
+from django.contrib.auth.models import Group, User
 from django.core.cache import cache
 from django.urls import reverse
 from django.test import TestCase
@@ -45,6 +45,30 @@ class ProfileUpdateViewTests(TestUsersMixin, TestCase):
         )
         self.student_user.refresh_from_db()
         assert self.student_user.first_name == "Fred"
+
+
+class ChildUserCreateViewTests(TestUsersMixin, TestCase):
+    def setUp(self):
+        self.create_users()
+        self.content = make_disclaimer_content()
+        self.url = reverse('accounts:register_child_user')
+        self.login(self.manager_user)
+
+    def test_add_child(self):
+        self.client.post(
+            self.url,
+            {
+                'first_name': 'Bugs',
+                'last_name': "Bunny",
+                "address": self.manager_user.userprofile.address,
+                "postcode": self.manager_user.userprofile.postcode,
+                "phone": self.manager_user.userprofile.phone,
+                "date_of_birth": "15-Jun-2000",
+            }
+        )
+        child_user = User.objects.get(first_name="Bugs")
+        assert child_user.email == ""
+        assert child_user.manager_user == self.manager_user
 
 
 class ProfileTests(TestUsersMixin, TestCase):
@@ -365,7 +389,6 @@ class SignedDataPrivacyCreateViewTests(TestUsersMixin, TestCase):
         cls.url = reverse('accounts:data_privacy_review')
         cls.data_privacy_policy = baker.make(DataPrivacyPolicy, version=None)
         cls.subscribed, _ = Group.objects.get_or_create(name='subscribed')
-
 
     def setUp(self):
         self.create_users()

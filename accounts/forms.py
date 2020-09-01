@@ -1,5 +1,6 @@
 from copy import deepcopy
 from datetime import datetime
+from dateutil.relativedelta import relativedelta
 
 from django import forms
 from django.contrib.auth.password_validation import get_password_validators, password_validators_help_text_html
@@ -34,12 +35,24 @@ class AccountFormMixin:
             )
         )
         self.fields["date_of_birth"] = forms.DateField(
-            widget=forms.DateInput(attrs={"autocomplete": "off"}, format='%d-%b-%Y'), input_formats=['%d-%b-%Y'],
+            widget=forms.DateInput(
+                attrs={"autocomplete": "off", 'class': 'form-control'}, format='%d-%b-%Y'
+            ),
+            input_formats=['%d-%b-%Y'],
+            help_text="Minimum age for registering as a main account holder is 16."
         )
         self.fields["address"] = forms.CharField(widget=forms.TextInput(attrs={'class': 'form-control'}))
         self.fields["postcode"] = forms.CharField(max_length=10, widget=forms.TextInput(attrs={'class': 'form-control'}))
         self.fields["phone"] = forms.CharField(max_length=20, widget=forms.TextInput(attrs={'class': 'form-control'}))
         self.fields["phone"].validators = [account_validators.phone_number_validator]
+
+    def clean_date_of_birth(self):
+        date_of_birth = self.cleaned_data.get("date_of_birth")
+        age_cutoff_date = (timezone.now() - relativedelta(years=16)).date()
+        if date_of_birth > age_cutoff_date:
+            self.add_error("date_of_birth", "You must be at least 16 years old to register and book classes")
+            return
+        return date_of_birth
 
 
 class CoreAccountFormMixin:
@@ -141,6 +154,10 @@ class RegisterChildUserForm(AccountFormMixin, forms.ModelForm):
     class Meta:
         model = ChildUserProfile
         fields = ("first_name", "last_name", "address", "postcode", "phone", "date_of_birth")
+
+    def clean_date_of_birth(self):
+        # override over-16 validation
+        return self.cleaned_data.get("date_of_birth")
 
 
 BASE_DISCLAIMER_FORM_WIDGETS = {
