@@ -1105,25 +1105,35 @@ class CourseBookingAddChangeForm(forms.Form):
             help_text = "Note that only ongoing/future courses that are fully configured, have spaces and are valid for this credit block " \
             "are listed here. You can't reassign the block to a full course."
 
-        self.fields['course'] = forms.ChoiceField(
-            choices=get_course_choices_for_user(booking_user, block, old_course_id),
-            required=True,
-            help_text=help_text,
-        )
         self.helper = FormHelper()
-        self.helper.layout = Layout(
-            HTML(f"<p><strong>Current course:</strong> {old_course.name + ' - start ' + old_course.start.strftime('%d-%b') if old_course else 'None'}</p>")
-            if block else HTML(""),
-            "course",
-            HTML(
-                f"<p>Changing an existing course on a block will cancel the student's bookings for the old course "
-                f"and create a booking for every {block.block_config.event_type.label} in the new course.</p>"
-            ) if block is not None else HTML("<p>If the student has a block available, it will be automatically assigned.  If no block is "
-                 "available, you can still create the course booking, but be aware that no payment method has "
-                 "been assigned.</p>"),
-            "send_confirmation",
-            Submit('submit', 'Save')
-        )
+        course_choices = get_course_choices_for_user(booking_user, block, old_course_id)
+        if not course_choices:
+            self.helper.layout = Layout(
+                HTML(f"<p>Student has no available course credit blocks. Go to their"
+                     f" <a href={reverse('studioadmin:user_blocks', args=(booking_user.id,))}>blocks list</a> to "
+                     f"add one first. You will be able to assign a course to the new block from there.</p>")
+            )
+            self.fields['course'] = forms.ChoiceField(choices=[])
+        else:
+            self.fields['course'] = forms.ChoiceField(
+                choices=course_choices,
+                required=True,
+                help_text=help_text,
+            )
+
+            self.helper.layout = Layout(
+                HTML(f"<p><strong>Current course:</strong> {old_course.name + ' - start ' + old_course.start.strftime('%d-%b') if old_course else 'None'}</p>")
+                if block else HTML(""),
+                "course",
+                HTML(
+                    f"<p>Changing an existing course on a block will cancel the student's bookings for the old course "
+                    f"and create a booking for every {block.block_config.event_type.label} in the new course.</p>"
+                ) if block is not None else HTML(
+                    "<p>The course will be automatically assigned to the student's next available block.</p>"
+                ),
+                "send_confirmation",
+                Submit('submit', 'Save')
+            )
 
     def full_clean(self):
         super().full_clean()
@@ -1138,6 +1148,9 @@ class CourseBookingAddChangeForm(forms.Form):
                         if course.full:
                             errorlist.remove(error)
                             errorlist.insert(i, f"The course {course} is now full")
+                        elif not self.fields["course"].choices:
+                            errorlist.remove(error)
+                            errorlist.insert(i, f"No valid course options")
                     except Exception:
                         pass
             if errorlist != self.errors["course"]:
@@ -1145,35 +1158,32 @@ class CourseBookingAddChangeForm(forms.Form):
 
 
 def get_course_choices_for_user(user, block, current_course_id):
-    def callable():
-        if block is not None:
-            # get only courses that that haven't ended yet, match the block's event type,
-            # excluding the one it's already used for
-            queryset = Course.objects.filter(event_type=block.block_config.event_type)
-            if current_course_id:
-                queryset = queryset.exclude(id=current_course_id)
-            courses = get_current_courses(queryset)
+    if block is not None:
+        # CHANGING COURSE ON A BLOCK
+        # get only courses that that haven't ended yet, match the block's event type and size,
+        # excluding the one it's already used for
+        queryset = Course.objects.filter(event_type=block.block_config.event_type, number_of_events=block.block_config.size)
+        if current_course_id:
+            queryset = queryset.exclude(id=current_course_id)
+        courses = get_current_courses(queryset)
+        # filter out courses that are full and not configured.  We already filtered to courses of the same
+        # event type and size of this block, so any choices are valid switches
+        courses = [course for course in courses if course.is_configured() and not course.full]
+    else:
+        # ADDING A COURSE BOOKING TO AN AVAILABLE BLOCK
+        # get all courses that haven't ended yet and that the user hasn't already booked for
+        user_booked_course_ids = user.bookings.filter(event__course__isnull=False).order_by().distinct("event__course").values_list("event__course_id")
+        queryset = Course.objects.exclude(id__in=user_booked_course_ids)
+        courses = get_current_courses(queryset)
+        # filter out courses that are full and not configured, and limit to ones the student has a
+        # block for
+        courses = [
+            course for course in courses if course.is_configured() and not course.full
+            and has_available_course_block(user, course)
+        ]
 
-        else:
-            # get all courses that haven't ended yet and that the user hasn't already booked for
-            user_booked_course_ids = user.bookings.filter(event__course__isnull=False).order_by().distinct("event__course").values_list("event__course_id")
-            queryset = Course.objects.exclude(id__in=user_booked_course_ids)
-            courses = get_current_courses(queryset)
-
-        # filter out courses that are full and not configured
-        courses = [course for course in courses if not course.is_configured() or not course.full]
-        # show choices with course and whether block is available to use
-        def _block_availability(course):
-            if block:
-                return ""
-            else:
-                return f"(block {'not' if not has_available_course_block(user, course) else ''} available)"
-
-        return tuple(
-            [
-                (course.id, f"{course.name} - start {course.start.strftime('%d-%b')} {_block_availability(course)}")
-                for course in courses
-            ]
-        )
-
-    return callable
+    return tuple(
+        [
+            (course.id, f"{course.name} - start {course.start.strftime('%d-%b')}") for course in courses
+        ]
+    )

@@ -590,9 +590,16 @@ class UserCourseBookingAddViewTests(EventTestMixin, TestUsersMixin, TestCase):
         self.create_users()
         self.create_tracks_and_event_types()
         self.create_events_and_course()
-        self.aerial_event = self.aerial_events[0]
-        self.aerial_event.course = self.course
-        self.aerial_event.save()
+
+        # configure the course
+        for i in range(self.course.number_of_events - self.course.uncancelled_events.count()):
+            baker.make(Event, event_type=self.course.event_type, course=self.course)
+        self.unconfigured_course = baker.make(
+            Course, event_type=self.course.event_type, number_of_events=self.course.number_of_events
+        )
+
+        self.course_config = baker.make(BlockConfig, duration=2, cost=10, event_type=self.course.event_type, course=True, size=self.course.number_of_events)
+
         self.login(self.staff_user)
         self.url = reverse("studioadmin:coursebookingadd", args=(self.student_user.id,))
 
@@ -603,23 +610,40 @@ class UserCourseBookingAddViewTests(EventTestMixin, TestUsersMixin, TestCase):
         resp = self.client.get(self.url)
         assert resp.context["booking_user"] == self.student_user
 
-    def test_add_course_booking(self):
+    def test_add_course_booking_no_available_block(self):
         assert self.student_user.bookings.exists() is False
-        self.client.post(self.url, {"course": self.course.id})
-        assert self.student_user.bookings.count() == 2
-        for booking in self.student_user.bookings.all():
-            assert booking.event.course == self.course
+        resp = self.client.get(self.url)
+        assert resp.context["form"].fields["course"].choices == []
+        assert "Student has no available course credit blocks" in resp.content.decode("utf-8")
+
+        # unpaid block, still not allowed to book
+        block = baker.make(Block, user=self.student_user, block_config=self.course_config, paid=False)
+        resp = self.client.get(self.url)
+        assert resp.context["form"].fields["course"].choices == []
+        assert "Student has no available course credit blocks" in resp.content.decode("utf-8")
+
+        # paid block, allowed
+        block.paid = True
+        block.save()
+        resp = self.client.get(self.url)
+        # Only the configured course is an option
+        assert len(resp.context["form"].fields["course"].choices) == 1
+        assert resp.context["form"].fields["course"].choices[0][0] == self.course.id
+
+    def test_post_with_no_valid_options(self):
+        resp = self.client.post(self.url, {"course": self.course.id})
+        assert resp.context["form"].errors == {"course": ["No valid course options"]}
 
     def test_add_booking_with_autoassigned_block(self):
         assert self.student_user.bookings.exists() is False
-        course_config = baker.make(BlockConfig, duration=2, cost=10, event_type=self.course.event_type, course=True, size=self.course.number_of_events)
-        block = baker.make(Block, user=self.student_user, block_config=course_config, paid=True)
+        block = baker.make(Block, user=self.student_user, block_config=self.course_config, paid=True)
         assert block.valid_for_course(self.course) is True
         self.client.post(self.url, {"course": self.course.id})
-        assert self.student_user.bookings.count() == 2
+        assert self.student_user.bookings.count() == self.course.uncancelled_events.count()
         for booking in self.student_user.bookings.all():
             assert booking.event.course == self.course
             assert booking.block == block
+
 
 class UserBlockChangeCourseTests(EventTestMixin, TestUsersMixin, TestCase):
 
