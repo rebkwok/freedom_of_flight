@@ -123,7 +123,7 @@ class Course(models.Model):
     number_of_events = models.PositiveIntegerField(default=4)
     slug = AutoSlugField(populate_from=["name", "event_type", "number_of_events"], max_length=40, unique=True)
     cancelled = models.BooleanField(default=False)
-    max_participants = models.PositiveIntegerField(help_text="Overrides any value set on individual linked events")
+    max_participants = models.PositiveIntegerField(default=10, help_text="Overrides any value set on individual linked events")
     show_on_site = models.BooleanField(default=False, help_text="Overrides any value set on individual linked events")
 
     @property

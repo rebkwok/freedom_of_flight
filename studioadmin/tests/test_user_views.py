@@ -455,7 +455,7 @@ class UserBookingEditViewTests(TestUsersMixin, TestCase):
         self.create_users()
         self.event = baker.make_recipe("booking.future_event", max_participants=3)
         self.booking = baker.make(Booking, user=self.student_user, event=self.event)
-        self.course = baker.make(Course, event_type=self.event.event_type)
+        self.course = baker.make(Course, event_type=self.event.event_type, max_participants=3)
         self.course_block = baker.make_recipe(
             "booking.course_block", block_config__event_type=self.event.event_type, user=self.student_user, paid=True
         )
@@ -645,7 +645,7 @@ class UserCourseBookingAddViewTests(EventTestMixin, TestUsersMixin, TestCase):
         assert choices == [self.course.id]
 
         # configured course with spaces, but not valid for the user's block, not shown in choices
-        course = baker.make(Course, event_type=self.course.event_type, number_of_events=4)
+        course = baker.make(Course, event_type=self.course.event_type, number_of_events=4, max_participants=3)
         baker.make(Event, course=course, event_type=self.course.event_type, _quantity=4)
         assert course.is_configured()
         assert course.full is False
@@ -690,8 +690,12 @@ class UserBlockChangeCourseTests(EventTestMixin, TestUsersMixin, TestCase):
         self.create_admin_users()
         self.create_users()
         self.create_tracks_and_event_types()
-        self.course1 = baker.make(Course, number_of_events=2, event_type=self.aerial_event_type)
-        self.course2 = baker.make(Course, number_of_events=2, event_type=self.aerial_event_type)
+        self.course1 = baker.make(
+            Course, number_of_events=2, event_type=self.aerial_event_type, max_participants=3
+        )
+        self.course2 = baker.make(
+            Course, number_of_events=2, event_type=self.aerial_event_type, max_participants=3
+        )
         baker.make(Event, event_type=self.aerial_event_type, course=self.course1, _quantity=2)
         baker.make(Event, event_type=self.aerial_event_type, course=self.course2, _quantity=2)
         self.login(self.staff_user)
@@ -714,7 +718,6 @@ class UserBlockChangeCourseTests(EventTestMixin, TestUsersMixin, TestCase):
     def test_course_options(self):
         def _get_choices_ids(response):
             return sorted(choice[0] for choice in response.context["form"].fields["course"].choices)
-
         resp = self.client.get(self.url)
         # Both courses are configured and valid for the block
         choices = _get_choices_ids(resp)
@@ -728,7 +731,7 @@ class UserBlockChangeCourseTests(EventTestMixin, TestUsersMixin, TestCase):
         assert choices == [self.course2.id]
 
         # configured course with spaces, but not valid for the user's block, not shown in choices
-        course = baker.make(Course, event_type=self.course1.event_type, number_of_events=4)
+        course = baker.make(Course, event_type=self.course1.event_type, number_of_events=4, max_participants=3)
         baker.make(Event, course=course, event_type=self.course1.event_type, _quantity=4)
         assert course.is_configured()
         assert course.full is False
