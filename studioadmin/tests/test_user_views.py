@@ -630,6 +630,45 @@ class UserCourseBookingAddViewTests(EventTestMixin, TestUsersMixin, TestCase):
         assert len(resp.context["form"].fields["course"].choices) == 1
         assert resp.context["form"].fields["course"].choices[0][0] == self.course.id
 
+    def test_course_options(self):
+        def _get_choices_ids(response):
+            return sorted(choice[0] for choice in response.context["form"].fields["course"].choices)
+        # user has paid block valid for self.course and self.unconfigured_course
+        block = baker.make(
+            Block, user=self.student_user, block_config=self.course_config, paid=True
+        )
+        block.save()
+        resp = self.client.get(self.url)
+        # Only the configured course is an option
+        choices = _get_choices_ids(resp)
+        assert len(resp.context["form"].fields["course"].choices) == 1
+        assert choices == [self.course.id]
+
+        # configured course with spaces, but not valid for the user's block, not shown in choices
+        course = baker.make(Course, event_type=self.course.event_type, number_of_events=4)
+        baker.make(Event, course=course, event_type=self.course.event_type, _quantity=4)
+        assert course.is_configured()
+        assert course.full is False
+        assert block.valid_for_course(course) is False
+        resp = self.client.get(self.url)
+        assert _get_choices_ids(resp) == [self.course.id]
+
+        # make a block for the user
+        new_block = baker.make(
+            Block, user=self.student_user, block_config__event_type=self.course.event_type,
+            block_config__course=True, block_config__size=4, paid=True
+        )
+        assert new_block.valid_for_course(course) is True
+        resp = self.client.get(self.url)
+        assert _get_choices_ids(resp) == sorted([self.course.id, course.id])
+
+        # make self.course full
+        for event in self.course.uncancelled_events:
+            baker.make(Booking, event=event, _quantity=self.course.max_participants)
+        assert self.course.full is True
+        resp = self.client.get(self.url)
+        assert _get_choices_ids(resp) == [course.id]
+
     def test_post_with_no_valid_options(self):
         resp = self.client.post(self.url, {"course": self.course.id})
         assert resp.context["form"].errors == {"course": ["No valid course options"]}
@@ -653,9 +692,8 @@ class UserBlockChangeCourseTests(EventTestMixin, TestUsersMixin, TestCase):
         self.create_tracks_and_event_types()
         self.course1 = baker.make(Course, number_of_events=2, event_type=self.aerial_event_type)
         self.course2 = baker.make(Course, number_of_events=2, event_type=self.aerial_event_type)
-        for i in range(2):
-            baker.make(Event, event_type=self.aerial_event_type, course=self.course1)
-            baker.make(Event, event_type=self.aerial_event_type, course=self.course2)
+        baker.make(Event, event_type=self.aerial_event_type, course=self.course1, _quantity=2)
+        baker.make(Event, event_type=self.aerial_event_type, course=self.course2, _quantity=2)
         self.login(self.staff_user)
 
         course_config = baker.make(
@@ -672,6 +710,37 @@ class UserBlockChangeCourseTests(EventTestMixin, TestUsersMixin, TestCase):
     def test_get(self):
         resp = self.client.get(self.url)
         assert resp.context["block"] == self.block
+
+    def test_course_options(self):
+        def _get_choices_ids(response):
+            return sorted(choice[0] for choice in response.context["form"].fields["course"].choices)
+
+        resp = self.client.get(self.url)
+        # Both courses are configured and valid for the block
+        choices = _get_choices_ids(resp)
+        assert choices == sorted([self.course1.id, self.course2.id])
+
+        # book user on course 1
+        for event in self.course1.uncancelled_events:
+            baker.make(Booking, user=self.student_user, event=event, block=self.block)
+        resp = self.client.get(self.url)
+        choices = _get_choices_ids(resp)
+        assert choices == [self.course2.id]
+
+        # configured course with spaces, but not valid for the user's block, not shown in choices
+        course = baker.make(Course, event_type=self.course1.event_type, number_of_events=4)
+        baker.make(Event, course=course, event_type=self.course1.event_type, _quantity=4)
+        assert course.is_configured()
+        assert course.full is False
+        resp = self.client.get(self.url)
+        assert _get_choices_ids(resp) == [self.course2.id]
+
+        # make self.course full
+        for event in self.course2.uncancelled_events:
+            baker.make(Booking, event=event, _quantity=self.course2.max_participants)
+        assert self.course2.full is True
+        resp = self.client.get(self.url)
+        assert _get_choices_ids(resp) == []
 
     def test_add_course_to_block(self):
         assert self.student_user.bookings.exists() is False
