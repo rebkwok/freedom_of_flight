@@ -1,3 +1,4 @@
+from decimal import Decimal
 import logging
 
 from django.views.decorators.http import require_GET
@@ -7,7 +8,8 @@ from paypal.standard.pdt.views import process_pdt
 
 from .emails import send_processed_payment_emails, send_failed_payment_emails
 from .exceptions import PayPalProcessingError
-from .utils import check_paypal_data, get_invoice_from_ipn_or_pdt
+from .models import Invoice
+from .utils import check_paypal_data, get_paypal_form, get_invoice_from_ipn_or_pdt
 
 logger = logging.getLogger(__name__)
 
@@ -59,3 +61,14 @@ def paypal_cancel_return(request):
     return render(request, 'payments/cancelled_payment.html')
 
 
+def paypal_test(request):
+    # encrypted custom field so we can verify it on return from paypal
+    if request.user.is_anonymous:
+        username = "paypal_test"
+    else:
+        username = request.user.username
+    invoice = Invoice.objects.create(
+        invoice_id=Invoice.generate_invoice_id(), amount=Decimal(1.0), username=username
+    )
+    paypal_form = get_paypal_form(request, invoice, paypal_test=True)
+    return render(request, 'payments/paypal_test.html', {"form": paypal_form})

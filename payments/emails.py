@@ -5,8 +5,15 @@ from django.contrib.sites.models import Site
 from django.template.loader import get_template
 
 
+def _get_user_from_invoice(invoice):
+    if invoice.username == "paypal_test":
+        return User.objects.get(email=settings.SUPPORT_EMAIL)
+    else:
+        return User.objects.get(username=invoice.username)
+
+
 def send_processed_payment_emails(invoice):
-    user = User.objects.get(username=invoice.username)
+    user = _get_user_from_invoice(invoice)
     ctx = {
         'host': f"https://{Site.objects.get_current().domain}",
         'user': user,
@@ -37,7 +44,7 @@ def send_processed_payment_emails(invoice):
 
 
 def send_processed_refund_emails(invoice):
-    user = User.objects.get(username=invoice.username)
+    user = _get_user_from_invoice(invoice)
     ctx = {
         'host': f"https://{Site.objects.get_current().domain}",
         'user': user,

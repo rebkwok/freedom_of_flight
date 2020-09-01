@@ -2,11 +2,11 @@ import logging
 from django.urls import reverse
 
 from .exceptions import PayPalProcessingError
-from .forms import PayPalPaymentsFormWithId
+from .forms import PayPalPaymentsFormWithId, PayPalPaymentsForm
 from .models import Invoice
 
 
-def get_paypal_form(request, invoice):
+def get_paypal_form(request, invoice, paypal_test=False):
     # What you want the button to do.
     paypal_dict = {
         "cmd": "_cart",
@@ -51,8 +51,23 @@ def get_paypal_form(request, invoice):
             }
         )
 
-    # Create the instance.
-    form = PayPalPaymentsFormWithId(initial=paypal_dict)
+    if paypal_test:
+        assert not invoice.blocks.exists()
+        assert not invoice.subscriptions.exists()
+        paypal_dict.update(
+            {
+                'item_name_1': "paypal_test",
+                'amount_1': invoice.amount,
+                'quantity_1': 1,
+            }
+        )
+        # Create the instance.
+        form = PayPalPaymentsForm(initial=paypal_dict)
+    else:
+        # Create the instance.
+        form = PayPalPaymentsFormWithId(initial=paypal_dict)
+
+
     return form
 
 

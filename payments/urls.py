@@ -1,5 +1,5 @@
 from django.urls import path
-from payments.views import paypal_return, paypal_cancel_return
+from payments.views import paypal_return, paypal_cancel_return, paypal_test
 
 
 app_name = 'payments'
@@ -7,4 +7,5 @@ app_name = 'payments'
 urlpatterns = [
     path('paypal-return/', paypal_return, name="paypal_return"),
     path('cancel/', paypal_cancel_return, name='paypal_cancel'),
+    path('paypal-test/', paypal_test, name="paypal_test"),
 ]

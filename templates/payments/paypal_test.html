@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% load bookingtags static %}
+
+
+{% block content %}
+
+<div class="row">
+    <div class="col-12 mt-5">
+        <h2>PayPal Test</h2>
+        {% include "payments/includes/paypal_button.html" %}
+</div>
+
+{% endblock %}
