@@ -12,11 +12,17 @@
 
 <p>Or sign up using the form below</p>
 
+    <p>
+  Please note: minimum age for registering as a main account holder is 16.  If you are a parent/guardian looking to
+  book classes for a child, please register your own details first.  You will then be able to add
+  managed accounts for under-16s.
+</p>
+
 <form class="signup" id="signup_form" method="post" action="{% url 'account_signup' %}">
   {% csrf_token %}
   {% include 'account/includes/signup_form_content.html' %}
   {% if redirect_field_value %}
-  <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}" />
+  <input type="hidden" name="{{ redirect_field_name }}" value="{% url 'accounts:profile' %}" />
   {% endif %}
   <button class="btn btn-success" type="submit">{% trans "Sign Up" %}</button>
 </form>

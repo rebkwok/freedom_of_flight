@@ -2,47 +2,20 @@
 {% load accounttags %}
 
 {% block content %}
-   <h1 class="mt-1">Your Profile</h1>
-   <div class="card">
-       <h2 class="card-header">Personal Details</h2>
-       <div class="card-body">
-           <div class="card-text"><strong>Username:</strong> {{ user.username }}</div>
-           <div class="card-text"><strong>Name:</strong> {{ user.first_name }} {{ user.last_name }}</div>
-           <div class="card-text"><strong>Date of birth:</strong> {{ user.userprofile.date_of_birth }}</div>
-           <div class="card-text"><strong>Address:</strong> {{ user.userprofile.address }}, {{ user.userprofile.postcode }}</div>
-           <div class="card-text"><strong>Phone:</strong> {{ user.userprofile.phone }}</div>
-          <div class="card-text"><a class="btn btn-xs btn-xs-wide btn-success" href="{% url 'accounts:update_profile' %}">Change</a></div>
 
-        </div>
-       </div>
-    <div class="card">
-       <h2 class="card-header">Emergency Contact Information</h2>
-       <div class="card-body">
-       <div class="card-text"><strong>Name:</strong> {{ latest_disclaimer.emergency_contact_name }} </div>
-       <div class="card-text"><strong>Phone:</strong> {{ latest_disclaimer.emergency_contact_phone }} </div>
-       <div class="card-text"><strong>Relationship:</strong> {{ latest_disclaimer.emergency_contact_relationship }} </div>
-       <div class="card-text"><a class="btn btn-xs btn-xs-wide btn-success" href="{% url 'accounts:update_emergency_contact' user.id %}">Change</a></div>
-       </div>
-   </div>
-    <div class="card">
-       <h2 class="card-header">Email Addresses</h2>
-       <div class="card-body">
-        <div class="card-text"><strong>Primary email address:</strong> {{ user.email }}</div>
-       <div class="card-text"><a class="btn btn-xs btn-xs-wide btn-success" href="{% url 'account_email' %}">Change</a></div>
-       </div>
-    </div>
-   <div class="card">
+   <h1 class="mt-1">Your Profile</h1>
+     <div class="card">
    <h2 class="card-header">Accounts</h2>
    <div class="card-body">
         <div class="card-text">
         {% if user.is_student or user.is_manager %}
            The following accounts are registered as student users:
            <ul>
-               <li>{% if user.is_student %}{{ user.first_name }} {{ user.last_name }} (main account) {% endif %}</li>
+               <li>{% if user.is_student %}<strong>{{ user|full_name }}</strong> (main account) {% endif %}</li>
                {% if user.is_manager %}
                     {% for managed_user in user.managed_users %}
                         {% if managed_user.id != user.id %}
-                           <li>{{ managed_user.first_name }} {{ managed_user.last_name }} (managed account)
+                            <li><strong>{{ managed_user|full_name }}</strong> (managed account)
                                {% if managed_user|has_disclaimer %}
                                     {% with managed_user|latest_disclaimer as managed_user_disclaimer %}
                                     <span class="helptext text-secondary">
@@ -64,6 +37,36 @@
    <div class="card-text"><a class="btn btn-xs btn-success btn-xs-wide" href="{% url 'accounts:register_child_user' %}">Add Managed Account</a></div>
         </div>
    </div>
+   <div class="card">
+       <h2 class="card-header">Personal Details</h2>
+       <div class="card-body">
+           <div class="card-text"><strong>Username:</strong> {{ user.username }}</div>
+           <div class="card-text"><strong>Name:</strong> {{ user.first_name }} {{ user.last_name }}</div>
+           <div class="card-text"><strong>Date of birth:</strong> {{ user.userprofile.date_of_birth }}</div>
+           <div class="card-text"><strong>Address:</strong> {{ user.userprofile.address }}, {{ user.userprofile.postcode }}</div>
+           <div class="card-text"><strong>Phone:</strong> {{ user.userprofile.phone }}</div>
+          <div class="card-text"><a class="btn btn-xs btn-xs-wide btn-success" href="{% url 'accounts:update_profile' %}">Change</a></div>
+
+        </div>
+       </div>
+    {% if latest_disclaimer %}
+    <div class="card">
+       <h2 class="card-header">Emergency Contact Information</h2>
+       <div class="card-body">
+       <div class="card-text"><strong>Name:</strong> {{ latest_disclaimer.emergency_contact_name }} </div>
+       <div class="card-text"><strong>Phone:</strong> {{ latest_disclaimer.emergency_contact_phone }} </div>
+       <div class="card-text"><strong>Relationship:</strong> {{ latest_disclaimer.emergency_contact_relationship }} </div>
+       <div class="card-text"><a class="btn btn-xs btn-xs-wide btn-success" href="{% url 'accounts:update_emergency_contact' user.id %}">Change</a></div>
+       </div>
+   </div>
+    {% endif  %}
+    <div class="card">
+       <h2 class="card-header">Email Addresses</h2>
+       <div class="card-body">
+        <div class="card-text"><strong>Primary email address:</strong> {{ user.email }}</div>
+       <div class="card-text"><a class="btn btn-xs btn-xs-wide btn-success" href="{% url 'account_email' %}">Change</a></div>
+       </div>
+    </div>
     <div class="card">
                <h2 class="card-header">Disclaimers</h2>
                 <div class="card-body">

@@ -25,8 +25,10 @@ jQuery(document).ready(function () {
         formatDate:'d-M-Y',
         timepicker: false,
         defaultDate:'01-Jan-1990',
+        maxDate: 0,
         closeOnDateSelect: true,
         scrollMonth: false,
+        yearEnd: 2020,
         scrollTime: false,
         scrollInput: false
     });

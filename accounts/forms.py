@@ -50,7 +50,10 @@ class AccountFormMixin:
         date_of_birth = self.cleaned_data.get("date_of_birth")
         age_cutoff_date = (timezone.now() - relativedelta(years=16)).date()
         if date_of_birth > age_cutoff_date:
-            self.add_error("date_of_birth", "You must be at least 16 years old to register and book classes")
+            self.add_error(
+                "date_of_birth",
+                 "You must be at least 16 years old to register as a main account holder.  Under-16s can "
+                 "be added as managed accounts after initial registration.")
             return
         return date_of_birth
 
