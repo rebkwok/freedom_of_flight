@@ -40,7 +40,7 @@
                                 <tr>
                                     <td><a href="{% url 'studioadmin:register' event.id %}">{{ event.name }} {% if event.course %}({{ event.course.name }}){% endif  %}</a></td>
                                     <td class="text-center">{{ event.start|date:"H:i" }} - {{ event.end|date:"H:i" }}</td>
-                                    <td class="text-center">{{ event.spaces_left }} {% if event.max_participants %}/ {{ event.max_participants }}{% endif %}</td>
+                                    <td class="text-center">{% if event.course %}{{ event.course.spaces_left }} / {{ event.course.max_participants }} {% else %}{{ event.spaces_left }} {% if event.max_participants %}/ {{ event.max_participants }}{% endif %}{% endif %}</td>
                                     <td class="text-center">
                                         <a href="{% url 'studioadmin:event_waiting_list' event.id %}">{{ event.waitinglistusers.count }}</a>
                                     </td>
