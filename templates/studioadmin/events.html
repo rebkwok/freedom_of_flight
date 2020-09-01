@@ -28,7 +28,7 @@
                     <table class="table table-sm">
                         <thead>
                             <tr>
-                                <th scope="col">Name{% if not past %}<br/><span class="helptext">Click to edit</span>{% endif %}</th>
+                                <th scope="col">Name{% if not past %}<br/><span class="helptext">Click to edit</span>{% else %}<br/><span class="helptext">Click to view register</span>{% endif %}</th>
                                 <th scope="col" class="text-center">Course</th>
                                 <th scope="col" class="text-center">Time</th>
                                 <th scope="col" class="text-center">Spaces</th>
@@ -48,7 +48,7 @@
                                     {% if not past %}
                                         <a href="{% url 'studioadmin:update_event' event.slug %}">{{ event.name }}</a>
                                     {% else %}
-                                        {{ event.name }}
+                                        <a href="{% url 'studioadmin:register' event.id %}">{{ event.name }}</a></td>
                                     {% endif %}
                                     {% if event.cancelled %} (CANCELLED){% endif %}
                                 </td>
