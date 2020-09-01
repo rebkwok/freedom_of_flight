@@ -94,7 +94,7 @@ class UserListView(LoginRequiredMixin, InstructorOrStaffUserMixin, ListView):
     paginate_by = 30
 
     def get_queryset(self):
-        queryset = super().get_queryset()
+        queryset = super().get_queryset().order_by("first_name")
         search = self.request.GET.get('search')
         action = self.request.GET.get('action')
         if self.request.GET.get('search') and action == "Search":
