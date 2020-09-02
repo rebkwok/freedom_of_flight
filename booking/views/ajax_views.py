@@ -296,9 +296,10 @@ def ajax_course_booking(request, course_id):
         booking.block = course_block
         booking.save()
 
-        ActivityLog.objects.create(
-            log=f'Course {course.name} (course.course_type) for {user.first_name} {user.last_name} booked by user {request.user.username}'
-        )
+    ActivityLog.objects.create(
+        log=f'Course {course} (start {course.start.strftime("%d-%m-%Y")} for {user.first_name} {user.last_name} '
+            f'booked by user {request.user.username}'
+    )
 
     # email context
     ctx = {
