@@ -27,7 +27,7 @@ from studioadmin.views import (
     UserBlocksListView, BlockAddView, BlockEditView, ajax_block_delete,
     email_subscription_users_view,
     UserSubscriptionsListView, SubscriptionAddView, SubscriptionEditView, ajax_subscription_delete,
-    course_booking_add_view, course_block_change_view,
+    course_booking_add_view, course_block_change_view, export_users,
 )
 
 app_name = 'studioadmin'
@@ -116,6 +116,7 @@ urlpatterns = [
         r'^policies/disclaimer-version/edit/(?P<version>\d+\.\d+)/$', DisclaimerContentUpdateView.as_view(), name='edit_disclaimer_content'
     ),
     # users
+    path('users/export/', export_users, name="export_users"),
     path('users/', UserListView.as_view(), name="users"),
     path('user/<int:pk>/detail/', UserDetailView.as_view(), name="user_detail"),
     path('user/<int:user_id>/bookings/', UserBookingsListView.as_view(), name="user_bookings"),

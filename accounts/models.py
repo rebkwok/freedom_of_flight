@@ -496,13 +496,14 @@ def managed_users(self):
     cache_key = managed_users_cache_key(self)
     managed_users = cache.get(cache_key)
     if not managed_users:
-        if self.userprofile:
+        if hasattr(self, "userprofile"):
             child_users = [childprofile.user for childprofile in self.userprofile.managed_profiles.all() if childprofile.user.is_active]
             managed_users = [self, *child_users] if self.is_student else [*child_users, self]
             if child_users and not self.is_manager:
                 self.userprofile.manager = True
                 self.userprofile.save()
         else:
+            UserProfile.objects.create(user=self)
             managed_users = [self]
         cache.set(cache_key, managed_users, timeout=60*60)
     return managed_users
@@ -525,6 +526,8 @@ def is_instructor(self):
 def is_student(self):
     if hasattr(self, "userprofile"):
         return self.userprofile.student
+    else:
+        UserProfile.objects.create(user=self)
     return False
 
 
@@ -532,6 +535,8 @@ def is_student(self):
 def is_manager(self):
     if hasattr(self, "userprofile"):
         return self.userprofile.manager
+    else:
+        UserProfile.objects.create(user=self)
     return False
 
 

@@ -9,10 +9,12 @@
 {% block content %}
     <h2>Registered User Accounts</h2>
 
-    <form class="mt-4 mb-4">
+    <form class="mt-4">
     {% crispy search_form %}
     </form>
-
+    <div class="mt-0 mb-2">
+        <a class="btn btn-sm btn-outline-success" href="{% url 'studioadmin:export_users' %}"><i class="fas fa-file-download"></i> Download emails</a>
+    </div>
 <div class="table-responsive">
     <table class="table table-sm tablesorter" id="sortTable">
         <thead>
