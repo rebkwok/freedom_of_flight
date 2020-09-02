@@ -17,9 +17,7 @@
 {% elif course.full %}
     <p>This course is now full.</p>
 {% elif not has_available_course_block %}
-    <a class="btn btn-outline-info btn-lg mb-2" href="#">
-    <i id="loader_{{ course.id }}">
-    </i>Payment Options</a>
+    <p class="helptext">Purchase a payment plan to book this course</p>
 {% else %}
     <a class="btn btn-sm btn-success btn-block mb-2" href="#"><i id="loader_{{ course.id }}"></i> Book Course</a>
 {% endif %}
