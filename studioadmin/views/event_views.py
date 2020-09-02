@@ -107,7 +107,7 @@ class PastEventAdminListView(EventAdminListView):
 
     def get_queryset(self):
         start_of_today = datetime.combine(timezone.now().date(), datetime.min.time(), tzinfo=timezone.utc)
-        return Event.objects.filter(start__lt=start_of_today).order_by("-start")
+        return Event.objects.filter(start__lt=start_of_today).order_by("-start__date", "start__time")
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
