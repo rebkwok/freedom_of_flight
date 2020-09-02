@@ -61,7 +61,7 @@ class EmailUsersViewsTests(EventTestMixin, TestUsersMixin, TestCase):
         assert len(mail.outbox) == 1
         assert mail.outbox[0].cc == ["test@test.com"]
         assert sorted(mail.outbox[0].bcc) == sorted([self.student_user.email, self.instructor_user.email])
-        assert mail.outbox[0].reply_to == "test@test.com"
+        assert mail.outbox[0].reply_to == ["test@test.com"]
         assert mail.outbox[0].subject == "Test"
 
     def test_select_at_least_one_user(self):
@@ -69,7 +69,7 @@ class EmailUsersViewsTests(EventTestMixin, TestUsersMixin, TestCase):
         resp = self.client.post(
             self.event_url, {
                 "students": [],
-                "reply_to_email": "test@test.com",
+                "reply_to_email": ["test@test.com"],
                 "subject": "Test",
                 "cc": True,
                 "message": "Test"
@@ -84,7 +84,7 @@ class EmailUsersViewsTests(EventTestMixin, TestUsersMixin, TestCase):
         self.client.post(
             self.event_url, {
                 "students": [self.child_user.id],
-                "reply_to_email": "test@test.com",
+                "reply_to_email": ["test@test.com"],
                 "subject": "Test",
                 "cc": True,
                 "message": "Test"
@@ -109,7 +109,7 @@ class EmailUsersViewsTests(EventTestMixin, TestUsersMixin, TestCase):
         resp = self.client.post(
             self.course_url, {
                 "students": [self.instructor_user.id],
-                "reply_to_email": "test@test.com",
+                "reply_to_email": ["test@test.com"],
                 "subject": "Test",
                 "cc": True,
                 "message": "Test"
@@ -118,7 +118,7 @@ class EmailUsersViewsTests(EventTestMixin, TestUsersMixin, TestCase):
         assert len(mail.outbox) == 1
         assert mail.outbox[0].cc == ["test@test.com"]
         assert mail.outbox[0].bcc == [self.instructor_user.email]
-        assert mail.outbox[0].reply_to == "test@test.com"
+        assert mail.outbox[0].reply_to == ["test@test.com"]
         assert mail.outbox[0].subject == "Test"
 
 

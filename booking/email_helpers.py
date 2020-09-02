@@ -48,7 +48,7 @@ def send_bcc_emails(context, bcc_user_emails, subject, template_without_ext, rep
         bcc=bcc_user_emails,
     )
     if reply_to:
-        msg.reply_to = reply_to
+        msg.reply_to = [reply_to]
     if cc:
         msg.cc = [reply_to]
     msg.attach_alternative(
