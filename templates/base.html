@@ -16,6 +16,7 @@
 
     <title>Freedom of Flight Aerial Booking</title>
 
+
   {# Load from local if in dev mode (debug on) and not specifically set #}
   {% if use_cdn %}
       <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.css" integrity="sha512-aOG0c6nPNzGk+5zjwyJaoRUgCdOrfSDhmMID2u4+OIslr0GjpLKo7Xm0Ao3xmpM4T8AmIouRkqwj1nrdVsLKEQ==" crossorigin="anonymous" />
@@ -70,7 +71,7 @@
             {% if request.user.is_authenticated %}
                 <li class="nav-item d-none d-lg-block"><a class="nav-link" href="{% url 'accounts:profile' %}">Account</a></li>
                 <li class="nav-item dropdown d-block d-lg-none">{% include "accounts/includes/account_nav_xs.html" %}</li>
-              {% if request.user.is_staff %}
+                {% if request.user.is_staff or request.user.is_instructor %}
                 <li><a class="nav-link" href="{% url 'studioadmin:registers' %}">Admin</a></li>
               {% endif %}
             {% endif %}

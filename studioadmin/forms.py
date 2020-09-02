@@ -54,6 +54,11 @@ def _obj_date_string(obj):
     return dates_string
 
 
+class EventModelChoiceField(forms.ModelChoiceField):
+    def label_from_instance(self, obj):
+        return f"{obj}{' (drop-in)' if not obj.course else ''}"
+
+
 class BlockModelChoiceField(forms.ModelChoiceField):
     def label_from_instance(self, obj):
         return f"{obj.block_config.name} - {_obj_date_string(obj)}"
@@ -846,14 +851,17 @@ class AddEditBookingForm(forms.ModelForm):
             self.event = None
             course_event = False
             already_booked = self.user.bookings.values_list("event_id", flat=True)
-            self.fields['event'] = forms.ModelChoiceField(
-                queryset=Event.objects.filter(
-                    course__isnull=True, start__gte=timezone.now()
-                ).filter(cancelled=False).exclude(id__in=already_booked).order_by('start'),
+            events = Event.objects.filter(
+                start__gte=timezone.now()
+            ).filter(cancelled=False).exclude(id__in=already_booked).order_by('start')
+            non_full_ids = [event.id for event in events if not event.full]
+            self.fields['event'] = EventModelChoiceField(
+                queryset=Event.objects.filter(id__in=non_full_ids),
                 widget=forms.Select(attrs={'class': 'form-control input-sm'}),
                 required=True,
-                help_text="Only drop-in events can be added here; for course events, use the "
-                          "'Add Course Booking' button"
+                help_text="This is limited to events with spaces.  You can add a single event from a "
+                          "course here (if the course is not fully booked), but if you want to add a"
+                          " full course, use the 'Add Course Booking' button"
             )
 
         if course_event:
@@ -932,8 +940,9 @@ class AddEditBookingForm(forms.ModelForm):
         event = self.event or self.cleaned_data.get('event')
         status = self.cleaned_data.get('status')
         no_show = self.cleaned_data.get('no_show')
-        if event.course:
-            # No options to update blocks on courses, no need for further checks here
+
+        if self.event is not None and event.course:
+            # no options to change existing course blocks
             return
 
         if not auto_assign_available_subscription_or_block:

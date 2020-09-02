@@ -135,7 +135,7 @@ class DisclaimerContactUpdateView(LoginRequiredMixin, UpdateView):
         return OnlineDisclaimer.objects.filter(user=self.disclaimer_user).latest("id")
 
     def form_valid(self, form):
-        return super().form_valid()
+        return super().form_valid(form)
 
     def get_success_url(self):
         return reverse('accounts:profile')

@@ -1,6 +1,6 @@
 <div class="subnav d-none d-md-block">
 <nav class="navbar fixed-top fixed-top-subnav navbar-expand navbar-light" id="navbarEventsSubNavContainer">
-  <a class="navbar-brand" href="#">ADMIN: Events</a>
+  <a class="navbar-brand" href="#">ADMIN: Events/Registers</a>
   <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarEventsSubNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
     <span class="navbar-toggler-icon"></span>
   </button>
@@ -9,6 +9,7 @@
       </li>
         <a class="nav-link" href="{% url 'studioadmin:registers' %}">Registers</a>
       </li>
+      {% if request.user.is_staff %}
       <li class="nav-item">
           <a class="nav-link" href="{% url 'studioadmin:choose_event_type_to_create' %}">Add event</a>
       </li>
@@ -18,6 +19,7 @@
        <li class="nav-item">
            <a class="nav-link" href="{% url 'studioadmin:past_events' %}">Past events</a>
        </li>
+      {% endif %}
       </ul>
   </div>
 </nav>
@@ -31,12 +33,16 @@
         </a>
         <div class="dropdown-menu" aria-labelledby="navbarDropdown">
           <a class="dropdown-item" href="{% url 'studioadmin:registers' %}">Registers</a>
+        {% if request.user.is_staff %}
           <a class="dropdown-item" href="{% url 'studioadmin:choose_event_type_to_create' %}">Add event</a>
           <a class="dropdown-item" href="{% url 'studioadmin:events' %}">View/Edit</a>
           <a class="dropdown-item" href="{% url 'studioadmin:past_events' %}">Past events</a>
+         {% endif %}
         </div>
     </li>
+        {% if request.user.is_staff %}
         <li class="nav-item"><a class="nav-link" href="{% url 'studioadmin:events' %}">Events list</a></li>
+        {% endif %}
     <li class="nav-item"><a class="nav-link" href="{% url 'studioadmin:registers' %}">Registers</a></li>
 </ul>
 </div>

@@ -12,7 +12,7 @@ from dateutil.relativedelta import relativedelta
 from django.db import models
 from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Group
 from django.utils import timezone
 
 from dynamic_forms.models import FormField, ResponseField
@@ -509,6 +509,19 @@ def managed_users(self):
 
 
 @property
+def is_instructor(self):
+    cache_key = f"user_{self.id}_is_instructor"
+    user_is_instructor = cache.get(cache_key)
+    if user_is_instructor is not None:
+        user_is_instructor = bool(user_is_instructor)
+    else:
+        group, _ = Group.objects.get_or_create(name='instructors')
+        user_is_instructor = group in self.groups.all()
+        cache.set(cache_key, user_is_instructor, 1800)
+    return user_is_instructor
+
+
+@property
 def is_student(self):
     if hasattr(self, "userprofile"):
         return self.userprofile.student
@@ -531,4 +544,5 @@ def manager_user(self):
 User.add_to_class("managed_users", managed_users)
 User.add_to_class("is_student", is_student)
 User.add_to_class("is_manager", is_manager)
+User.add_to_class("is_instructor", is_instructor)
 User.add_to_class("manager_user", manager_user)

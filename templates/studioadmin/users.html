@@ -44,6 +44,12 @@
                 {% if account_user.manager_user %}
                     <span class="badge badge-pill badge-success">Student</span>
                 {% else %}
+                    {% if account_user.is_staff %}
+                        <span class="badge badge-pill badge-primary">Admin</span>
+                    {% endif %}
+                    {% if account_user.is_instructor %}
+                        <span class="badge badge-pill badge-info">Instructor</span>
+                    {% endif %}
                     {% if account_user.is_student %}
                         <span class="badge badge-pill badge-success">Student</span>
                     {% endif %}

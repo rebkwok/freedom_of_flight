@@ -401,19 +401,15 @@ class UserBookingAddViewTests(TestUsersMixin, TestCase):
             "block": ["Block cannot be assigned for cancelled booking. Set to open and no_show if a block should be used."]
         }
 
-    def test_add_booking_for_full_event(self):
-        assert self.student_user.bookings.exists() is False
-        baker.make(Booking, event=self.event, _quantity=self.event.max_participants)
-        resp = self.client.post(
-            self.url,
-            {"user": self.student_user.id, "event": self.event.id, "block": "", "status": "OPEN",
-             "no_show": False}
-        )
-        assert self.student_user.bookings.count() == 0
+    def test_full_event_not_in_choices(self):
+        resp = self.client.get(self.url)
         form = resp.context_data["form"]
-        assert form.errors == {
-            "__all__": ["This class is full, can't make new booking."]
-        }
+        assert self.event.id in [choice[0] for choice in form.fields["event"].choices]
+
+        baker.make(Booking, event=self.event, _quantity=self.event.max_participants)
+        resp = self.client.get(self.url)
+        form = resp.context_data["form"]
+        assert self.event.id not in [choice[0] for choice in form.fields["event"].choices]
 
     def test_send_email_confirmation(self):
         self.client.post(

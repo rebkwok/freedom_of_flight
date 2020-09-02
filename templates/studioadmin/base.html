@@ -3,16 +3,23 @@
 {% block navbar %}
     <div class="collapse navbar-collapse" id="navbarCollapse">
         <ul class="navbar-nav mr-auto">
+        {% if request.user.is_staff %}
             <li class="nav-item"><a class="nav-link" href="{% url 'studioadmin:tracks' %}">Setup</a></li>
             <li class="nav-item"><a class="nav-link" href="{% url 'studioadmin:disclaimer_contents' %}">Policies</a></li>
             <li class="nav-item"><a class="nav-link" href="{% url 'studioadmin:block_configs' %}">Payment Plans</a></li>
-            <li class="nav-item"><a class="nav-link" href="{% url 'studioadmin:registers' %}">Events</a></li>
+        {% endif %}
+        <li class="nav-item"><a class="nav-link" href="{% url 'studioadmin:registers' %}">Events/Registers</a></li>
+        {% if request.user.is_staff %}
             <li class="nav-item"><a class="nav-link" href="{% url 'studioadmin:courses' %}">Courses</a></li>
             <li class="nav-item"><a class="nav-link" href="{% url 'studioadmin:timetable' %}">Timetable</a></li>
+        {% endif %}
             <li class="nav-item"><a class="nav-link" href="{% url 'studioadmin:users' %}">Students</a></li>
+        {% if request.user.is_staff %}
             <li class="nav-item"><a class="nav-link" href="#"><em>Vouchers</em></a></li>
             <li class="nav-item"><a class="nav-link" href="{% url 'studioadmin:help' %}">Help</a></li>
+       {% endif %}
             {% block subnav-xs %}{% endblock %}
+
         </ul>
 
       <span class="float-right">

@@ -11,6 +11,7 @@
       <li class="nav-item">
           <a class="nav-link" href="{% url 'studioadmin:user_detail' account_user.id %}">Details & Disclaimer</a>
       </li>
+     {% if request.user.is_staff %}
       <li class="nav-item">
           <a class="nav-link" href="{% url 'studioadmin:user_bookings' account_user.id %}">Bookings</a>
       </li>
@@ -23,6 +24,7 @@
       <li class="nav-item">
           <a class="nav-link" href="{% url 'studioadmin:user_subscriptions' account_user.id %}">Subscriptions</a>
       </li>
+        {% endif %}
     </ul>
   </div>
 </nav>
