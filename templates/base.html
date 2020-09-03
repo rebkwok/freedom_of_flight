@@ -53,9 +53,7 @@
             {% for track in tracks %}
             <li class="nav-item"><a class="nav-link" href="{% url 'booking:events' track.slug %}">{{ track.name }}</a></li>
             {% endfor %}
-          {% if request.user.is_authenticated %}
               <li class="nav-item"><a class="nav-link" href="{% url 'booking:purchase_options' %}">Payment Plans</a></li>
-            {% endif %}
 {#              <li class="nav-item dropdown">#}
 {#                <a class="nav-link dropdown-toggle" href="#" id="navbarShopDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">#}
 {#                  Shop#}

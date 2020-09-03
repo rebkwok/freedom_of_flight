@@ -42,8 +42,6 @@ def course_purchase_view(request, course_slug):
     return render(request, "booking/purchase_options.html", context)
 
 
-@data_privacy_required
-@login_required
 def purchase_view(request):
     context = {**block_config_context(request), **subscription_config_context(request)}
     return render(request, "booking/purchase_options.html", context)
@@ -82,12 +80,9 @@ def block_config_context(request, course=None, event=None):
         available_blocks = {
             label: configs for label, configs in available_blocks_with_labels.items() if configs
         }
-    context.update(
-        {
-            "available_blocks": available_blocks,
-            "user_active_blocks": active_user_managed_blocks(request.user, order_by_fields=("expiry_date", "purchase_date",)),
-        }
-    )
+    if request.user.is_authenticated:
+        context.update({"user_active_blocks": active_user_managed_blocks(request.user, order_by_fields=("expiry_date", "purchase_date",))})
+    context.update({"available_blocks": available_blocks})
     return context
 
 
@@ -117,23 +112,25 @@ def subscription_config_context(request, event_type=None):
             str(event_type.id) in config.bookable_event_types
         ]
 
+    def _start_options_for_users(config):
+        if request.user.is_authenticated:
+            return {
+                managed_user.id: config.get_start_options_for_user(managed_user, ignore_unpaid=True)
+                for managed_user in request.user.managed_users
+            }
+        return {}
+
     subscription_config_info = [
         {
             "config": config,
             "start_options": allowed_start_dates(config),
-            "start_options_for_users": {
-                managed_user.id: config.get_start_options_for_user(managed_user, ignore_unpaid=True)
-                for managed_user in request.user.managed_users
-            },
+            "start_options_for_users": _start_options_for_users(config),
             "current_period_cost": config.calculate_current_period_cost_as_of_today()
         } for config in subscription_configs
     ]
 
-    context.update(
-        {
-            "subscription_configs": subscription_config_info,
-            "user_active_subscriptions": active_user_managed_subscriptions(request.user, order_by_fields=("purchase_date",)),
-        }
-    )
+    if request.user.is_authenticated:
+        context.update({"user_active_subscriptions": active_user_managed_subscriptions(request.user, order_by_fields=("purchase_date",))})
+    context.update({"subscription_configs": subscription_config_info})
 
     return context

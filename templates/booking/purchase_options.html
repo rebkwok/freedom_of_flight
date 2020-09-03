@@ -8,10 +8,11 @@
 
 {% block content %}
     <h2 class="mt-1">Payment Options: Credit Blocks, Subscriptions and Memberships</h2>
-
-      <div class="mb-2">
-          <a class="btn btn-outline-primary btn-xs" href="{% url 'booking:shopping_basket' %}"><span>View cart <i class="fas fa-shopping-cart"></i></span></a>
-      </div>
+        {%  if request.user.is_authenticated %}
+          <div class="mb-2">
+              <a class="btn btn-outline-primary btn-xs" href="{% url 'booking:shopping_basket' %}"><span>View cart <i class="fas fa-shopping-cart"></i></span></a>
+          </div>
+        {% endif %}
       <h2>Credit Blocks</h2>
         {% if available_blocks %}
             <p class="text-danger">
@@ -29,7 +30,7 @@
                 {% for title, blocklist in available_blocks.items %}
                     <tr class="table-secondary">
                         <td class="pl-2">{{ title }}</td>
-                        <td class="text-center">User</td>
+                        {%  if request.user.is_authenticated %}<td class="text-center">User</td>{% else %}<td></td>{% endif %}
                         <td></td>
                     </tr>
                     {% for available_block_config in blocklist %}
@@ -55,13 +56,14 @@
                                 {% if available_block_config.duration %} Expires after {{ available_block_config.duration }} week{{ available_block_config.duration|pluralize }}{% else %}Never expires {% endif %} |
                                 Valid for {% if available_block_config.course %}1 course{% else %}{{ available_block_config.size }} use{{ available_block_config.size|pluralize }}{% endif %}<br/>
 
-                                {% active_block_info user_active_blocks available_block_config %}
+                                {%  if request.user.is_authenticated %}{% active_block_info user_active_blocks available_block_config %}{% endif %}
                             {% if not available_block_config.course %}
                                 <p class="helptext">Please note that drop-in credit blocks are not valid for classes that are part of a course.<p/>
                             {% endif %}
 
                         </p>
                         </td>
+                    {%  if request.user.is_authenticated %}
                         <td>
                             {% for available_user in available_users %}
                             <div class="purchase_option_badge_container">
@@ -81,6 +83,11 @@
                             </span><br/>
                             {% endfor %}
                         </td>
+                    {% else %}
+                        <td colspan="2">
+                        <span class="helptext float-right"><a href="{% url 'account_login' %}?next={{request.get_full_path}}">Log in</a> to purchase</span>
+                        </td>
+                    {% endif %}
                     </tr>
                     {% endfor %}
                 {% endfor %}
@@ -99,11 +106,15 @@
                 <th style="width: 10%"></th>
               </thead>
               <tbody>
-                    <tr class="table-secondary">
-                        <td class="pl-2">{{ title }}</td>
+                <tr class="table-secondary">
+                    <td>Subscriptions</td>
+                    {% if request.user.is_authenticated %}
                         <td class="text-center">User & Options</td>
                         <td></td>
-                    </tr>
+                    {% else %}
+                        <td colspan="2"></td>
+                    {% endif %}
+                </tr>
                     {% for subscription_config in subscription_configs %}
                     <tr {% if subscription_config.config.id in target_subscription_config_ids %}class="table-success"{% endif %}>
                         <td class="pl-2 pb-2">
@@ -142,21 +153,22 @@
                             <p class="helptext">Please note that subscriptions are not valid for classes that are part of a course.<p/>
                         {% endif %}
                         </td>
-                        <td>
-                            {% for available_user in available_users %}
-                                {% if not subscription_config.start_options_for_users|lookup_dict:available_user.id %}
-                                    <div class="purchase_option_badge_container">
-                                        <span class="badge badge-pill badge-light pt-1 mt-1 mb-1"><span class="helptext align-middle">{{ available_user|full_name|truncatechars:15 }}{% if subscription_start_option %} - {{ subscription_start_option|date:"d-M-y" }}{% endif %}</span></span>
-                                    </div>
-                                {% endif %}
-                                {% for subscription_start_option in subscription_config.start_options_for_users|lookup_dict:available_user.id %}
-                                    <div class="purchase_option_badge_container">
-                                        <span class="badge badge-pill badge-light pt-1 mt-1 mb-1"><span class="helptext align-middle">{{ available_user|full_name|truncatechars:15 }}{% if subscription_start_option %} - {{ subscription_start_option|date:"d-M-y" }}{% endif %}</span></span>
-                                    </div>
+                        {% if request.user.is_authenticated %}
+                            <td>
+                                {% for available_user in available_users %}
+                                    {% if not subscription_config.start_options_for_users|lookup_dict:available_user.id %}
+                                        <div class="purchase_option_badge_container">
+                                            <span class="badge badge-pill badge-light pt-1 mt-1 mb-1"><span class="helptext align-middle">{{ available_user|full_name|truncatechars:15 }}{% if subscription_start_option %} - {{ subscription_start_option|date:"d-M-y" }}{% endif %}</span></span>
+                                        </div>
+                                    {% endif %}
+                                    {% for subscription_start_option in subscription_config.start_options_for_users|lookup_dict:available_user.id %}
+                                        <div class="purchase_option_badge_container">
+                                            <span class="badge badge-pill badge-light pt-1 mt-1 mb-1"><span class="helptext align-middle">{{ available_user|full_name|truncatechars:15 }}{% if subscription_start_option %} - {{ subscription_start_option|date:"d-M-y" }}{% endif %}</span></span>
+                                        </div>
+                                    {% endfor %}
                                 {% endfor %}
-                            {% endfor %}
-                        </td>
-                        <td class="table-purchase-td">
+                            </td>
+                            <td class="table-purchase-td">
                             {% for available_user in available_users %}
                                 {% if not subscription_config.start_options_for_users|lookup_dict:available_user.id %}
                                     <span class="helptext">
@@ -178,6 +190,11 @@
                                 {% endfor %}
                             {% endfor %}
                         </td>
+                        {% else %}
+                            <td colspan="2">
+                            <span class="helptext float-right"><a href="{% url 'account_login' %}?next={{request.get_full_path}}">Log in</a> to purchase</span>
+                            </td>
+                        {% endif %}
                     </tr>
                     {% endfor %}
               </tbody>
