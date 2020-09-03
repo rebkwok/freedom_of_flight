@@ -482,9 +482,11 @@ class Block(models.Model):
             # it's valid for courses, event type matches, and it's the right size for the course
             # check it's valid for the earliest uncancelled event (hasn't expired)
             event = event or course.uncancelled_events.order_by("start").first()
-            if not event:  # No event == course is cancelled or has no events; either way, the block isn't valid
-                return False
-            valid_for_event = self._valid_and_active_for_event(event)
+            valid_for_event = True
+            if event:
+                # If there's no uncancelled events yet, the block is so far valid for the course in general
+                valid_for_event = self._valid_and_active_for_event(event)
+
             if valid_for_event:
                 # make sure it hasn't been used to book events on a different course
                 has_bookings_on_other_courses = self.bookings.exclude(event__course=course).exists()
