@@ -3,16 +3,16 @@
 {% load i18n %}
 {% load static %}
 
-{% block head_title %}{% trans "Signup" %}{% endblock %}
+{% block head_title %}{% trans "Register" %}{% endblock %}
 
 {% block content %}
-<h1>{% trans "Sign Up" %}</h1>
+<h1>{% trans "Register for a new account" %}</h1>
 
-<p>Already have an account? Then please <a href="{{ login_url }}">log in</a>.</p></br>
-
-<p>Or sign up using the form below</p>
-
-    <p>
+    <hr/>
+<p>Already have an account? Then please <a href="{{ login_url }}">log in</a>.</p>
+<hr/>
+<p>Or register using the form below.</p>
+<p>
   Please note: minimum age for registering as a main account holder is 16.  If you are a parent/guardian looking to
   book classes for a child, please register your own details first.  You will then be able to add
   managed accounts for under-16s.
@@ -24,7 +24,7 @@
   {% if redirect_field_value %}
   <input type="hidden" name="{{ redirect_field_name }}" value="{% url 'accounts:profile' %}" />
   {% endif %}
-  <button class="btn btn-success" type="submit">{% trans "Sign Up" %}</button>
+  <button class="btn btn-success" type="submit">{% trans "Register" %}</button>
 </form>
 {% endblock content %}
 

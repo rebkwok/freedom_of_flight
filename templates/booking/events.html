@@ -135,7 +135,7 @@
                                 <span class="helptext float-right"><a href="{% url 'accounts:disclaimer_form' view_as_user.id %}">Complete a disclaimer</a> to book</span>
                             {% endif %}
                         {% else %}
-                            <span class="helptext float-right"><a href="{% url 'account_login' %}?next={{request.get_full_path}}">Log in</a> to book</span>
+                            <span class="helptext float-right"><a href="{% url 'account_login' %}?next={{request.get_full_path}}">Log in</a> or <a href="{% url 'account_signup' %}">register</a> to book</span>
                         {% endif %}
                         <div>
                             {% include 'booking/includes/events_info.html' %}
