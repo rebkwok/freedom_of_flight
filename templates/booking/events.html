@@ -71,19 +71,22 @@
             {% for event in events %}
                 <div class="row event-card event-card-item {% if event.is_past or event.cancelled %}list-group-item-secondary{% endif %}">
                 {% with user_booking_info|lookup_dict:event.id as user_info %}
-                    <div class="col-7 col-sm-8 pt-2 pb-2">
+                    <div class="col-1 col-sm-1 pt-2 pb-2 pl-1">
+                        <small>{{ event.start|date:"H:i"  }}-{{ event.end|date:"H:i" }}</small>
+                    </div>
+                    <div class="col-6 col-sm-8 pt-2 pb-2">
                             <!-- Event name and info (availability, user blocks) on smaller screens -->
                             <span id="booked_tick_{{ event.id }}" {% if not user_info.open %}class="hidden"{% endif %}>
                             <i class="text-success fas fa-check-circle"></i>
                             </span>
-                            <a href="{% url 'booking:event' event.slug %}"> {{ event.start|date:"H:i"  }} - {{ event.end|date:"H:i" }}  {{ event.name }}</a>
+                            <a href="{% url 'booking:event' event.slug %}">{{ event.name }}</a>
                             <span class="d-inline-block d-sm-none" id="event_info_xs_{{event.id}}">
                             {% include 'booking/includes/event_info_xs.html' %}
                             </span>
                             <!-- availability, user blocks etc on larger screens plus course info on all -->
                             {% include 'booking/includes/events_info.html' %}
                     </div>
-                    <div class="col-5 col-sm-4 pt-2 pb-2 float-right">
+                    <div class="col-5 col-sm-3 pt-2 pb-2 pr-1 pl-1 float-right">
                             <!-- booking buttons and info text -->
                             {% if request.user.is_authenticated %}
                             {% if view_as_user|has_disclaimer %}
@@ -96,10 +99,11 @@
                                     <span class="float-right"><a class="btn btn-xs btn-secondary" disabled href="#">{{ event.event_type.label|title }} has started</a></span>
                                     {% endif %}
                                 {% elif not course %}
-                                    <span class="float-right">
                                         {% if event.course.has_started and not user_info.has_booked %}
+                                        <span class="float-right">
                                             <span class="helptext">Course has started<span/><br/>
                                                 <a class="btn btn-xs btn-outline-dark float-right" href="{% url 'booking:course_events' event.course.slug %}">More info</a>
+                                            </span>
                                         {% elif user_info.can_book_or_cancel %}
                                             <span
                                                 id="book_{{ event.id }}"
@@ -111,14 +115,15 @@
                                                 class="ajax_events_btn">
                                                 {% include "booking/includes/events_button.txt" %}
                                                 </span>
-                                            </span>
                                         {% elif event.full %}
+                                            <span class="float-right">
                                             <span
                                                 id="waiting_list_button_{{ event.id }}"
                                                 data-event_id="{{ event.id }}"
                                                 data-user_id="{{ view_as_user.id }}"
                                                 class="ajax_events_waiting_list_btn">
                                             {% include "booking/includes/waiting_list_button.html" %}
+                                            </span>
                                             </span>
                                         {% elif user_info.booking_restricted_pre_event_start %}
                                             <span class="float-right"><a class="btn btn-xs btn-secondary" disabled href="#"><span class="helptext">Unavailable {{ event.event_type.booking_restriction }} mins before start</span></a></span>

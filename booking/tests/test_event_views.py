@@ -189,7 +189,7 @@ class EventListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         # cancel button shown for the booked events
         assert 'Cancel' in resp.rendered_content
         # course details button shown for the unbooked course
-        assert 'View course details' in resp.rendered_content
+        assert 'Course details' in resp.rendered_content
 
     def test_event_list_user_booking_info_booking_restriction(self):
         """

@@ -22,7 +22,7 @@
             <div class="list-group mb-2">
                 <div class="list-group-item list-group-item-dark pt-1 pb-1">{{ date|date:"D d M Y" }}</div>
                 {% for booking in bookings %}
-                    <div id="list-item-{{ booking.event.id }}" class="list-group-item pt-1 pb-1 {% if booking.status == 'CANCELLED' or booking.no_show %}list-group-item-secondary text-secondary{% endif %}">
+                    <div id="list-item-{{ booking.event.id }}" class="list-group-item p-1 {% if booking.status == 'CANCELLED' or booking.no_show %}list-group-item-secondary text-secondary{% endif %}">
                         <a href="{% url 'booking:event' booking.event.slug %}">
                                 {{ booking.event.start|date:"H:i"  }} - {{ booking.event.end|date:"H:i"  }} {{ booking.event.name }}
                         </a> <em><span id="cancelled-text-{{ booking.event.id}}">
@@ -30,7 +30,6 @@
                                 <br/>You have cancelled this booking
                             {% endif %}
                             </span></em>
-                            <span class="float-right">
                             {% if booking.event.cancelled %}
                                 <span class="float-right">{{ booking.event.event_type.label|upper }} CANCELLED</span>
                             {% elif not history and booking|can_book_or_cancel %}
@@ -46,6 +45,7 @@
                                 </span>
                                 {% elif booking.event.full %}
                                     {% if booking.status == "CANCELLED" or booking.no_show %}
+                                        <span class="float-right">
                                         <span
                                             id="waiting_list_button_{{ booking.event.id }}"
                                             data-event_id="{{ booking.event.id }}"
@@ -53,13 +53,11 @@
                                             class="ajax_events_waiting_list_btn">
                                         {% include "booking/includes/waiting_list_button.html" %}
                                         </span>
+                                        </span>
                                     {% endif %}
-                                {% elif booking.event.cancelled %}
-                                    <span>Event Cancelled</span>
                                 {% elif booking.event|booking_restricted %}
                                     <span class="float-right"><a class="btn btn-xs btn-secondary" disabled href="#">Unavailable</a></span>
                             {% endif %}
-                            </span>
                         <div>
                             {% if booking.event.course %}
                                 <a href="{% url 'booking:course_events' booking.event.course.slug %}"><span class="badge badge-course">Course: {{ booking.event.course.name|truncatechars:30 }} ({{ booking.event.course_order }})</span></a>
