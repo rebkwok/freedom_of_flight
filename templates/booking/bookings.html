@@ -31,7 +31,9 @@
                             {% endif %}
                             </span></em>
                             <span class="float-right">
-                            {% if not history and booking|can_book_or_cancel %}
+                            {% if booking.event.cancelled %}
+                                <span class="float-right">{{ booking.event.event_type.label|upper }} CANCELLED</span>
+                            {% elif not history and booking|can_book_or_cancel %}
                                 <span
                                     id="book_{{ booking.event.id }}"
                                     data-user_id="{{ booking.user.id }}"
@@ -62,7 +64,7 @@
                             {% if booking.event.course %}
                                 <a href="{% url 'booking:course_events' booking.event.course.slug %}"><span class="badge badge-course">Course: {{ booking.event.course.name|truncatechars:30 }} ({{ booking.event.course_order }})</span></a>
                             {% endif %}
-                            {% if user.is_authenticated %}
+                            {% if not booking.event.cancelled %}
                                 {% booking_user_info booking as user_info %}
                                 <span id="block_info_{{booking.event.id}}">
                                     {% include 'booking/includes/block_info.html' %}

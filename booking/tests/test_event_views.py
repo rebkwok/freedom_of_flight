@@ -45,7 +45,8 @@ class EventListViewTests(EventTestMixin, TestUsersMixin, TestCase):
 
         resp = self.client.get(self.url, follow=True)
         assert len(sum(list(resp.context_data['events_by_date'].values()), [])) == 6
-        assert "Log in</a> to book</span>" in resp.rendered_content
+        assert "Log in</a>" in resp.rendered_content
+        assert "register</a> to book</span>" in resp.rendered_content
 
     def test_event_list_logged_in_no_data_protection_policy(self):
         DataPrivacyPolicy.objects.all().delete()
@@ -445,7 +446,7 @@ class CourseListViewTests(EventTestMixin, TestUsersMixin, TestCase):
 
         resp = self.client.get(self.url)
         self.make_disclaimer(self.child_user)
-        assert "Purchase a payment plan" in resp.rendered_content
+        assert "Purchase a payment plan to book this course" in resp.rendered_content
         # check there are no booked events yet
         assert resp.context_data["already_booked"] is False
 
@@ -453,5 +454,5 @@ class CourseListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         baker.make(Booking, event=self.course_event, user=self.child_user)
         baker.make(Booking, event=self.course_event1, user=self.child_user)
         resp = self.client.get(self.url)
-        assert "Payment plan available" not in resp.rendered_content
+        assert "Purchase a payment plan to book this course" not in resp.rendered_content
         assert resp.context_data["already_booked"] is True

@@ -58,29 +58,38 @@
     </div>
 
         {% if course.description %}
-            <div class="list-group mb-2">
-                <div class="list-group-item list-group-item-info pt-1 pb-1">Details</div>
-                <div class="list-group-item pt-1 pb-1">{{ course.description|linebreaks }}</div>
+            <div class="row event-card event-card-header list-group-item-info">
+                <div class="col-12 p-2">Details</div>
             </div>
+            <div class="row event-card event-card-item p-2">{{ course.description|linebreaks }}</div>
         {% endif %}
 
         {% for date, events in events_by_date.items %}
-            <div class="list-group mb-2">
-                <div class="list-group-item list-group-item-dark pt-1 pb-1">{{ date|date:"D d M Y" }}</div>
-                {% for event in events %}
-                    {% with user_booking_info|lookup_dict:event.id as user_info %}
-                        <div class="list-group-item {% if event.is_past or event.cancelled %}list-group-item-secondary{% endif %} pt-1 pb-1">
-
-                        <span id="booked_tick_{{ event.id }}" {% if not user_info.open %}class="hidden"{% endif %}>
-                        <i class="text-success fas fa-check-circle"></i>
-                        </span>
-                        <a href="{% url 'booking:event' event.slug %}"> {{ event.start|date:"H:i"  }} - {{ event.end|date:"H:i" }}  {{ event.name }}</a>
+            <div class="row event-card event-card-header list-group-item-secondary">
+                <div class="col-12 p-1">{{ date|date:"D d M Y" }}</div>
+            </div>
+            {% for event in events %}
+                <div class="row event-card event-card-item {% if event.is_past or event.cancelled %}list-group-item-secondary{% endif %}">
+                {% with user_booking_info|lookup_dict:event.id as user_info %}
+                    <div class="col-7 col-sm-8 pt-2 pb-2">
+                            <!-- Event name and info (availability, user blocks) on smaller screens -->
+                            <span id="booked_tick_{{ event.id }}" {% if not user_info.open %}class="hidden"{% endif %}>
+                            <i class="text-success fas fa-check-circle"></i>
+                            </span>
+                            <a href="{% url 'booking:event' event.slug %}"> {{ event.start|date:"H:i"  }} - {{ event.end|date:"H:i" }}  {{ event.name }}</a>
                             <span class="d-inline-block d-sm-none" id="event_info_xs_{{event.id}}">
                             {% include 'booking/includes/event_info_xs.html' %}
                             </span>
-                        {% if request.user.is_authenticated %}
+                            <!-- availability, user blocks etc on larger screens plus course info on all -->
+                            {% include 'booking/includes/events_info.html' %}
+                    </div>
+                    <div class="col-5 col-sm-4 pt-2 pb-2 float-right">
+                            <!-- booking buttons and info text -->
+                            {% if request.user.is_authenticated %}
                             {% if view_as_user|has_disclaimer %}
-                                {% if event.is_past %}
+                                {% if event.cancelled %}
+                                    <span class="float-right">{{ event.event_type.label|upper }} CANCELLED</span>
+                                {% elif event.is_past %}
                                     {% if course %}
                                     <span class="float-right"><a class="btn btn-xs btn-secondary" disabled href="#">{{ event.event_type.label|title }} is past</a></span>
                                     {% else %}
@@ -89,7 +98,8 @@
                                 {% elif not course %}
                                     <span class="float-right">
                                         {% if event.course.has_started and not user_info.has_booked %}
-                                            <span class="helptext">Course has started; more info <a href="{% url 'booking:course_events' event.course.slug %}">here</a></span>
+                                            <span class="helptext">Course has started<span/><br/>
+                                                <a class="btn btn-xs btn-outline-dark float-right" href="{% url 'booking:course_events' event.course.slug %}">More info</a>
                                         {% elif user_info.can_book_or_cancel %}
                                             <span
                                                 id="book_{{ event.id }}"
@@ -137,13 +147,11 @@
                         {% else %}
                             <span class="helptext float-right"><a href="{% url 'account_login' %}?next={{request.get_full_path}}">Log in</a> or <a href="{% url 'account_signup' %}">register</a> to book</span>
                         {% endif %}
-                        <div>
-                            {% include 'booking/includes/events_info.html' %}
-                        </div>
                     </div>
-                    {%  endwith %}
-                {% endfor %}
-            </div>
+
+                {%  endwith %}
+                </div>
+            {% endfor %}
         {% endfor %}
 
     {% if page_events.has_other_pages %}

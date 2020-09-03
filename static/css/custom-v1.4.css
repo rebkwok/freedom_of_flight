@@ -28,6 +28,24 @@ body > .container-fluid {
   padding: 60px 25px 0 25px;
 }
 
+.event-card {
+  margin-top: 5px;
+  border: 1px solid rgba(0,0,0,.125);
+}
+.event-card-header {
+  border-top-left-radius: .2rem;
+  border-top-right-radius: .2rem;
+}
+.event-card-item {
+  margin-top: 0;
+  border-top-width: 0;
+}
+
+.event-card-info {
+  background-color: #bee5eb;
+}
+
+
 @media only screen and (max-width: 768px) {
   h1 {
     font-size: xx-large;
@@ -224,17 +242,12 @@ div#CookielawBanner {
 
 /* Button styles */
 .btn-xs {
-  width: 150px;
+  width: 140px;
   font-size: 75%;
-  padding: 3px;
-}
-
-@media only screen and (max-width: 768px) {
-  .btn-xs {
-    width: 110px;
-    padding: 3px;
-    line-height: 1.1;
-  }
+  padding-top: 3px;
+  padding-bottom: 3px;
+  padding-left: 1px;
+  padding-right: 1px;
 }
 
 /* Button styles */

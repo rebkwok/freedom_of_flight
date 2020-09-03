@@ -1,5 +1,5 @@
 {% load bookingtags %}
-
+{% if not event.cancelled %} {# Cancelled events still show up with their courses #}
     <span data-toggle="tooltip" data-html="true"
           title="<span class='align-left'>
         {{ event.event_type.name|title }}<br/>
@@ -20,3 +20,4 @@
         </span>">
       <small><i class="text-secondary fas fa-info-circle"></i></small>
     </span>
+{% endif %}

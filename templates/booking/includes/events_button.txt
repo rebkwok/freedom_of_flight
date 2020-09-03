@@ -23,12 +23,12 @@
         <span class="helptext">Payment plan available</span><br/>
          <div class="btn btn-xs btn-outline-dark" href="#">View course details</div>
      {% else %}
-         <span class="helptext">Purchase a payment plan to book this course</span><br/>
+         <span class="helptext">Payment plan required</span><br/>
          <div class="btn btn-xs btn-outline-dark float-right" href="#">View course details</div>
      {% endif %}
 {% elif user_info.can_book_or_cancel %}
     {% if not user_info.has_available_block and not user_info.has_available_subscription %}
-         <span class="helptext">Purchase a payment plan to book this {{event.event_type.label}}</span>
+         <span class="helptext">Payment plan required</span>
      {% elif user_info.cancelled %}
         <div class="btn btn-xs btn-success" href="#"><i id="loader_{{ event.id }}"></i> Rebook Drop-in</div>
      {% else %}
