@@ -107,8 +107,11 @@ def ajax_toggle_course_visible(request, course_id):
 @staff_required
 def cancel_course_view(request, slug):
     course = get_object_or_404(Course, slug=slug)
-    bookings_to_cancel = Booking.objects.filter(event__in=course.events.all())
-    bookings_to_cancel_users = bookings_to_cancel.order_by().distinct("user")
+    bookings_to_cancel = Booking.objects.filter(event__course=course)
+    bookings_to_cancel_users = [
+        booking.user for booking in bookings_to_cancel.order_by().distinct("user")
+    ]
+
     if request.method == 'POST':
         if 'confirm' in request.POST:
             additional_message = request.POST["additional_message"]
@@ -122,26 +125,28 @@ def cancel_course_view(request, slug):
                 booking.save()
             course.save()
 
-            # send email notification
-            ctx = {
-                'host': 'http://{}'.format(request.META.get('HTTP_HOST')),
-                'course': course,
-                'additional_message': additional_message,
-            }
-            # send emails to manager user if this is a child user booking
-            user_emails = {
-                booking.user.childuserprofile.parent_user_profile.user.email if hasattr(booking.user, "childuserprofile")
-                else booking.user.email for booking in bookings_to_cancel
-            }
-            send_bcc_emails(
-                ctx,
-                user_emails,
-                subject=f'{settings.ACCOUNT_EMAIL_SUBJECT_PREFIX} The course {course.name} has been cancelled',
-                template_without_ext="studioadmin/email/course_cancelled"
-            )
+            send_email_confirmation = request.POST.get("send_email_confirmation")
+            if bookings_to_cancel and send_email_confirmation:
+                # send email notification
+                ctx = {
+                    'host': 'http://{}'.format(request.META.get('HTTP_HOST')),
+                    'course': course,
+                    'additional_message': additional_message,
+                }
+                # send emails to manager user if this is a child user booking
+                user_emails = {
+                    booking.user.childuserprofile.parent_user_profile.user.email if hasattr(booking.user, "childuserprofile")
+                    else booking.user.email for booking in bookings_to_cancel
+                }
+                send_bcc_emails(
+                    ctx,
+                    user_emails,
+                    subject=f'{settings.ACCOUNT_EMAIL_SUBJECT_PREFIX} The course {course.name} has been cancelled',
+                    template_without_ext="studioadmin/email/course_cancelled"
+                )
 
             if bookings_to_cancel:
-                message = 'bookings cancelled and notification emails sent to students'
+                message = f"bookings cancelled{' and notification emails sent to students' if send_email_confirmation else ''}"
             else:
                 message = 'no open bookings'
             messages.success(request, f'Course and all associated events cancelled; {message}')

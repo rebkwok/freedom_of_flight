@@ -191,7 +191,7 @@ class CancelEventViewTests(EventTestMixin, TestUsersMixin, TestCase):
         url = self.url(self.event)
         self.login(self.staff_user)
         resp = self.client.post(
-            url, data={"confirm": "yes, confirm", "additional_message": ""}, follow=True
+            url, data={"confirm": "yes, confirm", "additional_message": "", "send_email_confirmation": True}, follow=True
         )
         assert Event.objects.filter(id=event_id).exists() is False
         assert "Event deleted" in resp.rendered_content
@@ -204,7 +204,7 @@ class CancelEventViewTests(EventTestMixin, TestUsersMixin, TestCase):
         url = self.url(self.event)
         self.login(self.staff_user)
         resp = self.client.post(
-            url, data={"confirm": "yes, confirm", "additional_message": ""}, follow=True
+            url, data={"confirm": "yes, confirm", "additional_message": "", "send_email_confirmation": True}, follow=True
         )
         self.event.refresh_from_db()
         assert self.event.cancelled
@@ -230,7 +230,7 @@ class CancelEventViewTests(EventTestMixin, TestUsersMixin, TestCase):
         url = self.url(self.event)
         self.login(self.staff_user)
         resp = self.client.post(
-            url, data={"confirm": "yes, confirm", "additional_message": ""}, follow=True
+            url, data={"confirm": "yes, confirm", "additional_message": "", "send_email_confirmation": True}, follow=True
         )
         self.event.refresh_from_db()
         assert self.event.cancelled
@@ -257,7 +257,7 @@ class CancelEventViewTests(EventTestMixin, TestUsersMixin, TestCase):
         url = self.url(self.event)
         self.login(self.staff_user)
         resp = self.client.post(
-            url, data={"confirm": "yes, confirm", "additional_message": ""}, follow=True
+            url, data={"confirm": "yes, confirm", "additional_message": "", "send_email_confirmation": True}, follow=True
         )
         for obj in [self.event, open_booking, no_show_booking]:
             obj.refresh_from_db()
@@ -290,7 +290,7 @@ class CancelEventViewTests(EventTestMixin, TestUsersMixin, TestCase):
         url = self.url(self.course_event)
         self.login(self.staff_user)
         resp = self.client.post(
-            url, data={"confirm": "yes, confirm", "additional_message": ""}, follow=True
+            url, data={"confirm": "yes, confirm", "additional_message": "", "send_email_confirmation": True}, follow=True
         )
         for obj in [self.course_event, open_booking, no_show_booking]:
             obj.refresh_from_db()
@@ -313,10 +313,21 @@ class CancelEventViewTests(EventTestMixin, TestUsersMixin, TestCase):
         url = self.url(self.event)
         self.login(self.staff_user)
         resp = self.client.post(
-            url, data={"confirm": "yes, confirm", "additional_message": "This is an extra message."}
+            url,
+            data={"confirm": "yes, confirm", "additional_message": "This is an extra message.", "send_email_confirmation": True}
         )
         assert len(mail.outbox) == 1
         assert "This is an extra message." in mail.outbox[0].body
+
+    def test_cancel_event_no_email(self):
+        baker.make(Booking, event=self.event, user=self.student_user)
+        url = self.url(self.event)
+        self.login(self.staff_user)
+        self.client.post(
+            url,
+            data={"confirm": "yes, confirm", "additional_message": "This is an extra message."}
+        )
+        assert len(mail.outbox) == 0
 
     def test_cancel_event_with_open_bookings_emails_manager_user(self):
         baker.make(Booking, event=self.event, user=self.student_user)
@@ -324,7 +335,7 @@ class CancelEventViewTests(EventTestMixin, TestUsersMixin, TestCase):
         url = self.url(self.event)
         self.login(self.staff_user)
         self.client.post(
-            url, data={"confirm": "yes, confirm", "additional_message": ""}
+            url, data={"confirm": "yes, confirm", "additional_message": "", "send_email_confirmation": True}
         )
         assert sorted(mail.outbox[0].bcc) == sorted([self.student_user.email, self.manager_user.email])
 

@@ -151,26 +151,28 @@ def cancel_event_view(request, slug):
                     booking.save()
                 event.save()
 
-                # send email notification
-                ctx = {
-                    'host': 'http://{}'.format(request.META.get('HTTP_HOST')),
-                    'event': event,
-                    'additional_message': additional_message,
-                }
-                # send emails to manager user if this is a child user booking
-                user_emails = [
-                    booking.user.manager_user.email if booking.user.manager_user
-                    else booking.user.email for booking in bookings_to_cancel
-                ]
-                send_bcc_emails(
-                    ctx,
-                    user_emails,
-                    subject=f'{settings.ACCOUNT_EMAIL_SUBJECT_PREFIX} {event} has been cancelled',
-                    template_without_ext="studioadmin/email/event_cancelled"
-                )
+                send_email_confirmation = request.POST.get("send_email_confirmation")
+                if bookings_to_cancel and send_email_confirmation:
+                    # send email notification
+                    ctx = {
+                        'host': 'http://{}'.format(request.META.get('HTTP_HOST')),
+                        'event': event,
+                        'additional_message': additional_message,
+                    }
+                    # send emails to manager user if this is a child user booking
+                    user_emails = [
+                        booking.user.manager_user.email if booking.user.manager_user
+                        else booking.user.email for booking in bookings_to_cancel
+                    ]
+                    send_bcc_emails(
+                        ctx,
+                        user_emails,
+                        subject=f'{settings.ACCOUNT_EMAIL_SUBJECT_PREFIX} {event} has been cancelled',
+                        template_without_ext="studioadmin/email/event_cancelled"
+                    )
 
                 if bookings_to_cancel:
-                    message = 'bookings cancelled and notification emails sent to students'
+                    message = f"bookings cancelled{' and notification emails sent to students' if send_email_confirmation else ''}"
                 else:
                     message = 'no open bookings'
                 messages.success(request, f'Event cancelled; {message}')

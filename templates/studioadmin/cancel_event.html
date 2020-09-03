@@ -12,11 +12,11 @@
 {% block content %}
 
 <div class="pt-4">
-    <h2>Cancelling {{ event }}</h2>
+    <h2>Cancelling {% if event_is_part_of_course %}single {{ event.event_type.label }}: {% endif %}{{ event }}</h2>
 
-    {%  if event_is_part_of_course %}
+    {% if event_is_part_of_course %}
         <p>
-            This class is part of a course.  You will need to manually add a replacement class to the course.
+            This {{ event.event_type.label }} is part of a course.  You will need to manually add a replacement {{ event.event_type.label }} to the course.
         </p>
     {% endif %}
     {% if any_bookings %}
@@ -32,6 +32,11 @@
         {% endif %}
 
         <form action="" method="post">{% csrf_token %}
+            <div class="form-check">
+            <input type="checkbox" checked="checked" class="form-check-input" id="send_email_confirmation" name="send_email_confirmation"/>
+            <label class="form-check-label" for="send_email_confirmation">Email notification to students</label>
+                <small class="form-text text-muted">(or their main account holder, for managed users)</small>
+            </div>
             <div class="form-group">
             <label for="additional_message">Additional message to include in emails to students:</label><br/>
             <textarea class="form-control" id="additional_message" rows="10" name="additional_message"/></textarea>

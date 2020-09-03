@@ -200,7 +200,7 @@ class CancelCourseViewTests(EventTestMixin, TestUsersMixin, TestCase):
         url = self.url(self.course)
         self.login(self.staff_user)
         resp = self.client.post(
-            url, data={"confirm": "yes, confirm", "additional_message": ""}, follow=True
+            url, data={"confirm": "yes, confirm", "additional_message": "", "send_email_confirmation": True}, follow=True
         )
         self.course.refresh_from_db()
         self.course_event.refresh_from_db()
@@ -215,7 +215,7 @@ class CancelCourseViewTests(EventTestMixin, TestUsersMixin, TestCase):
         url = self.url(self.course)
         self.login(self.staff_user)
         resp = self.client.post(
-            url, data={"confirm": "yes, confirm", "additional_message": ""}, follow=True
+            url, data={"confirm": "yes, confirm", "additional_message": "", "send_email_confirmation": True}, follow=True
         )
         self.course.refresh_from_db()
         self.course_event.refresh_from_db()
@@ -245,7 +245,7 @@ class CancelCourseViewTests(EventTestMixin, TestUsersMixin, TestCase):
         url = self.url(self.course)
         self.login(self.staff_user)
         resp = self.client.post(
-            url, data={"confirm": "yes, confirm", "additional_message": ""}, follow=True
+            url, data={"confirm": "yes, confirm", "additional_message": "", "send_email_confirmation": True}, follow=True
         )
         self.course.refresh_from_db()
         self.course_event.refresh_from_db()
@@ -275,7 +275,7 @@ class CancelCourseViewTests(EventTestMixin, TestUsersMixin, TestCase):
         url = self.url(self.course)
         self.login(self.staff_user)
         resp = self.client.post(
-            url, data={"confirm": "yes, confirm", "additional_message": ""}, follow=True
+            url, data={"confirm": "yes, confirm", "additional_message": "", "send_email_confirmation": True}, follow=True
         )
         for obj in [self.course_event, open_booking, no_show_booking]:
             obj.refresh_from_db()
@@ -305,11 +305,26 @@ class CancelCourseViewTests(EventTestMixin, TestUsersMixin, TestCase):
         url = self.url(self.course)
         self.login(self.staff_user)
         resp = self.client.post(
-            url, data={"confirm": "yes, confirm", "additional_message": "This is an extra message."}
+            url,
+            data={"confirm": "yes, confirm", "additional_message": "This is an extra message.", "send_email_confirmation": True}
         )
         assert len(mail.outbox) == 1
         assert len(mail.outbox[0].bcc) == 1
         assert "This is an extra message." in mail.outbox[0].body
+
+    def test_cancel_course_no_email(self):
+        event = baker.make_recipe(
+            "booking.future_event", event_type=self.aerial_event_type, course=self.course
+        )
+        baker.make(Booking, event=self.course_event, user=self.student_user)
+        baker.make(Booking, event=event, user=self.student_user)
+        url = self.url(self.course)
+        self.login(self.staff_user)
+        resp = self.client.post(
+            url,
+            data={"confirm": "yes, confirm", "additional_message": ""}
+        )
+        assert len(mail.outbox) == 0
 
     def test_cancel_course_with_open_bookings_emails_manager_user(self):
         baker.make(Booking, event=self.course_event, user=self.student_user)
@@ -317,7 +332,7 @@ class CancelCourseViewTests(EventTestMixin, TestUsersMixin, TestCase):
         url = self.url(self.course)
         self.login(self.staff_user)
         self.client.post(
-            url, data={"confirm": "yes, confirm", "additional_message": ""}
+            url, data={"confirm": "yes, confirm", "additional_message": "", "send_email_confirmation": True}
         )
         assert sorted(mail.outbox[0].bcc) == sorted([self.student_user.email, self.manager_user.email])
 
