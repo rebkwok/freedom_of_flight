@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from functools import wraps
 
 from django.core.cache import cache
@@ -32,14 +34,18 @@ def _get_courses(queryset, include_course_function):
     return [course for course in queryset if include_course_function(course, start_of_today)]
 
 
+def _start_for_sort(course):
+    return course.start if course.start is not None else datetime.min.replace(tzinfo=timezone.utc)
+
+
 def get_current_courses(queryset=None):
     # for future courses, courses with least one event in the future, or have no events yet
-    return _get_courses(queryset, _include_future_course)
+    return sorted(_get_courses(queryset, _include_future_course), key=lambda course: _start_for_sort(course))
 
 
 def get_past_courses(queryset=None):
     # for past course, all events before the beginning of today
-    return _get_courses(queryset, _include_past_course)
+    return sorted(_get_courses(queryset, _include_past_course), key=lambda course: course.start, reverse=True)
 
 
 def staff_required(func):

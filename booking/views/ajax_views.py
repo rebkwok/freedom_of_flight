@@ -264,7 +264,7 @@ def ajax_toggle_waiting_list(request, event_id):
 @login_required
 @require_http_methods(['POST'])
 def ajax_course_booking(request, course_id):
-
+    ref = request.POST["ref"]
     user_id = request.POST["user_id"]
     if user_id == request.user.id:
         user = request.user
@@ -278,7 +278,7 @@ def ajax_course_booking(request, course_id):
 
     course = Course.objects.get(id=course_id)
 
-    if not has_available_block(user, course.events.first()):
+    if not has_available_block(user, course.uncancelled_events.first()):
         url = reverse('booking:course_purchase_options', args=(course.slug,))
         return JsonResponse({"redirect": True, "url": url})
 
@@ -290,7 +290,7 @@ def ajax_course_booking(request, course_id):
 
     course_block = get_active_user_block(user, course.events.first())
     # Book all events
-    for event in course.events.all():
+    for event in course.uncancelled_events.all():
         booking, _ = Booking.objects.get_or_create(user=user, event=event)
         # Make sure block is assigned but don't change booking statuses if already created
         booking.block = course_block
@@ -317,8 +317,12 @@ def ajax_course_booking(request, course_id):
         ctx, request.user, course.event_type.email_studio_when_booked, subjects, "course_booked"
     )
 
-    messages.success(request, "Course booking created")
-    url = reverse('booking:course_events', args=(course.slug,))
+    messages.success(request, f"Course {course.name} booked")
+
+    if ref == "course_list":
+        url = reverse('booking:courses', args=(course.event_type.track.slug,))
+    else:
+        url = reverse('booking:course_events', args=(course.slug,))
     return JsonResponse({"redirect": True, "url": url})
 
 

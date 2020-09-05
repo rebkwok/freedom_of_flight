@@ -54,6 +54,16 @@ class Track(models.Model):
             # returns the first one, or None
             return Track.objects.first()
 
+    @property
+    def event_type_label(self):
+        most_common = self.event_types.values("label").annotate(count=models.Count('label')).order_by("-count")
+        return most_common.first() or "class"
+
+    @property
+    def pluralized_event_type_label(self):
+        event_type_with_label = self.event_types.filter(label=self.event_type_label).first()
+        return event_type_with_label.pluralized_label if event_type_with_label else "classes"
+
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
         if self.default:
@@ -159,7 +169,7 @@ class Course(models.Model):
 
     @property
     def uncancelled_events(self):
-        return self.events.filter(cancelled=False)
+        return self.events.filter(cancelled=False).order_by("start")
 
     def is_configured(self):
         """A course is configured if it has the right number of un-cancelled events"""

@@ -10,6 +10,7 @@ from booking.views import (
     ajax_block_purchase, shopping_basket, ajax_checkout, BlockDetailView,
     SubscriptionListView, SubscriptionDetailView,
     ajax_subscription_purchase,
+    CourseListView
 )
 
 
@@ -30,6 +31,7 @@ urlpatterns = [
     path('ajax-toggle-waiting-list/<int:event_id>/', ajax_toggle_waiting_list, name='toggle_waiting_list'),
 
     # COURSES
+    path('<slug:track>/courses/', CourseListView.as_view(), name='courses'),
     path('course/<slug:course_slug>', CourseEventsListView.as_view(), name='course_events'),
     path('ajax-course-booking/<int:course_id>/', ajax_course_booking, name='ajax_course_booking'),
 
@@ -57,7 +59,7 @@ urlpatterns = [
     path("ajax-checkout/", ajax_checkout, name="ajax_checkout"),
     path('ajax-cart-item-delete/', ajax_cart_item_delete, name='ajax_cart_item_delete'),
 
-    # EVENTS LIST: needs to go last
+    # EVENTS LIST: needs to go last, catches everything else
     path('<slug:track>/', EventListView.as_view(), name='events'),
 
     # path('gift-vouchers/', GiftVoucherPurchaseView.as_view(), name='buy_gift_voucher'),

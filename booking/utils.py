@@ -209,3 +209,23 @@ def get_user_booking_info(user, event):
             "used_subscription_info": booking_subscription_info,
         })
     return info
+
+
+def get_user_course_booking_info(user, course):
+    has_booked = user.bookings.filter(event__course=course).exists()
+    first_event = course.uncancelled_events.first()
+    available_block = get_active_user_block(user, first_event)
+
+    info = {
+        "hide_block_info_divider": True,
+        "has_available_block": available_block is not None,
+        "has_booked": has_booked,
+        "open": has_booked, # for block info
+        "available_block": available_block,
+    }
+    if has_booked:
+        iter_used_blocks = (
+            booking.block for booking in user.bookings.filter(event__course=course) if booking.block is not None
+        )
+        info.update({"used_block": next(iter_used_blocks) if any(iter_used_blocks) else None})
+    return info

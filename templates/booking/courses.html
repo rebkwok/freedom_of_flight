@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% load accounttags bookingtags static email_obfuscator %}
+
+{% block extra_head %}
+{% include 'common/includes/ajax_head.html' %}
+{% endblock %}
+
+{% block content %}
+
+<div id="confirm-dialog"></div>
+
+    <h2 class="mt-1">{{ title }}: Courses</h2>
+
+    {% if available_users|length > 1 %}
+        <form class="form-inline pb-3" method="post">
+            {% csrf_token %}
+            {{ available_users_form }}
+        </form>
+    {% endif %}
+
+
+    <div class="row">
+    <div class="col-12">
+        <span class="float-left"><a class="btn btn-outline-primary btn-sm" href="{% url 'booking:events' track.slug %}">View {{ track.pluralized_event_type_label }}</a></span>
+        {% if request.user.is_authenticated %}<span class="float-right"><a href="{% url 'booking:bookings' %}">My Bookings</a></span>{% endif %}
+    </div>
+    </div>
+
+
+    <div class="row">
+    <div class="col-12">
+        {% if courses %}
+
+        {% for course in courses %}
+            {% with user_course_booking_info|lookup_dict:course.id as user_info %}
+            <div class="row event-card event-card-header list-group-item-secondary">
+                <div class="col-12 p-1">{{ course.name }}
+                    <span {% if not user_info.has_booked %}class="hidden"{% endif %}><i class="text-success fas fa-check-circle"></i></span>
+                    <span class="float-right">
+                        <a class="btn btn-xs btn-dark" href="{% url 'booking:course_events' course.slug %}">Course details</a>
+                    </span>
+                </div>
+            </div>
+
+                <div class="row event-card event-card-item">
+
+                    <div class="col-8 pt-2 pb-2 pl-1">
+                        <strong>{{ course.event_type.label|title }} Dates:</strong>
+                        <ul class="pl-1">
+                        {% for event in course.uncancelled_events %}
+                        <li style="list-style: none;">{{ event.start|date:"D d-M-y H:i" }} - {{ event.end|date:"H:i" }}</li>
+                        {% endfor %}
+                        </ul>
+                    </div>
+
+                    <div class="col-4 pt-2 pb-2 pr-1 pl-1 float-right">
+
+                            <!-- booking buttons and info text -->
+                            {% if request.user.is_authenticated %}
+                            {% if view_as_user|has_disclaimer %}
+                                <div class="row">
+                                    <div class="col-12">
+                                        {% if user_info.has_booked %}
+                                            <span class="float-right"><i class="text-success fas fa-check-circle"></i> Booked</span><br/>
+                                            <span class="float-right">{% include "booking/includes/block_info.html" %}</span>
+                                        {% elif course.has_started %}<span class="helptext float-right">Course has started</span>
+                                        {% elif course.full %}<span class="helptext float-right">Course is full</span>
+                                        {% elif user_info.has_available_block %}
+                                            <div
+                                                id="book_course_{{ course.id }}"
+                                                data-user_id="{{ view_as_user.id }}"
+                                                data-ref="course_list"
+                                                data-course_id="{{ course.id }}"
+                                                data-has_started={{ course.has_started|yesno:"1,0" }}
+                                                data-has_available_block={{ user_info.has_available_block|yesno:"1,0" }}
+                                                data-already_booked={{ user_info.has_booked|yesno:"1,0" }}
+                                                class="ajax_course_events_btn float-right">
+                                                {% include "booking/includes/course_list_button.html" %}
+                                            </div>
+                                        {% else %}
+                                            <span class="float-right helptext"><i class="text-dark fas fa-times-circle"></i> NOT BOOKED</span><br/>
+                                            <span class="float-right helptext">Payment plan required</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                            {% else %}
+                                <span class="helptext float-right"><a href="{% url 'accounts:disclaimer_form' view_as_user.id %}">Complete a disclaimer</a> to book</span>
+                            {% endif %}
+                        {% else %}
+                            <span class="helptext float-right"><a href="{% url 'account_login' %}?next={{request.get_full_path}}">Log in</a> or <a href="{% url 'account_signup' %}">register</a> to book</span>
+                        {% endif %}
+                    </div>
+                </div>
+            {%  endwith %}
+        {% endfor %}
+
+            {% include 'common/includes/single_page_pagination.html' %}
+
+    {% else %}
+        <p>No courses scheduled.</p>
+    {% endif %}
+    </div>
+    </div>
+{% endblock content %}
+
+{% block extra_js %}
+<script type='text/javascript' src="{% static 'booking/js/events_booking_ajax-v1.js' %}"></script>
+{% endblock %}

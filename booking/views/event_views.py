@@ -59,6 +59,14 @@ class EventListView(DataPolicyAgreementRequiredMixin, ListView):
         context["events_by_date"] = events_by_date
         context['title'] = self.get_title()
 
+        if "track" in self.kwargs:
+            track = Track.objects.get(slug=self.kwargs["track"])
+            context['track'] = track
+            context["courses_available"] = any(
+                [course for course in Course.objects.filter(event_type__track=track, cancelled=False, show_on_site=True)
+                 if course.last_event_date.date() >= timezone.now().date()]
+            )
+
         if self.request.user.is_authenticated:
             # Add in the booked_events
             # All user bookings for events in this list view (may be cancelled)
