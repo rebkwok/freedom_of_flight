@@ -49,7 +49,7 @@
                         <strong>{{ course.event_type.label|title }} Dates:</strong>
                         <ul class="pl-1">
                         {% for event in course.uncancelled_events %}
-                        <li style="list-style: none;">{{ event.start|date:"D d-M-y H:i" }} - {{ event.end|date:"H:i" }}</li>
+                        <li style="list-style: none;">{{ event.start|date:"D d-M-y, H:i" }}-{{ event.end|date:"H:i" }}</li>
                         {% endfor %}
                         </ul>
                     </div>
