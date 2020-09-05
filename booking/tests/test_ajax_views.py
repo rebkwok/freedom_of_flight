@@ -402,12 +402,49 @@ class BookingAjaxCourseBookingViewTests(EventTestMixin, TestUsersMixin, TestCase
         redirect_url = reverse('booking:disclaimer_required', args=(self.child_user.id,))
         assert resp.json() == {"redirect": True, "url": redirect_url}
 
+    def test_book_course_from_courselist(self):
+        # booking a course books for all events on the course
+        # make usable block
+        block = baker.make(
+            Block, user=self.student_user, block_config__event_type=self.aerial_event_type,
+            block_config__course=True, block_config__size=self.course.number_of_events,
+            paid=True
+        )
+        assert self.course.is_configured()
+        resp = self.client.post(self.url(self.course.id), data={"user_id": self.student_user.id, "ref": "course_list"})
+        resp = resp.json()
+        assert resp['redirect'] is True
+        redirect_url = reverse('booking:courses', args=(self.course.event_type.track.slug,))
+        assert resp['url'] == redirect_url
+
+        for event in self.course_events:
+            assert event.bookings.filter(user=self.student_user, status="OPEN", block=block).exists()
+
     def test_cannot_book_for_full_course(self):
-        pass
+        # make usable block
+        baker.make(
+            Block, user=self.student_user, block_config__event_type=self.aerial_event_type,
+            block_config__course=True, block_config__size=self.course.number_of_events,
+            paid=True
+        )
+        assert self.course.is_configured()
+        for event in self.course.events.all():
+            baker.make(Booking, event=event, _quantity=self.course.max_participants)
+        assert self.course.full
+        resp = self.client.post(self.url(self.course.id), data={"user_id": self.student_user.id})
+        assert resp.status_code == 400
 
     def test_cannot_book_for_cancelled_course(self):
+        # make usable block
+        baker.make(
+            Block, user=self.student_user, block_config__event_type=self.aerial_event_type,
+            block_config__course=True, block_config__size=self.course.number_of_events,
+            paid=True
+        )
         self.course.cancelled = True
         self.course.save()
+        resp = self.client.post(self.url(self.course.id), data={"user_id": self.student_user.id})
+        assert resp.status_code == 400
 
 
 class WaitinglistToggleAjaxViewTests(EventTestMixin, TestUsersMixin, TestCase):

@@ -18,8 +18,9 @@ from activitylog.models import ActivityLog
 from common.utils import full_name, start_of_day_in_utc
 from ..models import Booking, Block, Course, Event, WaitingListUser, BlockConfig, Subscription, SubscriptionConfig
 from ..utils import (
-    calculate_user_cart_total, has_available_block, has_available_subscription, get_active_user_block,
-    get_user_booking_info, get_available_user_subscription
+    calculate_user_cart_total, has_available_block, has_available_subscription,
+    get_active_user_course_block,
+    get_user_booking_info, get_available_user_subscription, has_available_course_block
 )
 from ..email_helpers import send_waiting_list_email, send_user_and_studio_emails
 from .views_utils import total_unpaid_item_count
@@ -264,7 +265,7 @@ def ajax_toggle_waiting_list(request, event_id):
 @login_required
 @require_http_methods(['POST'])
 def ajax_course_booking(request, course_id):
-    ref = request.POST["ref"]
+    ref = request.POST.get("ref", "course")
     user_id = request.POST["user_id"]
     if user_id == request.user.id:
         user = request.user
@@ -278,7 +279,7 @@ def ajax_course_booking(request, course_id):
 
     course = Course.objects.get(id=course_id)
 
-    if not has_available_block(user, course.uncancelled_events.first()):
+    if not has_available_course_block(user, course):
         url = reverse('booking:course_purchase_options', args=(course.slug,))
         return JsonResponse({"redirect": True, "url": url})
 
@@ -288,7 +289,7 @@ def ajax_course_booking(request, course_id):
             "Sorry, this course {}".format("has been cancelled" if course.cancelled else "is now full")
         )
 
-    course_block = get_active_user_block(user, course.events.first())
+    course_block = get_active_user_course_block(user, course)
     # Book all events
     for event in course.uncancelled_events.all():
         booking, _ = Booking.objects.get_or_create(user=user, event=event)

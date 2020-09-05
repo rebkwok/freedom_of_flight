@@ -159,7 +159,7 @@ class Course(models.Model):
 
     @property
     def has_started(self):
-        return self.start < timezone.now()
+        return self.start and self.start < timezone.now()
 
     @cached_property
     def last_event_date(self):

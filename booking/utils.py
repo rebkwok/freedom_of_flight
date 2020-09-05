@@ -31,7 +31,7 @@ def has_available_block(user, event):
 
 
 def has_available_course_block(user, course):
-    return has_available_block(user, course.events.order_by("start").first())
+    return any(True for block in user.blocks.all() if block.valid_for_course(course))
 
 
 def get_active_user_block(user, event):
@@ -50,6 +50,14 @@ def get_active_user_block(user, event):
             block_config__course=False, block_config__event_type=event.event_type
         ).order_by("expiry_date", "purchase_date")
         return next((block for block in blocks if block.valid_for_event(event)), None)
+
+
+def get_active_user_course_block(user, course):
+    blocks = user.blocks.filter(
+        block_config__course=True, block_config__event_type=course.event_type
+    ).order_by("expiry_date", "purchase_date")
+    # already sorted by expiry date, so we can just get the next valid one
+    return next((block for block in blocks if block.valid_for_course(course)), None)
 
 
 def get_block_status(block):
@@ -213,14 +221,13 @@ def get_user_booking_info(user, event):
 
 def get_user_course_booking_info(user, course):
     has_booked = user.bookings.filter(event__course=course).exists()
-    first_event = course.uncancelled_events.first()
-    available_block = get_active_user_block(user, first_event)
+    available_block = get_active_user_course_block(user, course)
 
     info = {
         "hide_block_info_divider": True,
         "has_available_block": available_block is not None,
         "has_booked": has_booked,
-        "open": has_booked, # for block info
+        "open": has_booked,  # for block info
         "available_block": available_block,
     }
     if has_booked:
