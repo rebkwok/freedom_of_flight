@@ -107,7 +107,28 @@ class EventListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         self.login(self.student_user)
         resp = self.client.get(self.adult_url)
         assert 'user_booking_info' in resp.context
+    
+    def test_event_list_name_filter(self):
+        Event.objects.all().delete()
+        baker.make_recipe("booking.future_event", event_type=self.aerial_event_type, _quantity=3, name="Hoop")
+        baker.make_recipe("booking.future_event", event_type=self.aerial_event_type, _quantity=2, name="Silks")
+        baker.make_recipe("booking.future_event", event_type=self.aerial_event_type, _quantity=2, name="silks")
+        baker.make_recipe("booking.future_event", event_type=self.aerial_event_type, _quantity=4, name="Trapeze")
+        
+        resp = self.client.get(self.adult_url)
+        # show all by default
+        assert len(sum(list(resp.context_data['events_by_date'].values()), [])) == 11
+        
+        # filter
+        resp = self.client.get(self.adult_url + "?event_name=Hoop")
+        assert len(sum(list(resp.context_data['events_by_date'].values()), [])) == 3
+        resp = self.client.get(self.adult_url + "?event_name=Trapeze")
+        assert len(sum(list(resp.context_data['events_by_date'].values()), [])) == 4
 
+        # case insensitive
+        resp = self.client.get(self.adult_url + "?event_name=silks")
+        assert len(sum(list(resp.context_data['events_by_date'].values()), [])) == 4
+                
     def test_event_list_with_booked_events(self):
         """
         test that booked events are shown on listing

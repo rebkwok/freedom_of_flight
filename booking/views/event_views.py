@@ -8,7 +8,7 @@ from django.utils import timezone
 from django.views.generic import ListView, DetailView
 
 
-from ..forms import AvailableUsersForm
+from ..forms import AvailableUsersForm, EventNameFilterForm
 from ..models import Course, Event, Track
 from ..utils import get_view_as_user, has_available_course_block, get_user_booking_info
 from .views_utils import DataPolicyAgreementRequiredMixin
@@ -35,9 +35,13 @@ class EventListView(DataPolicyAgreementRequiredMixin, ListView):
     def get_queryset(self):
         track = get_object_or_404(Track, slug=self.kwargs["track"])
         cutoff_time = timezone.now() - timedelta(minutes=10)
-        return Event.objects.filter(
+        events = Event.objects.select_related("event_type").filter(
             event_type__track=track, start__gt=cutoff_time, show_on_site=True, cancelled=False
         ).order_by('start__date', 'start__time')
+        event_name = self.request.GET.get("event_name")
+        if event_name:
+            events = events.filter(name__iexact=event_name)
+        return events
 
     def get_title(self):
         return Track.objects.get(slug=self.kwargs["track"]).name
@@ -64,8 +68,13 @@ class EventListView(DataPolicyAgreementRequiredMixin, ListView):
             context['track'] = track
             context["courses_available"] = any(
                 [course for course in Course.objects.filter(event_type__track=track, cancelled=False, show_on_site=True)
-                 if course.last_event_date.date() >= timezone.now().date()]
+                 if course.last_event_date and course.last_event_date.date() >= timezone.now().date()]
             )
+            event_name = self.request.GET.get("event_name")
+            if event_name:
+                context["name_filter_form"] = EventNameFilterForm(track=track, initial={"event_name": event_name})
+            else:
+                context["name_filter_form"] = EventNameFilterForm(track=track)
 
         if self.request.user.is_authenticated:
             # Add in the booked_events
