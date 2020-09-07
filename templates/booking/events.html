@@ -86,7 +86,7 @@
                     <div class="col-1 col-sm-1 pt-2 pb-2 pl-1">
                         <small>{{ event.start|date:"H:i"  }}-{{ event.end|date:"H:i" }}</small>
                     </div>
-                    <div class="col-6 col-sm-8 pt-2 pb-2">
+                    <div class="col-6 col-sm-7 pt-2 pb-2">
                             <!-- Event name and info (availability, user blocks) on smaller screens -->
                             <span id="booked_tick_{{ event.id }}" {% if not user_info.open %}class="hidden"{% endif %}>
                             <i class="text-success fas fa-check-circle"></i>
@@ -98,7 +98,7 @@
                             <!-- availability, user blocks etc on larger screens plus course info on all -->
                             {% include 'booking/includes/events_info.html' %}
                     </div>
-                    <div class="col-5 col-sm-3 pt-2 pb-2 pr-1 pl-1 float-right">
+                    <div class="col-5 col-sm-4 pt-2 pb-2 pr-1 pl-1 float-right">
                             <!-- booking buttons and info text -->
                             {% if request.user.is_authenticated %}
                             {% if view_as_user|has_disclaimer %}
@@ -114,7 +114,7 @@
                                         {% if event.course.has_started and not user_info.has_booked %}
                                         <span class="float-right">
                                             <span class="helptext">Course has started<span/><br/>
-                                                <a class="btn btn-xs btn-outline-dark float-right" href="{% url 'booking:course_events' event.course.slug %}">More info</a>
+                                                <a class="btn btn-xs btn-outline-dark float-right" href="{% url 'booking:course_events' event.course.slug %}">More booking info</a>
                                             </span>
                                         {% elif user_info.can_book_or_cancel %}
                                             <span

@@ -20,7 +20,8 @@
      {% elif event.course.full %}
         <span class="helptext float-right">Course is full</span>
      {% elif user_info.has_available_course_block or user_info.used_block %}
-        <span class="helptext float-right">NOT BOOKED</span><span class="helptext float-right">Payment plan available</span>
+        <span class="helptext float-right">NOT BOOKED</span><br/>
+        <span class="helptext float-right">Payment plan available</span><br/>
          <div class="btn btn-xs btn-outline-dark float-right" href="#">Course details</div>
      {% else %}
          <span class="helptext float-right">Payment plan required</span><br/>
