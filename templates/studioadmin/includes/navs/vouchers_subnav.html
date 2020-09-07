@@ -1,0 +1,36 @@
+<div class="subnav d-none d-md-block">
+<nav class="navbar fixed-top fixed-top-subnav navbar-expand navbar-light" id="navbarVouchersSubNavContainer">
+  <a class="navbar-brand" href="#">ADMIN: Vouchers</a>
+  <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarVouchersSubNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+  <div class="collapse navbar-collapse" id="navbarVouchersSubNav">
+    <ul class="navbar-nav">
+      </li>
+        <a class="nav-link" href="{% url 'studioadmin:vouchers' %}">Voucher list</a>
+      </li>
+     </li>
+        <a class="nav-link" href="{% url 'studioadmin:gift_vouchers' %}">Gift Voucher list</a>
+      </li>
+      <li class="nav-item">
+          <a class="nav-link" href="{% url 'studioadmin:add_voucher' %}">Add voucher</a>
+      </li>
+      </ul>
+  </div>
+</nav>
+</div>
+
+<div class="d-block d-md-none">
+<ul class="nav" id="vouchersNav">
+    <li class="nav-item dropdown">
+        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+          Vouchers Menu
+        </a>
+        <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+          <a class="dropdown-item" href="{% url 'studioadmin:vouchers' %}">Voucher List</a>
+          <a class="dropdown-item" href="{% url 'studioadmin:gift_vouchers' %}">Gift Voucher List</a>
+          <a class="dropdown-item" href="{% url 'studioadmin:add_voucher' %}">Add voucher</a>
+        </div>
+    </li>
+</ul>
+</div>

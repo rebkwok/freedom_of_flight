@@ -29,7 +29,8 @@ from studioadmin.views import (
     UserSubscriptionsListView, SubscriptionAddView, SubscriptionEditView, ajax_subscription_delete,
     course_booking_add_view, course_block_change_view, export_users,
     ajax_toggle_course_partial_booking, email_waiting_list_view, users_with_unused_blocks,
-    StripeAuthorizeView, connect_stripe_view, StripeAuthorizeCallbackView, InvoiceListView
+    StripeAuthorizeView, connect_stripe_view, StripeAuthorizeCallbackView, InvoiceListView,
+    VoucherDetailView, VoucherUpdateView, VoucherCreateView, VoucherListView, GiftVoucherListView,
 )
 
 app_name = 'studioadmin'
@@ -148,6 +149,13 @@ urlpatterns = [
     path('user/<int:user_id>/subscription/add/', SubscriptionAddView.as_view(), name="subscriptionadd"),
     path('user/subscription/<int:pk>/edit/', SubscriptionEditView.as_view(), name="subscriptionedit"),
     path('user/subscription/<int:subscription_id>/delete/', ajax_subscription_delete, name="subscriptiondelete"),
+
+    # vouchers
+    path('vouchers/', VoucherListView.as_view(), name="vouchers"),
+    path('gift-vouchers/', GiftVoucherListView.as_view(), name="gift_vouchers"),
+    path('vouchers/add/', VoucherCreateView.as_view(), name="add_voucher"),
+    path('vouchers/<int:pk>/edit/', VoucherUpdateView.as_view(), name="edit_voucher"),
+    path('vouchers/<int:pk>/', VoucherDetailView.as_view(), name="voucher_uses"),
 
     # help
     path('help/', help, name="help"),

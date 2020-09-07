@@ -205,4 +205,19 @@ jQuery(document).ready(function () {
         $('#id_start_date').datetimepicker('show');
     });
 
+    //VOUCHERS
+        jQuery('#id_expiry_date').datetimepicker({
+        format:'d-M-Y',
+        formatDate:'d-M-Y',
+        timepicker: false,
+        minDate: 0,
+        step: 5,
+        closeOnDateSelect: true,
+        scrollMonth: false,
+        scrollTime: false,
+        scrollInput: false,
+    });
+    $('#id_expiry_date').click(function(){
+        $('#id_expiry_date').datetimepicker('show');
+    });
 });

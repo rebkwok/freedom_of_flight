@@ -444,6 +444,12 @@ class BlockVoucher(BaseVoucher):
 class TotalVoucher(BaseVoucher):
     """A voucher that applies to the overall checkout total, not linked to any specific block"""
 
+    def uses(self):
+        return self.blocks.count()
+
+    def __str__(self):
+        return self.code
+
 
 class Block(models.Model):
     """
@@ -634,7 +640,12 @@ class WaitingListUser(models.Model):
         ]
 
 
-class GiftVoucherType(models.Model):
+class GiftVoucher(models.Model):
+    """
+    Defines gift vouchers that are available for purchase. Each one is associated with one Block config
+    and will be user to generate voucher codes for 100%, one-time use vouchers for one block of the 
+    specified block config.
+    """
     block_config = models.ForeignKey(
         BlockConfig, null=True, blank=True, on_delete=models.SET_NULL, related_name="gift_vouchers"
     )

@@ -2,7 +2,7 @@ from datetime import timedelta
 from django import forms
 from django.utils import timezone
 
-from .models import Event
+from .models import Event, GiftVoucher, BlockVoucher
 
 
 def get_available_users(user):
@@ -50,3 +50,66 @@ class EventNameFilterForm(forms.Form):
             ),
             label=''
         )
+
+
+class GiftVoucherForm(forms.Form):
+
+    voucher_type = forms.ModelChoiceField(
+        label="Voucher for:",
+        queryset=GiftVoucher.objects.filter(active=True),
+        widget=forms.Select(attrs={"class": "form-control"})
+    )
+    user_email = forms.EmailField(
+        label="Email address:",
+        widget=forms.TextInput(attrs={"class": "form-control"})
+    )
+    user_email1 = forms.EmailField(
+        label="Confirm email address:",
+        widget=forms.TextInput(attrs={"class": "form-control"})
+    )
+    recipient_name = forms.CharField(
+        label="Recipient name to display on voucher (optional):",
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+        required=False
+    )
+    message = forms.CharField(
+        label="Message to display on voucher (optional):",
+        widget=forms.Textarea(attrs={"class": "form-control", 'rows': 4}),
+        required=False,
+        max_length=500,
+        help_text="Max 500 characters"
+    )
+
+    def __init__(self, **kwargs):
+        user = kwargs.pop("user", None)
+        instance = kwargs.pop("instance", None)
+        super().__init__(**kwargs)
+        if instance:
+            self.instance = instance
+            self.fields["user_email"].initial = instance.purchaser_email
+            self.fields["user_email1"].initial = instance.purchaser_email
+
+            if instance.activated:
+                self.fields["voucher_type"].disabled = True
+                self.fields["user_email"].disabled = True
+                self.fields["user_email1"].disabled = True
+
+            self.fields["voucher_type"].initial = GiftVoucher.objects.get(block_config=instance.block_configs.first()).id
+
+            self.fields["recipient_name"].initial = instance.name
+            self.fields["message"].initial = instance.message
+        elif user:
+            self.fields["user_email"].initial = user.email
+            self.fields["user_email1"].initial = user.email
+
+    def clean_user_email(self):
+        return self.cleaned_data.get('user_email').strip()
+
+    def clean_user_email1(self):
+        return self.cleaned_data.get('user_email1').strip()
+
+    def clean(self):
+        user_email = self.cleaned_data["user_email"]
+        user_email1 = self.cleaned_data["user_email1"]
+        if user_email != user_email1:
+            self.add_error("user_email1", "Email addresses do not match")
