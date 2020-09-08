@@ -25,7 +25,7 @@
 
         {% if course %}
             {% if request.user.is_authenticated %}
-                {% if course.has_started and not already_booked %}
+                {% if not course.full and course.has_started and not already_booked %}
                     <h3 class="text-danger">
                         NOTE: This course has started.</h3>
                     <p><strong>If you would like to book for the remaining classes in the course,
@@ -111,7 +111,17 @@
                                     <span class="float-right"><a class="btn btn-xs btn-secondary" disabled href="#">{{ event.event_type.label|title }} has started</a></span>
                                     {% endif %}
                                 {% elif not course %}
-                                        {% if event.course.has_started and not user_info.has_booked %}
+                                        {% if event.full and not user_info.has_booked %}
+                                            <span class="float-right">
+                                            <span
+                                                id="waiting_list_button_{{ event.id }}"
+                                                data-event_id="{{ event.id }}"
+                                                data-user_id="{{ view_as_user.id }}"
+                                                class="ajax_events_waiting_list_btn">
+                                            {% include "booking/includes/waiting_list_button.html" %}
+                                            </span>
+                                            </span>
+                                        {% elif event.course.has_started and not user_info.has_booked %}
                                         <span class="float-right">
                                             <span class="helptext">Course has started<span/><br/>
                                                 <a class="btn btn-xs btn-outline-dark float-right" href="{% url 'booking:course_events' event.course.slug %}">More booking info</a>
@@ -127,16 +137,6 @@
                                                 class="ajax_events_btn">
                                                 {% include "booking/includes/events_button.txt" %}
                                                 </span>
-                                        {% elif event.full %}
-                                            <span class="float-right">
-                                            <span
-                                                id="waiting_list_button_{{ event.id }}"
-                                                data-event_id="{{ event.id }}"
-                                                data-user_id="{{ view_as_user.id }}"
-                                                class="ajax_events_waiting_list_btn">
-                                            {% include "booking/includes/waiting_list_button.html" %}
-                                            </span>
-                                            </span>
                                         {% elif user_info.booking_restricted_pre_event_start %}
                                             <span class="float-right"><a class="btn btn-xs btn-secondary" disabled href="#"><span class="helptext">Unavailable {{ event.event_type.booking_restriction }} mins before start</span></a></span>
                                         {% endif %}

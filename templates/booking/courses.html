@@ -62,10 +62,10 @@
                                         {% if user_info.has_booked %}
                                             <span class="float-right"><i class="text-success fas fa-check-circle"></i> Booked</span><br/>
                                             <span class="float-right">{% include "booking/includes/block_info.html" %}</span>
+                                        {% elif course.full %}<span class="helptext float-right">Course is full</span>
                                         {% elif course.has_started %}<span class="helptext float-right">
                                             Course has started. Spaces may be available for the remaining {{ course.event_type.pluralized_label }}; {{ studio_email|obfuscate_mailto:"email" }} for further details.
                                         </span>
-                                        {% elif course.full %}<span class="helptext float-right">Course is full</span>
                                         {% elif user_info.has_available_block %}
                                             <div
                                                 id="book_course_{{ course.id }}"
