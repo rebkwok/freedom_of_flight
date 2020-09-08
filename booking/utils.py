@@ -56,8 +56,14 @@ def get_active_user_course_block(user, course):
     blocks = user.blocks.filter(
         block_config__course=True, block_config__event_type=course.event_type
     ).order_by("expiry_date", "purchase_date")
+    valid_blocks = (block for block in blocks if block.valid_for_course(course))
     # already sorted by expiry date, so we can just get the next valid one
-    return next((block for block in blocks if block.valid_for_course(course)), None)
+    # UNLESS the course has started and allows part booking - then we want to make sure we return a valid part
+    # block before a full block
+    if course.has_started and course.allow_partial_booking:
+        valid_blocks = sorted(list(valid_blocks), key=lambda block: block.block_config.size < course.number_of_events)
+        return valid_blocks[0] if valid_blocks else None
+    return next(valid_blocks, None)
 
 
 def get_block_status(block):

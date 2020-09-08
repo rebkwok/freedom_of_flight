@@ -590,16 +590,35 @@ class UserCourseBookingAddViewTests(EventTestMixin, TestUsersMixin, TestCase):
         self.create_events_and_course()
 
         # configure the course
-        for i in range(self.course.number_of_events - self.course.uncancelled_events.count()):
-            baker.make(Event, event_type=self.course.event_type, course=self.course)
+        baker.make_recipe(
+            "booking.future_event", event_type=self.course.event_type, course=self.course,
+            _quantity=self.course.number_of_events - self.course.uncancelled_events.count()
+        )
         self.unconfigured_course = baker.make(
             Course, event_type=self.course.event_type, number_of_events=self.course.number_of_events
         )
+        self.in_progress_course = baker.make(
+            Course, event_type=self.course.event_type, number_of_events=self.course.number_of_events
+        )
+        baker.make_recipe("booking.past_event", event_type=self.in_progress_course.event_type, course=self.in_progress_course)
+        baker.make_recipe(
+            "booking.future_event", event_type=self.in_progress_course.event_type, course=self.in_progress_course,
+            _quantity=self.in_progress_course.number_of_events - 1
+        )
 
-        self.course_config = baker.make(BlockConfig, duration=2, cost=10, event_type=self.course.event_type, course=True, size=self.course.number_of_events)
+        self.course_config = baker.make(
+            BlockConfig, duration=2, cost=10, event_type=self.course.event_type, course=True, size=self.course.number_of_events
+        )
+        self.part_course_config = baker.make(
+            BlockConfig, duration=2, cost=10, event_type=self.in_progress_course.event_type, course=True,
+            size=self.in_progress_course.number_of_events - 1
+        )
 
         self.login(self.staff_user)
         self.url = reverse("studioadmin:coursebookingadd", args=(self.student_user.id,))
+
+    def _get_choices_ids(self, response):
+        return sorted(choice[0] for choice in response.context["form"].fields["course"].choices)
 
     def test_instructor_and_staff_can_access(self):
         self.user_access_test(["staff", "instructor"], self.url)
@@ -624,13 +643,11 @@ class UserCourseBookingAddViewTests(EventTestMixin, TestUsersMixin, TestCase):
         block.paid = True
         block.save()
         resp = self.client.get(self.url)
-        # Only the configured course is an option
-        assert len(resp.context["form"].fields["course"].choices) == 1
-        assert resp.context["form"].fields["course"].choices[0][0] == self.course.id
+        # 2 configured courses are options
+        assert len(resp.context["form"].fields["course"].choices) == 2
+        assert self._get_choices_ids(resp) == sorted([self.course.id, self.in_progress_course.id])
 
     def test_course_options(self):
-        def _get_choices_ids(response):
-            return sorted(choice[0] for choice in response.context["form"].fields["course"].choices)
         # user has paid block valid for self.course and self.unconfigured_course
         block = baker.make(
             Block, user=self.student_user, block_config=self.course_config, paid=True
@@ -638,9 +655,9 @@ class UserCourseBookingAddViewTests(EventTestMixin, TestUsersMixin, TestCase):
         block.save()
         resp = self.client.get(self.url)
         # Only the configured course is an option
-        choices = _get_choices_ids(resp)
-        assert len(resp.context["form"].fields["course"].choices) == 1
-        assert choices == [self.course.id]
+        choices = self._get_choices_ids(resp)
+        assert len(resp.context["form"].fields["course"].choices) == 2
+        assert choices == sorted([self.course.id, self.in_progress_course.id])
 
         # configured course with spaces, but not valid for the user's block, not shown in choices
         course = baker.make(Course, event_type=self.course.event_type, number_of_events=4, max_participants=3)
@@ -649,7 +666,7 @@ class UserCourseBookingAddViewTests(EventTestMixin, TestUsersMixin, TestCase):
         assert course.full is False
         assert block.valid_for_course(course) is False
         resp = self.client.get(self.url)
-        assert _get_choices_ids(resp) == [self.course.id]
+        assert self._get_choices_ids(resp) == sorted([self.course.id, self.in_progress_course.id])
 
         # make a block for the user
         new_block = baker.make(
@@ -658,14 +675,14 @@ class UserCourseBookingAddViewTests(EventTestMixin, TestUsersMixin, TestCase):
         )
         assert new_block.valid_for_course(course) is True
         resp = self.client.get(self.url)
-        assert _get_choices_ids(resp) == sorted([self.course.id, course.id])
+        assert self._get_choices_ids(resp) == sorted([self.course.id, self.in_progress_course.id, course.id])
 
         # make self.course full
         for event in self.course.uncancelled_events:
             baker.make(Booking, event=event, _quantity=self.course.max_participants)
         assert self.course.full is True
         resp = self.client.get(self.url)
-        assert _get_choices_ids(resp) == [course.id]
+        assert self._get_choices_ids(resp) == sorted([course.id, self.in_progress_course.id])
 
     def test_post_with_no_valid_options(self):
         resp = self.client.post(self.url, {"course": self.course.id})
@@ -681,6 +698,60 @@ class UserCourseBookingAddViewTests(EventTestMixin, TestUsersMixin, TestCase):
             assert booking.event.course == self.course
             assert booking.block == block
 
+    def test_add_booking_with_autoassigned_block_in_progress_course(self):
+        assert self.student_user.bookings.exists() is False
+        # This block is the same size as the full course
+        block = baker.make(Block, user=self.student_user, block_config=self.course_config, paid=True)
+        assert block.valid_for_course(self.in_progress_course) is True
+
+        self.client.post(self.url, {"course": self.in_progress_course.id})
+        # course has started, only books for remaining classes
+        assert self.in_progress_course.events_left.count() == self.in_progress_course.number_of_events - 1
+        assert self.student_user.bookings.count() == self.in_progress_course.events_left.count()
+        for booking in self.student_user.bookings.all():
+            assert booking.event.course == self.in_progress_course
+            assert booking.block == block
+
+    def test_add_booking_with_autoassigned_block_for_remaining_events(self):
+        assert self.student_user.bookings.exists() is False
+        # This block is one event smaller than the full course but is valid because it's already started
+        block = baker.make(Block, user=self.student_user, block_config=self.part_course_config, paid=True)
+        # Not valid unless course allows partial booking
+        assert block.valid_for_course(self.in_progress_course) is False
+        self.in_progress_course.allow_partial_booking = True
+        self.in_progress_course.save()
+        assert block.valid_for_course(self.in_progress_course) is True
+
+        assert block.block_config.size < self.in_progress_course.uncancelled_events.count()
+        self.client.post(self.url, {"course": self.in_progress_course.id})
+        # course has started, only books for remaining classes
+        assert self.in_progress_course.events_left.count() == self.in_progress_course.number_of_events - 1
+        assert self.student_user.bookings.count() == self.in_progress_course.events_left.count()
+        for booking in self.student_user.bookings.all():
+            assert booking.event.course == self.in_progress_course
+            assert booking.block == block
+
+    def test_autoassigns_part_block_first_for_in_progress_course(self):
+        assert self.student_user.bookings.exists() is False
+        # This block is one event smaller than the full course but is valid because it's already started
+        full_block = baker.make(Block, user=self.student_user, block_config=self.course_config, paid=True)
+        assert full_block.valid_for_course(self.in_progress_course) is True
+        assert self.student_user.bookings.exists() is False
+        # This block is the same size as the full course
+        part_block = baker.make(Block, user=self.student_user, block_config=self.part_course_config, paid=True)
+        # Not valid unless course allows partial booking
+        self.in_progress_course.allow_partial_booking = True
+        self.in_progress_course.save()
+        assert part_block.valid_for_course(self.in_progress_course) is True
+
+        self.client.post(self.url, {"course": self.in_progress_course.id})
+        # course has started, only books for remaining classes
+        assert self.in_progress_course.events_left.count() == self.in_progress_course.number_of_events - 1
+        assert self.student_user.bookings.count() == self.in_progress_course.events_left.count()
+        for booking in self.student_user.bookings.all():
+            assert booking.event.course == self.in_progress_course
+            assert booking.block == part_block
+
 
 class UserBlockChangeCourseTests(EventTestMixin, TestUsersMixin, TestCase):
 
@@ -694,8 +765,8 @@ class UserBlockChangeCourseTests(EventTestMixin, TestUsersMixin, TestCase):
         self.course2 = baker.make(
             Course, number_of_events=2, event_type=self.aerial_event_type, max_participants=3
         )
-        baker.make(Event, event_type=self.aerial_event_type, course=self.course1, _quantity=2)
-        baker.make(Event, event_type=self.aerial_event_type, course=self.course2, _quantity=2)
+        baker.make_recipe("booking.future_event", event_type=self.aerial_event_type, course=self.course1, _quantity=2)
+        baker.make_recipe("booking.future_event", event_type=self.aerial_event_type, course=self.course2, _quantity=2)
         self.login(self.staff_user)
 
         course_config = baker.make(
