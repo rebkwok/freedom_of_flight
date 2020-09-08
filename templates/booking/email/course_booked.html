@@ -6,7 +6,7 @@
 <p>Thank you for your booking for the course: {{ course }} ({{ course_user.first_name}} {{ course_user.last_name}}).  You have been registered for all course classes.</p>
 
 <ul>
-    {% for event in course.events.all %}
+    {% for event in course.events_left.all %}
     <li>{{ event }}</li>
     {% endfor %}
 </ul>

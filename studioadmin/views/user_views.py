@@ -17,7 +17,7 @@ from braces.views import LoginRequiredMixin
 from activitylog.models import ActivityLog
 from booking.email_helpers import send_bcc_emails, send_user_and_studio_emails, send_waiting_list_email
 from booking.models import Booking, Block, Course, Event, WaitingListUser, SubscriptionConfig, Subscription
-from booking.utils import get_active_user_block, has_available_course_block
+from booking.utils import get_active_user_block, get_active_user_course_block, has_available_course_block
 from common.utils import full_name
 
 from ..forms import (
@@ -538,7 +538,7 @@ def course_booking_add_view(request, user_id):
         form = CourseBookingAddChangeForm(request.POST, booking_user=user)
         if form.is_valid():
             course = Course.objects.get(pk=form.cleaned_data["course"])
-            course_block = get_active_user_block(user, course.uncancelled_events.first())
+            course_block = get_active_user_course_block(user, course)
             if course_block is None:
                 messages.error(
                     request, "NOTE: This course does not have a credit block assigned as payment."
@@ -546,7 +546,7 @@ def course_booking_add_view(request, user_id):
 
             new_bookings = 0
             updated_bookings = 0
-            for event in course.uncancelled_events:
+            for event in course.events_left:  # only book the user into the remaining course events
                 booking, created = Booking.objects.get_or_create(user=user, event=event)
                 # If the booking was cancelled, reopen it.  Leave the no-show settings as it was, in case it was
                 # cancelled by the user pre-admin cancelling
@@ -618,7 +618,7 @@ def course_block_change_view(request, block_id):
 
                 new_bookings = 0
                 updated_bookings = 0
-                for event in course.uncancelled_events:
+                for event in course.events_left:
                     booking, created = Booking.objects.get_or_create(user=user, event=event)
                     booking.block = course_block
                     booking.save()

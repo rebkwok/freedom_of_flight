@@ -6,7 +6,7 @@
         by an administrator.</p>
     <p>This course consists of the following {{ course.event_type.pluralized_label }}:</p>
     <ul>
-    {% for event in course.uncancelled_events %}
+    {% for event in course.events_left %}
     <li>{{ event }}</li>
     {% endfor %}
     </ul>

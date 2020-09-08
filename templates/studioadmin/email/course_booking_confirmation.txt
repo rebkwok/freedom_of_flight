@@ -1,6 +1,6 @@
 {% extends 'email_base.txt' %}{% block messagecontent %}
 {{ booking_user.first_name }} {{ booking_user.last_name }} has been booked into {{ course }} by an administrator.  This course consists of the following {{ course.event_type.pluralized_label }}:
-{% for event in course.uncancelled_events %}-{{ event }}{% endfor %}
+{% for event in course.events_left %}-{{ event }}{% endfor %}
 
 {% if old_course %}<p>This course replaced a previous booking for the course {{ old_course }}.</p>{% endif %}
 

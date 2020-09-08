@@ -31,6 +31,7 @@
                                 <th scope="col" class="text-center">Events in course</th>
                                 <th scope="col" class="text-center">Events configured</th>
                                 <th scope="col" class="text-center">Spaces</th>
+                                <th scope="col" class="text-center">Allow booking after start</th>
                                 <th scope="col">Event Type</th>
                                 <th scope="col" class="text-center">Visible</th>
                                 <th></th>
@@ -60,7 +61,14 @@
                                             {{ course.uncancelled_events.count }}/{{ course.number_of_events }}
                                         </div>
                                 </td>
-                                <td class="text-center">{% if course.uncancelled_events.exists %}{{ course.spaces_left }}{% else %}{{ course.max_participants }}{% endif %} {% if course.max_participants %}/ {{ course.max_participants }}{% endif %}</td>
+                                <td class="text-center">
+                                    <span class="badge badge-light pr-2 pl-2">
+                                        {% if course.uncancelled_events.exists %}{{ course.spaces_left }}{% else %}{{ course.max_participants }}{% endif %}{% if course.max_participants %}/{{ course.max_participants }}{% endif %}
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    {{ course.allow_partial_booking|yesno:"<i class='text-success far fa-check-circle'></i>,<i class='far fa-times-circle'></i>"|safe }}
+                                </td>
                                 <td>{{ course.event_type.name|title }}</td>
                                 <td class="text-center">
                                     {% if course.cancelled %}

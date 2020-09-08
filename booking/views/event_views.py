@@ -128,6 +128,6 @@ class CourseEventsListView(EventListView):
         context["course"] = course
         if self.request.user.is_authenticated:
             view_as_user = get_view_as_user(self.request)
-            context["already_booked"] = view_as_user.bookings.filter(event__course=course).exists()
+            context["already_booked"] = view_as_user.bookings.filter(event__course=course, status="OPEN").exists()
             context["has_available_course_block"] = has_available_course_block(view_as_user, course)
         return context

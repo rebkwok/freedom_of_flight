@@ -17,7 +17,11 @@
 {% elif course.full %}
     <p>This course is now full.</p>
 {% elif not has_available_course_block %}
-    <p><em>Purchase a payment plan to book this course</em></p>
+    <p><em>Purchase a payment plan to book this course
+    {% if course.has_started and course.allow_partial_booking %}
+    (Credit block for a course with {{ course.events_left.count }} {{ course.event_type.pluralized_label }})
+    {% endif %}</em>
+    </p>
 {% else %}
     <a class="btn btn-success mb-2" href="#"><i id="loader_{{ course.id }}"></i> Book Course</a>
 {% endif %}

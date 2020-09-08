@@ -135,6 +135,11 @@ class Course(models.Model):
     cancelled = models.BooleanField(default=False)
     max_participants = models.PositiveIntegerField(default=10, help_text="Overrides any value set on individual linked events")
     show_on_site = models.BooleanField(default=False, help_text="Overrides any value set on individual linked events")
+    allow_partial_booking = models.BooleanField(
+        default=False,
+        help_text="Users can book after a course has started (if they have purchased a credit "
+                  "block valid for the remaining number of classes)"
+    )
 
     @property
     def full(self):
@@ -175,6 +180,13 @@ class Course(models.Model):
     @property
     def uncancelled_events(self):
         return self.events.filter(cancelled=False).order_by("start")
+
+    @property
+    def events_left(self):
+        if not self.has_started:
+            return self.uncancelled_events
+        events_left_ids = [event.id for event in self.uncancelled_events if not event.is_past]
+        return self.uncancelled_events.filter(id__in=events_left_ids)
 
     def is_configured(self):
         """A course is configured if it has the right number of un-cancelled events"""
@@ -491,11 +503,21 @@ class Block(models.Model):
         # if it's not active we don't care about anything else
         if not self.active_block:
             return False
-        if self.block_config.course \
-                and self.block_config.event_type == course.event_type \
-                and self.block_config.size == course.number_of_events:
+        valid_for_course = False
+        if self.block_config.course and self.block_config.event_type == course.event_type:
+            # it's valid for courses, event type matches
+            # check the number of events
+            if course.has_started and course.allow_partial_booking:
+                valid_for_course = self.block_config.size == course.events_left.count()
+            else:
+                valid_for_course = self.block_config.size == course.number_of_events
+
+        if valid_for_course:
             # it's valid for courses, event type matches, and it's the right size for the course
             # check it's valid for the earliest uncancelled event (hasn't expired)
+            # For partial course blocks we can still just check the first uncancelled event;
+            # _valid_and_active_for_event only checks that the block expiry date is after the start of the first
+            # course event
             event = event or course.uncancelled_events.order_by("start").first()
             valid_for_event = True
             if event:

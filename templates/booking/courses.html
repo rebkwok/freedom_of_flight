@@ -48,7 +48,7 @@
                         <strong>{{ course.event_type.label|title }} Dates:</strong>
                         <ul class="pl-1">
                         {% for event in course.uncancelled_events %}
-                        <li style="list-style: none;">{{ event.start|date:"D d-M-y, H:i" }}-{{ event.end|date:"H:i" }}</li>
+                        <li style="list-style: none;" {% if event.is_past %}class="expired"{% endif %}>{{ event.start|date:"D d-M-y, H:i" }}-{{ event.end|date:"H:i" }}</li>
                         {% endfor %}
                         </ul>
                     </div>
@@ -63,7 +63,7 @@
                                             <span class="float-right"><i class="text-success fas fa-check-circle"></i> Booked</span><br/>
                                             <span class="float-right">{% include "booking/includes/block_info.html" %}</span>
                                         {% elif course.full %}<span class="helptext float-right">Course is full</span>
-                                        {% elif course.has_started %}<span class="helptext float-right">
+                                        {% elif course.has_started and not course.allow_partial_booking %}<span class="helptext float-right">
                                             Course has started. Spaces may be available for the remaining {{ course.event_type.pluralized_label }}; {{ studio_email|obfuscate_mailto:"email" }} for further details.
                                         </span>
                                         {% elif user_info.has_available_block %}
@@ -80,7 +80,8 @@
                                             </div>
                                         {% else %}
                                             <span class="float-right helptext"><i class="text-dark fas fa-times-circle"></i> NOT BOOKED</span><br/>
-                                            <span class="float-right helptext">Payment plan required</span>
+                                            <span class="float-right helptext">
+                                                Payment plan required (Credit block for a course with {{ course.events_left.count }} {{ course.event_type.pluralized_label }})</span>
                                         {% endif %}
                                     </div>
                                 </div>
@@ -106,5 +107,5 @@
 {% endblock content %}
 
 {% block extra_js %}
-<script type='text/javascript' src="{% static 'booking/js/events_booking_ajax-v1.js' %}"></script>
+<script type='text/javascript' src="{% static 'booking/js/events_booking_ajax-v2.js' %}"></script>
 {% endblock %}

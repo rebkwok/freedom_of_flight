@@ -183,14 +183,15 @@ class CourseUpdateForm(forms.ModelForm):
             "number_of_events",
             "max_participants",
             "show_on_site",
-            "cancelled"
+            "allow_partial_booking",
+            "cancelled",
         )
 
     def __init__(self,*args, **kwargs):
         self.event_type = kwargs.pop("event_type")
         super().__init__(*args, **kwargs)
         for name, field in self.fields.items():
-            if name == "show_on_site":
+            if name in ["show_on_site", "allow_partial_booking"]:
                 field.widget.attrs = {"class": "form-check-inline"}
             elif name == "cancelled" and self.instance:
                 if self.instance.cancelled:
@@ -237,6 +238,7 @@ class CourseUpdateForm(forms.ModelForm):
             if error:
                 return
         return events
+
 
 class CourseCreateForm(CourseUpdateForm):
     def __init__(self, *args, **kwargs):
@@ -1117,11 +1119,16 @@ class CourseBookingAddChangeForm(forms.Form):
         self.helper = FormHelper()
         course_choices = get_course_choices_for_user(booking_user, block, old_course_id)
         if not course_choices:
-            self.helper.layout = Layout(
-                HTML(f"<p>Student has no available course credit blocks. Go to their"
-                     f" <a href={reverse('studioadmin:user_blocks', args=(booking_user.id,))}>blocks list</a> to "
-                     f"add one first. You will be able to assign a course to the new block from there.</p>")
-            )
+            if block is None:
+                self.helper.layout = Layout(
+                    HTML(f"<p>Student has no available course credit blocks. Go to their"
+                         f" <a href={reverse('studioadmin:user_blocks', args=(booking_user.id,))}>blocks list</a> to "
+                         f"add one first. You will be able to assign a course to the new block from there.</p>")
+                )
+            else:
+                self.helper.layout = Layout(
+                    HTML(f"<p>No courses are available to book for this student and block.</p>")
+                )
             self.fields['course'] = forms.ChoiceField(choices=[])
         else:
             self.fields['course'] = forms.ChoiceField(
@@ -1171,7 +1178,13 @@ def get_course_choices_for_user(user, block, current_course_id):
         # CHANGING COURSE ON A BLOCK
         # get only courses that that haven't ended yet, match the block's event type and size,
         # excluding the one it's already used for
-        queryset = Course.objects.filter(event_type=block.block_config.event_type, number_of_events=block.block_config.size)
+        course_ids = [
+            course.id for course in Course.objects.filter(event_type=block.block_config.event_type)
+            if course.number_of_events == block.block_config.size
+            or course.events_left.count() == block.block_config.size
+        ]
+        queryset = Course.objects.filter(id__in=course_ids)
+
         if current_course_id:
             queryset = queryset.exclude(id=current_course_id)
         courses = get_current_courses(queryset)

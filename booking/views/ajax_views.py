@@ -113,11 +113,12 @@ def ajax_toggle_booking(request, event_id):
     host = f'http://{request.META.get("HTTP_HOST")}'
 
     if requested_action in ["opened", "reopened"]:
-        if event.course and requested_action == "opened":
-            # First time booking for a course event - redirect to book course
-            # rebookings can be done from events page
-            url = reverse('booking:course_events', args=(event.course.slug,))
-            return JsonResponse({"redirect": True, "url": url})
+        if event.course:
+            if requested_action == "opened" or existing_booking and existing_booking.status == "CANCELLED":
+                # First time booking for a course event, or reopening a fully cancelled course- redirect to book course
+                # rebookings can be done from events page
+                url = reverse('booking:course_events', args=(event.course.slug,))
+                return JsonResponse({"redirect": True, "url": url})
 
         if not (has_available_block(user, event) or has_available_subscription(user, event)) and not event.course:
             url = reverse("booking:event_purchase_options", args=(event.slug,))
@@ -291,7 +292,7 @@ def ajax_course_booking(request, course_id):
 
     course_block = get_active_user_course_block(user, course)
     # Book all events
-    for event in course.uncancelled_events.all():
+    for event in course.events_left:
         booking, _ = Booking.objects.get_or_create(user=user, event=event)
         # Make sure block is assigned but don't change booking statuses if already created
         booking.block = course_block
