@@ -1,3 +1,4 @@
+from bs4 import BeautifulSoup
 from model_bakery import baker
 from datetime import timedelta
 
@@ -9,7 +10,7 @@ from django.utils import timezone
 from accounts.models import DataPrivacyPolicy, SignedDataPrivacy
 from accounts.models import has_active_data_privacy_agreement
 
-from booking.models import Event, Booking, Track
+from booking.models import Event, Booking, Track, WaitingListUser
 from common.test_utils import make_disclaimer_content, TestUsersMixin, EventTestMixin
 
 
@@ -313,19 +314,148 @@ class EventListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         # Doesn't show the remaining count
         assert "remaining" not in resp.rendered_content
 
-    def test_button_displays(self):
-        # TODO
-        # With a single event, check that the button displays as expected for:
+    def test_button_display_dropin_event(self):
+
+        def _element_from_response_by_id(element_id):
+            response = self.client.get(self.adult_url)
+            soup = BeautifulSoup(response.rendered_content, features="html.parser")
+            return soup.find(id=element_id)
+
+        Event.objects.all().delete()
+        event = baker.make_recipe("booking.future_event", event_type=self.aerial_event_type)
+        make_disclaimer_content(version=None)
+
+        self.login(self.student_user)
+        resp = self.client.get(self.adult_url)
+        assert len(sum(list(resp.context_data['events_by_date'].values()), [])) == 1
+        assert "Complete a disclaimer" in resp.rendered_content
+
+        # not booked, has disclaimer
+        self.make_disclaimer(self.student_user)
+        book_button = _element_from_response_by_id(f"book_{event.id}")
+        assert "Payment plan required" in book_button.text
+
+        # cancelled, no block
+        booking = baker.make(Booking, user=self.student_user, event=event, status="CANCELLED")
+        book_button = _element_from_response_by_id(f"book_{event.id}")
+        assert "Payment plan required" in book_button.text
+        booking.delete()
+
+        # not booked with valid block
+        block = baker.make_recipe(
+            "booking.dropin_block", block_config__event_type=self.aerial_event_type,
+            block_config__size=10, user=self.student_user, paid=True
+        )
+        book_button = _element_from_response_by_id(f"book_{event.id}")
+        assert "Book Drop-in" in book_button.text
+
+        # cancelled, with block available
+        booking = baker.make(Booking, user=self.student_user, event=event, status="CANCELLED")
+        book_button = _element_from_response_by_id(f"book_{event.id}")
+        assert "Rebook Drop-in" in book_button.text
+
+        # no-show, with block
+        booking.status = "OPEN"
+        booking.block = block
+        booking.no_show = True
+        booking.save()
+        book_button = _element_from_response_by_id(f"book_{event.id}")
+        assert "Rebook Drop-in" in book_button.text
+        booking.delete()
+
+        # event full
+        baker.make(Booking, event=event, _quantity=event.max_participants)
+        waiting_list_button = _element_from_response_by_id(f"waiting_list_button_{event.id}")
+        assert "Join waiting list" in waiting_list_button.text
+
+        # event full, on waiting list
+        baker.make(WaitingListUser, event=event, user=self.student_user)
+        waiting_list_button = _element_from_response_by_id(f"waiting_list_button_{event.id}")
+        assert "Leave waiting list" in waiting_list_button.text
+
+        # event full, has booking
+        event.max_participants += 1
+        event.save()
+        baker.make(Booking, user=self.student_user, event=event, block=block)
+        book_button = _element_from_response_by_id(f"book_{event.id}")
+        assert "Cancel" in book_button.text
+
+    def test_button_display_course_event(self):
+        # With a course event, check that the button displays as expected for:
         # - no disclaimer
-        # - not booked (with and without available blocks)
+        # - not booked (with and without available course blocks)
         # - booked and open
-        # - cancelled (with and without available blocks)
-        # - no-show (with and without available blocks)
-        # - event full and booked
-        # - event full and cancelled/no-show
-        # - event cancelled and cancelled/no-show
+        # - cancelled (with and without available course blocks)
+        # - no-show (with and without available course blocks)
+        # - course full and booked
+        # - course full and cancelled/no-show
+        # - event cancelled
         # - on waiting list
-        ...
+        def _element_from_response_by_id(element_id):
+            response = self.client.get(self.adult_url)
+            soup = BeautifulSoup(response.rendered_content, features="html.parser")
+            return soup.find(id=element_id)
+
+        Event.objects.all().delete()
+        self.course.number_of_events = 1
+        self.course.save()
+        event = baker.make_recipe("booking.future_event", event_type=self.aerial_event_type, course=self.course)
+        make_disclaimer_content(version=None)
+
+        self.login(self.student_user)
+        resp = self.client.get(self.adult_url)
+        assert len(sum(list(resp.context_data['events_by_date'].values()), [])) == 1
+        assert "Complete a disclaimer" in resp.rendered_content
+
+        # not booked, has disclaimer
+        self.make_disclaimer(self.student_user)
+        book_button = _element_from_response_by_id(f"book_{event.id}")
+        assert "Payment plan required" in book_button.text
+
+        # cancelled, no block
+        booking = baker.make(Booking, user=self.student_user, event=event, status="CANCELLED")
+        book_button = _element_from_response_by_id(f"book_{event.id}")
+        assert "Payment plan required" in book_button.text
+        booking.delete()
+
+        # not booked with valid block
+        block = baker.make_recipe(
+            "booking.course_block", block_config__event_type=self.aerial_event_type,
+            block_config__size=1, user=self.student_user, paid=True
+        )
+        book_button = _element_from_response_by_id(f"book_{event.id}")
+        for fragment in ["NOT BOOKED", "Payment plan available", "Course details"]:
+            assert fragment in book_button.text
+
+        # cancelled, with block
+        booking = baker.make(Booking, user=self.student_user, event=event, status="CANCELLED")
+        book_button = _element_from_response_by_id(f"book_{event.id}")
+        for fragment in ["NOT BOOKED", "Payment plan available", "Course details"]:
+            assert fragment in book_button.text
+
+        # no-show, with block
+        booking.status = "OPEN"
+        booking.no_show = True
+        booking.save()
+        book_button = _element_from_response_by_id(f"book_{event.id}")
+        assert "Rebook" in book_button.text
+        booking.delete()
+
+        # event full
+        baker.make(Booking, event=event, _quantity=event.max_participants)
+        waiting_list_button = _element_from_response_by_id(f"waiting_list_button_{event.id}")
+        assert "Join waiting list" in waiting_list_button.text
+
+        # event full, on waiting list
+        baker.make(WaitingListUser, event=event, user=self.student_user)
+        waiting_list_button = _element_from_response_by_id(f"waiting_list_button_{event.id}")
+        assert "Leave waiting list" in waiting_list_button.text
+
+        # event full, has booking
+        Booking.objects.all().delete()
+        baker.make(Booking, user=self.student_user, event=event, block=block)
+        book_button = _element_from_response_by_id(f"book_{event.id}")
+        assert "Cancel" in book_button.text
 
 
     # def test_online_event_video_link(self):
@@ -477,3 +607,119 @@ class CourseListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         resp = self.client.get(self.url)
         assert "Purchase a payment plan to book this course" not in resp.rendered_content
         assert resp.context_data["already_booked"] is True
+
+    def test_button_display_course_event(self):
+        # With a course event, check that the button displays as expected for:
+        # - no disclaimer
+        # - not booked (with and without available course blocks)
+        # - booked and open
+        # - cancelled (with and without available course blocks)
+        # - no-show (with and without available course blocks)
+        # - course full and booked
+        # - course full and cancelled/no-show
+        # - event cancelled
+        # - on waiting list
+        def _element_from_response_by_id(element_id):
+            response = self.client.get(self.url)
+            soup = BeautifulSoup(response.rendered_content, features="html.parser")
+            return soup.find(id=element_id)
+
+        Event.objects.all().delete()
+        self.course.number_of_events = 1
+        self.course.save()
+        event = baker.make_recipe("booking.future_event", event_type=self.aerial_event_type, course=self.course)
+        make_disclaimer_content(version=None)
+
+        self.login(self.student_user)
+        resp = self.client.get(self.url)
+        assert len(sum(list(resp.context_data['events_by_date'].values()), [])) == 1
+        assert "Complete a disclaimer" in resp.rendered_content
+
+        # not booked, has disclaimer. Booking button for individual events not shown
+        self.make_disclaimer(self.student_user)
+        book_button = _element_from_response_by_id(f"book_{event.id}")
+        assert book_button is None
+        course_book_button = _element_from_response_by_id(f"book_course_{self.course.id}")
+        assert "Purchase a payment plan to book this course" in course_book_button.text
+
+        # cancelled, no block.  Booking button for individual events not shown
+        booking = baker.make(Booking, user=self.student_user, event=event, status="CANCELLED")
+        book_button = _element_from_response_by_id(f"book_{event.id}")
+        assert book_button is None
+        course_book_button = _element_from_response_by_id(f"book_course_{self.course.id}")
+        assert "Purchase a payment plan to book this course" in course_book_button.text
+        booking.delete()
+
+        # not booked with valid block
+        block = baker.make_recipe(
+            "booking.course_block", block_config__event_type=self.aerial_event_type,
+            block_config__size=1, user=self.student_user, paid=True
+        )
+        book_button = _element_from_response_by_id(f"book_{event.id}")
+        assert book_button is None
+        course_book_button = _element_from_response_by_id(f"book_course_{self.course.id}")
+        assert "Book Course" in course_book_button.text
+
+        # cancelled, with block
+        booking = baker.make(Booking, user=self.student_user, event=event, status="CANCELLED")
+        book_button = _element_from_response_by_id(f"book_{event.id}")
+        assert book_button is None
+        course_book_button = _element_from_response_by_id(f"book_course_{self.course.id}")
+        assert "Book Course" in course_book_button.text
+
+        # no-show, with block
+        booking.status = "OPEN"
+        booking.no_show = True
+        booking.save()
+        book_button = _element_from_response_by_id(f"book_{event.id}")
+        assert "Rebook" in book_button.text
+        course_book_button = _element_from_response_by_id(f"book_course_{self.course.id}")
+        assert "Student User is attending this course" in course_book_button.text
+        booking.delete()
+
+        # event full
+        baker.make(Booking, event=event, _quantity=event.max_participants)
+        waiting_list_button = _element_from_response_by_id(f"waiting_list_button_{event.id}")
+        assert waiting_list_button is None
+        course_book_button = _element_from_response_by_id(f"book_course_{self.course.id}")
+        assert "This course is now full" in course_book_button.text
+
+        # event full, on waiting list
+        baker.make(WaitingListUser, event=event, user=self.student_user)
+        waiting_list_button = _element_from_response_by_id(f"waiting_list_button_{event.id}")
+        assert waiting_list_button is None
+        course_book_button = _element_from_response_by_id(f"book_course_{self.course.id}")
+        assert "This course is now full" in course_book_button.text
+
+        # event full, has booking
+        Booking.objects.all().delete()
+        baker.make(Booking, user=self.student_user, event=event, block=block)
+        book_button = _element_from_response_by_id(f"book_{event.id}")
+        assert "Cancel" in book_button.text
+        course_book_button = _element_from_response_by_id(f"book_course_{self.course.id}")
+        assert "Student User is attending this course" in course_book_button.text
+
+        Booking.objects.all().delete()
+        self.course.number_of_events = 2
+        self.course.save()
+        baker.make_recipe("booking.past_event", course=self.course, event_type=self.aerial_event_type)
+        assert self.course.has_started
+        assert self.course.allow_partial_booking is False
+
+        # Course started, partial booking not allowed
+        course_book_button = _element_from_response_by_id(f"book_course_{self.course.id}")
+        assert course_book_button is None
+        resp = self.client.get(self.url)
+        assert "NOTE: This course has started" in resp.rendered_content
+
+        self.course.allow_partial_booking = True
+        self.course.save()
+        # Course started, partial booking allowed, has partial block
+        course_book_button = _element_from_response_by_id(f"book_course_{self.course.id}")
+        assert "Book Course" in course_book_button.text
+
+        # Course started, partial booking allowed, no block
+        block.delete()
+        course_book_button = _element_from_response_by_id(f"book_course_{self.course.id}")
+        assert "Purchase a payment plan to book this course" in course_book_button.text
+        assert "(Credit block for a course with 1 class)" in course_book_button.text

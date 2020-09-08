@@ -19,7 +19,7 @@
 {% elif not has_available_course_block %}
     <p><em>Purchase a payment plan to book this course
     {% if course.has_started and course.allow_partial_booking %}
-    (Credit block for a course with {{ course.events_left.count }} {{ course.event_type.pluralized_label }})
+    (Credit block for a course with {{course.events_left.count}} {{ course.event_type.label }}{{course.events_left.count|pluralize:course.event_type.plural_suffix }})
     {% endif %}</em>
     </p>
 {% else %}
