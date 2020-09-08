@@ -182,7 +182,12 @@ def show_warning(event, user_booking, has_available_payment_method=None):
 
 
 def get_user_booking_info(user, event):
-    user_booking = user.bookings.filter(event=event).first()
+    if event.course:
+        # bookings for course events are only counted if they're not fully cancelled.  We don't show rebook buttons
+        # for fully cancelled course bookings, only for no-show ones
+        user_booking = user.bookings.filter(event=event, status="OPEN").first()
+    else:
+        user_booking = user.bookings.filter(event=event).first()
     available_subscription = get_available_user_subscription(user, event)
     available_subscription_info = user_subscription_info(available_subscription, event, include_user=False)
     available_block = get_active_user_block(user, event)
@@ -220,7 +225,7 @@ def get_user_booking_info(user, event):
 
 
 def get_user_course_booking_info(user, course):
-    has_booked = user.bookings.filter(event__course=course).exists()
+    has_booked = user.bookings.filter(event__course=course, status="OPEN").exists()
     available_block = get_active_user_course_block(user, course)
 
     info = {
