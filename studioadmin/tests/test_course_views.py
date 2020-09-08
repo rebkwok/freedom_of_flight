@@ -192,8 +192,8 @@ class CancelCourseViewTests(EventTestMixin, TestUsersMixin, TestCase):
         assert self.student_user.bookings.filter(event__course=self.course).count() == 2
         self.login(self.staff_user)
         resp = self.client.get(url)
-        # We don't care about status, just cancel all bookings
-        assert len(resp.context_data["bookings_to_cancel_users"]) == 10
+        # Only list the uncancelled (open or no-show) bookings
+        assert len(resp.context_data["bookings_to_cancel_users"]) == 7
 
     def test_cancel_course_no_bookings(self):
         # no bookings - event set to cancel, no emails sent
@@ -222,8 +222,7 @@ class CancelCourseViewTests(EventTestMixin, TestUsersMixin, TestCase):
         assert self.course.cancelled
         assert self.course_event.cancelled
         # emails are sent to all users, including cancelled
-        assert "Course and all associated events cancelled; bookings cancelled " \
-               "and notification emails sent to students" in resp.rendered_content
+        assert "Course and all associated events cancelled" in resp.rendered_content
         assert len(mail.outbox) == 0
 
     def test_cancel_course_with_open_bookings(self):

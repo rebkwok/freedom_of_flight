@@ -150,7 +150,12 @@ class Course(models.Model):
     def booking_count(self):
         # Find the distinct users from all booking on this course.  We don't just look at the first event, in case
         # a course's events have been updated after start
-        return Booking.objects.select_related("event").filter(event__course_id=self.id).order_by().distinct("user").count()
+        # Only count open bookings, which will inlcude no-shows but not fully cancelled ones
+        # A booking should only be fully cancelled if the user has been manually cancelled out by an admin, and it
+        # should apply to all bookings in the course.
+        return Booking.objects.select_related("event").filter(
+            event__course_id=self.id, status="OPEN"
+        ).order_by().distinct("user").count()
 
     @cached_property
     def start(self):

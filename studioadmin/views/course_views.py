@@ -107,7 +107,7 @@ def ajax_toggle_course_visible(request, course_id):
 @staff_required
 def cancel_course_view(request, slug):
     course = get_object_or_404(Course, slug=slug)
-    bookings_to_cancel = Booking.objects.filter(event__course=course)
+    bookings_to_cancel = Booking.objects.filter(status="OPEN", event__course=course)
     bookings_to_cancel_users = [
         booking.user for booking in bookings_to_cancel.order_by().distinct("user")
     ]
@@ -233,8 +233,11 @@ class CourseUpdateView(LoginRequiredMixin, StaffUserMixin, CourseCreateUpdateMix
                     course.events.add(event)
         self._check_visibility_and_save(course)
 
-        # Make sure all users have a booking for all events (even if cancelled/no-show)
-        booked_users = set(Booking.objects.select_related("event").filter(event__course_id=course.id).order_by().distinct("user").values_list("user", flat=True))
+        # Make sure all users with uncancelled course bookings have a booking for all events
+        # (even if cancelled/no-show).
+        booked_users = set(Booking.objects.select_related("event")
+                           .filter(status="OPEN", event__course_id=course.id)
+                           .order_by().distinct("user").values_list("user", flat=True))
         updated_users = set()
         for event in course.events.all():
             unbooked_users = booked_users - set(event.bookings.values_list("user", flat=True))

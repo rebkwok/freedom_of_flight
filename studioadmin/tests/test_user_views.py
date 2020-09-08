@@ -94,6 +94,8 @@ class EmailUsersViewsTests(EventTestMixin, TestUsersMixin, TestCase):
 
     def test_email_course_users_form_initial(self):
         # shows users with any bookings checked in form initial
+        # Cancelled bookings users are not show - if the bookings are fully cancelled, they've been cancelled from
+        # the entire course
         course_event1 = baker.make_recipe('booking.future_event', event_type=self.aerial_event_type, course=self.course)
         for event in [self.course_event, course_event1]:
             baker.make(Booking, event=event, user=self.student_user)
@@ -101,7 +103,7 @@ class EmailUsersViewsTests(EventTestMixin, TestUsersMixin, TestCase):
             baker.make(Booking, event=event, user=self.student_user1, status="CANCELLED")
         resp = self.client.get(self.course_url)
         form = resp.context_data["form"]
-        assert sorted(form.fields["students"].initial) == sorted([self.student_user.id, self.instructor_user.id, self.student_user1.id])
+        assert sorted(form.fields["students"].initial) == sorted([self.student_user.id, self.instructor_user.id])
 
     def test_email_course_users(self):
         baker.make(Booking, event=self.course_event, user=self.student_user)

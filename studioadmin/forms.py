@@ -488,8 +488,8 @@ class EmailUsersForm(forms.Form):
         super().__init__(*args, **kwargs)
         target = "event" if event else "course" if course else "subscription"
         if course:
-            # flattened list of all bookings
-            bookings = sum([list(event.bookings.all()) for event in course.events.all()], [])
+            # flattened list of all bookings (no-shows included but not cancelled)
+            bookings = sum([list(event.bookings.filter(status="OPEN")) for event in course.events.all()], [])
             cancelled_bookings = []
         elif event:
             bookings = event.bookings.filter(status="OPEN", no_show=False)
@@ -1181,7 +1181,9 @@ def get_course_choices_for_user(user, block, current_course_id):
     else:
         # ADDING A COURSE BOOKING TO AN AVAILABLE BLOCK
         # get all courses that haven't ended yet and that the user hasn't already booked for
-        user_booked_course_ids = user.bookings.filter(event__course__isnull=False).order_by().distinct("event__course").values_list("event__course_id")
+        user_booked_course_ids = user.bookings.filter(
+            event__course__isnull=False, status="OPEN"
+        ).order_by().distinct("event__course").values_list("event__course_id")
         queryset = Course.objects.exclude(id__in=user_booked_course_ids)
         courses = get_current_courses(queryset)
         # filter out courses that are full and not configured, and limit to ones the student has a

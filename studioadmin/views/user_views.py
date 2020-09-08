@@ -548,6 +548,9 @@ def course_booking_add_view(request, user_id):
             updated_bookings = 0
             for event in course.uncancelled_events:
                 booking, created = Booking.objects.get_or_create(user=user, event=event)
+                # If the booking was cancelled, reopen it.  Leave the no-show settings as it was, in case it was
+                # cancelled by the user pre-admin cancelling
+                booking.status = "OPEN"
                 booking.block = course_block
                 booking.save()
                 if created:
