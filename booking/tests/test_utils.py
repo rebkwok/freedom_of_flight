@@ -14,6 +14,7 @@ from accounts.models import has_active_disclaimer
 from common.test_utils import EventTestMixin, TestUsersMixin, make_disclaimer_content
 from booking.utils import has_available_course_block, get_active_user_course_block
 
+
 class UtilsTests(EventTestMixin, TestUsersMixin, TestCase):
 
     def setUp(self):
@@ -66,6 +67,7 @@ class UtilsTests(EventTestMixin, TestUsersMixin, TestCase):
         self.in_progress_course.allow_partial_booking = True
         self.in_progress_course.save()
         assert part_course_block.valid_for_course(self.in_progress_course) is True
+        assert full_course_block.valid_for_course(self.in_progress_course) is True
 
     def test_used_block_not_valid_for_course(self):
         full_course_block = baker.make(Block, block_config=self.course_config, user=self.student_user, paid=True)
@@ -83,13 +85,17 @@ class UtilsTests(EventTestMixin, TestUsersMixin, TestCase):
         # a part course block available
         full_course_block_newest = baker.make(
             Block, block_config=self.course_config, user=self.student_user, paid=True,
-            purchase_date=timezone.now() - timedelta(2)
+            purchase_date=timezone.now() - timedelta(3)
         )
         full_course_block_oldest = baker.make(
             Block, block_config=self.course_config, user=self.student_user, paid=True,
-            purchase_date=timezone.now() - timedelta(3)
+            purchase_date=timezone.now() - timedelta(4)
         )
-        part_course_block = baker.make(
+        part_course_block_oldest = baker.make(
+            Block, block_config=self.part_course_config, user=self.student_user, paid=True,
+            purchase_date=timezone.now() - timedelta(2)
+        )
+        part_course_block_newest = baker.make(
             Block, block_config=self.part_course_config, user=self.student_user, paid=True,
             purchase_date=timezone.now() - timedelta(1)
         )
@@ -100,7 +106,7 @@ class UtilsTests(EventTestMixin, TestUsersMixin, TestCase):
 
         self.in_progress_course.allow_partial_booking = True
         self.in_progress_course.save()
-        assert get_active_user_course_block(self.student_user, self.in_progress_course) == part_course_block
+        assert get_active_user_course_block(self.student_user, self.in_progress_course) == part_course_block_oldest
 
         assert get_active_user_course_block(self.student_user1, self.course) is None
         assert get_active_user_course_block(self.student_user1, self.in_progress_course) is None

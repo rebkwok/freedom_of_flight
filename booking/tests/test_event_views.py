@@ -722,4 +722,4 @@ class CourseListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         block.delete()
         course_book_button = _element_from_response_by_id(f"book_course_{self.course.id}")
         assert "Purchase a payment plan to book this course" in course_book_button.text
-        assert "(Credit block for a course with 1 class)" in course_book_button.text
+        assert "(1 class course block)" in course_book_button.text

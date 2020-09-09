@@ -507,10 +507,11 @@ class Block(models.Model):
         if self.block_config.course and self.block_config.event_type == course.event_type:
             # it's valid for courses, event type matches
             # check the number of events
-            if course.has_started and course.allow_partial_booking:
+            # It's always valid if it's for the full course
+            valid_for_course = self.block_config.size == course.number_of_events
+            # If size doesn't match, it can also be valid if we allow partial booking and it's valid for the courses left
+            if not valid_for_course and course.has_started and course.allow_partial_booking:
                 valid_for_course = self.block_config.size == course.events_left.count()
-            else:
-                valid_for_course = self.block_config.size == course.number_of_events
 
         if valid_for_course:
             # it's valid for courses, event type matches, and it's the right size for the course

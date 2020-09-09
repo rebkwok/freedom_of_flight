@@ -61,7 +61,7 @@ def get_active_user_course_block(user, course):
     # UNLESS the course has started and allows part booking - then we want to make sure we return a valid part
     # block before a full block
     if course.has_started and course.allow_partial_booking:
-        valid_blocks = sorted(list(valid_blocks), key=lambda block: block.block_config.size < course.number_of_events)
+        valid_blocks = sorted(list(valid_blocks), key=lambda block: block.block_config.size < course.number_of_events, reverse=True)
         return valid_blocks[0] if valid_blocks else None
     return next(valid_blocks, None)
 
@@ -214,7 +214,12 @@ def get_user_booking_info(user, event):
         )
     }
     if event.course:
-        info.update({"has_available_course_block": has_available_course_block(user, event.course)})
+        info.update(
+            {
+                "has_available_course_block": has_available_course_block(user, event.course),
+                "available_block": get_active_user_course_block(user, event.course),
+             }
+        )
     if user_booking:
         if available_subscription == user_booking.subscription:
             booking_subscription_info = available_subscription_info

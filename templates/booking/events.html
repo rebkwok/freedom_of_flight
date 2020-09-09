@@ -40,6 +40,7 @@
                         data-course_id="{{ course.id }}"
                         data-has_started={{ course.has_started|yesno:"1,0" }}
                         data-allow_partial_booking={{ course.allow_partial_booking|yesno:"1,0" }}
+                        data-part_booking_with_full_block={% if available_course_block.block_config.size > course.events_left.count %}1{% else %}0{% endif %}
                         data-has_available_block={{ user|has_available_course_block:course|yesno:"1,0" }}
                         data-already_booked={{ already_booked|yesno:"1,0" }}
                         class="ajax_course_events_btn">

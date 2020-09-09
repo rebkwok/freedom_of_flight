@@ -13,8 +13,12 @@
 {% endif %}
 
 <!-- NOTE this snippet is only displayed if the user is allowed to book -->
-<span class="helptex float-right"><i class="text-dark fas fa-times-circle"></i> NOT BOOKED</span><br/>
-<span class="float-right">{% include "booking/includes/block_info.html" %}</span><br/>
+<span class="helptext float-right"><i class="text-dark fas fa-times-circle"></i> NOT BOOKED</span><br/>
+<span class="float-right">
+    {% if user_info.has_available_block  %}
+        <span class="helptext">Credit block available</span>
+    {% endif %}
+</span><br/>
 <span class="float-right">
     <a class="btn btn-success btn-sm mb-1" href="#"><i id="loader_{{ course.id }}"></i> Book Course</a>
 </span>

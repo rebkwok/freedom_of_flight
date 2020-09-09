@@ -73,6 +73,8 @@
                                                 data-ref="course_list"
                                                 data-course_id="{{ course.id }}"
                                                 data-has_started={{ course.has_started|yesno:"1,0" }}
+                                                data-allow_partial_booking={{ course.allow_partial_booking|yesno:"1,0" }}
+                                                data-part_booking_with_full_block={% if user_info.available_block.block_config.size > course.events_left.count %}1{% else %}0{% endif %}
                                                 data-has_available_block={{ user_info.has_available_block|yesno:"1,0" }}
                                                 data-already_booked={{ user_info.has_booked|yesno:"1,0" }}
                                                 class="ajax_course_events_btn float-right">
@@ -81,7 +83,7 @@
                                         {% else %}
                                             <span class="float-right helptext"><i class="text-dark fas fa-times-circle"></i> NOT BOOKED</span><br/>
                                             <span class="float-right helptext">
-                                                Payment plan required (Credit block for a course with {{ course.events_left.count }} {{ course.event_type.pluralized_label }})</span>
+                                                Payment plan required ({{ course.events_left.count }} {{ course.event_type.label }} course block)</span>
                                         {% endif %}
                                     </div>
                                 </div>
