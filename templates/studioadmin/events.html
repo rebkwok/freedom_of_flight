@@ -66,18 +66,22 @@
                                     {% endif %}
                                 </td>
                                 <td class="text-center">{{ event.start|date:"H:i" }} - {{ event.end|date:"H:i" }}</td>
-                                <td class="text-center">{{ event.spaces_left }} {% if event.max_participants %}/ {{ event.max_participants }}{% endif %}</td>
+                                <td class="text-center">
+                                    <span class="badge badge-light pr-2 pl-2">
+                                        {{ event.spaces_left }}{% if event.max_participants %}/{{ event.max_participants }}{% endif %}
+                                    </span>
+                                </td>
                                 <td>{{ event.event_type.name|title }}</td>
                                 {% if event.course %}
                                     <td class="helptext text-center">
                                     <div data-toggle="tooltip" data-placement="top" title="Visibility can be set on the course list">
-                                        <span class="btn btn-sm btn-visible btn-secondary disabled">{{ event.show_on_site|yesno|title }}</span>
+                                        <span class="btn btn-sm btn-toggle btn-secondary disabled">{{ event.show_on_site|yesno|title }}</span>
                                     </div>
                                     </td>
                                 {% else %}
                                     <td class="text-center">
                                         {% if event.cancelled %}
-                                            <span class="btn btn-sm btn-visible btn-secondary disabled">No</span>
+                                            <span class="btn btn-sm btn-toggle btn-secondary disabled">No</span>
                                         {% else %}
                                           <span
                                               id="visible-{{ event.id }}"

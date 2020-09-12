@@ -18,7 +18,7 @@ from crispy_forms.layout import Button, Layout, Submit, Row, Column, Field, Fiel
 from delorean import Delorean
 
 from .form_utils import Formset
-from .views.utils import get_current_courses
+from ..views.utils import get_current_courses
 from accounts.admin import CookiePolicyAdminForm, DataPrivacyPolicyAdminForm, DisclaimerContentAdminForm
 from accounts.models import CookiePolicy, DisclaimerContent, DataPrivacyPolicy
 from booking.models import (
@@ -202,6 +202,8 @@ class CourseUpdateForm(forms.ModelForm):
                 field.widget.attrs = {"class": "form-control"}
                 if name == "description":
                     field.widget.attrs.update({"rows": 10})
+
+        self.fields["allow_partial_booking"].label = "Allow booking after the course has started"
 
         self.hide_events = False
         self.bookings_exist = False

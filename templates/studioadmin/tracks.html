@@ -48,7 +48,7 @@
                         {% endfor %}
                     </td>
                     <td>
-                        <a href="{% url 'studioadmin:toggle_track_default' track.id %}" class="btn btn-sm btn-visible {% if track.default %}btn-success{% else %}btn-dark{% endif %}">
+                        <a href="{% url 'studioadmin:toggle_track_default' track.id %}" class="btn btn-sm btn-toggle {% if track.default %}btn-success{% else %}btn-dark{% endif %}">
                           {{ track.default|yesno|title}}
                         </a>
                     </td>

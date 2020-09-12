@@ -28,6 +28,7 @@ from studioadmin.views import (
     email_subscription_users_view,
     UserSubscriptionsListView, SubscriptionAddView, SubscriptionEditView, ajax_subscription_delete,
     course_booking_add_view, course_block_change_view, export_users,
+    ajax_toggle_course_partial_booking,
 )
 
 app_name = 'studioadmin'
@@ -56,6 +57,10 @@ urlpatterns = [
     path('courses/past/', PastCourseAdminListView.as_view(), name='past_courses'),
     path('course/<slug>/cancel/', cancel_course_view, name='cancel_course'),
     path('ajax-toggle-course-visible/<int:course_id>/', ajax_toggle_course_visible, name="ajax_toggle_course_visible"),
+    path(
+        'ajax-toggle-course-allow-partial-booking/<int:course_id>/',
+        ajax_toggle_course_partial_booking, name="ajax_toggle_course_allow_partial_booking"
+    ),
     path('course/create/', course_create_choice_view, name="choose_course_type_to_create"),
     path('course/<int:event_type_id>/create/', CourseCreateView.as_view(), name="create_course"),
     path('course/<slug>/update/', CourseUpdateView.as_view(), name="update_course"),

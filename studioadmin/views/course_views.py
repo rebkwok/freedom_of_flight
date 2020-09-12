@@ -103,6 +103,14 @@ def ajax_toggle_course_visible(request, course_id):
     return render(request, "studioadmin/includes/ajax_toggle_course_visible_btn.html", {"course": course})
 
 
+def ajax_toggle_course_partial_booking(request, course_id):
+    course = Course.objects.get(id=course_id)
+    course.allow_partial_booking = not course.allow_partial_booking
+    course.save()
+
+    return render(request, "studioadmin/includes/ajax_toggle_course_allow_partial_booking_btn.html", {"course": course})
+
+
 @login_required
 @staff_required
 def cancel_course_view(request, slug):

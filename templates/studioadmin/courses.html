@@ -67,14 +67,20 @@
                                     </span>
                                 </td>
                                 <td class="text-center">
-                                    {{ course.allow_partial_booking|yesno:"<i class='text-success far fa-check-circle'></i>,<i class='far fa-times-circle'></i>"|safe }}
+                                    <span
+                                          id="allow-partial-booking-{{ course.id }}"
+                                          data-course_id="{{ course.id }}"
+                                          class="allow-partial-booking-btn"
+                                          >
+                                          {% include "studioadmin/includes/ajax_toggle_course_allow_partial_booking_btn.html" %}
+                                      </span>
                                 </td>
                                 <td>{{ course.event_type.name|title }}</td>
                                 <td class="text-center">
                                     {% if course.cancelled %}
-                                        <span class="btn btn-sm btn-visible btn-secondary disabled">No</span>
+                                        <span class="btn btn-sm btn-toggle btn-secondary disabled">No</span>
                                     {% elif not course.can_be_visible %}
-                                        <span class="btn btn-sm btn-visible btn-secondary disabled">{{ course.show_on_site|yesno|title }}</span>
+                                        <span class="btn btn-sm btn-toggle btn-secondary disabled">{{ course.show_on_site|yesno|title }}</span>
                                     {% else %}
                                       <span
                                           id="visible-{{ course.id }}"
@@ -124,6 +130,6 @@
 {% endblock content %}
 
 {% block extra_js %}
-<script type='text/javascript' src="{% static 'studioadmin/js/courses_ajax-v1.js' %}"></script>
+<script type='text/javascript' src="{% static 'studioadmin/js/courses_ajax-v2.js' %}"></script>
 {% endblock %}
 

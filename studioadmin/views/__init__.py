@@ -2,6 +2,7 @@ from .cloning_views import clone_event, clone_timetable_session_view
 from .course_views import (
     CourseAdminListView, course_create_choice_view, CourseCreateView, CourseUpdateView,
     ajax_toggle_course_visible, cancel_course_view, PastCourseAdminListView, clone_course_view,
+    ajax_toggle_course_partial_booking,
 )
 from .event_views import (
     EventAdminListView, ajax_toggle_event_visible, cancel_event_view, EventCreateView,
