@@ -558,8 +558,8 @@ class AjaxBlockPurchaseTests(TestUsersMixin, TestCase):
         assert new_block.paid is False
         resp_json = resp.json()
         assert resp_json["cart_item_menu_count"] == 1
-        assert "Add" not in resp_json["html"]
-        assert 'class="fas fa-trash-alt"' in resp_json["html"]
+        assert "Add" in resp_json["html"]
+        assert "(1)" in resp_json["html"]
         assert f"Block added to cart for {self.student_user.first_name} {self.student_user.last_name}" in resp_json["html"]
 
     def test_add_new_course_block(self):
@@ -574,8 +574,8 @@ class AjaxBlockPurchaseTests(TestUsersMixin, TestCase):
         assert new_block.paid is False
         resp_json = resp.json()
         assert resp_json["cart_item_menu_count"] == 1
-        assert "Add" not in resp_json["html"]
-        assert 'class="fas fa-trash-alt"' in resp_json["html"]
+        assert "Add" in resp_json["html"]
+        assert "(1)" in resp_json["html"]
         assert f"Block added to cart for {self.student_user.first_name} {self.student_user.last_name}" in resp_json["html"]
 
     def test_add_block_for_managed_user(self):
@@ -590,27 +590,30 @@ class AjaxBlockPurchaseTests(TestUsersMixin, TestCase):
         assert new_block.paid is False
         resp_json = resp.json()
         assert resp_json["cart_item_menu_count"] == 2
-        assert "Add" not in resp_json["html"]
-        assert 'class="fas fa-trash-alt"' in resp_json["html"]
+        assert "Add" in resp_json["html"]
+        assert "(1)" in resp_json["html"]
         assert f"Block added to cart for {self.child_user.first_name} {self.child_user.last_name}" in resp_json[
             "html"]
 
-    def test_delete_from_cart(self):
+    def test_add_multiple_from_cart(self):
         self.login(self.manager_user)
         # user has multiple unpaid blocks
         course_block = baker.make_recipe("booking.course_block", block_config=self.course_config, user=self.manager_user)
         dropin_block1 = baker.make_recipe("booking.dropin_block", block_config=self.dropin_config, user=self.child_user)
-        # this is the block that will get deleted
-        baker.make_recipe("booking.dropin_block", block_config=self.dropin_config, user=self.manager_user)
 
+        assert self.manager_user.blocks.count() == 1
         url = reverse("booking:ajax_block_purchase", args=(self.dropin_config.id,))
         resp = self.client.post(url, data={"user_id": self.manager_user.id})
-        assert [block.id for block in self.manager_user.blocks.all()] == [course_block.id]
+        assert self.manager_user.blocks.count() == 2
+        assert self.manager_user.blocks.exclude(id=course_block.id).first().block_config == self.dropin_config
+
+        # chile user still has the same 1 block
         assert [block.id for block in self.child_user.blocks.all()] == [dropin_block1.id]
-        assert Block.objects.count() == 2
+        assert self.child_user.blocks.count() == 1
+        resp = self.client.post(url, data={"user_id": self.child_user.id})
+        assert self.child_user.blocks.count() == 2
+        for block in self.child_user.blocks.all():
+            assert block.block_config == self.dropin_config
+
         resp_json = resp.json()
-        assert resp_json["cart_item_menu_count"] == 2
-        assert "Add" in resp_json["html"]
-        assert 'class="fas fa-trash-alt"' not in resp_json["html"]
-        assert f"Block removed from cart for {self.manager_user.first_name} {self.manager_user.last_name}" in \
-               resp_json["html"]
+        assert resp_json["cart_item_menu_count"] == 4

@@ -254,7 +254,7 @@ class TimetableUploadViewTests(EventTestMixin, TestUsersMixin, TestCase):
         resp = self.client.get(self.url + "?tab=foo")
         assert resp.context_data["tab"] == "0"
 
-    @patch("studioadmin.forms.timezone")
+    @patch("studioadmin.forms.forms.timezone")
     def test_upload_timetable_for_correct_track(self, mock_tz):
         mock_tz.now.return_value = datetime(2020, 7, 1, tzinfo=timezone.utc)
         baker.make(TimetableSession, event_type__track=self.adult_track, _quantity=2)
@@ -294,7 +294,7 @@ class TimetableUploadViewTests(EventTestMixin, TestUsersMixin, TestCase):
         for event in thurs_uploaded_events:
             assert event.max_participants == 30
 
-    @patch("studioadmin.forms.timezone")
+    @patch("studioadmin.forms.forms.timezone")
     def test_upload_timetable_existing_events(self, mock_tz):
         mock_tz.now.return_value = datetime(2020, 1, 1, tzinfo=timezone.utc)
         tsession = baker.make(
@@ -322,7 +322,7 @@ class TimetableUploadViewTests(EventTestMixin, TestUsersMixin, TestCase):
         assert test_events.count() == 2
         assert sorted([test_event.id for test_event in test_events]) == sorted([event.id, uploaded.id])
 
-    @patch("studioadmin.forms.timezone")
+    @patch("studioadmin.forms.forms.timezone")
     def test_upload_timetable_subset_of_sessions(self, mock_tz):
         mock_tz.now.return_value = datetime(2020, 1, 1, tzinfo=timezone.utc)
         tsession = baker.make(

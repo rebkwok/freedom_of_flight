@@ -26,7 +26,7 @@ var processBlockPurchaseRequest = function()  {
        result, status, jqXHR)  {
       //console.log("sf result='" + result + "', status='" + status + "', jqXHR='" + jqXHR + "'");
 
-    $("#loader_" + block_config_id).removeClass("fa fa-spinner fa-spin").hide();
+    $("#loader_" + user_id + "_" + block_config_id).removeClass("fa fa-spinner fa-spin").hide();
     $('#block_config_' + block_config_id + '_' + user_id).html(result.html);
     $('#cart_item_menu_count').text(result.cart_item_menu_count);
    };

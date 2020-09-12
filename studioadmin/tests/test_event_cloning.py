@@ -63,7 +63,7 @@ class CloneEventTests(EventTestMixin, TestUsersMixin, TestCase):
             "recurring_weekly_time": (self.event.start + timedelta(hours=1)).time()
         }
 
-    @patch("studioadmin.forms.timezone")
+    @patch("studioadmin.forms.forms.timezone")
     def test_clone_single_event(self, mock_tz):
         mock_tz.now.return_value = datetime(2020, 1, 1, tzinfo=timezone.utc)
         # This datestring in the form is in local time (BST) and converted to UTC by django
@@ -82,7 +82,7 @@ class CloneEventTests(EventTestMixin, TestUsersMixin, TestCase):
         assert cloned_event.course is None
         assert cloned_event.start == datetime(2020, 4, 4, 9, 0, tzinfo=timezone.utc)
 
-    @patch("studioadmin.forms.timezone")
+    @patch("studioadmin.forms.forms.timezone")
     def test_clone_single_event_already_exists(self, mock_tz):
         mock_tz.now.return_value = datetime(2020, 1, 1, tzinfo=timezone.utc)
         # make another event with the same name and event type, and the date we're about to try to clone to
@@ -100,7 +100,7 @@ class CloneEventTests(EventTestMixin, TestUsersMixin, TestCase):
         assert Event.objects.filter(name="Original event").count() == 2
         assert "Class not cloned; a duplicate with this name and start already exists" in resp.rendered_content
 
-    @patch("studioadmin.forms.timezone")
+    @patch("studioadmin.forms.forms.timezone")
     def test_redirect_to_events_with_track(self, mock_tz):
         mock_tz.now.return_value = datetime(2020, 1, 1, tzinfo=timezone.utc)
         data = {
@@ -110,7 +110,7 @@ class CloneEventTests(EventTestMixin, TestUsersMixin, TestCase):
         resp = self.client.post(self.url, data)
         assert resp.url == reverse("studioadmin:events") + f"?track={self.event.event_type.track.id}"
 
-    @patch("studioadmin.forms.timezone")
+    @patch("studioadmin.forms.forms.timezone")
     def test_clone_weekly_recurring_event(self, mock_tz):
         mock_tz.now.return_value = datetime(2020, 1, 1, tzinfo=timezone.utc)
         data = {
@@ -129,7 +129,7 @@ class CloneEventTests(EventTestMixin, TestUsersMixin, TestCase):
         assert dates == [date(2020, 7, 6), date(2020, 7, 13), date(2020, 7, 20), date(2020, 7, 27)]
         assert times == {time(9, 0)}
 
-    @patch("studioadmin.forms.timezone")
+    @patch("studioadmin.forms.forms.timezone")
     def test_clone_weekly_recurring_event_already_exists(self, mock_tz):
         mock_tz.now.return_value = datetime(2020, 1, 1, tzinfo=timezone.utc)
         data = {
@@ -157,7 +157,7 @@ class CloneEventTests(EventTestMixin, TestUsersMixin, TestCase):
         assert "Classes with this name already exist for the following dates/times and were not cloned: " \
                "6 Jul 2020, 10:00" in resp.rendered_content
 
-    @patch("studioadmin.forms.timezone")
+    @patch("studioadmin.forms.forms.timezone")
     def test_clone_weekly_recurring_event_nothing_to_clone(self, mock_tz):
         mock_tz.now.return_value = datetime(2020, 1, 1, tzinfo=timezone.utc)
         # no mondays in time period
@@ -173,7 +173,7 @@ class CloneEventTests(EventTestMixin, TestUsersMixin, TestCase):
         assert cloned_events.exists() is False
         assert "Nothing to clone" in resp.rendered_content
 
-    @patch("studioadmin.forms.timezone")
+    @patch("studioadmin.forms.forms.timezone")
     def test_clone_weekly_recurring_event_inclusive(self, mock_tz):
         mock_tz.now.return_value = datetime(2020, 1, 1, tzinfo=timezone.utc)
         data = {
@@ -192,7 +192,7 @@ class CloneEventTests(EventTestMixin, TestUsersMixin, TestCase):
         assert dates == [date(2020, 7, 17), date(2020, 7, 24), date(2020, 7, 31)]
         assert times == {time(9, 0)}
 
-    @patch("studioadmin.forms.timezone")
+    @patch("studioadmin.forms.forms.timezone")
     def test_clone_weekly_recurring_event_date_validation(self, mock_tz):
         mock_tz.now.return_value = datetime(2020, 4, 1, tzinfo=timezone.utc)
         data = {
@@ -228,7 +228,7 @@ class CloneEventTests(EventTestMixin, TestUsersMixin, TestCase):
         form = resp.context_data["weekly_form"]
         assert form.errors == {"recurring_weekly_end": ["End date must be after start date"]}
 
-    @patch("studioadmin.forms.timezone")
+    @patch("studioadmin.forms.forms.timezone")
     def test_clone_weekly_recurring_event_multiple_days(self, mock_tz):
         mock_tz.now.return_value = datetime(2020, 1, 1, tzinfo=timezone.utc)
         data = {
@@ -248,7 +248,7 @@ class CloneEventTests(EventTestMixin, TestUsersMixin, TestCase):
         # BST, the UTC date is 1 hr before
         assert times == {time(9, 0)}
 
-    @patch("studioadmin.forms.timezone")
+    @patch("studioadmin.forms.forms.timezone")
     def test_clone_recurring_daily_intervals(self, mock_tz):
         mock_tz.now.return_value = datetime(2020, 1, 1, tzinfo=timezone.utc)
         data = {
@@ -266,7 +266,7 @@ class CloneEventTests(EventTestMixin, TestUsersMixin, TestCase):
         assert dates == {date(2020, 1, 7)}
         assert times == {time(10, 0), time(10, 20), time(10, 40), time(11, 0), time(11, 20), time(11, 40), time(12, 00)}
 
-    @patch("studioadmin.forms.timezone")
+    @patch("studioadmin.forms.forms.timezone")
     def test_clone_recurring_daily_intervals_existing_event(self, mock_tz):
         mock_tz.now.return_value = datetime(2020, 1, 1, tzinfo=timezone.utc)
         data = {
@@ -291,7 +291,7 @@ class CloneEventTests(EventTestMixin, TestUsersMixin, TestCase):
         assert "Classes with this name already exist on 7 Jan 2020 at these times and were not cloned: " \
                "10:40" in resp.rendered_content
 
-    @patch("studioadmin.forms.timezone")
+    @patch("studioadmin.forms.forms.timezone")
     def test_clone_recurring_daily_intervals_nothing_to_clone(self, mock_tz):
         mock_tz.now.return_value = datetime(2020, 1, 1, tzinfo=timezone.utc)
         data = {
@@ -311,7 +311,7 @@ class CloneEventTests(EventTestMixin, TestUsersMixin, TestCase):
         assert "Classes with this name already exist on 7 Jan 2020 at these times and were not cloned: " \
                "10:00" in resp.rendered_content
 
-    @patch("studioadmin.forms.timezone")
+    @patch("studioadmin.forms.forms.timezone")
     def test_clone_recurring_daily_intervals_start_date_today(self, mock_tz):
         mock_tz.now.return_value = datetime(2020, 7, 1, 10, 0, tzinfo=timezone.utc)
         data = {
@@ -329,7 +329,7 @@ class CloneEventTests(EventTestMixin, TestUsersMixin, TestCase):
         # today is BST, so times are 1 hr earlier in UTC
         assert times == {time(9, 0), time(9, 10), time(9, 20), time(9, 30)}
 
-    @patch("studioadmin.forms.timezone")
+    @patch("studioadmin.forms.forms.timezone")
     def test_clone_recurring_daily_intervals_validation(self, mock_tz):
         mock_tz.now.return_value = datetime(2020, 4, 1, tzinfo=timezone.utc)
         data = {
@@ -354,7 +354,7 @@ class CloneEventTests(EventTestMixin, TestUsersMixin, TestCase):
         form = resp.context_data["daily_form"]
         assert form.errors == {"recurring_daily_endtime": ["End time must be after start time"]}
 
-    @patch("studioadmin.forms.timezone")
+    @patch("studioadmin.forms.forms.timezone")
     def test_clone_with_no_valid_form(self, mock_tz):
         mock_tz.now.return_value = datetime(2020, 4, 1, tzinfo=timezone.utc)
         data = {
@@ -368,7 +368,7 @@ class CloneEventTests(EventTestMixin, TestUsersMixin, TestCase):
         # renders the same page again
         assert resp.status_code == 200
 
-    @patch("studioadmin.forms.timezone")
+    @patch("studioadmin.forms.forms.timezone")
     def test_clone_ignores_other_form_fields(self, mock_tz):
         mock_tz.now.return_value = datetime(2020, 4, 1, tzinfo=timezone.utc)
         data = {

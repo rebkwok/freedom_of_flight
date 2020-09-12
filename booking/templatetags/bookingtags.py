@@ -51,6 +51,11 @@ def has_unpaid_block(user, block_config):
     return any(block for block in user.blocks.filter(paid=False) if block.block_config == block_config)
 
 
+@register.filter
+def unpaid_block_count(user, block_config):
+    return user.blocks.filter(block_config=block_config, paid=False).count()
+
+
 @register.simple_tag
 def has_unpaid_subscription(user, subscription_config, start_date):
     if subscription_config.start_options == "signup_date" and start_date == start_of_day_in_utc(timezone.now()):
