@@ -29,12 +29,12 @@ def event_waiting_list_view(request, event_id):
             waiting_list_users.get(user_id=booking.user.id).delete()
         if bookings_for_wl_users:
             # refresh the queryset if we had to cleanup
-            waiting_list_users = WaitingListUser.objects.filter(event__id=event_id).order_by('user__username')
+            waiting_list_users = WaitingListUser.objects.filter(event__id=event_id).order_by('date_joined')
 
     template = 'studioadmin/event_waiting_list.html'
 
     return TemplateResponse(
-        request, template, {'waiting_list_users': waiting_list_users, 'event': event,}
+        request, template, {'waiting_list_users': waiting_list_users, 'event': event}
     )
 
 

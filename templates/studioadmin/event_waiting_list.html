@@ -1,6 +1,6 @@
 {% extends "studioadmin/base.html" %}
 {% load static %}
-{% load bookingtags %}
+{% load bookingtags accounttags email_obfuscator %}
 
 {% block extra_head %}
 {% include 'common/includes/ajax_head.html' %}
@@ -17,14 +17,14 @@
 
     <h2>Waiting List for {{ event }}</h2>
     <p class="lead">(Currently {% if event.spaces_left %}not {% endif %} full)</p>
-
+        <a class="btn btn-sm btn-outline-dark mb-2" href="{% url 'studioadmin:email_waiting_list' event.id %}">Email waiting list</a>
             {% if waiting_list_users %}
                     <div class="table-responsive">
                         <table class="table">
                             <thead>
                             <tr>
                                 <th>User</th>
-                                <th>Username</th>
+                                <th>Email</th>
                                 <th>Date joined</th>
                                 <th></th>
                             </tr>
@@ -33,12 +33,17 @@
                             {% for wluser in waiting_list_users %}
                             <tr id="row-wluser-{{ wluser.id }}">
                                 <td>{{ wluser.user.first_name }} {{ wluser.user.last_name }}</td>
-                                <td>{{ wluser.user.username }}</td>
+                                <td>{% if wluser.user.manager_user %}
+                                        {{ wluser.user.manager_user.email|obfuscate_mailto:"<i class='far fa-envelope'></i>"|safe }} ({{ wluser.user.manager_user|full_name }})
+                                    {% else %}
+                                        {{ wluser.user.email|obfuscate_mailto:"<i class='far fa-envelope'></i>"|safe }}
+                                    {% endif %}
+                                </td>
                                 <td>{{ wluser.date_joined }}</td>
                                 <td class="text-center wl-remove-btn"
                                     data-wluser_id={{ wluser.id }}
                                     data-event_id={{ event.id }}>
-                                    <span class="btn btn-outline-success">Remove</span>
+                                    <span class="btn btn-sm btn-outline-success">Remove</span>
                                 </td>
                             </tr>
                             {% endfor %}

@@ -28,7 +28,7 @@ from studioadmin.views import (
     email_subscription_users_view,
     UserSubscriptionsListView, SubscriptionAddView, SubscriptionEditView, ajax_subscription_delete,
     course_booking_add_view, course_block_change_view, export_users,
-    ajax_toggle_course_partial_booking,
+    ajax_toggle_course_partial_booking, email_waiting_list_view
 )
 
 app_name = 'studioadmin'
@@ -72,6 +72,7 @@ urlpatterns = [
     path('registers/<int:event_id>/ajax-add-booking/', ajax_add_register_booking, name='bookingregisteradd'),
     path('register/<int:booking_id>/ajax-toggle-attended/', ajax_toggle_attended, name='ajax_toggle_attended'),
 
+    path('waiting-list/<int:event_id>/email-students/', email_waiting_list_view, name="email_waiting_list"),
     path('waiting-list/<int:event_id>/', event_waiting_list_view, name="event_waiting_list"),
     path('waiting-list/remove/', ajax_remove_from_waiting_list, name="ajax_remove_from_waiting_list"),
 

@@ -22,7 +22,8 @@ from ..views.utils import get_current_courses
 from accounts.admin import CookiePolicyAdminForm, DataPrivacyPolicyAdminForm, DisclaimerContentAdminForm
 from accounts.models import CookiePolicy, DisclaimerContent, DataPrivacyPolicy
 from booking.models import (
-    Booking, Block, Event, Course, EventType, COMMON_LABEL_PLURALS, BlockConfig, SubscriptionConfig, Subscription
+    Booking, Block, Event, Course, EventType, COMMON_LABEL_PLURALS, BlockConfig, SubscriptionConfig,
+    Subscription, WaitingListUser
 )
 from booking.utils import has_available_course_block
 from common.utils import full_name
@@ -479,11 +480,55 @@ class UploadTimetableForm(forms.Form):
         return super().clean()
 
 
-class EmailUsersForm(forms.Form):
+class BaseEmailForm(forms.Form):
     message = forms.CharField(widget=forms.Textarea())
     reply_to_email = forms.EmailField(initial=settings.DEFAULT_STUDIO_EMAIL)
     cc = forms.BooleanField(initial=False, label="Send a copy to me", required=False)
     subject = forms.CharField()
+
+    def get_form_helper(self):
+        helper = FormHelper()
+        helper.layout = Layout(
+            HTML(
+                "<div class='helptext pt-0 mt-0 mb-2'>For child/dependent users, the email will be sent to the main user account</div>"
+            ),
+            'students',
+            "subject",
+            "reply_to_email",
+            "cc",
+            Field("message", rows=15),
+            Submit('submit', f'Send email')
+        )
+        return helper
+
+    def clean(self):
+        if not self.cleaned_data.get("students"):
+            self.add_error("students", "Select at least one student to email")
+
+
+class EmailWaitingListUsersForm(BaseEmailForm):
+
+    def __init__(self, *args, **kwargs):
+        event = kwargs.pop("event", None)
+        super().__init__(*args, **kwargs)
+        waiting_list_users = WaitingListUser.objects.filter(event=event).order_by("date_joined")
+        choices = [
+            (waiting_list_user.user.id, f"{full_name(waiting_list_user.user)} (joined {waiting_list_user.date_joined.strftime('%d-%b-%y')})")
+            for waiting_list_user in waiting_list_users
+        ]
+
+        self.fields["students"] = forms.MultipleChoiceField(
+            widget=forms.CheckboxSelectMultiple(attrs={"class": "form-check-input"}),
+            choices=choices,
+            required=False,
+            label=f"The following students are on the waiting list for this {event.event_type.label}.",
+            initial={waiting_list_user.user.id for waiting_list_user in waiting_list_users},
+        )
+        self.fields["subject"].initial = event
+        self.helper = self.get_form_helper()
+
+
+class EmailUsersForm(BaseEmailForm):
 
     def __init__(self, *args, **kwargs):
         event = kwargs.pop("event", None)
@@ -527,22 +572,7 @@ class EmailUsersForm(forms.Form):
 
         self.fields["subject"].initial = event if target == "event" else course.name if target == "course" else subscription_config.name
 
-        self.helper = FormHelper()
-        self.helper.layout = Layout(
-            HTML(
-                "<div class='helptext pt-0 mt-0 mb-2'>For child/dependent users, the email will be sent to the main user account</div>"
-            ),
-            'students',
-            "subject",
-            "reply_to_email",
-            "cc",
-            Field("message", rows=15),
-            Submit('submit', f'Send email')
-        )
-
-    def clean(self):
-        if not self.cleaned_data.get("students"):
-            self.add_error("students", "Select at least one student to email")
+        self.helper = self.get_form_helper()
 
 
 class EventTypeForm(forms.ModelForm):

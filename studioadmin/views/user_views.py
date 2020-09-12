@@ -22,7 +22,7 @@ from common.utils import full_name
 
 from ..forms import (
     EmailUsersForm, SearchForm, AddEditBookingForm, AddEditBlockForm, AddEditSubscriptionForm,
-    CourseBookingAddChangeForm
+    CourseBookingAddChangeForm, EmailWaitingListUsersForm
 )
 from .utils import staff_required, is_instructor_or_staff, InstructorOrStaffUserMixin
 
@@ -37,6 +37,20 @@ def email_event_users_view(request, event_slug):
         if form.is_valid():
             process_form_and_send_email(request, form)
             return HttpResponseRedirect(reverse("studioadmin:events") + f"?track={event.event_type.track_id}")
+    context = {"form": form, "event": event}
+    return TemplateResponse(request, "studioadmin/email_event_users.html", context)
+
+
+@login_required
+@staff_required
+def email_waiting_list_view(request, event_id):
+    event = get_object_or_404(Event, pk=event_id)
+    form = EmailWaitingListUsersForm(event=event)
+    if request.method == "POST":
+        form = EmailWaitingListUsersForm(request.POST, event=event)
+        if form.is_valid():
+            process_form_and_send_email(request, form)
+            return HttpResponseRedirect(reverse("studioadmin:event_waiting_list", args=(event.id,)))
     context = {"form": form, "event": event}
     return TemplateResponse(request, "studioadmin/email_event_users.html", context)
 
