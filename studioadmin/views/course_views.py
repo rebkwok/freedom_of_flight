@@ -29,11 +29,16 @@ class CourseAdminListView(LoginRequiredMixin, StaffUserMixin, ListView):
     custom_paginate_by = 10
 
     def get_queryset(self):
-        queryset = super().get_queryset()
+        if self.request.GET.get("include_cancelled") == "yes":
+            queryset = super().get_queryset()
+        else:
+            queryset = super().get_queryset().filter(cancelled=False)
         return get_current_courses(queryset)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        if self.request.GET.get("include_cancelled") == "yes":
+            context["show_cancelled"] = True
         all_courses = self.get_queryset()
 
         track_id = self.request.GET.get('track')
@@ -86,11 +91,17 @@ class CourseAdminListView(LoginRequiredMixin, StaffUserMixin, ListView):
 class PastCourseAdminListView(CourseAdminListView):
 
     def get_queryset(self):
+        if self.request.GET.get("include_cancelled") == "yes":
+            queryset = Course.objects.all()
+        else:
+            queryset = Course.objects.filter(cancelled=False)
         # not super, because the super view filters only to current/future
-        return get_past_courses()
+        return get_past_courses(queryset)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        if self.request.GET.get("include_cancelled") == "yes":
+            context["show_cancelled"] = True
         context['past'] = True
         return context
 
