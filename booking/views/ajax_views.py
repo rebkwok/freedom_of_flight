@@ -211,6 +211,7 @@ def ajax_toggle_booking(request, event_id):
     alert_message['message'] = f"Booking has been {requested_action}"
 
     if ref != "course":
+        page = request.POST.get("page", 1)
         if block_availability_changed or subscription_availability_changed:
             # subscription or block have changed, redirect to the same page again to refresh buttons
             # Ignore if we came from the course page
@@ -219,14 +220,18 @@ def ajax_toggle_booking(request, event_id):
                 url = reverse("booking:bookings")
             else:
                 url = reverse("booking:events", args=(event.event_type.track.slug,))
-            return JsonResponse({"redirect": True, "url": url})
+            return JsonResponse({"redirect": True, "url": url + f"?page={page}"})
     user_info = get_user_booking_info(user, event)
     context = {
+        "booking": booking,
         "event": event,
         "alert_message": alert_message,
         "user_info": get_user_booking_info(user, event),
     }
-    html = render_to_string(f"booking/includes/events_button.txt", context, request)
+    if ref == "bookings":
+        html = render_to_string(f"booking/includes/bookings_button.txt", context, request)
+    else:
+        html = render_to_string(f"booking/includes/events_button.txt", context, request)
     block_info_html = render_to_string(f"booking/includes/block_info.html", context, request)
     event_availability_html = render_to_string(f"booking/includes/event_availability_badge.html", {"event": event}, request)
     event_info_xs_html = render_to_string('booking/includes/event_info_xs.html', {"event": event, "user_info": user_info}, request)
@@ -322,7 +327,8 @@ def ajax_course_booking(request, course_id):
     messages.success(request, f"Course {course.name} booked")
 
     if ref == "course_list":
-        url = reverse('booking:courses', args=(course.event_type.track.slug,))
+        page = request.POST.get("page", 1)
+        url = reverse('booking:courses', args=(course.event_type.track.slug,)) + f"?page={page}"
     else:
         url = reverse('booking:course_events', args=(course.slug,))
     return JsonResponse({"redirect": True, "url": url})

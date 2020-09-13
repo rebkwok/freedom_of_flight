@@ -7,10 +7,10 @@ jQuery(document).ready(function () {
     });
     $('a[href="' + location.pathname + '"]').closest('.nav-item').addClass('active');
 
-    // messages timeout after 5 sec
+    // messages timeout after 8 sec
     setTimeout(function() {
         $('#message-row').fadeOut('slow');
-    }, 5000); // <-- time in milliseconds, 1000 =  1 sec
+    }, 8000); // <-- time in milliseconds, 1000 =  1 sec
 
     $('[data-toggle="tooltip"]').tooltip();
     $('[data-toggle="popover"]').popover()

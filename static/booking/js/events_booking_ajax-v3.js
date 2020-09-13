@@ -21,6 +21,7 @@ var processBookingToggleRequest = function()  {
     var event_id = $button_just_clicked_on.data('event_id');
     var user_id = $button_just_clicked_on.data('user_id');
     var ref = $button_just_clicked_on.data('ref');
+    var page = $button_just_clicked_on.data('page');
     var show_warning = $button_just_clicked_on.data('show_warning');
     var cancellation_allowed = $button_just_clicked_on.data('cancellation_allowed');
 
@@ -103,7 +104,7 @@ var processBookingToggleRequest = function()  {
               url: '/ajax-toggle-booking/' + event_id + '/',
               dataType: 'json',
               type: 'POST',
-              data: {csrfmiddlewaretoken: window.CSRF_TOKEN, "user_id": user_id, "ref": ref},
+              data: {csrfmiddlewaretoken: window.CSRF_TOKEN, "user_id": user_id, "ref": ref, 'page': page},
               beforeSend: function() {$("#loader_" + event_id).addClass("fa fa-spinner fa-spin").show()},
               success: processResult,
               //Should also have a "fail" call as well.
@@ -130,6 +131,7 @@ var processCourseBookingRequest = function()  {
     var course_id = $button_just_clicked_on.data('course_id');
     var user_id = $button_just_clicked_on.data('user_id');
     var ref = $button_just_clicked_on.data('ref');
+    var page = $button_just_clicked_on.data('page');
     var allow_partial_booking = $button_just_clicked_on.data('allow_partial_booking');
     var part_booking_with_full_block = $button_just_clicked_on.data('part_booking_with_full_block');
     var has_started = $button_just_clicked_on.data('has_started');
@@ -219,7 +221,7 @@ var processCourseBookingRequest = function()  {
                 url: '/ajax-course-booking/' + course_id + "/",
                 dataType: 'json',
                 type: 'POST',
-                data: {csrfmiddlewaretoken: window.CSRF_TOKEN, "user_id": user_id, "ref": ref},
+                data: {csrfmiddlewaretoken: window.CSRF_TOKEN, "user_id": user_id, "ref": ref, 'page': page},
                 beforeSend: function() {$("#loader_" + course_id).addClass("fa fa-spinner fa-spin").show();},
                 success: processResult,
                 //Should also have a "fail" call as well.

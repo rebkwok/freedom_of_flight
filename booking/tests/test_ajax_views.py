@@ -414,7 +414,7 @@ class BookingAjaxCourseBookingViewTests(EventTestMixin, TestUsersMixin, TestCase
         resp = self.client.post(self.url(self.course.id), data={"user_id": self.student_user.id, "ref": "course_list"})
         resp = resp.json()
         assert resp['redirect'] is True
-        redirect_url = reverse('booking:courses', args=(self.course.event_type.track.slug,))
+        redirect_url = reverse('booking:courses', args=(self.course.event_type.track.slug,)) + "?page=1"
         assert resp['url'] == redirect_url
 
         for event in self.course_events:
