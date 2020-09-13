@@ -418,3 +418,6 @@ td.sort-col {
   font-size: 1px;
 }
 
+#div_id_events > div > span.invalid-feedback {
+  display: block;
+}

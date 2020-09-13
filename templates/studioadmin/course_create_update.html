@@ -4,6 +4,8 @@
 
 {% block extra_head %}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-multiselect/0.9.15/css/bootstrap-multiselect.css" integrity="sha512-EvvoSMXERW4Pe9LjDN9XDzHd66p8Z49gcrB7LCUplh0GcEHiV816gXGwIhir6PJiwl0ew8GFM2QaIg2TW02B9A==" crossorigin="anonymous" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-timepicker/1.10.0/jquery.timepicker.min.css" integrity="sha512-eOKbnuWqH2HMqH9nXcm95KXitbj8k7P49YYzpk7J4lw1zl+h4uCjkCfV7RaY4XETtTZnNhgsa+/7x29fH6ffjg==" crossorigin="anonymous" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-ui-multidatespicker/1.6.6/jquery-ui.multidatespicker.min.css" integrity="sha512-mIbgL1BBPonQ8vE6IE3m12DOgjnwObnVHk4C2k3S7yyrgd3ctznEDHnz4871ioTgh7QIy0imgyLeNFk+PehRSw==" crossorigin="anonymous" />
 {% endblock %}
 
 {% block subnav-xs %}
@@ -24,7 +26,8 @@
 
     {% if creating %}
     <p>
-        You can create a course before or after its individual events have been created.
+        You can create a course before or after its individual events have been created. After the initial course
+        options have been saved, you can also specify event dates and automatically create events for this course.
     </p>
     <p>By default, a newly created course is not visible on the booking site.  Make it visible on creation
         by ticking "show on site", or use the button on the course list page.</p>
@@ -47,10 +50,7 @@
     {% endif %}
         <form method="post" action="">
         {% csrf_token %}
-        {{ form|crispy }}
-        {% if form.events.errors %}<span class="errorlist">{{ form.events.errors }}</span>{% endif %}
-        <input class="btn btn-primary" type="submit" value="Save">
-        <a class="btn btn-dark" href="{% url 'studioadmin:courses' %}">Cancel</a>
+        {%  crispy form %}
     </form>
 
 {% endblock %}
@@ -59,6 +59,8 @@
 {% block extra_js %}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-multiselect/0.9.15/js/bootstrap-multiselect.min.js" integrity="sha512-aFvi2oPv3NjnjQv1Y/hmKD7RNMendo4CZ2DwQqMWzoURKxcqAoktj0nNG4LU8m23+Ws9X5uVDD4OXLqpUVXD5Q==" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-ui-multidatespicker/1.6.6/jquery-ui.multidatespicker.min.js" integrity="sha512-mMP7O0G5Vv01th+kpYux7RbD89Mx/iQnIvxcKdctiPyADgJzacfQJ8k2AsB8695AAuR2uPuxk7dawb1eehjcuQ==" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-timepicker/1.10.0/jquery.timepicker.min.js" integrity="sha512-RLw8xx+jXrPhT6aXAFiYMXhFtwZFJ0O3qJH1TwK6/F02RSdeasBTTYWJ+twHLCk9+TU8OCQOYToEeYyF/B1q2g==" crossorigin="anonymous"></script>
 <script type="text/javascript">
     $(document).ready(function() {
         $('#id_events').multiselect({
@@ -69,7 +71,38 @@
             enableFiltering: true,
             enableCaseInsensitiveFiltering: true,
         });
+
+        $('#id_create_events_dates').multiDatesPicker(
+            {
+                minDate: 0,
+                dateFormat: "d-M-yy",
+            }
+        );
+        // Fix jumping back to current month - see https://github.com/dubrox/Multiple-Dates-Picker-for-jQuery-UI/issues/221
+        $.datepicker._selectDateOverload = $.datepicker._selectDate;
+        $.datepicker._selectDate = function (id, dateStr) {
+        var target = $(id);
+        var inst = this._getInst(target[0]);
+        inst.inline = true;
+        $.datepicker._selectDateOverload(id, dateStr);
+        inst.inline = false;
+        if (target[0].multiDatesPicker != null) {
+        target[0].multiDatesPicker.changed = false;
+        } else {
+        target.multiDatesPicker.changed = false;
+        }
+        this._updateDatepicker(inst);
+        };
+
+        $('#id_create_events_time').timepicker(
+            {
+                'timeFormat': 'H:i',
+                'step': 5,
+                'scrollDefault': "18:00"
+            }
+        );
     });
+
 </script>
 
 {% endblock %}

@@ -1,9 +1,10 @@
+from datetime import datetime
+
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.contrib import messages
 from django.core.paginator import Paginator
-from django import forms
 from django.template.response import TemplateResponse
 from django.shortcuts import get_object_or_404, render, HttpResponseRedirect
 from django.views.generic import ListView, CreateView, UpdateView
@@ -18,7 +19,7 @@ from booking.models import Booking, Course, Event, Track, EventType
 from common.utils import full_name
 
 from ..forms import CourseCreateForm, CourseUpdateForm
-from .utils import get_current_courses, get_past_courses, staff_required, StaffUserMixin, InstructorOrStaffUserMixin
+from .utils import get_current_courses, get_past_courses, staff_required, StaffUserMixin, utc_adjusted_datetime
 
 
 class CourseAdminListView(LoginRequiredMixin, StaffUserMixin, ListView):
@@ -160,7 +161,7 @@ def cancel_course_view(request, slug):
             messages.success(request, f'Course and all associated events cancelled; {message}')
             ActivityLog.objects.create(log=f"Course {course} cancelled by admin user {request.user}; {message}")
 
-        return HttpResponseRedirect(reverse('studioadmin:events') + f"?track={course.event_type.track_id}")
+        return HttpResponseRedirect(reverse('studioadmin:courses') + f"?track={course.event_type.track_id}")
 
     context = {
         'course': course,
@@ -191,6 +192,43 @@ class CourseCreateUpdateMixin:
                 f"WARNING: Course has cancelled {course.event_type.pluralized_label} and is not fully configured (but is still "
                 f"visible on site)")
 
+    def _create_events(self, course, form):
+        event_name = form.cleaned_data["create_events_name"]
+        event_time = form.cleaned_data["create_events_time"]
+        event_duration = form.cleaned_data["create_events_duration"]
+        event_dates = form.cleaned_data["create_events_dates"]
+        # event_dates = event_dates.split(",")
+        event_dates = [
+            datetime.strptime(event_date.strip(), "%d-%b-%Y") for event_date in event_dates.split(",")
+        ] if event_dates else []
+        # then try to add the new events; reject if class with same name at same date/time already exists
+        created_events = []
+        duplicates = []
+        for event_date in event_dates:
+            # If the requested event start date is in DST, we need to adjust the literal time, otherwise it'll be created
+            # as that literal time in UTC, which will be 1 hour earlier than we want
+            naive_event_start = datetime.combine(event_date, event_time)
+            event_start = utc_adjusted_datetime(naive_event_start)
+            event, created = Event.objects.get_or_create(
+                name=event_name, event_type=course.event_type, start=event_start,
+                defaults={
+                    "course": course,
+                    "description": course.description,
+                    "duration": event_duration,
+                    "max_participants": course.max_participants,
+                    "show_on_site": course.show_on_site,
+                }
+            )
+            created_events.append(event) if created else duplicates.append(event)
+        if created_events:
+            messages.success(self.request, f"{len(created_events)} new {course.event_type.pluralized_label} created and added to course")
+        if duplicates:
+            messages.warning(
+                self.request, f"{len(duplicates)} {course.event_type.pluralized_label} with the same name, event_type and "
+                              f"date/time already existed and were not created."
+            )
+        return created_events, duplicates
+
     def get_success_url(self, track_id):
         return reverse('studioadmin:courses') + f"?track={track_id}"
 
@@ -212,11 +250,16 @@ class CourseCreateView(LoginRequiredMixin, StaffUserMixin, CourseCreateUpdateMix
 
     def form_valid(self, form):
         course = form.save()
+        # first find the existing events and add those
         event_ids = form.cleaned_data["events"]
         events = Event.objects.filter(id__in=event_ids)
         for event in events:
             event.course = course
             event.save()
+
+        # now generate the requested new classes and add those to the course
+        self._create_events(course, form)
+
         self._check_visibility_and_save(course)
         return HttpResponseRedirect(self.get_success_url(course.event_type.track_id))
 
@@ -232,6 +275,7 @@ class CourseUpdateView(LoginRequiredMixin, StaffUserMixin, CourseCreateUpdateMix
     def form_valid(self, form):
         course = form.save(commit=False)
         if not form.hide_events:
+            # First update the existing events with the choices in the existing event multiselect
             new_events = form.cleaned_data.get("events")
             for event in course.uncancelled_events:
                 if event not in new_events:
@@ -239,6 +283,8 @@ class CourseUpdateView(LoginRequiredMixin, StaffUserMixin, CourseCreateUpdateMix
             for event in new_events:
                 if event not in course.uncancelled_events:
                     course.events.add(event)
+            # Now create any requested dates
+            self._create_events(course, form)
         self._check_visibility_and_save(course)
 
         # Make sure all users with uncancelled course bookings have a booking for all events

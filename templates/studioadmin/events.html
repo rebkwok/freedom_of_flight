@@ -56,11 +56,11 @@
                                     {% if event.course %}
                                         {% if not past %}
                                         <a href="{% url 'studioadmin:update_course' event.course.slug %}">
-                                            <div data-toggle="tooltip" data-placement="top" title="{{ event.course.name }}">
+                                            <div data-toggle="tooltip" data-placement="top" title="{{ event.course.name }} (starts {{ event.course.start|date:"d-M-y"}})">
                                             <i class="fas fa-external-link-alt"></i></div>
                                         </a>
                                         {% else %}
-                                            <div data-toggle="tooltip" data-placement="top" title="{{ event.course.name }}">
+                                            <div data-toggle="tooltip" data-placement="top" title="{{ event.course.name }} (starts {{ event.course.start|date:"d-M-y"}})">
                                             <i class="far fa-question-circle"></i></div>
                                         {% endif %}
                                     {% endif %}
