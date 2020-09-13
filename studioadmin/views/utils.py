@@ -20,6 +20,13 @@ def _include_future_course(course, start_of_today):
         return course.last_event_date >= start_of_today
 
 
+def _include_not_started_course(course, start_of_today):
+    if course.last_event_date is None:
+        return True
+    else:
+        return course.start >= start_of_today
+
+
 def _include_past_course(course, start_of_today):
     if course.last_event_date is None:
         return False
@@ -41,6 +48,11 @@ def _start_for_sort(course):
 def get_current_courses(queryset=None):
     # for future courses, courses with least one event in the future, or have no events yet
     return sorted(_get_courses(queryset, _include_future_course), key=lambda course: _start_for_sort(course))
+
+
+def get_not_yet_started_courses(queryset=None):
+    # courses with all events in the future, or have no events yet
+    return sorted(_get_courses(queryset, _include_not_started_course), key=lambda course: _start_for_sort(course))
 
 
 def get_past_courses(queryset=None):

@@ -8,7 +8,7 @@ from studioadmin.views import (
     ajax_remove_from_waiting_list, event_waiting_list_view, cancel_event_view,
     event_create_choice_view, EventCreateView, EventUpdateView, clone_event, PastEventAdminListView,
     CourseAdminListView, course_create_choice_view, CourseCreateView, CourseUpdateView, PastCourseAdminListView,
-    ajax_toggle_course_visible, cancel_course_view, clone_course_view,
+    ajax_toggle_course_visible, cancel_course_view, clone_course_view, NotStartedYetCourseAdminListView,
     TimetableSessionListView, ajax_timetable_session_delete, timetable_session_create_choice_view,
     TimetableSessionCreateView, TimetableSessionUpdateView, clone_timetable_session_view,
     upload_timetable_view, email_event_users_view, email_course_users_view,
@@ -55,6 +55,7 @@ urlpatterns = [
 
     path('courses/', CourseAdminListView.as_view(), name='courses'),
     path('courses/past/', PastCourseAdminListView.as_view(), name='past_courses'),
+    path('courses/not-started/', NotStartedYetCourseAdminListView.as_view(), name='not_started_courses'),
     path('course/<slug>/cancel/', cancel_course_view, name='cancel_course'),
     path('ajax-toggle-course-visible/<int:course_id>/', ajax_toggle_course_visible, name="ajax_toggle_course_visible"),
     path(

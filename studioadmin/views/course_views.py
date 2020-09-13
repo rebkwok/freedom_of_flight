@@ -19,7 +19,8 @@ from booking.models import Booking, Course, Event, Track, EventType
 from common.utils import full_name
 
 from ..forms import CourseCreateForm, CourseUpdateForm
-from .utils import get_current_courses, get_past_courses, staff_required, StaffUserMixin, utc_adjusted_datetime
+from .utils import get_current_courses, get_past_courses, get_not_yet_started_courses, \
+    staff_required, StaffUserMixin, utc_adjusted_datetime
 
 
 class CourseAdminListView(LoginRequiredMixin, StaffUserMixin, ListView):
@@ -103,6 +104,24 @@ class PastCourseAdminListView(CourseAdminListView):
         if self.request.GET.get("include_cancelled") == "yes":
             context["show_cancelled"] = True
         context['past'] = True
+        return context
+
+
+class NotStartedYetCourseAdminListView(CourseAdminListView):
+
+    def get_queryset(self):
+        if self.request.GET.get("include_cancelled") == "yes":
+            queryset = Course.objects.all()
+        else:
+            queryset = Course.objects.filter(cancelled=False)
+        # not super, because the super view filters only to current/future
+        return get_not_yet_started_courses(queryset)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if self.request.GET.get("include_cancelled") == "yes":
+            context["show_cancelled"] = True
+        context['not_started'] = True
         return context
 
 

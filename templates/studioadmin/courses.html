@@ -10,12 +10,12 @@
 {% endblock %}
 
 {% block content %}
-    <h1>{% if past %}Past {% endif %}Courses</h1>
+    <h1>{% if past %}Past {% elif not_started %}Future {% endif %}Courses</h1>
     {% if track_courses %}
         {% if show_cancelled %}
-            <a class="btn btn-sm btn-outline-success float-right" href="{% url 'studioadmin:courses' %}?track={{ request.GET.track }}&include_cancelled=no&tab={{ request.GET.tab }}&page={{ request.GET.tab }}">Hide cancelled courses</a>
+            <a class="btn btn-sm btn-outline-success float-right" href="{% url 'studioadmin:courses' %}?include_cancelled=no&tab={{ request.GET.tab }}&page={{ request.GET.tab }}">Hide cancelled courses</a>
         {% else %}
-            <a class="btn btn-sm btn-outline-success float-right"  href="{% url 'studioadmin:courses' %}?track={{ request.GET.track }}&include_cancelled=yes&tab={{ request.GET.tab }}&page={{ request.GET.tab }}">Include cancelled courses</a>
+            <a class="btn btn-sm btn-outline-success float-right"  href="{% url 'studioadmin:courses' %}?include_cancelled=yes&tab={{ request.GET.tab }}&page={{ request.GET.tab }}">Include cancelled courses</a>
         {% endif %}
 
         <nav>

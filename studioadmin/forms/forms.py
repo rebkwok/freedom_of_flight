@@ -219,7 +219,7 @@ class CourseUpdateForm(forms.ModelForm):
                 required=False,
                 queryset=get_course_event_choices(self.event_type, self.instance.id),
                 widget=forms.SelectMultiple(attrs={"class": "form-control"}),
-                label=f"Add existing {self.event_type.pluralized_label}"
+                label=""
             )
             if self.instance.id:
                 self.fields["events"].initial = [event.id for event in self.instance.uncancelled_events]
@@ -277,16 +277,21 @@ class CourseUpdateForm(forms.ModelForm):
         if hide_events:
             return HTML("")
         return Fieldset(
-            "Events",
+            f"Scheduled {self.event_type.pluralized_label.title()}",
             HTML(
-                f"<em><h4>Select existing {self.event_type.pluralized_label} or create new ones</h4>"
+                f"<p>Select existing {self.event_type.pluralized_label} or create new ones</p>"
                 f"<p class='form-text text-muted'>You can use a combination of these options (e.g. select 1 {self.event_type.label} that "
                 f"already exists and create 3 additional {self.event_type.pluralized_label} on specified dates). "
-                f"{self.event_type.label.title()} descriptions will be populated with the course description."
-                f"</p></em>"
+                f"</p>"
             ),
+            HTML(f"<h5>Add existing {self.event_type.pluralized_label}:</h5>"),
             "events",
-            HTML(f"<h4>Create new {self.event_type.pluralized_label}:</h4>"),
+            HTML(f"<h5>Create new {self.event_type.pluralized_label}:</h5>"),
+            HTML(
+                f"<p class='form-text text-muted'>Enter a single name, time and duration that will be applied to all "
+                f"created {self.event_type.pluralized_label}. {self.event_type.label.title()} descriptions will be "
+                f"populated with the course description.</p>"
+            ),
             "create_events_name",
             Row(
                 Column(

@@ -10,10 +10,13 @@
           <a class="nav-link" href="{% url 'studioadmin:choose_course_type_to_create' %}">Add course</a>
       </li>
       <li class="nav-item">
-          <a class="nav-link" href="{% url 'studioadmin:courses' %}">View/Edit</a>
+          <a class="nav-link" href="{% url 'studioadmin:courses' %}">Current/Upcoming</a>
       </li>
       <li class="nav-item">
-          <a class="nav-link" href="{% url 'studioadmin:past_courses' %}">Past courses</a>
+          <a class="nav-link" href="{% url 'studioadmin:not_started_courses' %}">Upcoming only</a>
+      </li>
+      <li class="nav-item">
+          <a class="nav-link" href="{% url 'studioadmin:past_courses' %}">Past</a>
       </li>
     </ul>
   </div>
@@ -28,8 +31,9 @@
     </a>
     <div class="dropdown-menu" aria-labelledby="navbarDropdown">
       <a class="dropdown-item" href="{% url 'studioadmin:choose_course_type_to_create' %}">Add course</a>
-      <a class="dropdown-item" href="{% url 'studioadmin:courses' %}">View/Edit</a>
-      <a class="dropdown-item" href="{% url 'studioadmin:past_courses' %}">Past courses</a>
+      <a class="dropdown-item" href="{% url 'studioadmin:courses' %}">Current/Upcoming</a>
+      <a class="dropdown-item" href="{% url 'studioadmin:not_started_courses' %}">Upcoming only</a>
+      <a class="dropdown-item" href="{% url 'studioadmin:past_courses' %}">Past</a>
     </div>
     </li>
     <li class="nav-item"><a class="nav-link" href="{% url 'studioadmin:courses' %}">Courses list</a></li>
