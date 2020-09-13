@@ -13,7 +13,12 @@
 
 
 <h2>{% if gift_vouchers %}Gift {% endif %}Vouchers</h2>
-
+{% if gift_vouchers %}
+<p>
+Gift vouchers are identical to standard vouchers, but are typically one-time use and a 100% discount for a single
+credit block.
+</p>
+{% endif %}
 <table class="table table-responsive tablesorter" id="sortTable">
 <thead>
 <tr class="success">

@@ -1,12 +1,9 @@
-{% extends "studioadmin/print_base.html" %}
+{% extends "print_base.html" %}
 {% load static %}
 
 {% block studioadmincontent %}
 
-    <div class="container-fluid">
-        <div class="row ">
-
-            <div class="col-xs-12 voucher-bg voucher-box voucher-outer-box">
+            <div class="col-12 voucher-bg voucher-box voucher-outer-box">
                 <div class="voucher-box voucher-inner-box">
                     <h1 class="voucher-title text-center">Gift Certificate </h1>
                     {% if voucher.name %}
@@ -17,7 +14,7 @@
 
                     <div class="voucher-content">
                        <p><span class="voucher-content-label">Voucher code:</span> {{ voucher.code }}</p>
-                       <p><span class="voucher-content-label">Valid for:</span> <ul>{% for item in valid_for %}<li>{% if voucher_type == "block" %}{{ item.description }}{% else %}{{ item }}{% endif %}{% if voucher.discount < 100 %} - {{ voucher.discount }}% off{% endif %}</li>{% endfor %}</ul></p>
+                       <p><span class="voucher-content-label">Valid for:</span> <ul>{% for item in valid_for %}<li>{{ item }}{% if voucher.discount < 100 %} - {{ voucher.discount }}% off{% endif %}</li>{% endfor %}</ul></p>
                        <p><span class="voucher-content-label">Date issued:</span> {{ voucher.start_date|date:"d M Y" }}</p>
                        <p><span class="voucher-content-label">Date expired:</span> {{ voucher.expiry_date|date:"d M Y" }}</p>
                        {% if voucher.max_per_user > 1 %}
@@ -39,30 +36,25 @@
         <hr>
         <div class="row">
             <div class="text-muted">
-                <div class="col-xs-12 vspace">
+                <div class="col-12 vspace">
                     <a href="javascript:window.print()" id="print-button" alt="print this page"
                             class="btn btn-success">Print voucher</a>
                     <a href="{% url 'booking:gift_voucher_update' voucher.code %}" class="btn btn-warning no-print" alt="update voucher"
                             >Update voucher details</a>
                 </div>
 
-                <div class="col-xs-12">
+                <div class="col-12">
                     <h5>Voucher Instructions</h5>
                     <ol>
-                        <li>Log in to booking.thewatermelonstudio.co.uk</li>
-                        <li>{% if voucher_type == "block" %}Go to "My Blocks", click "Add a new block" and select the block type
-                        listed above
-                            {% else %}Book a class of the type listed above to add it to your shopping basket.{% endif %}</li>
+                        <li>Log in to booking.freedomofflightaerial.com</li>
+                        <li>Go to Payment Plans and select the credit block listed above</li>
                         <li>On the Shopping Basket page, enter your voucher code and click Apply</li>
                         <li>If this was the only item in your basket, the total will now be £0. Click Submit to complete your purchase.</li>
                     </ol>
-                    <span class="font-italic">Terms and conditions apply to all purchases, for full T&C see <a href="http://www.thewatermelonstudio.co.uk/t&s.html" target="_blank">thewatermelonstudio.co.uk/t&s.html</a></span>
+                    <span class="helptext">Terms and conditions apply to all purchases, full T&C available <a href="{% url 'booking:terms_and_conditions' %}" target="_blank">here</a></span>
 
                 </div>
 
             </div>
-        </div>
-
-    </div>
 
 {% endblock %}
