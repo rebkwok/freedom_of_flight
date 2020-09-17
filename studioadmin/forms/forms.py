@@ -351,31 +351,32 @@ class CourseUpdateForm(forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
-        events = cleaned_data["events"]
-        create_events_dates = cleaned_data["create_events_dates"]
-        create_events_dates_list = create_events_dates.split(",") if create_events_dates else []
+        if "events" in cleaned_data:
+            events = cleaned_data["events"]
+            create_events_dates = cleaned_data["create_events_dates"]
+            create_events_dates_list = create_events_dates.split(",") if create_events_dates else []
 
-        number_of_events = cleaned_data["number_of_events"]
-        total_selected_events = len(events) + len(create_events_dates_list)
-        if total_selected_events > number_of_events:
-            error_msg = f"Too many {self.event_type.pluralized_label} selected or requested for creation; " \
-                        f"select a maximum total of {number_of_events}."
-            if events:
-                self.add_error("events", error_msg)
+            number_of_events = cleaned_data["number_of_events"]
+            total_selected_events = len(events) + len(create_events_dates_list)
+            if total_selected_events > number_of_events:
+                error_msg = f"Too many {self.event_type.pluralized_label} selected or requested for creation; " \
+                            f"select a maximum total of {number_of_events}."
+                if events:
+                    self.add_error("events", error_msg)
+                if create_events_dates:
+                    self.add_error("create_events_dates", error_msg)
+
             if create_events_dates:
-                self.add_error("create_events_dates", error_msg)
-
-        if create_events_dates:
-            create_events_name = cleaned_data["create_events_name"]
-            create_events_time = cleaned_data["create_events_time"]
-            create_events_duration = cleaned_data["create_events_duration"]
-            error_msg = f"This field is required when creating new {self.event_type.pluralized_label}"
-            if not create_events_name:
-                self.add_error("create_events_name", error_msg)
-            if not create_events_time:
-                self.add_error("create_events_time", error_msg)
-            if not create_events_duration:
-                self.add_error("create_events_duration", error_msg)
+                create_events_name = cleaned_data["create_events_name"]
+                create_events_time = cleaned_data["create_events_time"]
+                create_events_duration = cleaned_data["create_events_duration"]
+                error_msg = f"This field is required when creating new {self.event_type.pluralized_label}"
+                if not create_events_name:
+                    self.add_error("create_events_name", error_msg)
+                if not create_events_time:
+                    self.add_error("create_events_time", error_msg)
+                if not create_events_duration:
+                    self.add_error("create_events_duration", error_msg)
 
 
 class CourseCreateForm(CourseUpdateForm):

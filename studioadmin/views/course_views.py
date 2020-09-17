@@ -219,8 +219,7 @@ class CourseCreateUpdateMixin:
         if course.can_be_visible() and not course.is_configured() and course.show_on_site:
             messages.error(
                 self.request,
-                f"WARNING: Course has cancelled {course.event_type.pluralized_label} and is not fully configured (but is still "
-                f"visible on site)")
+                f"WARNING: Course has started but is no longer fully configured (but is still visible on site)")
 
     def _create_events(self, course, form):
         event_name = form.cleaned_data["create_events_name"]
