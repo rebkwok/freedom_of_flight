@@ -35,7 +35,7 @@ from .user_views import (
     UserBlocksListView, BlockAddView, BlockEditView, ajax_block_delete,
     email_subscription_users_view, email_waiting_list_view,
     UserSubscriptionsListView, SubscriptionAddView, SubscriptionEditView, ajax_subscription_delete,
-    course_booking_add_view, course_block_change_view, export_users
+    course_booking_add_view, course_block_change_view, export_users, users_with_unused_blocks
 )
 
 from .waiting_list import ajax_remove_from_waiting_list, event_waiting_list_view

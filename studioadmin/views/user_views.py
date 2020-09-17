@@ -16,7 +16,7 @@ from braces.views import LoginRequiredMixin
 
 from activitylog.models import ActivityLog
 from booking.email_helpers import send_bcc_emails, send_user_and_studio_emails, send_waiting_list_email
-from booking.models import Booking, Block, Course, Event, WaitingListUser, SubscriptionConfig, Subscription
+from booking.models import Booking, Block, BlockConfig, Course, Event, WaitingListUser, SubscriptionConfig, Subscription
 from booking.utils import get_active_user_block, get_active_user_course_block, has_available_course_block
 from common.utils import full_name
 
@@ -99,6 +99,19 @@ def process_form_and_send_email(request, form):
         reply_to=form.cleaned_data["reply_to_email"], cc=form.cleaned_data["cc"]
     )
     messages.success(request, "Email sent")
+
+@login_required
+@staff_required
+def users_with_unused_blocks(request):
+    unused_blocks_by_config = {}
+    for block_config in BlockConfig.objects.all():
+        unused_blocks = [
+            block for block in Block.objects.filter(block_config=block_config, paid=True) if not block.bookings.exists()
+        ]
+        if unused_blocks:
+            unused_blocks_by_config[block_config.name] = unused_blocks
+    context = {"unused_blocks_by_config": unused_blocks_by_config}
+    return TemplateResponse(request, "studioadmin/unused_blocks.html", context)
 
 
 def export_users(request):

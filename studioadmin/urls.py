@@ -28,7 +28,7 @@ from studioadmin.views import (
     email_subscription_users_view,
     UserSubscriptionsListView, SubscriptionAddView, SubscriptionEditView, ajax_subscription_delete,
     course_booking_add_view, course_block_change_view, export_users,
-    ajax_toggle_course_partial_booking, email_waiting_list_view
+    ajax_toggle_course_partial_booking, email_waiting_list_view, users_with_unused_blocks
 )
 
 app_name = 'studioadmin'
@@ -124,6 +124,7 @@ urlpatterns = [
     ),
     # users
     path('users/export/', export_users, name="export_users"),
+    path('users/unused-blocks/', users_with_unused_blocks, name="unused_blocks"),
     path('users/', UserListView.as_view(), name="users"),
     path('user/<int:pk>/detail/', UserDetailView.as_view(), name="user_detail"),
     path('user/<int:user_id>/bookings/', UserBookingsListView.as_view(), name="user_bookings"),
