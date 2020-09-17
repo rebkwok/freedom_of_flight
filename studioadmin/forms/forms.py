@@ -247,13 +247,13 @@ class CourseUpdateForm(forms.ModelForm):
                 required=False
             )
 
-            self.helper = FormHelper()
-            self.helper.layout = Layout(
-                self._layout_name_and_description(),
-                self._layout_settings(),
-                self._layout_event_selection(self.hide_events),
-                self._layout_buttons(),
-            )
+        self.helper = FormHelper()
+        self.helper.layout = Layout(
+            self._layout_name_and_description(),
+            self._layout_settings(),
+            self._layout_event_selection(self.hide_events),
+            self._layout_buttons(),
+        )
 
     def _layout_name_and_description(self, hide_event_type=False):
         return Fieldset(
