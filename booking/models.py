@@ -255,8 +255,8 @@ class Event(models.Model):
     @property
     def spaces_left(self):
         if self.course:
-            # No-shows and cancelled count for course event spaces
-            booked_number = self.bookings.filter().count()
+            # No-shows count for course event spaces
+            booked_number = self.bookings.filter(status='OPEN').count()
         else:
             booked_number = self.bookings.filter(status='OPEN', no_show=False).count()
         return self.max_participants - booked_number
