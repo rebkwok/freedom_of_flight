@@ -597,7 +597,7 @@ class CourseListViewTests(EventTestMixin, TestUsersMixin, TestCase):
 
         resp = self.client.get(self.url)
         self.make_disclaimer(self.child_user)
-        assert "Purchase a payment plan to book this course" in resp.rendered_content
+        assert "You need a payment plan to book this course" in resp.rendered_content
         # check there are no booked events yet
         assert resp.context_data["already_booked"] is False
 
@@ -605,7 +605,7 @@ class CourseListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         baker.make(Booking, event=self.course_event, user=self.child_user)
         baker.make(Booking, event=self.course_event1, user=self.child_user)
         resp = self.client.get(self.url)
-        assert "Purchase a payment plan to book this course" not in resp.rendered_content
+        assert "You need a payment plan to book this course" not in resp.rendered_content
         assert resp.context_data["already_booked"] is True
 
     def test_button_display_course_event(self):
@@ -640,14 +640,14 @@ class CourseListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         book_button = _element_from_response_by_id(f"book_{event.id}")
         assert book_button is None
         course_book_button = _element_from_response_by_id(f"book_course_{self.course.id}")
-        assert "Purchase a payment plan to book this course" in course_book_button.text
+        assert "You need a payment plan to book this course" in course_book_button.text
 
         # cancelled, no block.  Booking button for individual events not shown
         booking = baker.make(Booking, user=self.student_user, event=event, status="CANCELLED")
         book_button = _element_from_response_by_id(f"book_{event.id}")
         assert book_button is None
         course_book_button = _element_from_response_by_id(f"book_course_{self.course.id}")
-        assert "Purchase a payment plan to book this course" in course_book_button.text
+        assert "You need a payment plan to book this course" in course_book_button.text
         booking.delete()
 
         # not booked with valid block
@@ -721,5 +721,5 @@ class CourseListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         # Course started, partial booking allowed, no block
         block.delete()
         course_book_button = _element_from_response_by_id(f"book_course_{self.course.id}")
-        assert "Purchase a payment plan to book this course" in course_book_button.text
-        assert "(1 class course block)" in course_book_button.text
+        assert "You need a payment plan to book this course" in course_book_button.text
+        assert "1 class course block" in course_book_button.text

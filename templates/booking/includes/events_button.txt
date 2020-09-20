@@ -30,6 +30,7 @@
 {% elif user_info.can_book_or_cancel %}
     {% if not user_info.has_available_block and not user_info.has_available_subscription %}
          <span class="helptext float-right">Payment plan required</span>
+         <span class="btn btn-xs btn-outline-dark float-right">Options</span>
      {% elif user_info.cancelled %}
         <div class="btn btn-xs btn-success float-right" href="#"><i id="loader_{{ event.id }}"></i> Rebook Drop-in</div>
      {% else %}
