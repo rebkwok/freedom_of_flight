@@ -4,7 +4,7 @@
 Payment processed
 -------------------
 Invoice number: {{ invoice.invoice_id }}</p>
-Paypal Transaction id: {{ invoice.transaction_id }}
+{% if invoice.transaction_id %}Paypal Transaction id: {{ invoice.transaction_id }}{% endif %}
 User: {{ user.first_name}} {{ user.last_name}}
 Purchased:
 {% for block in invoice.blocks.all %}-{{ block }}{% endfor %}

@@ -5,10 +5,11 @@
 ACTION REQUIRED: CHECK STATUS OF ERROR TRANSACTION
 Payment Error
 -----------------------------
-IPN/PDT number: {{ ipn_or_pdt.id }}</p>
-Invoice number: {{ ipn_or_pdt.invoice }}</p>
+{% if ipn_or_pdt %}IPN/PDT number: {{ ipn_or_pdt.id }}
 Paypal transaction id: {{ ipn_or_pdt.txn_id }}
 Paypal payment status: {{ ipn_or_pdt.payment_status }}
+{% elif payment_intent %}Stripe payment intent id: {{ payment_intent.id }}
+payment status: {{ payment_intent.payment_status }}{% endif %}
 {% if error %}Error: {{ error }} {% endif %}
 
 {% endblock %}

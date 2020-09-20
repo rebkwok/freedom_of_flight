@@ -10,7 +10,8 @@ from booking.views import (
     ajax_block_purchase, shopping_basket, ajax_checkout, BlockDetailView,
     SubscriptionListView, SubscriptionDetailView,
     ajax_subscription_purchase,
-    CourseListView
+    CourseListView,
+    stripe_checkout
 )
 
 
@@ -57,6 +58,7 @@ urlpatterns = [
     # SHOPPING BASKET
     path("shopping-cart/", shopping_basket, name="shopping_basket"),
     path("ajax-checkout/", ajax_checkout, name="ajax_checkout"),
+    path("stripe-checkout/", stripe_checkout, name="stripe_checkout"),
     path('ajax-cart-item-delete/', ajax_cart_item_delete, name='ajax_cart_item_delete'),
 
     # EVENTS LIST: needs to go last, catches everything else

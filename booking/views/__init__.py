@@ -10,4 +10,4 @@ from .subscription_views import SubscriptionListView, SubscriptionDetailView
 from .booking_views import BookingListView, BookingHistoryListView
 from .event_views import CourseEventsListView, EventDetailView, EventListView, home
 from .misc_views import disclaimer_required, permission_denied, terms_and_conditions, covid19_policy
-from .shopping_basket_views import shopping_basket, ajax_checkout
+from .shopping_basket_views import shopping_basket, ajax_checkout, stripe_checkout

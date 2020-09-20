@@ -1,0 +1,26 @@
+{#larger sizes sub navbar#}
+<div class="subnav d-none d-md-block">
+<nav class="navbar fixed-top fixed-top-subnav navbar-expand navbar-light" id="navbarPaymentsSubNavContainer">
+  <a class="navbar-brand" href="#">ADMIN: Payments</a>
+  <div class="collapse navbar-collapse" id="navbarPaymentsSubNav">
+    <ul class="navbar-nav">
+      <li class="nav-item">
+          <a class="nav-link" href="{% url 'studioadmin:connect_stripe' %}">Connect</a>
+      </li>
+    </ul>
+  </div>
+</nav>
+</div>
+
+<div class="d-block d-md-none">
+<ul class="nav">
+    <li class="nav-item dropdown">
+    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+      Payments Menu
+    </a>
+    <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+      <a class="dropdown-item" href="{% url 'studioadmin:connect_stripe' %}">Connect</a>
+    </div>
+  </li>
+</ul>
+</div>

@@ -2,15 +2,19 @@
 from decimal import Decimal
 import logging
 
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
+from django.contrib.sites.models import Site
 from django.contrib import messages
 from django.template.response import TemplateResponse
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, render, HttpResponseRedirect
 from django.views.decorators.http import require_http_methods
 from django.http import JsonResponse
 from django.urls import reverse
 
-from payments.models import Invoice
+import stripe
+
+from payments.models import Invoice, Seller
 from payments.utils import get_paypal_form
 
 from common.utils import full_name
@@ -268,7 +272,7 @@ def ajax_checkout(request):
                     return invoice
 
     # check for an existing unpaid invoice with this user and amount
-    invoices = Invoice.objects.filter(username=request.user.username, amount=Decimal(total), transaction_id__isnull=True)
+    invoices = Invoice.objects.filter(username=request.user.username, amount=Decimal(total), paid=False)
     # if any exist, check for one where the blocks and subscriptions are the same
     invoice = _get_matching_invoice(invoices)
     if invoice is None:
@@ -288,3 +292,118 @@ def ajax_checkout(request):
             "paypal_form_html": paypal_form_html.content.decode("utf-8"),
         }
     )
+
+
+@login_required
+@require_http_methods(['POST'])
+def stripe_checkout(request):
+    """
+    Called when clicking on checkout from the shopping basket page
+    Re-check the voucher codes and the total
+    """
+    total = Decimal(request.POST.get("cart_total"))
+    unpaid_blocks = get_unpaid_user_managed_blocks(request.user)
+    unpaid_subscriptions = get_unpaid_user_managed_subscriptions(request.user)
+
+    if not (unpaid_blocks or unpaid_subscriptions):
+        messages.warning(request, "Your cart is empty")
+        return HttpResponseRedirect(reverse("booking:shopping_basket"))
+
+    # verify any vouchers on blocks
+    for block in unpaid_blocks:
+        if block.voucher:
+            try:
+                validate_voucher_properties(block.voucher)
+                validate_voucher_for_block_configs_in_cart(block.voucher, [block])
+                validate_voucher_for_user(block.voucher, block.user)
+                if block.voucher.check_block_config(block.block_config):
+                    validate_voucher_for_unpaid_block(block, block.voucher)
+                else:
+                    raise VoucherValidationError("voucher on block not valid")
+            except VoucherValidationError:
+                block.voucher = None
+                block.save()
+    check_total = calculate_user_cart_total(unpaid_blocks=unpaid_blocks, unpaid_subscriptions=unpaid_subscriptions)
+    if total != check_total:
+        messages.error(request, "Some cart items changed; please check and try again")
+        url = reverse('booking:shopping_basket')
+        return HttpResponseRedirect(reverse("booking:shopping_basket"))
+
+    if unpaid_blocks and calculate_user_cart_total(unpaid_blocks=unpaid_blocks) == 0:
+        # vouchers apply to blocks only; if we have blocks in the cart and the total for blocks only is 0, then a
+        # voucher has been applied to all blocks and we can mark them as paid now
+        for block in unpaid_blocks:
+            block.paid = True
+            block.save()
+        messages.success(request, "Voucher applied successfully; block ready to use")
+        return HttpResponseRedirect(reverse("booking:blocks"))
+
+    # NOTE: invoice user will always be the request.user, not any attached sub-user
+    # May be different to the user on the purchased blocks
+    def _get_matching_invoice(invoices):
+        for invoice in invoices:
+            invoice_blocks = invoice.blocks.all()
+            invoice_subscriptions = invoice.subscriptions.all()
+            if unpaid_blocks.count() == invoice.blocks.count() and unpaid_subscriptions.count() == invoice.subscriptions.count():
+                if all(True for invoice_block in invoice_blocks if invoice_block in unpaid_blocks) \
+                        and all(True for invoice_subscription in invoice_subscriptions if invoice_subscription in unpaid_subscriptions):
+                    return invoice
+
+    # check for an existing unpaid invoice for this user
+    invoices = Invoice.objects.filter(username=request.user.username, paid=False)
+    # if any exist, check for one where the blocks and subscriptions are the same
+    invoice = _get_matching_invoice(invoices)
+    if invoice is None:
+        invoice = Invoice.objects.create(
+            invoice_id=Invoice.generate_invoice_id(), amount=Decimal(total), username=request.user.username
+        )
+        for block in unpaid_blocks:
+            block.invoice = invoice
+            block.save()
+        for subscription in unpaid_subscriptions:
+            subscription.invoice = invoice
+            subscription.save()
+
+    # Create the Stripe PaymentIntent
+    stripe.api_key = settings.STRIPE_SECRET_KEY
+    stripe_account = Seller.objects.filter(site=Site.objects.get_current(request)).first().stripe_user_id
+    # Stripe requires the amount as an integer, in pence
+    total_as_int = int(total * 100)
+
+    payment_intent_data = {
+        "payment_method_types": ['card'],
+        "amount": total_as_int,
+        "currency": 'gbp',
+        "stripe_account": stripe_account,
+        "description": f"{full_name(request.user)}-invoice#{invoice.invoice_id}",
+        "metadata": {
+            "invoice_id": invoice.invoice_id, "invoice_signature": invoice.signature(), **invoice.items_metadata()},
+    }
+    context = {}
+    if not invoice.stripe_payment_intent_id:
+        payment_intent = stripe.PaymentIntent.create(**payment_intent_data)
+        invoice.stripe_payment_intent_id = payment_intent.id
+        invoice.save()
+    else:
+        try:
+            payment_intent = stripe.PaymentIntent.modify(
+                invoice.stripe_payment_intent_id, **payment_intent_data,
+            )
+        except stripe.error.InvalidRequestError as error:
+            payment_intent = stripe.PaymentIntent.retrieve(
+                invoice.stripe_payment_intent_id, stripe_account=stripe_account
+            )
+            if payment_intent.status == "succeeded":
+                context.update({"preprocessing_error": "Invoice is already paid"})
+                context.update({"already_paid": True})
+            logging.error(
+                "Error processing checkout for invoice: %s (%s)", invoice.invoice_id, str(error)
+            )
+    context.update({
+        "client_secret": payment_intent.client_secret,
+        "stripe_account": stripe_account,
+        "stripe_api_key": settings.STRIPE_PUBLISHABLE_KEY,
+        "cart_items": invoice.items_dict(),
+        "cart_total": total
+     })
+    return TemplateResponse(request, "booking/checkout.html", context)

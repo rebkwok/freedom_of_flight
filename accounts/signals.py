@@ -4,7 +4,9 @@ from django.db.models.signals import post_save, post_delete, pre_delete
 from django.dispatch import receiver
 
 from activitylog.models import ActivityLog
-from accounts.models import active_disclaimer_cache_key, managed_users_cache_key, OnlineDisclaimer, ChildUserProfile
+from accounts.models import active_disclaimer_cache_key, managed_users_cache_key, OnlineDisclaimer, \
+    ChildUserProfile, UserProfile
+from payments.models import Seller
 
 
 @receiver(post_save, sender=User)
@@ -16,6 +18,20 @@ def user_post_save(sender, instance, created, *args, **kwargs):
                     instance.first_name, instance.last_name, instance.username,
             )
         )
+
+
+@receiver(post_save, sender=UserProfile)
+def userprofile_save(sender, instance, created, **kwargs):
+    if created:
+        if instance.seller:
+            Seller.objects.create(user=instance.user)
+    if not created:
+        user_id = instance.user.id
+        existing_seller = Seller.objects.filter(user=user_id).first()
+        if instance.seller and not existing_seller:
+            Seller.objects.create(user=instance.user)
+        if not instance.seller and existing_seller:
+            existing_seller.delete()
 
 
 @receiver(post_delete, sender=OnlineDisclaimer)

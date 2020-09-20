@@ -1,7 +1,7 @@
 import logging
 from django.urls import reverse
 
-from .exceptions import PayPalProcessingError
+from .exceptions import PayPalProcessingError, StripeProcessingError
 from .forms import PayPalPaymentsFormWithId, PayPalPaymentsForm
 from .models import Invoice
 
@@ -120,3 +120,25 @@ def retrieve_invoice_from_paypal_data(ipn_or_pdt):
         except (Invoice.DoesNotExist, ValueError):
             return None
 
+
+def get_invoice_from_payment_intent(payment_intent, raise_immediately=False):
+    # Don't raise the exception here so we don't expose it to the user; leave it for the webhook
+    invoice_id = payment_intent.metadata.get("invoice_id")
+    if not invoice_id:
+        return None
+    try:
+        return Invoice.objects.get(invoice_id=invoice_id)
+    except Invoice.DoesNotExist:
+        logging.error("Error processing stripe payment intent %s; could not find invoice", payment_intent.id)
+        if raise_immediately:
+            raise StripeProcessingError(f"Error processing stripe payment intent {payment_intent.id}; could not find invoice")
+        return None
+
+
+def check_stripe_data(payment_intent, invoice):
+    signature = payment_intent.metadata.get("invoice_signature")
+    if signature != invoice.signature():
+        raise StripeProcessingError("Could not verify invoice signature")
+
+    if payment_intent.amount != int(invoice.amount * 100):
+        raise StripeProcessingError("Invoice amount is not correct")

@@ -13,6 +13,7 @@ from .policy_views import (
     CookiePolicyDetailView, DataPrivacyPolicyDetailView, DisclaimerContentDetailView,
     DisclaimerContentCreateView, DisclaimerContentUpdateView, CookiePolicyCreateView, DataPrivacyPolicyCreateView
 )
+from .payments_views import StripeAuthorizeView, connect_stripe_view, StripeAuthorizeCallbackView
 from .payment_plan_views import (
     block_config_list_view, ajax_toggle_block_config_active, block_config_delete_view, choose_block_config_type,
     BlockConfigCreateView, BlockConfigUpdateView,
