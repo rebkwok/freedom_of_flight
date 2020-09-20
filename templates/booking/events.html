@@ -10,7 +10,17 @@
 
 <div id="confirm-dialog"></div>
 
-    <h2 class="mt-1">{{ title }}</h2>
+    <h2 class="mt-1">{{ title }}
+    {% if not course %}
+        {% for track_obj in tracks %}
+            {% if track_obj != track %}
+                <small class="expired">| <a class="expired" href="{% url 'booking:events' track_obj.slug %}">{{ track_obj.name }}</a></small>
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+    </h2>
+
+
 
     {% if available_users|length > 1 %}
         <form class="form-inline pb-3" method="post">
