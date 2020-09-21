@@ -214,21 +214,21 @@ def shopping_basket(request):
     )
 
 
-@login_required
-@require_http_methods(['POST'])
-def ajax_checkout(request):
-    """
-    Called when clicking on checkout from the shopping basket page
-    Re-check the voucher codes and the total
-    """
+def _check_items_and_get_updated_invoice(request):
     total = Decimal(request.POST.get("cart_total"))
     unpaid_blocks = get_unpaid_user_managed_blocks(request.user)
     unpaid_subscriptions = get_unpaid_user_managed_subscriptions(request.user)
+    checked = {
+        "total": total,
+        "invoice": None,
+        "redirect": False,
+        "redirect_url": None
+    }
 
     if not (unpaid_blocks or unpaid_subscriptions):
         messages.warning(request, "Your cart is empty")
-        url = reverse("booking:shopping_basket")
-        return JsonResponse({"redirect": True, "url": url})
+        checked.update({"redirect": True, "redirect_url": reverse("booking:shopping_basket")})
+        return checked
 
     # verify any vouchers on blocks
     for block in unpaid_blocks:
@@ -247,8 +247,8 @@ def ajax_checkout(request):
     check_total = calculate_user_cart_total(unpaid_blocks=unpaid_blocks, unpaid_subscriptions=unpaid_subscriptions)
     if total != check_total:
         messages.error(request, "Some cart items changed; please check and try again")
-        url = reverse('booking:shopping_basket')
-        return JsonResponse({"redirect": True, "url": url})
+        checked.update({"redirect": True, "redirect_url": reverse("booking:shopping_basket")})
+        return checked
 
     if unpaid_blocks and calculate_user_cart_total(unpaid_blocks=unpaid_blocks) == 0:
         # vouchers apply to blocks only; if we have blocks in the cart and the total for blocks only is 0, then a
@@ -257,8 +257,8 @@ def ajax_checkout(request):
             block.paid = True
             block.save()
         messages.success(request, "Voucher applied successfully; block ready to use")
-        url = reverse("booking:blocks")
-        return JsonResponse({"redirect": True, "url": url})
+        checked.update({"redirect": True, "redirect_url": reverse("booking:blocks")})
+        return checked
 
     # NOTE: invoice user will always be the request.user, not any attached sub-user
     # May be different to the user on the purchased blocks
@@ -268,15 +268,18 @@ def ajax_checkout(request):
             invoice_subscriptions = invoice.subscriptions.all()
             if unpaid_blocks.count() == invoice.blocks.count() and unpaid_subscriptions.count() == invoice.subscriptions.count():
                 if all(True for invoice_block in invoice_blocks if invoice_block in unpaid_blocks) \
-                        and all(True for invoice_subscription in invoice_subscriptions if invoice_subscription in unpaid_subscriptions):
+                        and all(True for invoice_subscription in invoice_subscriptions if
+                                invoice_subscription in unpaid_subscriptions):
                     return invoice
 
-    # check for an existing unpaid invoice with this user and amount
-    invoices = Invoice.objects.filter(username=request.user.username, amount=Decimal(total), paid=False)
+    # check for an existing unpaid invoice for this user
+    invoices = Invoice.objects.filter(username=request.user.username, paid=False)
     # if any exist, check for one where the blocks and subscriptions are the same
     invoice = _get_matching_invoice(invoices)
     if invoice is None:
-        invoice = Invoice.objects.create(invoice_id=Invoice.generate_invoice_id(), amount=Decimal(total), username=request.user.username)
+        invoice = Invoice.objects.create(
+            invoice_id=Invoice.generate_invoice_id(), amount=Decimal(total), username=request.user.username
+        )
         for block in unpaid_blocks:
             block.invoice = invoice
             block.save()
@@ -284,6 +287,23 @@ def ajax_checkout(request):
             subscription.invoice = invoice
             subscription.save()
 
+    checked.update({"invoice": invoice})
+    return checked
+
+
+@login_required
+@require_http_methods(['POST'])
+def ajax_checkout(request):
+    """
+    Called when clicking on checkout from the shopping basket page
+    Re-check the voucher codes and the total
+    """
+    checked_dict = _check_items_and_get_updated_invoice(request)
+    if checked_dict["redirect"]:
+        return JsonResponse({"redirect": True, "url": checked_dict["redirect_url"]})
+
+    total = checked_dict["total"]
+    invoice = checked_dict["invoice"]
     # encrypted custom field so we can verify it on return from paypal
     paypal_form = get_paypal_form(request, invoice)
     paypal_form_html = render(request, "payments/includes/paypal_button.html", {"form": paypal_form})
@@ -301,68 +321,11 @@ def stripe_checkout(request):
     Called when clicking on checkout from the shopping basket page
     Re-check the voucher codes and the total
     """
-    total = Decimal(request.POST.get("cart_total"))
-    unpaid_blocks = get_unpaid_user_managed_blocks(request.user)
-    unpaid_subscriptions = get_unpaid_user_managed_subscriptions(request.user)
-
-    if not (unpaid_blocks or unpaid_subscriptions):
-        messages.warning(request, "Your cart is empty")
-        return HttpResponseRedirect(reverse("booking:shopping_basket"))
-
-    # verify any vouchers on blocks
-    for block in unpaid_blocks:
-        if block.voucher:
-            try:
-                validate_voucher_properties(block.voucher)
-                validate_voucher_for_block_configs_in_cart(block.voucher, [block])
-                validate_voucher_for_user(block.voucher, block.user)
-                if block.voucher.check_block_config(block.block_config):
-                    validate_voucher_for_unpaid_block(block, block.voucher)
-                else:
-                    raise VoucherValidationError("voucher on block not valid")
-            except VoucherValidationError:
-                block.voucher = None
-                block.save()
-    check_total = calculate_user_cart_total(unpaid_blocks=unpaid_blocks, unpaid_subscriptions=unpaid_subscriptions)
-    if total != check_total:
-        messages.error(request, "Some cart items changed; please check and try again")
-        url = reverse('booking:shopping_basket')
-        return HttpResponseRedirect(reverse("booking:shopping_basket"))
-
-    if unpaid_blocks and calculate_user_cart_total(unpaid_blocks=unpaid_blocks) == 0:
-        # vouchers apply to blocks only; if we have blocks in the cart and the total for blocks only is 0, then a
-        # voucher has been applied to all blocks and we can mark them as paid now
-        for block in unpaid_blocks:
-            block.paid = True
-            block.save()
-        messages.success(request, "Voucher applied successfully; block ready to use")
-        return HttpResponseRedirect(reverse("booking:blocks"))
-
-    # NOTE: invoice user will always be the request.user, not any attached sub-user
-    # May be different to the user on the purchased blocks
-    def _get_matching_invoice(invoices):
-        for invoice in invoices:
-            invoice_blocks = invoice.blocks.all()
-            invoice_subscriptions = invoice.subscriptions.all()
-            if unpaid_blocks.count() == invoice.blocks.count() and unpaid_subscriptions.count() == invoice.subscriptions.count():
-                if all(True for invoice_block in invoice_blocks if invoice_block in unpaid_blocks) \
-                        and all(True for invoice_subscription in invoice_subscriptions if invoice_subscription in unpaid_subscriptions):
-                    return invoice
-
-    # check for an existing unpaid invoice for this user
-    invoices = Invoice.objects.filter(username=request.user.username, paid=False)
-    # if any exist, check for one where the blocks and subscriptions are the same
-    invoice = _get_matching_invoice(invoices)
-    if invoice is None:
-        invoice = Invoice.objects.create(
-            invoice_id=Invoice.generate_invoice_id(), amount=Decimal(total), username=request.user.username
-        )
-        for block in unpaid_blocks:
-            block.invoice = invoice
-            block.save()
-        for subscription in unpaid_subscriptions:
-            subscription.invoice = invoice
-            subscription.save()
+    checked_dict = _check_items_and_get_updated_invoice(request)
+    if checked_dict["redirect"]:
+        return HttpResponseRedirect(checked_dict["redirect_url"])
+    total = checked_dict["total"]
+    invoice = checked_dict["invoice"]
 
     # Create the Stripe PaymentIntent
     stripe.api_key = settings.STRIPE_SECRET_KEY

@@ -22,6 +22,10 @@ class Invoice(models.Model):
     # checkout and changing their mind
     date_created = models.DateTimeField(default=timezone.now)
     paid = models.BooleanField(default=False)
+    date_paid = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ("-date_paid",)
 
     def __str__(self):
         return f"{self.invoice_id} - {self.username} - £{self.amount}{' (paid)' if self.paid else ''}"
@@ -68,6 +72,8 @@ class Invoice(models.Model):
         if self.transaction_id:
             # If it has a paypal transaction ID, it's paid
             self.paid = True
+        if self.paid and not self.date_paid:
+            self.date_paid = timezone.now()
         super().save()
 
 
