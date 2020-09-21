@@ -329,44 +329,53 @@ def stripe_checkout(request):
 
     # Create the Stripe PaymentIntent
     stripe.api_key = settings.STRIPE_SECRET_KEY
-    stripe_account = Seller.objects.filter(site=Site.objects.get_current(request)).first().stripe_user_id
-    # Stripe requires the amount as an integer, in pence
-    total_as_int = int(total * 100)
+    seller = Seller.objects.filter(site=Site.objects.get_current(request)).first()
 
-    payment_intent_data = {
-        "payment_method_types": ['card'],
-        "amount": total_as_int,
-        "currency": 'gbp',
-        "stripe_account": stripe_account,
-        "description": f"{full_name(request.user)}-invoice#{invoice.invoice_id}",
-        "metadata": {
-            "invoice_id": invoice.invoice_id, "invoice_signature": invoice.signature(), **invoice.items_metadata()},
-    }
     context = {}
-    if not invoice.stripe_payment_intent_id:
-        payment_intent = stripe.PaymentIntent.create(**payment_intent_data)
-        invoice.stripe_payment_intent_id = payment_intent.id
-        invoice.save()
+    if seller is None:
+        logger.error("No seller found on Stripe checkout attempt")
+        context.update({"preprocessing_error": True})
     else:
-        try:
-            payment_intent = stripe.PaymentIntent.modify(
-                invoice.stripe_payment_intent_id, **payment_intent_data,
-            )
-        except stripe.error.InvalidRequestError as error:
-            payment_intent = stripe.PaymentIntent.retrieve(
-                invoice.stripe_payment_intent_id, stripe_account=stripe_account
-            )
-            if payment_intent.status == "succeeded":
-                context.update({"preprocessing_error": "Invoice is already paid"})
-                context.update({"already_paid": True})
-            logging.error(
-                "Error processing checkout for invoice: %s (%s)", invoice.invoice_id, str(error)
-            )
-    context.update({
-        "client_secret": payment_intent.client_secret,
-        "stripe_account": stripe_account,
-        "stripe_api_key": settings.STRIPE_PUBLISHABLE_KEY,
-        "cart_items": invoice.items_dict(),
-        "cart_total": total
-     })
+        stripe_account = seller.stripe_user_id
+        # Stripe requires the amount as an integer, in pence
+        total_as_int = int(total * 100)
+
+        payment_intent_data = {
+            "payment_method_types": ['card'],
+            "amount": total_as_int,
+            "currency": 'gbp',
+            "stripe_account": stripe_account,
+            "description": f"{full_name(request.user)}-invoice#{invoice.invoice_id}",
+            "metadata": {
+                "invoice_id": invoice.invoice_id, "invoice_signature": invoice.signature(), **invoice.items_metadata()},
+        }
+
+        if not invoice.stripe_payment_intent_id:
+            payment_intent = stripe.PaymentIntent.create(**payment_intent_data)
+            invoice.stripe_payment_intent_id = payment_intent.id
+            invoice.save()
+        else:
+            try:
+                payment_intent = stripe.PaymentIntent.modify(
+                    invoice.stripe_payment_intent_id, **payment_intent_data,
+                )
+            except stripe.error.InvalidRequestError as error:
+                payment_intent = stripe.PaymentIntent.retrieve(
+                    invoice.stripe_payment_intent_id, stripe_account=stripe_account
+                )
+                if payment_intent.status == "succeeded":
+                    context.update({"preprocessing_error": True})
+                    context.update({"already_paid": True})
+                else:
+                    context.update({"preprocessing_error": True})
+                logging.error(
+                    "Error processing checkout for invoice: %s (%s)", invoice.invoice_id, str(error)
+                )
+        context.update({
+            "client_secret": payment_intent.client_secret,
+            "stripe_account": stripe_account,
+            "stripe_api_key": settings.STRIPE_PUBLISHABLE_KEY,
+            "cart_items": invoice.items_dict(),
+            "cart_total": total
+         })
     return TemplateResponse(request, "booking/checkout.html", context)
