@@ -29,7 +29,7 @@ from studioadmin.views import (
     UserSubscriptionsListView, SubscriptionAddView, SubscriptionEditView, ajax_subscription_delete,
     course_booking_add_view, course_block_change_view, export_users,
     ajax_toggle_course_partial_booking, email_waiting_list_view, users_with_unused_blocks,
-    StripeAuthorizeView, connect_stripe_view, StripeAuthorizeCallbackView
+    StripeAuthorizeView, connect_stripe_view, StripeAuthorizeCallbackView, InvoiceListView
 )
 
 app_name = 'studioadmin'
@@ -112,6 +112,7 @@ urlpatterns = [
     path("payments/connect/", connect_stripe_view, name="connect_stripe"),
     path("payments/authorize/", StripeAuthorizeView.as_view(), name="authorize_stripe"),
     path("payments/oauth/callback/", StripeAuthorizeCallbackView.as_view(), name="authorize_stripe_callback"),
+    path("payment/transactions/", InvoiceListView.as_view(), name="invoices"),
 
     # policies
     path('policies/cookie-policies/', CookiePolicyListView.as_view(), name="cookie_policies"),

@@ -7,14 +7,14 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.sites.models import Site
 from django.shortcuts import redirect, render
 from django.urls import reverse
-from django.views.generic import View
+from django.views.generic import ListView, View
 
 from braces.views import LoginRequiredMixin
 
 from activitylog.models import ActivityLog
 from booking.models import Track, EventType, BlockConfig, SubscriptionConfig, Subscription
 from common.utils import full_name
-from payments.models import Seller
+from payments.models import Seller, Invoice
 from .utils import StaffUserMixin, staff_required
 
 
@@ -64,3 +64,11 @@ class StripeAuthorizeCallbackView(View):
             seller.save()
 
         return redirect(reverse('studioadmin:connect_stripe'))
+
+
+class InvoiceListView(LoginRequiredMixin, StaffUserMixin, ListView):
+    paginate_by = 30
+    model = Invoice
+    context_object_name = "invoices"
+    template_name = "studioadmin/invoices.html"
+    queryset = Invoice.objects.filter(paid=True)

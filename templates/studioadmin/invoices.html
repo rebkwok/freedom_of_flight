@@ -1,6 +1,6 @@
 {%  extends "studioadmin/base.html" %}
 
-{% load studioadmintags static %}
+{% load accounttags studioadmintags static %}
 
 {% block subnav-xs %}
     {%  include "studioadmin/includes/navs/xs/payments_subnav.html" %}
@@ -10,16 +10,30 @@
 {% endblock %}
 
 {% block content %}
-    <h1>Connect Stripe Account</h1>
-    {% if not request.user.is_seller %}
-        <p>WARNING! You do not have permission to connect a Stripe account. Please contact an administrator. </p>
-    {% else %}
-        {% if not request.user.seller.stripe_user_id %}
-            <a href="{% url 'studioadmin:authorize_stripe' %}" class="btn btn-info">Connect Stripe Account</a>
-        {% else %}
-        <p>Your Stripe account is connected.</p>
-        {% endif %}
-    {% endif %}
+    <h1>Transaction History</h1>
+
+    <table class="table table-responsive table-striped">
+        <thead>
+            <th>Invoice</th>
+            <th>User</th>
+            <th>Amount</th>
+            <th>Payment method</th>
+            <th>Date Paid</th>
+        </thead>
+        <tbody>
+            {% for invoice in invoices %}
+                <tr>
+                    <td>{{ invoice.invoice_id }}</td>
+                    <td>{{ invoice.username }}</td>
+                    <td>{{ invoice.amount }}</td>
+                    <td>{% if invoice.stripe_payment_intent_id %}Stripe{% else %}PayPal{% endif %}</td>
+                    <td>{{ invoice.date_paid|date:"d-M-y H:i" }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    {% include 'common/includes/single_page_pagination.html' %}
 
 {% endblock content %}
 {% block extra_js %}

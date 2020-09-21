@@ -7,6 +7,9 @@
       <li class="nav-item">
           <a class="nav-link" href="{% url 'studioadmin:connect_stripe' %}">Connect</a>
       </li>
+      <li class="nav-item">
+          <a class="nav-link" href="{% url 'studioadmin:invoices' %}">Transactions</a>
+      </li>
     </ul>
   </div>
 </nav>
@@ -20,6 +23,7 @@
     </a>
     <div class="dropdown-menu" aria-labelledby="navbarDropdown">
       <a class="dropdown-item" href="{% url 'studioadmin:connect_stripe' %}">Connect</a>
+      <a class="dropdown-item" href="{% url 'studioadmin:invoices' %}">Transactions</a>
     </div>
   </li>
 </ul>
