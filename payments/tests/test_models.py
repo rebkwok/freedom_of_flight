@@ -7,7 +7,8 @@ from django.test import TestCase
 
 from model_bakery import baker
 
-from ..models import Invoice
+from booking.models import Block, Subscription
+from ..models import Invoice, Seller
 
 
 @pytest.fixture
@@ -45,3 +46,27 @@ class TestModels(TestCase):
     def test_signature(self):
         invoice = baker.make(Invoice, invoice_id="foo123")
         assert invoice.signature() == sha512("foo123test".encode("utf-8")).hexdigest()
+
+    @pytest.mark.usefixtures("invoice_keyenv")
+    def test_invoice_item_count(self):
+        invoice = baker.make(
+            Invoice, invoice_id="foo123",
+            blocks=baker.make(Block, _quantity=2),
+            subscriptions=baker.make(Subscription, _quantity=1)
+        )
+        assert invoice.item_count() == 3
+
+    @pytest.mark.usefixtures("invoice_keyenv")
+    def test_invoice_items_metadata(self):
+        invoice = baker.make(Invoice, invoice_id="foo123")
+        block = baker.make(Block, block_config__cost=10, block_config__name="test block", invoice=invoice)
+        subscription = baker.make(Subscription, config__name="test subscription", config__cost=50, invoice=invoice)
+
+        assert invoice.items_metadata() == {
+            "test block": f"£10.00 (block-{block.id})",
+            "test subscription": f"£50.00 (subscription-{subscription.id})",
+        }
+
+    def seller_str(self):
+        seller = baker.make(Seller, user__email="testuser@test.com")
+        assert str(seller) == "testuser@test.com"

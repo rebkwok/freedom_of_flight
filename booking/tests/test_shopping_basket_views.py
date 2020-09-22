@@ -682,3 +682,28 @@ class StripeCheckoutTests(TestUsersMixin, TestCase):
         )
         resp = self.client.post(self.url, data={"cart_total": 20})
         assert resp.context_data["preprocessing_error"] is True
+
+    def test_check_total(self):
+        # This is the last check immediately before submitting payment; just returns the current total
+        # so the js can check it
+        url = reverse("booking:check_total")
+        resp = self.client.get(url)
+        assert resp.json() == {"total": 0}
+
+        block = baker.make_recipe(
+            "booking.dropin_block", block_config=self.dropin_block_config, user=self.student_user,
+        )
+        subscription = baker.make(
+            Subscription, config=self.subscription_config, user=self.student_user
+        )
+        resp = self.client.get(url)
+        assert resp.json() == {"total": "70.00"}
+
+        subscription.paid = True
+        subscription.save()
+        voucher = baker.make(BlockVoucher, code="test", discount=10, max_per_user=10)
+        voucher.block_configs.add(self.dropin_block_config)
+        block.voucher = voucher
+        block.save()
+        resp = self.client.get(url)
+        assert resp.json() == {"total": "18.00"}
