@@ -88,8 +88,9 @@ def paypal_test(request):
 
 def _process_completed_stripe_payment(payment_intent, invoice):
     if not invoice.paid:
+        logging.info("Updating items to paid for invoice %s", invoice.invoice_id)
         check_stripe_data(payment_intent, invoice)
-        # not already processed by IPN, do it now
+        logging.info("Stripe check OK")
         for block in invoice.blocks.all():
             block.paid = True
             block.save()
@@ -130,9 +131,11 @@ def stripe_payment_complete(request):
             # No invoice retrieved, fail
             failed = True
             error = f"No invoice could be retrieved from succeeded payment intent {payment_intent.id}"
+            logging.error(error)
     else:
         failed = True
         error = f"Payment intent id {payment_intent.id} status: {payment_intent.status}"
+        logging.error(error)
     payment_intent.metadata.pop("invoice_id")
     payment_intent.metadata.pop("invoice_signature")
     if not failed:

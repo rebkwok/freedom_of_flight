@@ -1,13 +1,15 @@
 var MILLS_TO_IGNORE = 1000;
 
 $(document).ready(function()  {
-
-        // Set up Stripe.js and Elements to use in checkout form
+    // Set up Stripe.js and Elements to use in checkout form
     var setupElements = function() {
-        var card_button = document.getElementById('card-button');
-        var stripe_account = card_button.getAttribute("data-stripe_account")
-        var client_secret = card_button.getAttribute("data-client_secret")
-        var stripe_api_key = card_button.getAttribute("data-stripe_api_key")
+      var card_button = document.getElementById('card-button');
+      var stripe_account = card_button.getAttribute("data-stripe_account")
+      var client_secret = card_button.getAttribute("data-client_secret")
+      var stripe_api_key = card_button.getAttribute("data-stripe_api_key")
+      var invoice_id = card_button.getAttribute("data-invoice_id")
+      var total = card_button.getAttribute("data-total")
+
       var stripe = Stripe(stripe_api_key, {stripeAccount: stripe_account});
       var elements = stripe.elements();
       var style = {
@@ -42,6 +44,7 @@ $(document).ready(function()  {
         stripe: stripe,
         card: card,
         client_secret: client_secret,
+        total: total
       };
     };
 
@@ -54,8 +57,23 @@ $(document).ready(function()  {
 
     form.addEventListener("submit", function(event) {
       event.preventDefault();
-      // Initiate payment when the submit button is clicked
-      pay(stripe_data);
+
+      var response = fetch('/check-total/').then(function(response) {
+          return response.json();
+        }).then(function(check_total) {
+            console.log(check_total);
+            console.log(stripe_data.total);
+            var current_total = check_total.total
+          // Call stripe.confirmCardPayment() with the client secret.
+          if (current_total !== stripe_data.total) {
+            // Show error to your customer
+            showError("Your cart has changed, please return to the shopping cart page and try again");
+          } else {
+            // Total is up to date, make payment
+            pay(stripe_data);
+          }
+        });
+
     });
 
     var pay = function(stripe_data) {

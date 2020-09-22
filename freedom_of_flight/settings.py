@@ -339,7 +339,7 @@ if env('TRAVIS') or env('HEROKU') or TESTING or env('LOCAL'):  # pragma: no cove
             'console': {
                 'level': 'DEBUG',
                 'class': 'logging.StreamHandler',
-            }
+            },
         },
         'loggers': {
             'django.request': {

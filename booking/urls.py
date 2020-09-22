@@ -11,7 +11,7 @@ from booking.views import (
     SubscriptionListView, SubscriptionDetailView,
     ajax_subscription_purchase,
     CourseListView,
-    stripe_checkout
+    stripe_checkout, check_total
 )
 
 
@@ -60,6 +60,7 @@ urlpatterns = [
     path("ajax-checkout/", ajax_checkout, name="ajax_checkout"),
     path("stripe-checkout/", stripe_checkout, name="stripe_checkout"),
     path('ajax-cart-item-delete/', ajax_cart_item_delete, name='ajax_cart_item_delete'),
+    path('check-total/', check_total, name="check_total"),
 
     # EVENTS LIST: needs to go last, catches everything else
     path('<slug:track>/', EventListView.as_view(), name='events'),

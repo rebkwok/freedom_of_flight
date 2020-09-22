@@ -214,6 +214,23 @@ def shopping_basket(request):
     )
 
 
+def _verify_block_vouchers(unpaid_blocks):
+    # verify any vouchers on blocks
+    for block in unpaid_blocks:
+        if block.voucher:
+            try:
+                validate_voucher_properties(block.voucher)
+                validate_voucher_for_block_configs_in_cart(block.voucher, [block])
+                validate_voucher_for_user(block.voucher, block.user)
+                if block.voucher.check_block_config(block.block_config):
+                    validate_voucher_for_unpaid_block(block, block.voucher)
+                else:
+                    raise VoucherValidationError("voucher on block not valid")
+            except VoucherValidationError:
+                block.voucher = None
+                block.save()
+
+
 def _check_items_and_get_updated_invoice(request):
     total = Decimal(request.POST.get("cart_total"))
     unpaid_blocks = get_unpaid_user_managed_blocks(request.user)
@@ -230,20 +247,7 @@ def _check_items_and_get_updated_invoice(request):
         checked.update({"redirect": True, "redirect_url": reverse("booking:shopping_basket")})
         return checked
 
-    # verify any vouchers on blocks
-    for block in unpaid_blocks:
-        if block.voucher:
-            try:
-                validate_voucher_properties(block.voucher)
-                validate_voucher_for_block_configs_in_cart(block.voucher, [block])
-                validate_voucher_for_user(block.voucher, block.user)
-                if block.voucher.check_block_config(block.block_config):
-                    validate_voucher_for_unpaid_block(block, block.voucher)
-                else:
-                    raise VoucherValidationError("voucher on block not valid")
-            except VoucherValidationError:
-                block.voucher = None
-                block.save()
+    _verify_block_vouchers(unpaid_blocks)
     check_total = calculate_user_cart_total(unpaid_blocks=unpaid_blocks, unpaid_subscriptions=unpaid_subscriptions)
     if total != check_total:
         messages.error(request, "Some cart items changed; please check and try again")
@@ -262,20 +266,19 @@ def _check_items_and_get_updated_invoice(request):
 
     # NOTE: invoice user will always be the request.user, not any attached sub-user
     # May be different to the user on the purchased blocks
+    unpaid_block_ids = {block.id for block in unpaid_blocks}
+    unpaid_subscription_ids = {subscription.id for subscription in unpaid_subscriptions}
     def _get_matching_invoice(invoices):
         for invoice in invoices:
-            invoice_blocks = invoice.blocks.all()
-            invoice_subscriptions = invoice.subscriptions.all()
-            if unpaid_blocks.count() == invoice.blocks.count() and unpaid_subscriptions.count() == invoice.subscriptions.count():
-                if all(True for invoice_block in invoice_blocks if invoice_block in unpaid_blocks) \
-                        and all(True for invoice_subscription in invoice_subscriptions if
-                                invoice_subscription in unpaid_subscriptions):
-                    return invoice
+            if {block.id for block in invoice.blocks.all()} == unpaid_block_ids \
+                    and {subscription.id for subscription in invoice.subscriptions.all()} == unpaid_subscription_ids:
+                return invoice
 
     # check for an existing unpaid invoice for this user
     invoices = Invoice.objects.filter(username=request.user.username, paid=False)
     # if any exist, check for one where the blocks and subscriptions are the same
     invoice = _get_matching_invoice(invoices)
+
     if invoice is None:
         invoice = Invoice.objects.create(
             invoice_id=Invoice.generate_invoice_id(), amount=Decimal(total), username=request.user.username
@@ -286,6 +289,10 @@ def _check_items_and_get_updated_invoice(request):
         for subscription in unpaid_subscriptions:
             subscription.invoice = invoice
             subscription.save()
+    else:
+        # If an invoice with the expected items is found, make sure it's total is current
+        invoice.amount = Decimal(total)
+        invoice.save()
 
     checked.update({"invoice": invoice})
     return checked
@@ -326,7 +333,7 @@ def stripe_checkout(request):
         return HttpResponseRedirect(checked_dict["redirect_url"])
     total = checked_dict["total"]
     invoice = checked_dict["invoice"]
-
+    logging.info("invoice id %s", invoice.invoice_id)
     # Create the Stripe PaymentIntent
     stripe.api_key = settings.STRIPE_SECRET_KEY
     seller = Seller.objects.filter(site=Site.objects.get_current(request)).first()
@@ -369,13 +376,21 @@ def stripe_checkout(request):
                 else:
                     context.update({"preprocessing_error": True})
                 logging.error(
-                    "Error processing checkout for invoice: %s (%s)", invoice.invoice_id, str(error)
+                    "Error processing checkout for invoice: %s, payment intent: %s (%s)", invoice.invoice_id, payment_intent.id, str(error)
                 )
         context.update({
             "client_secret": payment_intent.client_secret,
             "stripe_account": stripe_account,
             "stripe_api_key": settings.STRIPE_PUBLISHABLE_KEY,
             "cart_items": invoice.items_dict(),
-            "cart_total": total
+            "cart_total": total,
          })
     return TemplateResponse(request, "booking/checkout.html", context)
+
+
+def check_total(request):
+    unpaid_blocks = get_unpaid_user_managed_blocks(request.user)
+    unpaid_subscriptions = get_unpaid_user_managed_subscriptions(request.user)
+    _verify_block_vouchers(unpaid_blocks)
+    check_total = calculate_user_cart_total(unpaid_blocks=unpaid_blocks, unpaid_subscriptions=unpaid_subscriptions)
+    return JsonResponse({"total": check_total})
