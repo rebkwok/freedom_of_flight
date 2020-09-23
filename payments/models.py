@@ -2,6 +2,7 @@ from os import environ
 
 from django.contrib.auth.models import User
 from django.contrib.sites.models import Site
+from django.contrib.postgres.fields import JSONField
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
@@ -89,3 +90,33 @@ class Seller(models.Model):
 
     def __str__(self):
         return self.user.email
+
+
+class StripePaymentIntent(models.Model):
+    payment_intent_id = models.CharField(max_length=255)
+    amount = models.PositiveIntegerField()
+    description = models.CharField(max_length=255)
+    status = models.CharField(max_length=255)
+    invoice = models.ForeignKey(Invoice, on_delete=models.SET_NULL, null=True, blank=True)
+    seller = models.ForeignKey(Seller, on_delete=models.SET_NULL, null=True, blank=True)
+    metadata = JSONField()
+    client_secret = models.CharField(max_length=255)
+    currency = models.CharField(max_length=3)
+
+    @classmethod
+    def update_or_create_payment_intent_instance(cls, payment_intent, invoice, seller=None):
+        defaults = {
+            "invoice": invoice,
+            "amount": payment_intent.amount,
+            "description": payment_intent.description,
+            "status": payment_intent.status,
+            "metadata": payment_intent.metadata,
+            "client_secret": payment_intent.client_secret,
+            "currency": payment_intent.currency
+        }
+        if seller is not None:
+            defaults.update({"seller": seller})
+        return cls.objects.update_or_create(payment_intent_id=payment_intent.id, defaults=defaults)
+
+    def __str__(self):
+        return f"{self.payment_intent_id} - invoice {self.invoice.invoice_id} - {self.invoice.username}"

@@ -9,7 +9,7 @@ Payment Error
 Paypal transaction id: {{ ipn_or_pdt.txn_id }}
 Paypal payment status: {{ ipn_or_pdt.payment_status }}
 {% elif payment_intent %}Stripe payment intent id: {{ payment_intent.id }}
-payment status: {{ payment_intent.payment_status }}{% endif %}
+payment status: {{ payment_intent.status }}{% endif %}
 {% if error %}Error: {{ error }} {% endif %}
 
 {% endblock %}

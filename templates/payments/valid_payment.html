@@ -23,10 +23,10 @@
                     <th>Cost</th>
                 </thead>
                 <tbody>
-                    {% for name, cost in cart_items.items %}
+                    {% for item in cart_items %}
                         <tr>
-                            <td>{{ name }}</td>
-                            <td>{{ cost }}</td>
+                            <td>{{ item.name }}</td>
+                            <td>{{ item.cost }}</td>
                         </tr>
                     {% endfor %}
                 </tbody>

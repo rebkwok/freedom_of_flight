@@ -14,7 +14,7 @@ from django.urls import reverse
 
 import stripe
 
-from payments.models import Invoice, Seller
+from payments.models import Invoice, Seller, StripePaymentIntent
 from payments.utils import get_paypal_form
 
 from common.utils import full_name
@@ -378,6 +378,9 @@ def stripe_checkout(request):
                 logging.error(
                     "Error processing checkout for invoice: %s, payment intent: %s (%s)", invoice.invoice_id, payment_intent.id, str(error)
                 )
+        # update/create the django model PaymentIntent - this isjust for records
+        StripePaymentIntent.update_or_create_payment_intent_instance(payment_intent, invoice, seller)
+
         context.update({
             "client_secret": payment_intent.client_secret,
             "stripe_account": stripe_account,

@@ -14,7 +14,7 @@ import stripe
 from activitylog.models import ActivityLog
 from .emails import send_processed_payment_emails, send_failed_payment_emails, send_processed_refund_emails
 from .exceptions import PayPalProcessingError, StripeProcessingError
-from .models import Invoice, Seller
+from .models import Invoice, Seller, StripePaymentIntent
 from .utils import check_paypal_data, get_paypal_form, get_invoice_from_ipn_or_pdt, \
     get_invoice_from_payment_intent, check_stripe_data
 
@@ -61,7 +61,7 @@ def paypal_return(request):
             failed = True
             error = "No invoice on PDT on return from paypal"
     if not failed:
-        context.update({"cart_items": invoice.items_dict()})
+        context.update({"cart_items": invoice.items_dict().values()})
         return render(request, 'payments/valid_payment.html', context)
 
     error = error or "Failed status on PDT return from paypal"
@@ -86,7 +86,7 @@ def paypal_test(request):
     return render(request, 'payments/paypal_test.html', {"form": paypal_form})
 
 
-def _process_completed_stripe_payment(payment_intent, invoice):
+def _process_completed_stripe_payment(payment_intent, invoice, seller=None):
     if not invoice.paid:
         logging.info("Updating items to paid for invoice %s", invoice.invoice_id)
         check_stripe_data(payment_intent, invoice)
@@ -99,6 +99,9 @@ def _process_completed_stripe_payment(payment_intent, invoice):
             subscription.save()
         invoice.paid = True
         invoice.save()
+        # update/create the django model PaymentIntent - this isjust for records
+        StripePaymentIntent.update_or_create_payment_intent_instance(payment_intent, invoice, seller)
+
         # SEND EMAILS
         send_processed_payment_emails(invoice)
         ActivityLog.objects.create(
@@ -114,7 +117,8 @@ def stripe_payment_complete(request):
     payload = json.loads(request.POST.get("payload"))
     logger.info("Processing payment intent from payload %s", payload)
     stripe.api_key = settings.STRIPE_SECRET_KEY
-    stripe_account = Seller.objects.filter(site=Site.objects.get_current(request)).first().stripe_user_id
+    seller = Seller.objects.filter(site=Site.objects.get_current(request)).first()
+    stripe_account = seller.stripe_user_id
     payment_intent = stripe.PaymentIntent.retrieve(payload["id"], stripe_account=stripe_account)
     failed = False
 
@@ -122,7 +126,7 @@ def stripe_payment_complete(request):
         invoice = get_invoice_from_payment_intent(payment_intent, raise_immediately=False)
         if invoice is not None:
             try:
-                _process_completed_stripe_payment(payment_intent, invoice)
+                _process_completed_stripe_payment(payment_intent, invoice, seller)
             except StripeProcessingError as e:
                 error = f"Error processing Stripe payment: {e}"
                 logging.error(e)
@@ -139,7 +143,7 @@ def stripe_payment_complete(request):
     payment_intent.metadata.pop("invoice_id")
     payment_intent.metadata.pop("invoice_signature")
     if not failed:
-        context = {"cart_items": payment_intent.metadata}
+        context = {"cart_items": invoice.items_dict().values()}
         return render(request, 'payments/valid_payment.html', context)
     else:
         send_failed_payment_emails(payment_intent=payment_intent, error=error)
