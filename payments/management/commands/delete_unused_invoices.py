@@ -1,7 +1,7 @@
 from django.core.management.base import BaseCommand
 
 from activitylog.models import ActivityLog
-from booking.models import Invoice
+from payments.models import Invoice, StripePaymentIntent
 
 
 class Command(BaseCommand):
@@ -12,6 +12,7 @@ class Command(BaseCommand):
         if unused_invoices:
             log = f"{len(unused_invoices)} unpaid unused invoice(s) deleted: invoice_ids {','.join([invoice.invoice_id for invoice in unused_invoices])}"
             for invoice in unused_invoices:
+                payment_intent = StripePaymentIntent.objects.filter(invoice_id=invoice.id).delete()
                 invoice.delete()
             ActivityLog.objects.create(log=log)
             self.stdout.write(log)

@@ -140,8 +140,8 @@ def stripe_payment_complete(request):
         failed = True
         error = f"Payment intent id {payment_intent.id} status: {payment_intent.status}"
         logging.error(error)
-    payment_intent.metadata.pop("invoice_id")
-    payment_intent.metadata.pop("invoice_signature")
+    payment_intent.metadata.pop("invoice_id", None)
+    payment_intent.metadata.pop("invoice_signature", None)
     if not failed:
         context = {"cart_items": invoice.items_dict().values()}
         return render(request, 'payments/valid_payment.html', context)
@@ -167,22 +167,23 @@ def stripe_webhook(request):
         logging.error(e)
         return HttpResponse(status=400)
 
-    payment_intent = event.data.object
     try:
+        payment_intent = event.data.object
         invoice = get_invoice_from_payment_intent(payment_intent, raise_immediately=True)
         error = None
-        if event["type"] == "payment_intent.succeeded":
+        if event.type == "payment_intent.succeeded":
             _process_completed_stripe_payment(payment_intent, invoice)
-        elif event["type"] == "payment_intent.refunded":
+        elif event.type == "payment_intent.refunded":
             send_processed_refund_emails(invoice)
-        elif event["type"] == "payment_intent.payment_failed":
-            error = f"Failed payment intent id: {event['data']['object']['id']}; invoice id {invoice.invoice_id}"
-            send_processed_refund_emails(invoice)
-        elif event["type"] == "payment_intent.requires_action":
-            error = f"Payment intent requires action: {event['data']['object']['id']}; invoice id {invoice.invoice_id}"
+        elif event.type == "payment_intent.payment_failed":
+            error = f"Failed payment intent id: {payment_intent.id}; invoice id {invoice.invoice_id}"
+        elif event.type == "payment_intent.requires_action":
+            error = f"Payment intent requires action: id {payment_intent.id}; invoice id {invoice.invoice_id}"
         if error:
             send_failed_payment_emails(error=error)
+            return HttpResponse(status=400)
     except Exception as e:  # log anything else
         logging.error(e)
+        send_failed_payment_emails(error=e)
         return HttpResponse(status=400)
     return HttpResponse(status=200)

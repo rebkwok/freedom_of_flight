@@ -125,6 +125,8 @@ def get_invoice_from_payment_intent(payment_intent, raise_immediately=False):
     # Don't raise the exception here so we don't expose it to the user; leave it for the webhook
     invoice_id = payment_intent.metadata.get("invoice_id")
     if not invoice_id:
+        if raise_immediately:
+            raise StripeProcessingError(f"Error processing stripe payment intent {payment_intent.id}; no invoice id")
         return None
     try:
         return Invoice.objects.get(invoice_id=invoice_id)
@@ -138,7 +140,11 @@ def get_invoice_from_payment_intent(payment_intent, raise_immediately=False):
 def check_stripe_data(payment_intent, invoice):
     signature = payment_intent.metadata.get("invoice_signature")
     if signature != invoice.signature():
-        raise StripeProcessingError("Could not verify invoice signature")
+        raise StripeProcessingError(
+            f"Could not verify invoice signature: payment intent {payment_intent.id}; invoice id {invoice.invoice_id}")
 
     if payment_intent.amount != int(invoice.amount * 100):
-        raise StripeProcessingError("Invoice amount is not correct")
+        raise StripeProcessingError(
+            f"Invoice amount is not correct: payment intent {payment_intent.id} ({payment_intent.amount/100}); "
+            f"invoice id {invoice.invoice_id} ({invoice.amount})"
+        )
