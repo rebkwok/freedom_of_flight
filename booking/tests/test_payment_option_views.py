@@ -1,5 +1,6 @@
 from model_bakery import baker
 
+from django.core.cache import cache
 from django.urls import reverse
 from django.test import TestCase
 
@@ -71,6 +72,10 @@ class BlockPurchaseViewTests(TestUsersMixin, TestCase):
         assert resp.context["user_active_blocks"] == [block]
 
     def test_user_and_managed_user_blocks_in_context(self):
+        # make sure the manager user is also a student, otherwise payment options page doesn't show options for them
+        cache.clear()
+        self.manager_user.userprofile.student = True
+        self.manager_user.userprofile.save()
         self.login(self.manager_user)
         block1 = baker.make(Block, user=self.child_user, block_config=self.activeconfig, paid=True)
         block2 = baker.make(Block, user=self.manager_user, block_config=self.activeconfig, paid=True)

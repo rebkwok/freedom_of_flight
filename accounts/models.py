@@ -491,22 +491,33 @@ def managed_users_cache_key(user):
     return f"managed_users_{user.id}"
 
 
-@property
-def managed_users(self):
-    cache_key = managed_users_cache_key(self)
+def _get_managed_users(user):
+    cache_key = managed_users_cache_key(user)
     managed_users = cache.get(cache_key)
     if not managed_users:
-        if hasattr(self, "userprofile"):
-            child_users = [childprofile.user for childprofile in self.userprofile.managed_profiles.all() if childprofile.user.is_active]
-            managed_users = [self, *child_users] if self.is_student else [*child_users, self]
-            if child_users and not self.is_manager:
-                self.userprofile.manager = True
-                self.userprofile.save()
+        if hasattr(user, "userprofile"):
+            child_users = [childprofile.user for childprofile in user.userprofile.managed_profiles.all() if
+                           childprofile.user.is_active]
+            managed_users = [user, *child_users] if user.is_student else child_users
+            if child_users and not user.is_manager:
+                user.userprofile.manager = True
+                user.userprofile.save()
         else:
-            UserProfile.objects.create(user=self)
-            managed_users = [self]
-        cache.set(cache_key, managed_users, timeout=60*60)
+            UserProfile.objects.create(user=user, student=True)
+            managed_users = [user]
+        cache.set(cache_key, managed_users, timeout=60 * 60)
     return managed_users
+
+
+@property
+def managed_users(self):
+    return _get_managed_users(self)
+
+
+@property
+def managed_users_excluding_self(self):
+    managed_users = _get_managed_users(self)
+    return [user for user in managed_users if user != self]
 
 
 @property
@@ -547,6 +558,7 @@ def manager_user(self):
     return None
 
 User.add_to_class("managed_users", managed_users)
+User.add_to_class("managed_users_excluding_self", managed_users_excluding_self)
 User.add_to_class("is_student", is_student)
 User.add_to_class("is_manager", is_manager)
 User.add_to_class("is_instructor", is_instructor)

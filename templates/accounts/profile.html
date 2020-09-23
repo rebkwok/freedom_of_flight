@@ -8,10 +8,10 @@
    <h2 class="card-header">Accounts</h2>
    <div class="card-body">
         <div class="card-text">
-        {% if user.is_student or user.is_manager %}
+        {% if user.is_student or user.is_manager and user.managed_users %}
            The following accounts are registered as student users:
            <ul>
-               <li>{% if user.is_student %}<strong>{{ user|full_name }}</strong> (main account) {% endif %}</li>
+               {% if user.is_student %}<li><strong>{{ user|full_name }}</strong> (main account)</li>{% endif %}
                {% if user.is_manager %}
                     {% for managed_user in user.managed_users %}
                         {% if managed_user.id != user.id %}
@@ -32,9 +32,14 @@
                 </ul>
            {% endif %}
         {% endif %}</div>
-       {% if not user.is_manager %}<div class="card-text">You do not currently manage accounts for other users.</div>{% endif %}
-            {% if not user.is_student %}<div class="card-text">You are not currently registered as a student.</div>{% endif %}
+       {% if not user.is_manager %}
+           <div class="card-text">You do not currently manage accounts for other users.</div>{% endif %}
    <div class="card-text"><a class="btn btn-xs btn-success btn-xs-wide" href="{% url 'accounts:register_child_user' %}">Add Managed Account</a></div>
+
+       {% if not user.is_student %}
+           <hr/>
+            <div class="card-text">You are not currently registered as a student. <a class="btn btn-xs btn-success" href="{% url 'accounts:update_profile' %}">Change</a></div>
+        {% endif %}
         </div>
    </div>
    <div class="card">

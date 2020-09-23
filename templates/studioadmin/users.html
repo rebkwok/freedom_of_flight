@@ -28,6 +28,7 @@
                 </th>
             <th class="text-center">Role</th>
             <th class="text-center">Managed by <span class="fa fa-sort"></span></th>
+            <th class="text-center">Manages</th>
             <th class="text-center">Disclaimer</th>
             <th class="text-center">Details</th>
             <th class="text-center">Email</th>
@@ -61,7 +62,18 @@
                     {% endif %}
                 {% endif %}
             </td>
-            <td class="text-center">{% if account_user.manager_user %}{{ account_user.manager_user|full_name|truncatechars:30  }}{% else %}-{% endif %}</td>
+            <td class="text-center"><small>{% if account_user.manager_user %}{{ account_user.manager_user|full_name|truncatechars:30  }}{% else %}-{% endif %}</small></td>
+            <td><small>
+                {% for managed_user in account_user.managed_users_excluding_self %}
+                    {% if request.user.is_staff %}
+                        <a href="{% url 'studioadmin:user_bookings' account_user.id %}">{{ managed_user|full_name }}</a>
+                    {% else %}
+                        {{ managed_user|full_name }}
+                    {% endif %}
+                        <br/>
+                {% endfor %}
+                </small>
+            </td>
             <td class="text-center">
                 {% if account_user|has_disclaimer %}
                     <span class="badge badge-pill badge-primary">Yes</span>

@@ -40,12 +40,17 @@ def data_privacy_required(view_func):
     return wrap
 
 
+def _managed_user_plus_self(user):
+    return {user, *user.managed_users}
+
+
 def get_unpaid_user_managed_blocks(user):
-    return Block.objects.filter(user__in=user.managed_users, paid=False).order_by('user_id')
+
+    return Block.objects.filter(user__in=_managed_user_plus_self(user), paid=False).order_by('user_id')
 
 
 def get_unpaid_user_managed_subscriptions(user):
-    return Subscription.objects.filter(user__in=user.managed_users, paid=False).order_by('user_id')
+    return Subscription.objects.filter(user__in=_managed_user_plus_self(user), paid=False).order_by('user_id')
 
 
 def get_unpaid_user_managed_items(user):
@@ -53,7 +58,6 @@ def get_unpaid_user_managed_items(user):
         "blocks": get_unpaid_user_managed_blocks(user),
         "subscription": get_unpaid_user_managed_subscriptions(user)
     }
-
 
 def total_unpaid_item_count(user):
     return sum([queryset.count() for queryset in get_unpaid_user_managed_items(user).values()])

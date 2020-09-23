@@ -21,7 +21,7 @@ def booking(request):
         cart_item_count = total_unpaid_item_count(request.user)
         view_as_user = get_view_as_user(request)
     else:
-        available_users = [request.user]
+        available_users = []
         cart_item_count = None
         view_as_user = request.user
 

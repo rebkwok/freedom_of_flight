@@ -64,14 +64,15 @@
                         </p>
                         </td>
                     {%  if request.user.is_authenticated %}
-                        <td>
-                            {% for available_user in available_users %}
-                            <div class="purchase_option_badge_container">
-                                <span class="badge badge-pill badge-light pt-1 mt-1 mb-1"><span class="align-middle helptext">{{ available_user|full_name|truncatechars:15 }}</span></span>
-                            </div>
-                            {% endfor %}
-                        </td>
-                        <td class="table-purchase-td">
+                        {% if available_users %}
+                            <td>
+                                {% for available_user in available_users %}
+                                <div class="purchase_option_badge_container">
+                                    <span class="badge badge-pill badge-light pt-1 mt-1 mb-1"><span class="align-middle helptext">{{ available_user|full_name|truncatechars:15 }}</span></span>
+                                </div>
+                                {% endfor %}
+                            </td>
+                            <td class="table-purchase-td">
                             {% for available_user in available_users %}
                             <span
                                 id="block_config_{{ available_block_config.id }}_{{ available_user.id }}"
@@ -83,6 +84,15 @@
                             </span><br/>
                             {% endfor %}
                         </td>
+                        {% else %}
+                            {% if request.user.is_manager %}
+                                <td colspan="2">
+                                <span class="helptext float-right">
+                                    Register as a student or add a managed account to purchase
+                                    <a href="{% url 'accounts:profile' %}">Update account</a></span>
+                                </td>
+                            {% endif %}
+                        {% endif %}
                     {% else %}
                         <td colspan="2">
                             <span class="helptext float-right"><a href="{% url 'account_login' %}?next={{request.get_full_path}}">Log in</a> or <a href="{% url 'account_signup' %}">register</a> to purchase</span>

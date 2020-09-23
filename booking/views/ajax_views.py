@@ -20,10 +20,10 @@ from ..models import Booking, Block, Course, Event, WaitingListUser, BlockConfig
 from ..utils import (
     calculate_user_cart_total, has_available_block, has_available_subscription,
     get_active_user_course_block,
-    get_user_booking_info, get_available_user_subscription, has_available_course_block
+    get_user_booking_info, get_available_user_subscription, has_available_course_block,
 )
 from ..email_helpers import send_waiting_list_email, send_user_and_studio_emails
-from .views_utils import total_unpaid_item_count
+from .views_utils import total_unpaid_item_count, get_unpaid_user_managed_items, get_unpaid_user_managed_subscriptions, get_unpaid_user_managed_blocks
 
 
 logger = logging.getLogger(__name__)
@@ -346,8 +346,8 @@ def ajax_cart_item_delete(request):
     item_id = request.POST.get("item_id")
     item = get_object_or_404(ITEM_TYPE_MODEL_MAPPING[item_type], pk=item_id)
     item.delete()
-    unpaid_blocks = Block.objects.filter(paid=False, user__in=request.user.managed_users)
-    unpaid_subscriptions = Subscription.objects.filter(paid=False, user__in=request.user.managed_users)
+    unpaid_blocks = get_unpaid_user_managed_blocks(request.user)
+    unpaid_subscriptions = get_unpaid_user_managed_subscriptions(request.user)
     total = calculate_user_cart_total(unpaid_blocks, unpaid_subscriptions)
     payment_button_html = render(
         request, f"booking/includes/payment_button.txt", {"total_cost": total}

@@ -38,6 +38,24 @@
                     </li>
                 </ul>
             {% endif %}
+            {% if account_user.is_manager %}
+                    <h4 class="card-header">Manages other accounts:</h4>
+                {% if account_user.managed_users_excluding_self %}
+                    <ul class="list-group list-group-flush">
+                    <li class="list-group-item">
+                        {% for managed_user in account_user.managed_users_excluding_self %}
+                            {{ managed_user|full_name }}<br/>
+                        {% endfor %}
+                    </li>
+                    </ul>
+                 {% else %}
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item">
+                            None registered
+                        </li>
+                    </ul>
+                 {% endif %}
+            {% endif %}
             {% if latest_disclaimer %}
             <h4 class="card-header">Disclaimer ({% if user|has_disclaimer %}Active{% else %}Expired{% endif %})</h4>
                 <ul class="list-group list-group-flush">
