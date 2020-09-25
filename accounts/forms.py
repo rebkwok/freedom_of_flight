@@ -39,23 +39,11 @@ class AccountFormMixin:
                 attrs={"autocomplete": "off", 'class': 'form-control'}, format='%d-%b-%Y'
             ),
             input_formats=['%d-%b-%Y'],
-            help_text="Minimum age for registering as a main account holder is 16."
         )
         self.fields["address"] = forms.CharField(widget=forms.TextInput(attrs={'class': 'form-control'}))
         self.fields["postcode"] = forms.CharField(max_length=10, widget=forms.TextInput(attrs={'class': 'form-control'}))
         self.fields["phone"] = forms.CharField(max_length=20, widget=forms.TextInput(attrs={'class': 'form-control'}))
         self.fields["phone"].validators = [account_validators.phone_number_validator]
-
-    def clean_date_of_birth(self):
-        date_of_birth = self.cleaned_data.get("date_of_birth")
-        age_cutoff_date = (timezone.now() - relativedelta(years=16)).date()
-        if date_of_birth > age_cutoff_date:
-            self.add_error(
-                "date_of_birth",
-                 "You must be at least 16 years old to register as a main account holder.  Under-16s can "
-                 "be added as managed accounts after initial registration.")
-            return
-        return date_of_birth
 
 
 class CoreAccountFormMixin:
@@ -73,6 +61,18 @@ class CoreAccountFormMixin:
             help_text="You'll be able to add managed accounts on the next page.",
             required=False,
         )
+        self.fields["date_of_birth"].help_text = "Minimum age for registering as a main account holder is 16."
+
+    def clean_date_of_birth(self):
+        date_of_birth = self.cleaned_data.get("date_of_birth")
+        age_cutoff_date = (timezone.now() - relativedelta(years=16)).date()
+        if date_of_birth > age_cutoff_date:
+            self.add_error(
+                "date_of_birth",
+                 "You must be at least 16 years old to register as a main account holder.  Under-16s can "
+                 "be added as managed accounts after initial registration.")
+            return
+        return date_of_birth
 
 
 class SignupForm(CoreAccountFormMixin, AccountFormMixin, forms.Form):
@@ -117,7 +117,7 @@ class SignupForm(CoreAccountFormMixin, AccountFormMixin, forms.Form):
            )
 
 
-class ProfileForm(CoreAccountFormMixin, AccountFormMixin, forms.ModelForm):
+class ManagedProfileForm(AccountFormMixin, forms.ModelForm):
 
     first_name = forms.CharField(
         widget=forms.TextInput(attrs={'class': "form-control"}), required = True
@@ -131,6 +131,17 @@ class ProfileForm(CoreAccountFormMixin, AccountFormMixin, forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields['first_name'].initial = user.first_name
         self.fields['last_name'].initial = user.last_name
+
+    class Meta:
+        model = ChildUserProfile
+        fields = ("first_name", "last_name", "address", "postcode", "phone", "date_of_birth")
+
+
+class ProfileForm(CoreAccountFormMixin, ManagedProfileForm):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['date_of_birth'].help_text = "Minimum age for registering as a main account holder is 16."
 
     class Meta:
         model = UserProfile

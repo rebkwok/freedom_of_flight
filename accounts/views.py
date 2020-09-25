@@ -19,7 +19,7 @@ from shortuuid import ShortUUID
 
 from common.utils import full_name
 from .forms import DisclaimerForm, DataPrivacyAgreementForm, NonRegisteredDisclaimerForm, \
-    ProfileForm, DisclaimerContactUpdateForm, RegisterChildUserForm
+    ProfileForm, DisclaimerContactUpdateForm, RegisterChildUserForm, ManagedProfileForm
 from .models import CookiePolicy, DataPrivacyPolicy, SignedDataPrivacy, UserProfile, OnlineDisclaimer, \
     has_active_data_privacy_agreement, has_active_disclaimer, has_expired_disclaimer, ChildUserProfile, DisclaimerContent
 from activitylog.models import ActivityLog
@@ -47,27 +47,47 @@ class ProfileUpdateView(LoginRequiredMixin, UpdateView):
     template_name = 'accounts/update_profile.html'
     form_class = ProfileForm
 
+    def dispatch(self, request, *args, **kwargs):
+        self.account_user = request.user
+        return super(ProfileUpdateView, self).dispatch(request, *args, **kwargs)
+
     def get_form_kwargs(self):
         form_kwargs = super().get_form_kwargs()
-        form_kwargs["user"] = self.request.user
+        form_kwargs["user"] = self.account_user
         return form_kwargs
 
     def get_object(self):
-        return get_object_or_404(
-            UserProfile, user=self.request.user
-        )
+        return get_object_or_404(UserProfile, user=self.account_user)
 
     def form_valid(self, form):
         form.save()
         form_data = form.cleaned_data
         # update the user with first and last name that are on the User model
-        self.request.user.first_name = form_data['first_name']
-        self.request.user.last_name = form_data['last_name']
-        self.request.user.save()
+        self.account_user.first_name = form_data['first_name']
+        self.account_user.last_name = form_data['last_name']
+        self.account_user.save()
         return HttpResponseRedirect(self.get_success_url())
 
     def get_success_url(self):
         return reverse('accounts:profile')
+
+
+class ManagedProfileUpdateView(ProfileUpdateView):
+
+    model = ChildUserProfile
+    form_class = ManagedProfileForm
+
+    def dispatch(self, request, *args, **kwargs):
+        self.account_user = get_object_or_404(User, pk=kwargs.get("user_id"))
+        return super(ProfileUpdateView, self).dispatch(request, *args, **kwargs)
+
+    def get_object(self):
+        return get_object_or_404(ChildUserProfile, user=self.account_user)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["managed_user"] = True
+        return context
 
 
 class ChildUserCreateView(LoginRequiredMixin, CreateView):

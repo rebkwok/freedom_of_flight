@@ -1,9 +1,13 @@
 {% extends 'account/base.html' %}
-{% load static %}
+{% load accounttags static %}
 
 {% block content %}
     <div>
+        {% if managed_user %}
+            <h2>Edit Managed Account Profile</h2>
+        {% else %}
         <h2>Edit Your Account Profile</h2>
+        {% endif %}
     </div>
     <form action="" method="post">{% csrf_token %}
                     {% csrf_token %}
@@ -12,14 +16,18 @@
                                 {% if field.name == 'confirmation_key' %}
                                     <span class="hide">{{ field }}</span>
                                 {% elif field.name == "student" or field.name == "manager" %}
-                                    <div class="form-check mb-2">
-                                       {{ field }}
-                                       <label class="form-check-label" for="id_{{ field.name }}">{{ field.label }}{% if field.field.required %}*{% endif %}</label><br/>
-                                       <span class="helptext">{{ field.help_text }}</span>
-                                        {% if field.errors %}
-                                            <span class="errorlist">{{ field.errors }}</span>
-                                        {% endif %}
-                                   </div>
+                                    {% if managed_user %}
+                                        <span class="hide">{{ field }}</span>
+                                    {% else %}
+                                        <div class="form-check mb-2">
+                                           {{ field }}
+                                           <label class="form-check-label" for="id_{{ field.name }}">{{ field.label }}{% if field.field.required %}*{% endif %}</label><br/>
+                                           <span class="helptext">{{ field.help_text }}</span>
+                                            {% if field.errors %}
+                                                <span class="errorlist">{{ field.errors }}</span>
+                                            {% endif %}
+                                        </div>
+                                    {% endif %}
                                 {% else %}
                                     <div class="form-group">
                                        <label class="control-label" for="{{ field.name }}_id">{{ field.label }}{% if field.field.required %}*{% endif %}</label><br/>
