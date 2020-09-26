@@ -187,7 +187,6 @@ class DisclaimerContentAdmin(admin.ModelAdmin):
     form = DisclaimerContentAdminForm
 
 
-# which acts a bit like a singleton
 class UserProfileInline(admin.StackedInline):
     model = UserProfile
     can_delete = False

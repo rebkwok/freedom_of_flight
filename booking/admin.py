@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.utils import timezone
 
 from common.utils import full_name
 
@@ -6,6 +7,23 @@ from .models import (
     Block, BlockConfig, Booking, BlockVoucher, GiftVoucherType,
     Course, Event, EventType, Track, WaitingListUser, SubscriptionConfig, Subscription
 )
+
+
+class CourseFilter(admin.SimpleListFilter):
+
+    title = 'Upcoming Courses'
+    parameter_name = 'course'
+
+    def lookups(self, request, model_admin):
+        return [
+            (course.id, course) for course in Course.objects.all() if course.last_event_date is not None and
+            course.last_event_date >= timezone.now()
+        ]
+
+    def queryset(self, request, queryset):
+        if self.value():
+            return queryset.filter(event__course_id=self.value())
+        return queryset
 
 
 class BookingInline(admin.TabularInline):
@@ -38,9 +56,9 @@ class TrackAdmin(admin.ModelAdmin):
 
 class BookingAdmin(admin.ModelAdmin):
     model = Booking
-    list_filter = ["event"]
+    list_filter = ["event__event_type", CourseFilter]
     list_display = ["get_user", "event", "status", "no_show", "block"]
-    search_fields = ["user__first_name", "user__last_name"]
+    search_fields = ["user__first_name", "user__last_name", "event__name"]
 
     def get_user(self, obj):
         return full_name(obj.user)
@@ -63,6 +81,8 @@ class BlockAdmin(admin.ModelAdmin):
 
 class EventAdmin(admin.ModelAdmin):
     model = Event
+    list_filter = ["event_type"]
+    search_fields = ["name"]
     inlines = (BookingInline,)
 
 
