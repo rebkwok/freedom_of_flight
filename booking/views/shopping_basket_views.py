@@ -333,7 +333,7 @@ def stripe_checkout(request):
         return HttpResponseRedirect(checked_dict["redirect_url"])
     total = checked_dict["total"]
     invoice = checked_dict["invoice"]
-    logging.info("invoice id %s", invoice.invoice_id)
+    logger.info("Stripe checkout for invoice id %s", invoice.invoice_id)
     # Create the Stripe PaymentIntent
     stripe.api_key = settings.STRIPE_SECRET_KEY
     seller = Seller.objects.filter(site=Site.objects.get_current(request)).first()
@@ -375,7 +375,7 @@ def stripe_checkout(request):
                     context.update({"already_paid": True})
                 else:
                     context.update({"preprocessing_error": True})
-                logging.error(
+                logger.error(
                     "Error processing checkout for invoice: %s, payment intent: %s (%s)", invoice.invoice_id, payment_intent.id, str(error)
                 )
         # update/create the django model PaymentIntent - this isjust for records

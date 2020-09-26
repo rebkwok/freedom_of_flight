@@ -25,7 +25,7 @@ def process_ipn(sender, **kwargs):
                 try:
                     check_paypal_data(ipn_obj, invoice)
                 except PayPalProcessingError as e:
-                    logging.error("Error processing paypal PDT %s", e)
+                    logger.error("Error processing paypal PDT %s", e)
                     raise e
                 else:
                     # Everything is OK

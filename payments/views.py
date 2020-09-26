@@ -35,7 +35,7 @@ def paypal_return(request):
                 try:
                     check_paypal_data(pdt_obj, invoice)
                 except PayPalProcessingError as e:
-                    logging.error("Error processing paypal PDT %s", e)
+                    logger.error("Error processing paypal PDT %s", e)
                     failed = True
                     error = f"Error processing paypal PDT {e}",
                 else:
@@ -88,9 +88,9 @@ def paypal_test(request):
 
 def _process_completed_stripe_payment(payment_intent, invoice, seller=None):
     if not invoice.paid:
-        logging.info("Updating items to paid for invoice %s", invoice.invoice_id)
+        logger.info("Updating items to paid for invoice %s", invoice.invoice_id)
         check_stripe_data(payment_intent, invoice)
-        logging.info("Stripe check OK")
+        logger.info("Stripe check OK")
         for block in invoice.blocks.all():
             block.paid = True
             block.save()
@@ -129,17 +129,17 @@ def stripe_payment_complete(request):
                 _process_completed_stripe_payment(payment_intent, invoice, seller)
             except StripeProcessingError as e:
                 error = f"Error processing Stripe payment: {e}"
-                logging.error(e)
+                logger.error(e)
                 failed = True
         else:
             # No invoice retrieved, fail
             failed = True
             error = f"No invoice could be retrieved from succeeded payment intent {payment_intent.id}"
-            logging.error(error)
+            logger.error(error)
     else:
         failed = True
         error = f"Payment intent id {payment_intent.id} status: {payment_intent.status}"
-        logging.error(error)
+        logger.error(error)
     payment_intent.metadata.pop("invoice_id", None)
     payment_intent.metadata.pop("invoice_signature", None)
     if not failed:
@@ -160,15 +160,36 @@ def stripe_webhook(request):
         event = stripe.Webhook.construct_event(payload, sig_header, settings.STRIPE_ENDPOINT_SECRET)
     except ValueError as e:
         # Invalid payload
-        logging.error(e)
+        logger.error(e)
         return HttpResponse(status=400)
     except stripe.error.SignatureVerificationError as e:
         # Invalid signature
-        logging.error(e)
+        logger.error(e)
         return HttpResponse(status=400)
 
+    event_object = event.data.object
+    if event.type == "account.application.authorized":
+        connected_accounts = stripe.Account.list().data
+        for connected_account in connected_accounts:
+            seller = Seller.objects.filter(stripe_user_id=connected_account.id)
+            if not seller.exists():
+                logger.error(f"Connected Stripe account has no associated seller %s", connected_account.id)
+                return HttpResponse("Connected Stripe account has no associated seller", status=400)
+        return HttpResponse(status=200)
+
+    elif event.type == "account.application.deauthorized":
+        connected_accounts = stripe.Account.list().data
+        connected_account_ids = [account.id for account in connected_accounts]
+        for seller in Seller.objects.all():
+            if seller.stripe_user_id not in connected_account_ids:
+                seller.site = None
+                seller.save()
+                logger.info(f"Stripe account disconnected: %s", seller.stripe_user_id)
+                ActivityLog.objects.create(log=f"Stripe account disconnected: {seller.stripe_user_id}")
+        return HttpResponse(status=200)
+
     try:
-        payment_intent = event.data.object
+        payment_intent = event_object
         invoice = get_invoice_from_payment_intent(payment_intent, raise_immediately=True)
         error = None
         if event.type == "payment_intent.succeeded":
@@ -183,7 +204,7 @@ def stripe_webhook(request):
             send_failed_payment_emails(error=error)
             return HttpResponse(status=400)
     except Exception as e:  # log anything else
-        logging.error(e)
+        logger.error(e)
         send_failed_payment_emails(error=e)
         return HttpResponse(status=400)
     return HttpResponse(status=200)

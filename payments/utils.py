@@ -6,6 +6,9 @@ from .forms import PayPalPaymentsFormWithId, PayPalPaymentsForm
 from .models import Invoice
 
 
+logger = logging.getLogger(__name__)
+
+
 def get_paypal_form(request, invoice, paypal_test=False):
     # What you want the button to do.
     paypal_dict = {
@@ -93,7 +96,7 @@ def get_invoice_from_ipn_or_pdt(ipn_or_pdt, paypal_obj_type, raise_immediately=F
         # sometimes paypal doesn't send back the invoice id - try to retrieve it from the custom field
         invoice = retrieve_invoice_from_paypal_data(ipn_or_pdt)
         if invoice is None:
-            logging.error("Error processing paypal %s %s; could not find invoice", paypal_obj_type, ipn_or_pdt.id)
+            logger.error("Error processing paypal %s %s; could not find invoice", paypal_obj_type, ipn_or_pdt.id)
             if raise_immediately:
                 raise PayPalProcessingError(f"Error processing paypal {paypal_obj_type} {ipn_or_pdt.id}; could not find invoice")
             return None
@@ -103,7 +106,7 @@ def get_invoice_from_ipn_or_pdt(ipn_or_pdt, paypal_obj_type, raise_immediately=F
     try:
         return Invoice.objects.get(invoice_id=ipn_or_pdt.invoice)
     except Invoice.DoesNotExist:
-        logging.error("Error processing paypal %s %s; could not find invoice", paypal_obj_type, ipn_or_pdt.id)
+        logger.error("Error processing paypal %s %s; could not find invoice", paypal_obj_type, ipn_or_pdt.id)
         if raise_immediately:
             raise PayPalProcessingError(f"Error processing paypal {paypal_obj_type} {ipn_or_pdt.id}; could not find invoice")
         return None
@@ -131,7 +134,7 @@ def get_invoice_from_payment_intent(payment_intent, raise_immediately=False):
     try:
         return Invoice.objects.get(invoice_id=invoice_id)
     except Invoice.DoesNotExist:
-        logging.error("Error processing stripe payment intent %s; could not find invoice", payment_intent.id)
+        logger.error("Error processing stripe payment intent %s; could not find invoice", payment_intent.id)
         if raise_immediately:
             raise StripeProcessingError(f"Error processing stripe payment intent {payment_intent.id}; could not find invoice")
         return None

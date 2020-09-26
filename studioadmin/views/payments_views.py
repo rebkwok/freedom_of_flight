@@ -1,4 +1,5 @@
 from urllib.parse import urlencode
+import logging
 
 import requests
 
@@ -12,10 +13,10 @@ from django.views.generic import ListView, View
 from braces.views import LoginRequiredMixin
 
 from activitylog.models import ActivityLog
-from booking.models import Track, EventType, BlockConfig, SubscriptionConfig, Subscription
-from common.utils import full_name
 from payments.models import Seller, Invoice
 from .utils import StaffUserMixin, staff_required
+
+logger = logging.getLogger(__name__)
 
 
 @login_required
@@ -56,13 +57,14 @@ class StripeAuthorizeCallbackView(View):
             stripe_user_id = resp_data['stripe_user_id']
             stripe_access_token = resp_data['access_token']
             stripe_refresh_token = resp_data['refresh_token']
-            seller = Seller.objects.filter(user_id=self.request.user.id).first()
+            seller, _ = Seller.objects.get_or_create(user_id=self.request.user.id)
             seller.site = Site.objects.get_current(request)
             seller.stripe_access_token = stripe_access_token
             seller.stripe_refresh_token = stripe_refresh_token
             seller.stripe_user_id = stripe_user_id
             seller.save()
-
+            logger.info(f"Stripe account connected: %s", seller.stripe_user_id)
+            ActivityLog.objects.create(log=f"Stripe account connected: {seller.stripe_user_id}")
         return redirect(reverse('studioadmin:connect_stripe'))
 
 

@@ -6,8 +6,7 @@
         {% if request.user.is_staff %}
             <li class="nav-item"><a class="nav-link" href="{% url 'studioadmin:tracks' %}">Setup</a></li>
             <li class="nav-item"><a class="nav-link" href="{% url 'studioadmin:disclaimer_contents' %}">Policies</a></li>
-            <li class="nav-item"><a class="nav-link" href="{% url 'studioadmin:invoices' %}">Payments</a></li>
-            <li class="nav-item"><a class="nav-link" href="{% url 'studioadmin:block_configs' %}">Payment Plans</a></li>
+            <li class="nav-item"><a class="nav-link" href="{% url 'studioadmin:block_configs' %}">Payments</a></li>
         {% endif %}
         <li class="nav-item"><a class="nav-link" href="{% url 'studioadmin:registers' %}">Events/Registers</a></li>
         {% if request.user.is_staff %}
