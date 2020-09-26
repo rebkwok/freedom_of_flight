@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from datetime import timedelta
 from model_bakery import baker
-from unittest.mock import MagicMock, patch
+from unittest.mock import Mock, patch
 
 from django.contrib.sites.models import Site
 from django.urls import reverse
@@ -522,6 +522,19 @@ class StripeCheckoutTests(TestUsersMixin, TestCase):
     def setUpTestData(cls):
         cls.url = reverse('booking:stripe_checkout')
 
+    def get_mock_payment_intent(self, **params):
+        defaults = {
+            "id": "mock-intent-id",
+            "amount": 1000,
+            "description": "",
+            "status": "succeeded",
+            "metadata": {},
+            "currency": "gbp",
+            "client_secret": "secret"
+        }
+        options = {**defaults, **params}
+        return Mock(**options)
+
     def setUp(self):
         super().setUp()
         baker.make(Seller, site=Site.objects.get_current())
@@ -537,7 +550,7 @@ class StripeCheckoutTests(TestUsersMixin, TestCase):
 
     @patch("booking.views.shopping_basket_views.stripe.PaymentIntent")
     def test_creates_invoice_and_applies_to_unpaid_blocks_and_subscriptions(self, mock_payment_intent):
-        mock_payment_intent_obj = MagicMock(id="foo")
+        mock_payment_intent_obj = self.get_mock_payment_intent(id="foo")
         mock_payment_intent.create.return_value = mock_payment_intent_obj
         block = baker.make_recipe(
             "booking.dropin_block", block_config=self.dropin_block_config, user=self.student_user,
@@ -561,7 +574,7 @@ class StripeCheckoutTests(TestUsersMixin, TestCase):
 
     @patch("booking.views.shopping_basket_views.stripe.PaymentIntent")
     def test_invoice_user_is_manager_user(self, mock_payment_intent):
-        mock_payment_intent_obj = MagicMock(id="foo")
+        mock_payment_intent_obj = self.get_mock_payment_intent(id="foo")
         mock_payment_intent.create.return_value = mock_payment_intent_obj
         self.login(self.manager_user)
         block = baker.make_recipe(
@@ -584,7 +597,7 @@ class StripeCheckoutTests(TestUsersMixin, TestCase):
 
     @patch("booking.views.shopping_basket_views.stripe.PaymentIntent")
     def test_creates_invoice_and_applies_to_unpaid_blocks_with_vouchers(self, mock_payment_intent):
-        mock_payment_intent_obj = MagicMock(id="foo")
+        mock_payment_intent_obj = self.get_mock_payment_intent(id="foo")
         mock_payment_intent.create.return_value = mock_payment_intent_obj
         voucher = baker.make(BlockVoucher, discount=10)
         voucher.block_configs.add(self.dropin_block_config)
@@ -606,7 +619,7 @@ class StripeCheckoutTests(TestUsersMixin, TestCase):
 
     @patch("booking.views.shopping_basket_views.stripe.PaymentIntent")
     def test_zero_total(self, mock_payment_intent):
-        mock_payment_intent_obj = MagicMock(id="foo")
+        mock_payment_intent_obj = self.get_mock_payment_intent(id="foo")
         mock_payment_intent.create.return_value = mock_payment_intent_obj
         voucher = baker.make(BlockVoucher, code="test", discount=100, max_per_user=10)
         voucher.block_configs.add(self.dropin_block_config)
@@ -623,7 +636,7 @@ class StripeCheckoutTests(TestUsersMixin, TestCase):
 
     @patch("booking.views.shopping_basket_views.stripe.PaymentIntent")
     def test_uses_existing_invoice(self, mock_payment_intent):
-        mock_payment_intent_obj = MagicMock(id="foo")
+        mock_payment_intent_obj = self.get_mock_payment_intent(id="foo")
         mock_payment_intent.modify.return_value = mock_payment_intent_obj
         invoice = baker.make(
             Invoice, username=self.student_user.username, amount=20, transaction_id=None, paid=False,
@@ -651,7 +664,7 @@ class StripeCheckoutTests(TestUsersMixin, TestCase):
 
     @patch("booking.views.shopping_basket_views.stripe.PaymentIntent")
     def test_invoice_already_succeeded(self, mock_payment_intent):
-        mock_payment_intent_obj = MagicMock(id="foo", status="succeeded")
+        mock_payment_intent_obj = self.get_mock_payment_intent(id="foo", status="succeeded")
         mock_payment_intent.modify.side_effect = InvalidRequestError("error", None)
         mock_payment_intent.retrieve.return_value = mock_payment_intent_obj
 
@@ -668,7 +681,7 @@ class StripeCheckoutTests(TestUsersMixin, TestCase):
 
     @patch("booking.views.shopping_basket_views.stripe.PaymentIntent")
     def test_other_error_modifying_payment_intent(self, mock_payment_intent):
-        mock_payment_intent_obj = MagicMock(id="foo", status="pending")
+        mock_payment_intent_obj = self.get_mock_payment_intent(id="foo", status="pending")
         mock_payment_intent.modify.side_effect = InvalidRequestError("error", None)
         mock_payment_intent.retrieve.return_value = mock_payment_intent_obj
 
