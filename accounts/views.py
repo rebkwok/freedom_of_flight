@@ -79,6 +79,8 @@ class ManagedProfileUpdateView(ProfileUpdateView):
 
     def dispatch(self, request, *args, **kwargs):
         self.account_user = get_object_or_404(User, pk=kwargs.get("user_id"))
+        if self.account_user not in request.user.managed_users:
+            return HttpResponseRedirect(reverse("accounts:profile"))
         return super(ProfileUpdateView, self).dispatch(request, *args, **kwargs)
 
     def get_object(self):
