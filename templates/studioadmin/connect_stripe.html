@@ -15,7 +15,11 @@
         <p>WARNING! You do not have permission to connect a Stripe account. Please contact an administrator. </p>
     {% else %}
         {% if not request.user.seller.stripe_user_id or not request.user.seller.site %}
-            <a href="{% url 'studioadmin:authorize_stripe' %}" class="btn btn-info">Connect Stripe Account</a>
+            {% if site_seller %}
+                <p>A Stripe account is already connected for this site.</p>
+            {% else %}
+                <a href="{% url 'studioadmin:authorize_stripe' %}" class="btn btn-info">Connect Stripe Account</a>
+            {% endif %}
         {% else %}
             <p>Your Stripe account id <strong>{{ request.user.seller.stripe_user_id }}</strong> is connected.</p>
         {% endif %}

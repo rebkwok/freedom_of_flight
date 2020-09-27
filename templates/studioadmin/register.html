@@ -28,10 +28,10 @@
             <tr class="compress">
                 <th scope="col" class="text-center"></th>
                 <th scope="col" class="text-center">Attended</th>
-                <th scope="col" class="text-center" >Status</th>
                 <th scope="col" class="text-center">User</th>
-                <th scope="col" class="text-center">Disclaimer</th>
-                <th scope="col" class="text-center">Block/Subscription</th>
+                <th scope="col" class="text-center" style="min-width: 100px;">Notes</th>
+                <th scope="col" class="text-center">Details</th>
+                <th scope="col" class="text-center">Block</th>
             </tr>
             </thead>
             <!-- Modal -->
@@ -39,8 +39,12 @@
             <!-- /.modal -->
 
             <tbody>
-            {% if bookings %}
-                {% for booking in bookings %}
+            {% if register_formset.forms %}
+                <form method="post">
+                {% csrf_token %}
+                {{ register_formset.management_form }}
+                {% for form in register_formset.forms %}
+                    {% with form.instance as booking %}
                     <tr id='booking-row-{{ booking.id }}' class="compress{% if booking.no_show or booking.status == 'CANCELLED' %} expired{% endif %}">
                         {% if status_choice == 'CANCELLED' %}
                             <td></td>
@@ -66,8 +70,8 @@
                                 </div>
                             </td>
                         {% endif %}
-                        <td class="text-center" id="booking-status-{{ booking.id }}">{{ booking.status }}</td>
                         <td class="text-center"> {{ booking.user.first_name }} {{ booking.user.last_name }}</td>
+                        <td>{{ form.as_p }}</td>
                         <td class="text-center">
                             {% if booking.user|has_disclaimer or booking.user|has_expired_disclaimer %}
                                 <a href="{% url 'studioadmin:user_detail' booking.user.id %}" target="_blank"><span id="disclaimer" class="far fa-file-alt"></span></a>
@@ -77,33 +81,33 @@
                             {% endif %}
                         </td>
                         <td class="text-center">
-                            {% if booking.block %}
-                                {{ booking.block.block_config }} <span class="helptext">(exp: {{ booking.block.expiry_date|date:"d-M-y" }})</span>
-                            {% elif booking.subscription %}
-                                {{ booking.subscription.config }} <span class="helptext">(exp: {{ booking.subscription.expiry_date|date:"d-M-y" }})</span>
-                            {% else %}
-                                {% if booking.status == "OPEN" and not booking.no_show %}
-                                    {% if booking.has_available_subscription or booking.has_available_block %}
-                                        WARNING: USER'S SUBSCRIPTION/BLOCK NOT ASSIGNED
-                                    {% else  %}
-                                        WARNING: USER HAS NO SUBSCRIPTION/BLOCK
-                                    {% endif %}
-                                {% endif %}
-                            {% endif %}
+
+                            <div class="d-none d-sm-block">
+                                {% include 'studioadmin/includes/register_block_display.html' %}
+                            </div>
+                            <div class="d-block d-sm-none">
+                                <div type="button" data-toggle="tooltip" data-html="true" data-placement="top"
+                                        title="{% include 'studioadmin/includes/register_block_display.html' %}">
+                                  <i class="text-dark far fa-question-circle"></i>
+                                </div>
+                            </div>
                         </td>
                     </tr>
+                    {% endwith %}
                 {% endfor %}
+                <tr><td colspan="7"><input class="btn btn-xs btn-success" type="submit" value="Save"/></td>
             {% else %}
-                <tr><td colspan="6">No bookings for this {{ event.event_type.label }}</td></tr>
+                <tr><td colspan="7">No bookings for this {{ event.event_type.label }}</td></tr>
+            </form>
             {% endif %}
             </tbody>
             <tfoot>
             <tr>
-                <td colspan="6">
+                <td colspan="7">
                 {% if not event.course %}
                     <a
                         id="add-more-btn"
-                        class="bookingadd btn btn-success {% if not can_add_more %}disabled{% endif %}"
+                        class="bookingadd btn btn-xs btn-success {% if not can_add_more %}disabled{% endif %}"
                         href="#" data-form="{% url 'studioadmin:bookingregisteradd' event.id %}"
                         title="add booking"
                     >Add booking</a>
@@ -136,5 +140,5 @@
 {% else %}
     <script type='text/javascript' src="{% static 'js/jquery.form-4.3.0.min.js' %}"></script>
 {% endif %}
-<script type='text/javascript' src="{% static 'studioadmin/js/register_ajax-v1.js' %}"></script>
+<script type='text/javascript' src="{% static 'studioadmin/js/register_ajax-v2.js' %}"></script>
 {% endblock %}

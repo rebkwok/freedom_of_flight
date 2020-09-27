@@ -1,0 +1,14 @@
+{% if booking.block %}
+    {{ booking.block.block_config }} <span class='helptext'>(exp: {{ booking.block.expiry_date|date:'d-M-y' }})</span>
+{% elif booking.subscription %}
+    {{ booking.subscription.config }} <span class='helptext'>(exp: {{ booking.subscription.expiry_date|date:'d-M-y' }})</span>
+{% else %}
+
+    {% if booking.status == 'OPEN' and not booking.no_show %}
+        {% if booking.has_available_subscription or booking.has_available_block %}
+            WARNING: USER'S SUBSCRIPTION/BLOCK NOT ASSIGNED
+        {% else  %}
+            WARNING: USER HAS NO SUBSCRIPTION/BLOCK
+        {% endif %}
+    {% endif %}
+{% endif %}

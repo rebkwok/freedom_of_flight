@@ -40,8 +40,11 @@ const processToggleAttended = function()  {
            $('#booking-attended-' + booking_id).addClass('btn-success').removeClass('btn-outline-secondary');
            $('#booking-noshow-' + booking_id).addClass('btn-outline-secondary').removeClass('btn-danger');
            $('#booking-row-' + booking_id).removeClass('expired');
-           $('#booking-status-' + booking_id).html('OPEN');
-       } else {
+       } else if (result.no_show === false) {  // neither no-show or attended
+           $('#booking-row-' + booking_id).removeClass('expired');
+           $('#booking-attended-' + booking_id).addClass('btn-outline-secondary').removeClass('btn-success');
+           $('#booking-noshow-' + booking_id).addClass('btn-outline-secondary').removeClass('btn-danger')
+       } else {  // no-show
            $('#booking-row-' + booking_id).addClass('expired');
            $('#booking-attended-' + booking_id).addClass('btn-outline-secondary').removeClass('btn-success');
            $('#booking-noshow-' + booking_id).addClass('btn-danger').removeClass('btn-outline-secondary');

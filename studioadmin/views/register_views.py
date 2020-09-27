@@ -2,12 +2,13 @@ from datetime import timedelta
 
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.http import HttpResponseBadRequest, JsonResponse, HttpResponse
+from django.http import HttpResponseBadRequest, JsonResponse, HttpResponse, HttpResponseRedirect
 from django.template.response import TemplateResponse
 from django.template.loader import render_to_string
 from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_http_methods
 from django.utils import timezone
+from django.urls import reverse
 
 from braces.views import LoginRequiredMixin
 
@@ -16,7 +17,7 @@ from booking.email_helpers import send_waiting_list_email
 from booking.models import Booking, Event, WaitingListUser
 from booking.utils import get_active_user_block, get_available_user_subscription
 
-from ..forms import AddRegisterBookingForm
+from ..forms import AddRegisterBookingForm, RegisterFormSet
 from .event_views import BaseEventAdminListView
 from .utils import is_instructor_or_staff, InstructorOrStaffUserMixin
 
@@ -33,13 +34,21 @@ class RegisterListView(LoginRequiredMixin, InstructorOrStaffUserMixin, BaseEvent
 @login_required
 @is_instructor_or_staff
 def register_view(request, event_id):
+    template = 'studioadmin/register.html'
     event = get_object_or_404(Event, pk=event_id)
     bookings = event.bookings.filter(status="OPEN").order_by('date_booked')
-    template = 'studioadmin/register.html'
+
+    if request.method == 'POST':
+        formset = RegisterFormSet(request.POST, queryset=bookings)
+        if formset.is_valid():
+            formset.save()
+            return HttpResponseRedirect(reverse("studioadmin:register", args=(event_id,)))
+    else:
+        register_formset = RegisterFormSet(queryset=bookings)
 
     return TemplateResponse(
         request, template, {
-            'event': event, 'bookings': bookings,
+            'event': event, 'bookings': bookings, "register_formset": register_formset,
             'can_add_more': event.spaces_left > 0,
         }
     )
@@ -131,12 +140,18 @@ def ajax_toggle_attended(request, booking_id):
                 and (booking.no_show or booking.status == 'CANCELLED') and booking.event.spaces_left == 0:
             return HttpResponseBadRequest(f'{booking.event.event_type.label.title()} is now full, cannot reopen booking.')
         else:
-            booking.status = 'OPEN'
-            booking.attended = True
-            booking.no_show = False
+            if booking.attended:  # clicking on attended again - toggle off
+                booking.attended = False
+            else:
+                booking.status = 'OPEN'
+                booking.attended = True
+                booking.no_show = False
     elif attendance == 'no-show':
-        booking.attended = False
-        booking.no_show = True
+        if booking.no_show: # clicking on no-show again - toggle off
+            booking.no_show = False
+        else:
+            booking.attended = False
+            booking.no_show = True
     booking.save()
 
     ActivityLog.objects.create(
@@ -152,5 +167,5 @@ def ajax_toggle_attended(request, booking_id):
         waiting_list_users = WaitingListUser.objects.filter(event=booking.event)
         send_waiting_list_email(booking.event, waiting_list_users, host)
     return JsonResponse(
-        {'attended': booking.attended, "spaces_left": booking.event.spaces_left, 'alert_msg': alert_msg}
+        {'attended': booking.attended, 'no_show': booking.no_show, "spaces_left": booking.event.spaces_left, 'alert_msg': alert_msg}
     )

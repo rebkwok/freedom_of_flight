@@ -22,7 +22,8 @@ logger = logging.getLogger(__name__)
 @login_required
 @staff_required
 def connect_stripe_view(request):
-    return render(request, "studioadmin/connect_stripe.html")
+    site_seller = Seller.objects.filter(site=Site.objects.get_current(request)).first()
+    return render(request, "studioadmin/connect_stripe.html", {"site_seller": site_seller})
 
 
 class StripeAuthorizeView(LoginRequiredMixin, StaffUserMixin, View):

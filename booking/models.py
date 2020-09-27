@@ -1104,6 +1104,7 @@ class Booking(models.Model):
     status = models.CharField(max_length=255, choices=STATUS_CHOICES, default='OPEN')
     attended = models.BooleanField(default=False, help_text='Student has attended this event')
     no_show = models.BooleanField(default=False, help_text='Student booked but did not attend, or cancelled after the allowed cancellation period')
+    notes = models.CharField(max_length=255, null=True, blank=True)
 
     class Meta:
         unique_together = ('user', 'event')

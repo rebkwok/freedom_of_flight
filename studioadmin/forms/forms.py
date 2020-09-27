@@ -75,6 +75,16 @@ class BlockConfigModelChoiceField(forms.ModelChoiceField):
         return f"{obj.name}{' (not active)' if not obj.active else ''}"
 
 
+class RegisterBookingForm(forms.ModelForm):
+    class Meta:
+        model = Booking
+        fields = ("notes",)
+        labels = {"notes": ""}
+        widgets = {"notes": forms.TextInput(attrs={"class": "form-control"})}
+
+RegisterFormSet = forms.modelformset_factory(Booking, form=RegisterBookingForm, extra=0, can_delete=False)
+
+
 class AddRegisterBookingForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
