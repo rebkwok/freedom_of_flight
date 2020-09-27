@@ -58,13 +58,13 @@ class RegisterViewTests(TestUsersMixin, TestCase):
     def test_shows_enabled_add_new_booking_button(self):
         self.login(self.staff_user)
         resp = self.client.get(self.url)
-        assert "bookingadd btn btn-success" in resp.rendered_content
-        assert "bookingadd btn btn-success disabled" not in resp.rendered_content
+        assert "bookingadd btn btn-xs btn-success" in resp.rendered_content
+        assert "bookingadd btn btn-xs btn-success disabled" not in resp.rendered_content
 
         for i in range(self.event.max_participants):
             baker.make(Booking, event=self.event)
         resp = self.client.get(self.url)
-        assert "bookingadd btn btn-success disabled" in resp.rendered_content
+        assert "bookingadd btn btn-xs btn-success disabled" in resp.rendered_content
 
     def test_shows_open_and_no_show_bookings(self):
         baker.make(Booking, event=self.event, status="OPEN")

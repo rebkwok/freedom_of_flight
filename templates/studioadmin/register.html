@@ -95,15 +95,15 @@
                     </tr>
                     {% endwith %}
                 {% endfor %}
-                <tr><td colspan="7"><input class="btn btn-xs btn-success" type="submit" value="Save"/></td>
+                <tr><td colspan="6"><input class="btn btn-xs btn-success" type="submit" value="Save"/></td>
             {% else %}
-                <tr><td colspan="7">No bookings for this {{ event.event_type.label }}</td></tr>
+                <tr><td colspan="6">No bookings for this {{ event.event_type.label }}</td></tr>
             </form>
             {% endif %}
             </tbody>
             <tfoot>
             <tr>
-                <td colspan="7">
+                <td colspan="6">
                 {% if not event.course %}
                     <a
                         id="add-more-btn"
