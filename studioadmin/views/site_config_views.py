@@ -2,22 +2,19 @@ from django import forms
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
-from django.forms.models import formset_factory
 from django.template.loader import render_to_string
 from django.template.response import TemplateResponse
 from django.shortcuts import get_object_or_404, render, HttpResponseRedirect
-from django.views.decorators.http import require_http_methods
-from django.views.generic import ListView, CreateView, UpdateView
+from django.views.generic import View, ListView, CreateView, UpdateView
 from django.urls import reverse
-from django.utils import timezone
 
 from braces.views import LoginRequiredMixin
 
 from activitylog.models import ActivityLog
-from booking.models import Track, EventType, BlockConfig, SubscriptionConfig, Subscription
+from booking.models import Track, EventType
 from common.utils import full_name
 
-from ..forms import EventTypeForm, BlockConfigForm, SubscriptionConfigForm, BookableEventTypesForm
+from ..forms import EventTypeForm
 from .utils import staff_required, StaffUserMixin, is_instructor_or_staff
 
 

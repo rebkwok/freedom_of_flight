@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% load bookingtags static %}
+{% load accounttags bookingtags static %}
 
 
 {% block content %}
@@ -8,12 +8,29 @@
 <div class="row">
     <div class="col-12 mt-5">
     <div class="card">
-        <div class="card-header"><h2>Payment Processed</h2></div>
+        <div class="card-header text-center">
+            <i class="font-weight-lighter text-success far fa-check-circle fa-5x"></i>
+        </div>
         <div class="card-body">
-            <h4 class="card-title"></h4>
+            <h4 class="card-title">Payment Processed</h4>
             <p class="card-text">
-                Thank you for your payment. Your transaction has been completed and we've emailed you confirmation and transaction details.
+                Thank you for your payment. Your transaction has been completed and you'll receive confirmation by email shortly.
             </p>
+
+                <table class="table table-bordered">
+                <thead>
+                    <th>Item</th>
+                    <th>Cost</th>
+                </thead>
+                <tbody>
+                    {% for item in cart_items %}
+                        <tr>
+                            <td>{{ item.name }}</td>
+                            <td>{{ item.cost }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+                </table>
 
             <p>
                 <strong><span class="text-danger">Please note</span>: purchasing a credit block or subscription does not automatically book you into

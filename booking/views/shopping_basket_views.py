@@ -2,15 +2,19 @@
 from decimal import Decimal
 import logging
 
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
+from django.contrib.sites.models import Site
 from django.contrib import messages
 from django.template.response import TemplateResponse
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, render, HttpResponseRedirect
 from django.views.decorators.http import require_http_methods
 from django.http import JsonResponse
 from django.urls import reverse
 
-from payments.models import Invoice
+import stripe
+
+from payments.models import Invoice, Seller, StripePaymentIntent
 from payments.utils import get_paypal_form
 
 from common.utils import full_name
@@ -210,22 +214,7 @@ def shopping_basket(request):
     )
 
 
-@login_required
-@require_http_methods(['POST'])
-def ajax_checkout(request):
-    """
-    Called when clicking on checkout from the shopping basket page
-    Re-check the voucher codes and the total
-    """
-    total = Decimal(request.POST.get("cart_total"))
-    unpaid_blocks = get_unpaid_user_managed_blocks(request.user)
-    unpaid_subscriptions = get_unpaid_user_managed_subscriptions(request.user)
-
-    if not (unpaid_blocks or unpaid_subscriptions):
-        messages.warning(request, "Your cart is empty")
-        url = reverse("booking:shopping_basket")
-        return JsonResponse({"redirect": True, "url": url})
-
+def _verify_block_vouchers(unpaid_blocks):
     # verify any vouchers on blocks
     for block in unpaid_blocks:
         if block.voucher:
@@ -240,11 +229,30 @@ def ajax_checkout(request):
             except VoucherValidationError:
                 block.voucher = None
                 block.save()
+
+
+def _check_items_and_get_updated_invoice(request):
+    total = Decimal(request.POST.get("cart_total"))
+    unpaid_blocks = get_unpaid_user_managed_blocks(request.user)
+    unpaid_subscriptions = get_unpaid_user_managed_subscriptions(request.user)
+    checked = {
+        "total": total,
+        "invoice": None,
+        "redirect": False,
+        "redirect_url": None
+    }
+
+    if not (unpaid_blocks or unpaid_subscriptions):
+        messages.warning(request, "Your cart is empty")
+        checked.update({"redirect": True, "redirect_url": reverse("booking:shopping_basket")})
+        return checked
+
+    _verify_block_vouchers(unpaid_blocks)
     check_total = calculate_user_cart_total(unpaid_blocks=unpaid_blocks, unpaid_subscriptions=unpaid_subscriptions)
     if total != check_total:
         messages.error(request, "Some cart items changed; please check and try again")
-        url = reverse('booking:shopping_basket')
-        return JsonResponse({"redirect": True, "url": url})
+        checked.update({"redirect": True, "redirect_url": reverse("booking:shopping_basket")})
+        return checked
 
     if unpaid_blocks and calculate_user_cart_total(unpaid_blocks=unpaid_blocks) == 0:
         # vouchers apply to blocks only; if we have blocks in the cart and the total for blocks only is 0, then a
@@ -253,33 +261,56 @@ def ajax_checkout(request):
             block.paid = True
             block.save()
         messages.success(request, "Voucher applied successfully; block ready to use")
-        url = reverse("booking:blocks")
-        return JsonResponse({"redirect": True, "url": url})
+        checked.update({"redirect": True, "redirect_url": reverse("booking:blocks")})
+        return checked
 
     # NOTE: invoice user will always be the request.user, not any attached sub-user
     # May be different to the user on the purchased blocks
+    unpaid_block_ids = {block.id for block in unpaid_blocks}
+    unpaid_subscription_ids = {subscription.id for subscription in unpaid_subscriptions}
     def _get_matching_invoice(invoices):
         for invoice in invoices:
-            invoice_blocks = invoice.blocks.all()
-            invoice_subscriptions = invoice.subscriptions.all()
-            if unpaid_blocks.count() == invoice.blocks.count() and unpaid_subscriptions.count() == invoice.subscriptions.count():
-                if all(True for invoice_block in invoice_blocks if invoice_block in unpaid_blocks) \
-                        and all(True for invoice_subscription in invoice_subscriptions if invoice_subscription in unpaid_subscriptions):
-                    return invoice
+            if {block.id for block in invoice.blocks.all()} == unpaid_block_ids \
+                    and {subscription.id for subscription in invoice.subscriptions.all()} == unpaid_subscription_ids:
+                return invoice
 
-    # check for an existing unpaid invoice with this user and amount
-    invoices = Invoice.objects.filter(username=request.user.username, amount=Decimal(total), transaction_id__isnull=True)
+    # check for an existing unpaid invoice for this user
+    invoices = Invoice.objects.filter(username=request.user.username, paid=False)
     # if any exist, check for one where the blocks and subscriptions are the same
     invoice = _get_matching_invoice(invoices)
+
     if invoice is None:
-        invoice = Invoice.objects.create(invoice_id=Invoice.generate_invoice_id(), amount=Decimal(total), username=request.user.username)
+        invoice = Invoice.objects.create(
+            invoice_id=Invoice.generate_invoice_id(), amount=Decimal(total), username=request.user.username
+        )
         for block in unpaid_blocks:
             block.invoice = invoice
             block.save()
         for subscription in unpaid_subscriptions:
             subscription.invoice = invoice
             subscription.save()
+    else:
+        # If an invoice with the expected items is found, make sure it's total is current
+        invoice.amount = Decimal(total)
+        invoice.save()
 
+    checked.update({"invoice": invoice})
+    return checked
+
+
+@login_required
+@require_http_methods(['POST'])
+def ajax_checkout(request):
+    """
+    Called when clicking on checkout from the shopping basket page
+    Re-check the voucher codes and the total
+    """
+    checked_dict = _check_items_and_get_updated_invoice(request)
+    if checked_dict["redirect"]:
+        return JsonResponse({"redirect": True, "url": checked_dict["redirect_url"]})
+
+    total = checked_dict["total"]
+    invoice = checked_dict["invoice"]
     # encrypted custom field so we can verify it on return from paypal
     paypal_form = get_paypal_form(request, invoice)
     paypal_form_html = render(request, "payments/includes/paypal_button.html", {"form": paypal_form})
@@ -288,3 +319,81 @@ def ajax_checkout(request):
             "paypal_form_html": paypal_form_html.content.decode("utf-8"),
         }
     )
+
+
+@login_required
+@require_http_methods(['POST'])
+def stripe_checkout(request):
+    """
+    Called when clicking on checkout from the shopping basket page
+    Re-check the voucher codes and the total
+    """
+    checked_dict = _check_items_and_get_updated_invoice(request)
+    if checked_dict["redirect"]:
+        return HttpResponseRedirect(checked_dict["redirect_url"])
+    total = checked_dict["total"]
+    invoice = checked_dict["invoice"]
+    logger.info("Stripe checkout for invoice id %s", invoice.invoice_id)
+    # Create the Stripe PaymentIntent
+    stripe.api_key = settings.STRIPE_SECRET_KEY
+    seller = Seller.objects.filter(site=Site.objects.get_current(request)).first()
+
+    context = {}
+    if seller is None:
+        logger.error("No seller found on Stripe checkout attempt")
+        context.update({"preprocessing_error": True})
+    else:
+        stripe_account = seller.stripe_user_id
+        # Stripe requires the amount as an integer, in pence
+        total_as_int = int(total * 100)
+
+        payment_intent_data = {
+            "payment_method_types": ['card'],
+            "amount": total_as_int,
+            "currency": 'gbp',
+            "stripe_account": stripe_account,
+            "description": f"{full_name(request.user)}-invoice#{invoice.invoice_id}",
+            "metadata": {
+                "invoice_id": invoice.invoice_id, "invoice_signature": invoice.signature(), **invoice.items_metadata()},
+        }
+
+        if not invoice.stripe_payment_intent_id:
+            payment_intent = stripe.PaymentIntent.create(**payment_intent_data)
+            invoice.stripe_payment_intent_id = payment_intent.id
+            invoice.save()
+        else:
+            try:
+                payment_intent = stripe.PaymentIntent.modify(
+                    invoice.stripe_payment_intent_id, **payment_intent_data,
+                )
+            except stripe.error.InvalidRequestError as error:
+                payment_intent = stripe.PaymentIntent.retrieve(
+                    invoice.stripe_payment_intent_id, stripe_account=stripe_account
+                )
+                if payment_intent.status == "succeeded":
+                    context.update({"preprocessing_error": True})
+                    context.update({"already_paid": True})
+                else:
+                    context.update({"preprocessing_error": True})
+                logger.error(
+                    "Error processing checkout for invoice: %s, payment intent: %s (%s)", invoice.invoice_id, payment_intent.id, str(error)
+                )
+        # update/create the django model PaymentIntent - this isjust for records
+        StripePaymentIntent.update_or_create_payment_intent_instance(payment_intent, invoice, seller)
+
+        context.update({
+            "client_secret": payment_intent.client_secret,
+            "stripe_account": stripe_account,
+            "stripe_api_key": settings.STRIPE_PUBLISHABLE_KEY,
+            "cart_items": invoice.items_dict(),
+            "cart_total": total,
+         })
+    return TemplateResponse(request, "booking/checkout.html", context)
+
+
+def check_total(request):
+    unpaid_blocks = get_unpaid_user_managed_blocks(request.user)
+    unpaid_subscriptions = get_unpaid_user_managed_subscriptions(request.user)
+    _verify_block_vouchers(unpaid_blocks)
+    check_total = calculate_user_cart_total(unpaid_blocks=unpaid_blocks, unpaid_subscriptions=unpaid_subscriptions)
+    return JsonResponse({"total": check_total})

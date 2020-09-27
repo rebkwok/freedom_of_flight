@@ -32,5 +32,6 @@ def booking(request):
         'available_users': available_users,
         'cart_item_count': cart_item_count,
         'view_as_user': view_as_user,
+        'checkout_method': settings.CHECKOUT_METHOD,
     }
 

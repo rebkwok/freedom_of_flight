@@ -42,6 +42,8 @@ def course_purchase_view(request, course_slug):
     return render(request, "booking/purchase_options.html", context)
 
 
+@data_privacy_required
+@login_required
 def purchase_view(request):
     context = {**block_config_context(request), **subscription_config_context(request)}
     return render(request, "booking/purchase_options.html", context)

@@ -77,6 +77,7 @@ class BaseUserProfile(models.Model):
 class UserProfile(BaseUserProfile):
     student = models.BooleanField(default=True)
     manager = models.BooleanField(default=False)
+    seller = models.BooleanField(default=False)
 
     def __str__(self):
         return self.user.username
@@ -552,6 +553,15 @@ def is_manager(self):
 
 
 @property
+def is_seller(self):
+    if hasattr(self, "userprofile"):
+        return self.userprofile.seller
+    else:
+        UserProfile.objects.create(user=self)
+    return False
+
+
+@property
 def manager_user(self):
     if hasattr(self, "childuserprofile"):
         return self.childuserprofile.parent_user_profile.user
@@ -561,5 +571,6 @@ User.add_to_class("managed_users", managed_users)
 User.add_to_class("managed_users_excluding_self", managed_users_excluding_self)
 User.add_to_class("is_student", is_student)
 User.add_to_class("is_manager", is_manager)
+User.add_to_class("is_seller", is_seller)
 User.add_to_class("is_instructor", is_instructor)
 User.add_to_class("manager_user", manager_user)

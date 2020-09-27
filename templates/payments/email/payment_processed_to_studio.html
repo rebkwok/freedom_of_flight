@@ -3,7 +3,7 @@
 {% block messagecontent %}
 <h2>Payment processed</h2>
 <p><strong>Invoice number:</strong> {{ invoice.invoice_id }}</p>
-<p><strong>Paypal Transaction id:</strong> {{ invoice.transaction_id }}</p>
+{% if invoice.transaction_id %}<p><strong>Paypal Transaction id:</strong> {{ invoice.transaction_id }}</p>{% endif %}
 <p><strong>User: {{ user.first_name}} {{ user.last_name}}</strong></p>
 <p><strong>Purchased:</strong>
     <ul>

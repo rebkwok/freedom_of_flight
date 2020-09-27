@@ -87,6 +87,7 @@
               <tr>
                   <td colspan="2">
                       <strong>TOTAL: £ <span id="total">{{ total_cost }}</span></strong>
+                    {% if checkout_method == "paypal" %}
                       <span
                           class="ajax-checkout-btn"
                           id="checkout-btn"
@@ -96,7 +97,13 @@
                       </span>
 
                       <span id="paypal-btn-wrapper"><span id="paypal-checkout-btn"></span></span>
-
+                    {% elif checkout_method == "stripe" %}
+                      <form method="post" action="{% url 'booking:stripe_checkout' %}">
+                          {% csrf_token %}
+                          <input type="hidden" name="cart_total" value="{{ total_cost }}">
+                          <input class="btn btn-xs btn-xs-wide btn-warning mb-1" type="submit" value="{% if total_cost > 0 %}Checkout{% else %}Submit{% endif %}">
+                      </form>
+                    {% endif %}
                       <a class="btn btn-xs btn-outline-primary" href="{% url 'booking:purchase_options' %}">Add more items</a>
                       <hr>
                           <form name="block_voucher_form" class="form-inline" method="post" action="">

@@ -3,7 +3,9 @@
 {% block messagecontent %}
 <h2>Thank you for your payment.</h2>
 <p><strong>Invoice number:</strong> {{ invoice.invoice_id }}</p>
+{% if invoice.transaction_id %}
 <p><strong>Paypal Transaction id:</strong> {{ invoice.transaction_id }}</p>
+{% endif %}
 <p><strong>Purchased:</strong>
     <ul>
         {% for block in invoice.blocks.all %}

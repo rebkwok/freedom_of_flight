@@ -16,7 +16,6 @@ class BlockPurchaseViewTests(TestUsersMixin, TestCase):
         self.make_data_privacy_agreement(self.manager_user)
         self.make_disclaimer(self.student_user)
         self.make_disclaimer(self.child_user)
-
         self.login(self.student_user)
 
     @classmethod
@@ -29,6 +28,13 @@ class BlockPurchaseViewTests(TestUsersMixin, TestCase):
             size=4, duration=2
         )
         cls.courseconfig = baker.make(BlockConfig, course=True, event_type=event_type, size=3, active=True)
+
+    def test_no_data_privacy_agreement(self):
+        self.student_user.data_privacy_agreement.all().delete()
+        cache.clear()
+        resp = self.client.get(self.url)
+        assert resp.status_code == 302
+        assert resp.url == reverse('accounts:data_privacy_review') + '?next=' + self.url
 
     def test_list_active_block_configs(self):
         resp = self.client.get(self.url)

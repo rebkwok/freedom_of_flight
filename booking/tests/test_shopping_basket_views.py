@@ -1,14 +1,18 @@
 # -*- coding: utf-8 -*-
 from datetime import timedelta
 from model_bakery import baker
+from unittest.mock import Mock, patch
 
+from django.contrib.sites.models import Site
 from django.urls import reverse
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
+
+from stripe.error import InvalidRequestError
 
 from booking.models import Block, BlockConfig, BlockVoucher, Subscription, SubscriptionConfig
 from common.test_utils import TestUsersMixin
-from payments.models import Invoice
+from payments.models import Invoice, Seller
 
 
 class ShoppingBasketViewTests(TestUsersMixin, TestCase):
@@ -311,6 +315,7 @@ class ShoppingBasketViewTests(TestUsersMixin, TestCase):
         assert list(resp.context_data["applied_voucher_codes_and_discount"]) == [("foo", 10, None), ("test", 50, None)]
         assert resp.context_data["total_cost"] == 46
 
+    @override_settings(CHECKOUT_METHOD="paypal")
     def test_payment_button_when_total_is_zero(self):
         voucher = baker.make(BlockVoucher, code="test", discount=50, max_per_user=10)
         voucher.block_configs.add(self.dropin_block_config)
@@ -326,6 +331,24 @@ class ShoppingBasketViewTests(TestUsersMixin, TestCase):
         resp = self.client.post(self.url, data={"add_voucher_code": "add_voucher_code", "code": "test"})
         assert resp.context_data["total_cost"] == 0
         assert "Checkout with PayPal" not in resp.rendered_content
+        assert "Submit" in resp.rendered_content
+
+    @override_settings(CHECKOUT_METHOD="stripe")
+    def test_stripe_payment_button_when_total_is_zero(self):
+        voucher = baker.make(BlockVoucher, code="test", discount=50, max_per_user=10)
+        voucher.block_configs.add(self.dropin_block_config)
+        baker.make_recipe(
+            "booking.dropin_block", block_config=self.dropin_block_config, user=self.student_user,
+        )
+        resp = self.client.post(self.url, data={"add_voucher_code": "add_voucher_code", "code": "test"})
+        assert resp.context_data["total_cost"] == 10
+        assert "Checkout" in resp.rendered_content
+
+        voucher.discount = 100
+        voucher.save()
+        resp = self.client.post(self.url, data={"add_voucher_code": "add_voucher_code", "code": "test"})
+        assert resp.context_data["total_cost"] == 0
+        assert "Checkout" not in resp.rendered_content
         assert "Submit" in resp.rendered_content
 
 
@@ -346,6 +369,12 @@ class AjaxShoppingBasketCheckoutTests(TestUsersMixin, TestCase):
         self.dropin_block_config = baker.make(BlockConfig, cost=20)
         self.course_block_config = baker.make(BlockConfig, cost=40)
         self.subscription_config = baker.make(SubscriptionConfig, cost=50)
+
+    def test_no_unpaid_items(self):
+        # If no unpaid items, ignore any cart total passed and return to shopping basket
+        resp = self.client.post(self.url, data={"cart_total": 10}).json()
+        assert resp["redirect"] is True
+        assert resp["url"] == reverse("booking:shopping_basket")
 
     def test_rechecks_total(self):
         baker.make_recipe(
@@ -485,3 +514,209 @@ class AjaxShoppingBasketCheckoutTests(TestUsersMixin, TestCase):
         assert Invoice.objects.count() == 1
         assert block.invoice == invoice
         assert "paypal_form_html" in resp
+
+
+class StripeCheckoutTests(TestUsersMixin, TestCase):
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.url = reverse('booking:stripe_checkout')
+
+    def get_mock_payment_intent(self, **params):
+        defaults = {
+            "id": "mock-intent-id",
+            "amount": 1000,
+            "description": "",
+            "status": "succeeded",
+            "metadata": {},
+            "currency": "gbp",
+            "client_secret": "secret"
+        }
+        options = {**defaults, **params}
+        return Mock(**options)
+
+    def setUp(self):
+        super().setUp()
+        baker.make(Seller, site=Site.objects.get_current())
+        self.create_users()
+        self.make_data_privacy_agreement(self.student_user)
+        self.make_data_privacy_agreement(self.manager_user)
+        self.make_disclaimer(self.student_user)
+        self.make_disclaimer(self.child_user)
+        self.login(self.student_user)
+        self.dropin_block_config = baker.make(BlockConfig, cost=20)
+        self.course_block_config = baker.make(BlockConfig, cost=40)
+        self.subscription_config = baker.make(SubscriptionConfig, cost=50)
+
+    @patch("booking.views.shopping_basket_views.stripe.PaymentIntent")
+    def test_creates_invoice_and_applies_to_unpaid_blocks_and_subscriptions(self, mock_payment_intent):
+        mock_payment_intent_obj = self.get_mock_payment_intent(id="foo")
+        mock_payment_intent.create.return_value = mock_payment_intent_obj
+        block = baker.make_recipe(
+            "booking.dropin_block", block_config=self.dropin_block_config, user=self.student_user,
+        )
+        subscription = baker.make(
+            Subscription, config=self.subscription_config, user=self.student_user
+        )
+        assert Invoice.objects.exists() is False
+        # total is correct
+        resp = self.client.post(self.url, data={"cart_total": 70})
+        assert resp.status_code == 200
+        assert resp.context_data["cart_total"] == 70.00
+        block.refresh_from_db()
+        subscription.refresh_from_db()
+        assert Invoice.objects.exists()
+        invoice = Invoice.objects.first()
+        assert invoice.username == self.student_user.username
+        assert invoice.amount == 70
+        assert block.invoice == invoice
+        assert subscription.invoice == invoice
+
+    @patch("booking.views.shopping_basket_views.stripe.PaymentIntent")
+    def test_invoice_user_is_manager_user(self, mock_payment_intent):
+        mock_payment_intent_obj = self.get_mock_payment_intent(id="foo")
+        mock_payment_intent.create.return_value = mock_payment_intent_obj
+        self.login(self.manager_user)
+        block = baker.make_recipe(
+            "booking.dropin_block", block_config=self.dropin_block_config, user=self.child_user,
+        )
+        subscription = baker.make(
+            Subscription, config=self.subscription_config, user=self.child_user
+        )
+        assert Invoice.objects.exists() is False
+        # total is correct
+        self.client.post(self.url, data={"cart_total": 70})
+        block.refresh_from_db()
+        subscription.refresh_from_db()
+        assert Invoice.objects.exists()
+        invoice = Invoice.objects.first()
+        assert invoice.username == self.manager_user.username
+        assert invoice.amount == 70
+        assert block.invoice == invoice
+        assert subscription.invoice == invoice
+
+    @patch("booking.views.shopping_basket_views.stripe.PaymentIntent")
+    def test_creates_invoice_and_applies_to_unpaid_blocks_with_vouchers(self, mock_payment_intent):
+        mock_payment_intent_obj = self.get_mock_payment_intent(id="foo")
+        mock_payment_intent.create.return_value = mock_payment_intent_obj
+        voucher = baker.make(BlockVoucher, discount=10)
+        voucher.block_configs.add(self.dropin_block_config)
+        block = baker.make_recipe(
+            "booking.dropin_block", block_config=self.dropin_block_config, user=self.student_user,
+            voucher=voucher
+        )
+        assert Invoice.objects.exists() is False
+        # total is correct
+        resp = self.client.post(self.url, data={"cart_total": 18})
+        assert resp.status_code == 200
+        block.refresh_from_db()
+        assert Invoice.objects.exists()
+        invoice = Invoice.objects.first()
+        assert invoice.username == self.student_user.username
+        assert invoice.amount == 18
+        assert block.invoice == invoice
+        assert resp.context_data["cart_total"] == 18.00
+
+    @patch("booking.views.shopping_basket_views.stripe.PaymentIntent")
+    def test_zero_total(self, mock_payment_intent):
+        mock_payment_intent_obj = self.get_mock_payment_intent(id="foo")
+        mock_payment_intent.create.return_value = mock_payment_intent_obj
+        voucher = baker.make(BlockVoucher, code="test", discount=100, max_per_user=10)
+        voucher.block_configs.add(self.dropin_block_config)
+        block = baker.make_recipe(
+            "booking.dropin_block", block_config=self.dropin_block_config, user=self.student_user,
+            voucher=voucher
+        )
+        resp = self.client.post(self.url, data={"cart_total": 0})
+        block.refresh_from_db()
+        assert block.paid
+        assert block.voucher == voucher
+        assert resp.status_code == 302
+        assert resp.url == reverse("booking:blocks")
+
+    @patch("booking.views.shopping_basket_views.stripe.PaymentIntent")
+    def test_uses_existing_invoice(self, mock_payment_intent):
+        mock_payment_intent_obj = self.get_mock_payment_intent(id="foo")
+        mock_payment_intent.modify.return_value = mock_payment_intent_obj
+        invoice = baker.make(
+            Invoice, username=self.student_user.username, amount=20, transaction_id=None, paid=False,
+            stripe_payment_intent_id="foo"
+        )
+        block = baker.make_recipe(
+            "booking.dropin_block", block_config=self.dropin_block_config, user=self.student_user,
+            invoice=invoice
+        )
+        # total is correct
+        resp = self.client.post(self.url, data={"cart_total": 20})
+        block.refresh_from_db()
+        assert Invoice.objects.count() == 1
+        assert block.invoice == invoice
+        assert resp.context_data["cart_total"] == 20.00
+
+    def test_no_seller(self):
+        Seller.objects.all().delete()
+        baker.make_recipe(
+            "booking.dropin_block", block_config=self.dropin_block_config, user=self.student_user,
+        )
+        resp = self.client.post(self.url, data={"cart_total": 20})
+        assert resp.status_code == 200
+        assert resp.context_data["preprocessing_error"] is True
+
+    @patch("booking.views.shopping_basket_views.stripe.PaymentIntent")
+    def test_invoice_already_succeeded(self, mock_payment_intent):
+        mock_payment_intent_obj = self.get_mock_payment_intent(id="foo", status="succeeded")
+        mock_payment_intent.modify.side_effect = InvalidRequestError("error", None)
+        mock_payment_intent.retrieve.return_value = mock_payment_intent_obj
+
+        invoice = baker.make(
+            Invoice, username=self.student_user.username, amount=20, transaction_id=None, paid=False,
+            stripe_payment_intent_id="foo"
+        )
+        baker.make_recipe(
+            "booking.dropin_block", block_config=self.dropin_block_config, user=self.student_user,
+            invoice=invoice
+        )
+        resp = self.client.post(self.url, data={"cart_total": 20})
+        assert resp.context_data["preprocessing_error"] is True
+
+    @patch("booking.views.shopping_basket_views.stripe.PaymentIntent")
+    def test_other_error_modifying_payment_intent(self, mock_payment_intent):
+        mock_payment_intent_obj = self.get_mock_payment_intent(id="foo", status="pending")
+        mock_payment_intent.modify.side_effect = InvalidRequestError("error", None)
+        mock_payment_intent.retrieve.return_value = mock_payment_intent_obj
+
+        invoice = baker.make(
+            Invoice, username=self.student_user.username, amount=20, transaction_id=None, paid=False,
+            stripe_payment_intent_id="foo"
+        )
+        baker.make_recipe(
+            "booking.dropin_block", block_config=self.dropin_block_config, user=self.student_user,
+            invoice=invoice
+        )
+        resp = self.client.post(self.url, data={"cart_total": 20})
+        assert resp.context_data["preprocessing_error"] is True
+
+    def test_check_total(self):
+        # This is the last check immediately before submitting payment; just returns the current total
+        # so the js can check it
+        url = reverse("booking:check_total")
+        resp = self.client.get(url)
+        assert resp.json() == {"total": 0}
+
+        block = baker.make_recipe(
+            "booking.dropin_block", block_config=self.dropin_block_config, user=self.student_user,
+        )
+        subscription = baker.make(
+            Subscription, config=self.subscription_config, user=self.student_user
+        )
+        resp = self.client.get(url)
+        assert resp.json() == {"total": "70.00"}
+
+        subscription.paid = True
+        subscription.save()
+        voucher = baker.make(BlockVoucher, code="test", discount=10, max_per_user=10)
+        voucher.block_configs.add(self.dropin_block_config)
+        block.voucher = voucher
+        block.save()
+        resp = self.client.get(url)
+        assert resp.json() == {"total": "18.00"}

@@ -1,0 +1,28 @@
+{%  extends "studioadmin/base.html" %}
+
+{% load studioadmintags static %}
+
+{% block subnav-xs %}
+    {%  include "studioadmin/includes/navs/xs/payment_plans_subnav.html" %}
+{% endblock %}
+{% block precontent %}
+    {%  include "studioadmin/includes/navs/payment_plans_subnav.html" %}
+{% endblock %}
+
+{% block content %}
+    <h1>Connect Stripe Account</h1>
+    {% if not request.user.is_seller %}
+        <p>WARNING! You do not have permission to connect a Stripe account. Please contact an administrator. </p>
+    {% else %}
+        {% if not request.user.seller.stripe_user_id or not request.user.seller.site %}
+            <a href="{% url 'studioadmin:authorize_stripe' %}" class="btn btn-info">Connect Stripe Account</a>
+        {% else %}
+            <p>Your Stripe account id <strong>{{ request.user.seller.stripe_user_id }}</strong> is connected.</p>
+        {% endif %}
+    {% endif %}
+
+{% endblock content %}
+{% block extra_js %}
+
+
+{% endblock %}

@@ -7,6 +7,8 @@ from .exceptions import PayPalProcessingError
 from .emails import send_processed_payment_emails, send_processed_refund_emails, send_failed_payment_emails
 from .utils import check_paypal_data, get_invoice_from_ipn_or_pdt
 
+from activitylog.models import ActivityLog
+
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +25,7 @@ def process_ipn(sender, **kwargs):
                 try:
                     check_paypal_data(ipn_obj, invoice)
                 except PayPalProcessingError as e:
-                    logging.error("Error processing paypal PDT %s", e)
+                    logger.error("Error processing paypal PDT %s", e)
                     raise e
                 else:
                     # Everything is OK
@@ -34,9 +36,13 @@ def process_ipn(sender, **kwargs):
                         subscription.paid = True
                         subscription.save()
                     invoice.transaction_id = ipn_obj.txn_id
+                    invoice.paid = True
                     invoice.save()
                     # SEND EMAILS
                     send_processed_payment_emails(invoice)
+                    ActivityLog.objects.create(
+                        log=f"Invoice {invoice.invoice_id} (user {invoice.username}) paid by PayPal"
+                    )
             else:
                 logger.info("IPN signal received for invoice %s; already processed", invoice.invoice_id)
         elif ipn_obj.payment_status == ST_PP_REFUNDED:
