@@ -161,11 +161,11 @@ def stripe_webhook(request):
     except ValueError as e:
         # Invalid payload
         logger.error(e)
-        return HttpResponse(status=400)
+        return HttpResponse(str(e), status=400)
     except stripe.error.SignatureVerificationError as e:
         # Invalid signature
         logger.error(e)
-        return HttpResponse(status=400)
+        return HttpResponse(str(e), status=400)
 
     event_object = event.data.object
     if event.type == "account.application.authorized":
@@ -202,9 +202,9 @@ def stripe_webhook(request):
             error = f"Payment intent requires action: id {payment_intent.id}; invoice id {invoice.invoice_id}"
         if error:
             send_failed_payment_emails(error=error)
-            return HttpResponse(status=400)
+            return HttpResponse(error, status=400)
     except Exception as e:  # log anything else
         logger.error(e)
         send_failed_payment_emails(error=e)
-        return HttpResponse(status=400)
+        return HttpResponse(str(e), status=400)
     return HttpResponse(status=200)
