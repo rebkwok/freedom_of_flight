@@ -36,18 +36,20 @@
                     <th>Name<br/><span class="helptext">Click to edit</span></th>
                     <th>Track</th>
                     <th class="text-center">Cancellation Period</th>
+                    <th class="text-center">Min age</th>
+                    <th class="text-center">Max age</th>
                     <th class="text-center">Delete<br/><span class="helptext">(if no linked events)</span></th>
                 </tr>
             </thead>
             <tbody>
-
-
 
             {% for event_type in event_types %}
                 <tr id="row-event-type-{{ event_type.id }}">
                     <td><a href="{% url 'studioadmin:edit_event_type' event_type.id %}">{{ event_type.name|title }}</a></td>
                     <td>{{ event_type.track }}</td>
                     <td class="text-center">{{ event_type.cancellation_period }} hrs</td>
+                    <td class="text-center">{% if event_type.minimum_age_for_booking %}{{ event_type.minimum_age_for_booking }} yrs{% else %}-{% endif %}</td>
+                    <td class="text-center">{% if event_type.maximum_age_for_booking %}{{ event_type.maximum_age_for_booking }} yrs{% else %}-{% endif %}</td>
                     <td class="text-center">{% if not event_type.event_set.exists %}
                         <div
                             class="event-type-delete-btn"

@@ -32,6 +32,8 @@ def userprofile_save(sender, instance, created, **kwargs):
             Seller.objects.create(user=instance.user)
         if not instance.seller and existing_seller:
             existing_seller.delete()
+    if instance.user.manager_user:
+        _delete_managed_users_cache(instance.user.manager_user)
 
 
 @receiver(post_delete, sender=OnlineDisclaimer)

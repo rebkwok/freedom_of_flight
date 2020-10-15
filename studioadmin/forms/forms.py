@@ -732,6 +732,7 @@ class EventTypeForm(forms.ModelForm):
         model = EventType
         fields = (
             "track", "name", "label", "plural_suffix", "description", "booking_restriction",
+            "minimum_age_for_booking", "maximum_age_for_booking",
             "cancellation_period", "email_studio_when_booked",
             "allow_booking_cancellation", "is_online"
         )
@@ -767,15 +768,35 @@ class EventTypeForm(forms.ModelForm):
             "description",
             AppendedText('booking_restriction', 'mins'),
             AppendedText('cancellation_period', 'hrs'),
-            "email_studio_when_booked",
-            "allow_booking_cancellation",
-            "is_online",
-            Submit('submit', f'Save')
-        )
+            HTML(
+                """
+                <p>
+                <strong>Optional age restrictions for booking:</strong><br/>
+                <span class='helptext text-secondary'>
+                    Note: restrictions will be applied to purchase of blocks/subscriptions, not to booking once a block/subscription
+                    is purchased.
+                </span>
+                </p>"""
+            ),
+            Row(
+                Column(AppendedText('minimum_age_for_booking', 'years'), css_class="col-6"),
+                Column(AppendedText('maximum_age_for_booking', 'years'), css_class="col-6"),
+            ),
+        "email_studio_when_booked",
+        "allow_booking_cancellation",
+        "is_online",
+        Submit('submit', f'Save')
+    )
 
     def clean_name(self):
         name = self.cleaned_data["name"]
         return name.lower()
+
+    def clean(self):
+        super().clean()
+        if self.cleaned_data.get("minimum_age_for_booking") and self.cleaned_data.get("maximum_age_for_booking"):
+            self.add_error("minimum_age_for_booking", "Specify at most one of min/max age for booking")
+            self.add_error("maximum_age_for_booking", "Specify at most one of min/max age for booking")
 
 
 class BlockConfigForm(forms.ModelForm):
@@ -924,6 +945,8 @@ class SubscriptionConfigForm(forms.ModelForm):
         total_formset_forms = int(self.data['form-TOTAL_FORMS'])
         duration_units = self.cleaned_data["duration_units"]
         seen = set()
+        age_restrictions = {}
+
         for i in range(total_formset_forms):
             event_type = self.data[f"form-{i}-event_type"]
             allowed_unit = self.data[f"form-{i}-allowed_unit"]
@@ -931,6 +954,7 @@ class SubscriptionConfigForm(forms.ModelForm):
             # don't bother validating items we're deleting
             deleting = self.data.get(f"form-{i}-DELETE")
             if event_type and not deleting:
+                event_type_obj = EventType.objects.get(id=int(event_type))
                 if allowed_number and allowed_unit != "day":
                     # Don't bother validating week/month units if no max number specified
                     duration_unit = duration_units.rstrip("s")
@@ -939,10 +963,22 @@ class SubscriptionConfigForm(forms.ModelForm):
                             "__all__", f"Cannot specify {allowed_unit}ly usage for a subscription with a {duration_unit}ly duration. "
                                        f"Specify usage per {duration_unit} instead.")
                 if event_type in seen:
-                    duplicate_event_type = EventType.objects.get(id=int(event_type))
-                    self.add_error("__all__", f"Usage specified twice for event type {duplicate_event_type.name} (track {duplicate_event_type.track})")
+                    self.add_error("__all__", f"Usage specified twice for event type {event_type_obj.name} (track {event_type_obj.track})")
                 seen.add(event_type)
-        return super().clean()
+
+                if event_type_obj.minimum_age_for_booking:
+                    age_restrictions[event_type_obj] = ("min", event_type_obj.minimum_age_for_booking)
+                if event_type_obj.maximum_age_for_booking:
+                    age_restrictions[event_type_obj] = ("max", event_type_obj.maximum_age_for_booking)
+
+        if len(set(age_restrictions.values())) > 1:
+            error_strings = [
+                f"{ev_type.name.title()} ({ev_type.track}) - {restriction[0]} {restriction[1]} yrs"
+                for ev_type, restriction in age_restrictions.items()
+            ]
+            self.add_error(
+                "__all__", f"Event types have conflicting age restrictions: {', '.join(error_strings)}"
+            )
 
 
 class StudioadminCookiePolicyForm(CookiePolicyAdminForm):

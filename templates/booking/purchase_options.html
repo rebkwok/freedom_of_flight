@@ -51,12 +51,19 @@
                             <p class="d-none d-md-block">{{ available_block_config.description|linebreaksbr}}</p>
                         {% endif %}
 
-                        <p class="mb-0">
+                        <p class="mb-1">
+
                                 £{{ available_block_config.cost }} |
                                 {% if available_block_config.duration %} Expires after {{ available_block_config.duration }} week{{ available_block_config.duration|pluralize }}{% else %}Never expires {% endif %} |
                                 Valid for {% if available_block_config.course %}1 course{% else %}{{ available_block_config.size }} use{{ available_block_config.size|pluralize }}{% endif %}<br/>
 
-                                {%  if request.user.is_authenticated %}{% active_block_info user_active_blocks available_block_config %}{% endif %}
+                            {%  if request.user.is_authenticated %}{% active_block_info user_active_blocks available_block_config %}{% endif %}
+
+                            {% if available_block_config.age_restrictions %}
+                                <p class="helptext mb-0">
+                                    <strong>NOTE: {{ available_block_config.age_restrictions }}</strong>
+                                </p>
+                            {% endif %}
                             {% if not available_block_config.course %}
                                 <p class="helptext">Please note that drop-in credit blocks are not valid for classes that are part of a course.<p/>
                             {% endif %}
@@ -65,25 +72,38 @@
                         </td>
                     {%  if request.user.is_authenticated %}
                         {% if available_users %}
-                            <td>
-                                {% for available_user in available_users %}
-                                <div class="purchase_option_badge_container">
-                                    <span class="badge badge-pill badge-light pt-1 mt-1 mb-1"><span class="align-middle helptext">{{ available_user|full_name|truncatechars:15 }}</span></span>
-                                </div>
-                                {% endfor %}
-                            </td>
-                            <td class="table-purchase-td">
-                            {% for available_user in available_users %}
-                            <span
-                                id="block_config_{{ available_block_config.id }}_{{ available_user.id }}"
-                                data-user_id="{{ available_user.id }}"
-                                data-block_config_id="{{ available_block_config.id }}"
-                                data-block_config_type="{% if available_block_config.course %}course{% else %}dropin{% endif %}"
-                                class="float-right ajax_blocks_btn">
-                                {% include "booking/includes/blocks_button.txt" %}
-                            </span><br/>
-                            {% endfor %}
-                        </td>
+                            {% if not available_users|at_least_one_user_can_purchase:available_block_config %}
+                                <td colspan="2">
+                                    <span class="helptext float-right">
+                                        Unavailable for users on your account due to age restrictions.
+                                    </span>
+                                </td>
+                            {% else %}
+                                <td>
+                                    {% for available_user in available_users %}
+                                        {% if available_user|can_purchase_block:available_block_config %}
+                                            <div class="purchase_option_badge_container">
+                                                <span class="badge badge-pill badge-light pt-1 mt-1 mb-1"><span class="align-middle helptext">{{ available_user|full_name|truncatechars:15 }}</span></span>
+                                            </div>
+                                        {% endif %}
+                                    {% endfor %}
+                                </td>
+                                <td class="table-purchase-td">
+
+                                    {% for available_user in available_users %}
+                                        {% if available_user|can_purchase_block:available_block_config %}
+                                            <span
+                                                id="block_config_{{ available_block_config.id }}_{{ available_user.id }}"
+                                                data-user_id="{{ available_user.id }}"
+                                                data-block_config_id="{{ available_block_config.id }}"
+                                                data-block_config_type="{% if available_block_config.course %}course{% else %}dropin{% endif %}"
+                                                class="float-right ajax_blocks_btn">
+                                                {% include "booking/includes/blocks_button.txt" %}
+                                            </span><br/>
+                                        {% endif %}
+                                    {% endfor %}
+                                </td>
+                            {% endif %}
                         {% else %}
                             {% if request.user.is_manager %}
                                 <td colspan="2">
@@ -147,7 +167,7 @@
                                 Valid for:
                                 {% format_bookable_event_types subscription_config.config %}
                             {% endif %}
-                            <p class="mb-0">
+                            <p class="mb-1">
                                 {% if subscription_config.current_period_cost != subscription_config.config.cost %}
                                     £{{ subscription_config.config.cost }} (£{{ subscription_config.current_period_cost }})<br/>
                                     <small><em>Remainder of current period can be purchased at a reduced cost</em></small><br/>
@@ -159,47 +179,75 @@
                                 <br/>
                                 {% active_subscription_info user_active_subscriptions subscription_config.config %}
                             </p>
+                        {% if subscription_config.config.age_restrictions %}
+                            <p class="helptext mb-0"><strong>
+                                NOTE: {{ subscription_config.config.age_restrictions }}
+                                </strong>
+                            </p>
+                        {% endif %}
                         {% if subscription_config.config.bookable_event_types %}
                             <p class="helptext">Please note that subscriptions are not valid for classes that are part of a course.<p/>
                         {% endif %}
                         </td>
                         {% if request.user.is_authenticated %}
-                            <td>
-                                {% for available_user in available_users %}
-                                    {% if not subscription_config.start_options_for_users|lookup_dict:available_user.id %}
-                                        <div class="purchase_option_badge_container">
-                                            <span class="badge badge-pill badge-light pt-1 mt-1 mb-1"><span class="helptext align-middle">{{ available_user|full_name|truncatechars:15 }}{% if subscription_start_option %} - {{ subscription_start_option|date:"d-M-y" }}{% endif %}</span></span>
-                                        </div>
-                                    {% endif %}
-                                    {% for subscription_start_option in subscription_config.start_options_for_users|lookup_dict:available_user.id %}
-                                        <div class="purchase_option_badge_container">
-                                            <span class="badge badge-pill badge-light pt-1 mt-1 mb-1"><span class="helptext align-middle">{{ available_user|full_name|truncatechars:15 }}{% if subscription_start_option %} - {{ subscription_start_option|date:"d-M-y" }}{% endif %}</span></span>
-                                        </div>
+                            {% if available_users %}
+                                {% if not available_users|at_least_one_user_can_purchase:subscription_config.config %}
+                                    <td colspan="2">
+                                        <span class="helptext float-right">
+                                            Unavailable for users on your account due to age restrictions.
+                                        </span>
+                                    </td>
+                                {% else %}
+                                    <td>
+                                        {% for available_user in available_users %}
+                                            {% if available_user|can_purchase_subscription:subscription_config.config %}
+                                                {% if not subscription_config.start_options_for_users|lookup_dict:available_user.id %}
+                                                    <div class="purchase_option_badge_container">
+                                                        <span class="badge badge-pill badge-light pt-1 mt-1 mb-1"><span class="helptext align-middle">{{ available_user|full_name|truncatechars:15 }}{% if subscription_start_option %} - {{ subscription_start_option|date:"d-M-y" }}{% endif %}</span></span>
+                                                    </div>
+                                                {% endif %}
+                                                {% for subscription_start_option in subscription_config.start_options_for_users|lookup_dict:available_user.id %}
+                                                    <div class="purchase_option_badge_container">
+                                                        <span class="badge badge-pill badge-light pt-1 mt-1 mb-1"><span class="helptext align-middle">{{ available_user|full_name|truncatechars:15 }}{% if subscription_start_option %} - {{ subscription_start_option|date:"d-M-y" }}{% endif %}</span></span>
+                                                    </div>
+                                                {% endfor %}
+                                            {% endif %}
+                                        {% endfor %}
+                                    </td>
+                                    <td class="table-purchase-td">
+                                    {% for available_user in available_users %}
+                                        {% if available_user|can_purchase_subscription:subscription_config.config %}
+                                            {% if not subscription_config.start_options_for_users|lookup_dict:available_user.id %}
+                                                <span class="helptext">
+                                                    <div href="#" class="btn btn-cart-xs btn-table-xs btn-outline-light mt-1 mb-1 p-1 text-dark">
+                                                        No options available
+                                                    </div>
+                                                </span>
+                                            {% endif %}
+                                            {% for subscription_start_option in subscription_config.start_options_for_users|lookup_dict:available_user.id %}
+                                                <span
+                                                    id="subscription_config_{{ subscription_config.config.id }}_{{ available_user.id }}_{{ subscription_start_option|date:'d' }}"
+                                                    data-user_id="{{ available_user.id }}"
+                                                    data-subscription_config_id="{{ subscription_config.config.id }}"
+                                                    data-subscription_start_date="{{ subscription_start_option|date:"d-M-y" }}"
+                                                    data-subscription_start_day="{{ subscription_start_option|date:"d" }}"
+                                                    class="float-right ajax_subscriptions_btn">
+                                                    {% include "booking/includes/subscriptions_button.txt" %}
+                                                </span><br/>
+                                            {% endfor %}
+                                        {% endif %}
                                     {% endfor %}
-                                {% endfor %}
-                            </td>
-                            <td class="table-purchase-td">
-                            {% for available_user in available_users %}
-                                {% if not subscription_config.start_options_for_users|lookup_dict:available_user.id %}
-                                    <span class="helptext">
-                                        <div href="#" class="btn btn-cart-xs btn-table-xs btn-outline-light mt-1 mb-1 p-1 text-dark">
-                                            No options available
-                                        </div>
-                                    </span>
+                                </td>
                                 {% endif %}
-                                {% for subscription_start_option in subscription_config.start_options_for_users|lookup_dict:available_user.id %}
-                                    <span
-                                        id="subscription_config_{{ subscription_config.config.id }}_{{ available_user.id }}_{{ subscription_start_option|date:'d' }}"
-                                        data-user_id="{{ available_user.id }}"
-                                        data-subscription_config_id="{{ subscription_config.config.id }}"
-                                        data-subscription_start_date="{{ subscription_start_option|date:"d-M-y" }}"
-                                        data-subscription_start_day="{{ subscription_start_option|date:"d" }}"
-                                        class="float-right ajax_subscriptions_btn">
-                                        {% include "booking/includes/subscriptions_button.txt" %}
-                                    </span><br/>
-                                {% endfor %}
-                            {% endfor %}
-                        </td>
+                            {% else %}
+                                 {% if request.user.is_manager %}
+                                    <td colspan="2">
+                                    <span class="helptext float-right">
+                                        Register as a student or add a managed account to purchase
+                                        <a href="{% url 'accounts:profile' %}">Update account</a></span>
+                                    </td>
+                                {% endif %}
+                            {% endif %}
                         {% else %}
                             <td colspan="2">
                             <span class="helptext float-right"><a href="{% url 'account_login' %}?next={{request.get_full_path}}">Log in</a> or <a href="{% url 'account_signup' %}">register</a> to purchase</span>
