@@ -1,11 +1,14 @@
 # -*- coding: utf-8 -*-
+from dateutil.relativedelta import relativedelta
+from datetime import timedelta, datetime
+from unittest.mock import patch
+
+from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 from django.utils import timezone
 from django.urls import reverse
 
-from datetime import timedelta, datetime
-from unittest.mock import patch
 from model_bakery import baker
 import pytest
 
@@ -261,6 +264,35 @@ class EventTypeTests(TestCase):
         evtype = baker.make(EventType, label="sheep", plural_suffix="")
         assert evtype.pluralized_label == "sheep"
 
+    def test_valid_for_user(self):
+        user = baker.make(User, userprofile__date_of_birth=(timezone.now() - relativedelta(years=16)).date())
+        # min and max ages are inclusive so an exactly 16 yr old is valid for both over and under 16
+        evtype = baker.make(EventType, minimum_age_for_booking=16)
+        assert evtype.valid_for_user(user) is True
+
+        evtype.minimum_age_for_booking = None
+        evtype.maximum_age_for_booking = 16
+        evtype.save()
+        assert evtype.valid_for_user(user) is True
+
+        evtype.maximum_age_for_booking = 15
+        evtype.save()
+        assert evtype.valid_for_user(user) is False
+
+        evtype.maximum_age_for_booking = None
+        evtype.minimum_age_for_booking = 17
+        evtype.save()
+        assert evtype.valid_for_user(user) is False
+
+    def test_age_restrictions(self):
+        evtype = baker.make(EventType, minimum_age_for_booking=16)
+        assert evtype.age_restrictions == "age 16 and over only"
+
+        evtype.minimum_age_for_booking = None
+        evtype.maximum_age_for_booking = 16
+        evtype.save()
+        assert evtype.age_restrictions == "age 16 and under only"
+
 
 class CourseTests(EventTestMixin, TestCase):
 
@@ -393,6 +425,11 @@ class BlockConfigTests(TestCase):
         # property to make course and drop in block configs behave the same
         dropin_config = baker.make(BlockConfig, name="A Drop in Block", size=4)
         assert dropin_config.size == 4
+
+    def test_block_config_age_restrictions(self):
+        # property to make course and drop in block configs behave the same
+        dropin_config = baker.make(BlockConfig, event_type__minimum_age_for_booking=16, name="A Drop in Block", size=4)
+        assert dropin_config.age_restrictions == "Valid for age 16 and over only"
 
 
 class BlockVoucherTests(TestCase):
@@ -660,6 +697,12 @@ class SubscriptionConfigTests(TestUsersMixin, TestCase):
     def test_subscription_config_str(self):
         subscription_config = baker.make(SubscriptionConfig, name="membership")
         assert str(subscription_config) == "membership (active)"
+
+    def test_age_restrictions(self):
+        event_type = baker.make(EventType, maximum_age_for_booking=12)
+        subscription_config = baker.make(
+            SubscriptionConfig, name="membership", bookable_event_types={str(event_type.id): {}})
+        assert subscription_config.age_restrictions == "Valid for age 12 and under only"
 
     def test_start_date_set_to_start_of_day(self):
         start_date = datetime(2020, 1, 1, 13, 30, tzinfo=timezone.utc)
@@ -1122,7 +1165,7 @@ class TestStartDatesOfferedToUser:
     )
     def test_start_options_for_user_no_existing_subscription(
         self, student_user, mocker,
-        now_value, start, duration, duration_units, start_option, advance_purchase_allowed, recurring, 
+        now_value, start, duration, duration_units, start_option, advance_purchase_allowed, recurring,
         expected_start_dates
     ):
         mock_now = mocker.patch("booking.models.timezone.now")

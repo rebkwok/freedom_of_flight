@@ -136,9 +136,9 @@ class EventType(models.Model):
     @property
     def age_restrictions(self):
         if self.minimum_age_for_booking:
-            return f"over {self.minimum_age_for_booking}s only"
+            return f"age {self.minimum_age_for_booking} and over only"
         if self.maximum_age_for_booking:
-            return f"under {self.maximum_age_for_booking}s only"
+            return f"age {self.maximum_age_for_booking} and under only"
 
     def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
         self.name = self.name.lower()
