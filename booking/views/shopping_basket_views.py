@@ -391,6 +391,7 @@ def stripe_checkout(request):
     return TemplateResponse(request, "booking/checkout.html", context)
 
 
+@login_required
 def check_total(request):
     unpaid_blocks = get_unpaid_user_managed_blocks(request.user)
     unpaid_subscriptions = get_unpaid_user_managed_subscriptions(request.user)
