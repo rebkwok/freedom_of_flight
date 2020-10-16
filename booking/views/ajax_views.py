@@ -197,7 +197,7 @@ def ajax_toggle_booking(request, event_id):
     }
 
     subjects = {
-        "user": f"Booking for {event} {requested_action}",
+        "user": f"Booking for {event} {requested_action if requested_action == 'cancelled' else ''}",
         "studio": f"{user.first_name} {user.last_name} has just booked for {event}"
     }
 
