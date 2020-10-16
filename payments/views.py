@@ -197,14 +197,15 @@ def stripe_webhook(request):
         elif event.type == "payment_intent.refunded":
             send_processed_refund_emails(invoice)
         elif event.type == "payment_intent.payment_failed":
-            error = f"Failed payment intent id: {payment_intent.id}; invoice id {invoice.invoice_id}"
+            error = f"Failed payment intent id: {payment_intent.id}; invoice id {invoice.invoice_id}; error {payment_intent.last_payment_error}"
         elif event.type == "payment_intent.requires_action":
             error = f"Payment intent requires action: id {payment_intent.id}; invoice id {invoice.invoice_id}"
         if error:
+            logger.error(error)
             send_failed_payment_emails(error=error)
-            return HttpResponse(error, status=400)
+            return HttpResponse(error, status=200)
     except Exception as e:  # log anything else
         logger.error(e)
         send_failed_payment_emails(error=e)
-        return HttpResponse(str(e), status=400)
+        return HttpResponse(str(e), status=200)
     return HttpResponse(status=200)

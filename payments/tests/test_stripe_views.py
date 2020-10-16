@@ -314,10 +314,12 @@ class StripeWebhookTests(TestUsersMixin, TestCase):
     def test_webhook_exceptions(self, mock_webhook):
         mock_webhook.construct_event.side_effect = stripe.error.SignatureVerificationError("", "foo")
         resp = self.client.post(self.url, data={}, HTTP_STRIPE_SIGNATURE="foo")
+        # stripe verification error returns 400 so stripe will try again
         assert resp.status_code == 400
 
         mock_webhook.construct_event.side_effect = ValueError
         resp = self.client.post(self.url, data={}, HTTP_STRIPE_SIGNATURE="foo")
+        # value error means payload is invalid; returns 400 so stripe will try again
         assert resp.status_code == 400
 
     @patch("payments.views.stripe.Webhook")
@@ -330,7 +332,7 @@ class StripeWebhookTests(TestUsersMixin, TestCase):
         }
         mock_webhook.construct_event.return_value = get_mock_webhook_event(metadata=metadata)
         resp = self.client.post(self.url, data={}, HTTP_STRIPE_SIGNATURE="foo")
-        assert resp.status_code == 400
+        assert resp.status_code == 200
 
         # invoice and block is still unpaid
         assert self.block.paid is False
@@ -379,7 +381,7 @@ class StripeWebhookTests(TestUsersMixin, TestCase):
             webhook_event_type="payment_intent.payment_failed", metadata=metadata
         )
         resp = self.client.post(self.url, data={}, HTTP_STRIPE_SIGNATURE="foo")
-        assert resp.status_code == 400
+        assert resp.status_code == 200
         self.block.refresh_from_db()
         self.invoice.refresh_from_db()
         # invoice and block is still unpaid
@@ -402,7 +404,7 @@ class StripeWebhookTests(TestUsersMixin, TestCase):
             webhook_event_type="payment_intent.requires_action", metadata=metadata
         )
         resp = self.client.post(self.url, data={}, HTTP_STRIPE_SIGNATURE="foo")
-        assert resp.status_code == 400
+        assert resp.status_code == 200
         self.block.refresh_from_db()
         self.invoice.refresh_from_db()
         # invoice and block is still unpaid
