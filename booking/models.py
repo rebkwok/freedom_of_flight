@@ -127,6 +127,8 @@ class EventType(models.Model):
     def valid_for_user(self, user):
         if not any([self.maximum_age_for_booking, self.minimum_age_for_booking]):
             return True
+        if user.age is None:
+            return False
         if self.maximum_age_for_booking and user.age > self.maximum_age_for_booking:
             return False
         if self.minimum_age_for_booking and user.age < self.minimum_age_for_booking:

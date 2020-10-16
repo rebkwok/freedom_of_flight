@@ -520,8 +520,9 @@ def user_age(self):
         date_of_birth = self.childuserprofile.date_of_birth
     else:
         date_of_birth = self.userprofile.date_of_birth
-    date_of_birth_datetime = datetime.combine(date_of_birth, time(0, 0), tzinfo=timezone.utc)
-    return relativedelta(timezone.now(), date_of_birth_datetime).years
+    if date_of_birth:
+        date_of_birth_datetime = datetime.combine(date_of_birth, time(0, 0), tzinfo=timezone.utc)
+        return relativedelta(timezone.now(), date_of_birth_datetime).years
 
 
 @property
