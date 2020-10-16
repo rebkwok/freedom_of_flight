@@ -15,7 +15,7 @@ from common.test_utils import TestUsersMixin
 from ..models import Invoice, Seller, StripePaymentIntent
 
 
-def get_mock_payment_intent(**params):
+def get_mock_payment_intent(webhook_event_type=None, **params):
     defaults = {
         "id": "mock-intent-id",
         "amount": 1000,
@@ -26,13 +26,15 @@ def get_mock_payment_intent(**params):
         "client_secret": "secret"
     }
     options = {**defaults, **params}
+    if webhook_event_type == "payment_intent.payment_failed":
+        options["last_payment_error"] = {'error': 'an error'}
     return Mock(**options)
 
 
 def get_mock_webhook_event(**params):
     webhook_event_type = params.pop("webhook_event_type", "payment_intent.succeeded")
     mock_event = Mock(
-        data=Mock(object=get_mock_payment_intent(**params)), type=webhook_event_type
+        data=Mock(object=get_mock_payment_intent(webhook_event_type, **params)), type=webhook_event_type
     )
     return mock_event
 

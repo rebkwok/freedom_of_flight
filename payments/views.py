@@ -198,7 +198,7 @@ def stripe_webhook(request):
             send_processed_refund_emails(invoice)
         elif event.type == "payment_intent.payment_failed":
             error = f"Failed payment intent id: {payment_intent.id}; invoice id {invoice.invoice_id}; " \
-                    f"error {json.dumps(payment_intent.last_payment_error)}"
+                    f"error {payment_intent.last_payment_error}"
         elif event.type == "payment_intent.requires_action":
             error = f"Payment intent requires action: id {payment_intent.id}; invoice id {invoice.invoice_id}"
         if error:
