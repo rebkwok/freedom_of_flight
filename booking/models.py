@@ -100,6 +100,15 @@ class EventType(models.Model):
     allow_booking_cancellation = models.BooleanField(default=True)
     is_online = models.BooleanField(default=False)
 
+    minimum_age_for_booking = models.PositiveIntegerField(
+        null=True, blank=True,
+        help_text="Minimum age allowed for booking (inclusive - i.e. 16 allows booking from the student's 16th birthday)"
+    )
+    maximum_age_for_booking = models.PositiveIntegerField(
+        null=True, blank=True,
+        help_text="Maximum age allowed for booking (inclusive - i.e. 16 allows booking up to the student's 17th birthday)"
+    )
+
     class Meta:
         unique_together = ("name", "track")
 
@@ -114,6 +123,24 @@ class EventType(models.Model):
         else:
             plural_label = self.label + suffix[0]
         return plural_label
+
+    def valid_for_user(self, user):
+        if not any([self.maximum_age_for_booking, self.minimum_age_for_booking]):
+            return True
+        if user.age is None:
+            return False
+        if self.maximum_age_for_booking and user.age > self.maximum_age_for_booking:
+            return False
+        if self.minimum_age_for_booking and user.age < self.minimum_age_for_booking:
+            return False
+        return True
+
+    @property
+    def age_restrictions(self):
+        if self.minimum_age_for_booking:
+            return f"age {self.minimum_age_for_booking} and over only"
+        if self.maximum_age_for_booking:
+            return f"age {self.maximum_age_for_booking} and under only"
 
     def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
         self.name = self.name.lower()
@@ -334,6 +361,14 @@ class BlockConfig(models.Model):
 
     def blocks_purchased(self):
         return self.block_set.filter(paid=True).count()
+
+    def available_to_user(self, user):
+        return self.event_type.valid_for_user(user)
+
+    @property
+    def age_restrictions(self):
+        if self.event_type.age_restrictions:
+            return f"Valid for {self.event_type.age_restrictions}"
 
 
 class BaseVoucher(models.Model):
@@ -666,6 +701,27 @@ class SubscriptionConfig(models.Model):
     def __str__(self):
         return f"{self.name} ({'active' if self.active else 'inactive'})"
 
+    @property
+    def event_types(self):
+        if self.bookable_event_types:
+            return EventType.objects.filter(id__in=self.bookable_event_types.keys())
+        return []
+
+    @property
+    def age_restrictions(self):
+        for event_type in self.event_types:
+            # Return the first age restriction only; we prohibit adding multiple event types with different age
+            # restrictions
+            if event_type.age_restrictions:
+                return f"Valid for {event_type.age_restrictions}"
+
+    def available_to_user(self, user):
+        """Check the min/max age limits for event_types on the subscription"""
+        for event_type in self.event_types:
+            if not event_type.valid_for_user(user):
+                return False
+        return True
+
     def is_purchaseable(self):
         """
         A subscription is purchaseable if:
@@ -851,6 +907,7 @@ class SubscriptionConfig(models.Model):
         # 2. if partial_purchase_allowed, start_options must be start_date
         # 3. if start_options is start_date, start date is required
         # 4. if recurring is False, start date is required and start_options must be start_date
+        # 5. check no conflicting age restrictions in bookable event types
         if not self.recurring:
             if self.start_options != "start_date":
                 raise ValidationError({'start_options': _('Must be start_date for one-off subscriptions.')})

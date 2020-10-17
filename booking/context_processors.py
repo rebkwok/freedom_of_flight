@@ -17,7 +17,7 @@ def booking(request):
         tracks = Track.objects.filter(default=True)
 
     if request.user.is_authenticated:
-        available_users = request.user.managed_users
+        available_users = request.user.managed_student_users
         cart_item_count = total_unpaid_item_count(request.user)
         view_as_user = get_view_as_user(request)
     else:

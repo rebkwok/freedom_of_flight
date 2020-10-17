@@ -163,3 +163,18 @@ def format_bookable_event_types(subscription_config):
         for key, value in bookable_event_types.items()
     }
     return {"bookable_event_types": formatted_bookable_event_types}
+
+
+@register.filter
+def can_purchase_block(user, block_config):
+    return block_config.available_to_user(user)
+
+
+@register.filter
+def can_purchase_subscription(user, subscription_config):
+    return subscription_config.available_to_user(user)
+
+
+@register.filter
+def at_least_one_user_can_purchase(available_users, block_or_subscription):
+    return any(user for user in available_users if block_or_subscription.available_to_user(user))
