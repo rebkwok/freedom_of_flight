@@ -102,9 +102,8 @@ class EventDetailView(DataPolicyAgreementRequiredMixin, DetailView):
         context = super().get_context_data()
         if self.request.user.is_authenticated:
             view_as_user = get_view_as_user(self.request)
-            booking = view_as_user.bookings.filter(event=self.object, user=view_as_user)
-            if booking:
-                context["booking"] = booking[0]
+            open_booking = view_as_user.bookings.filter(event=self.object, user=view_as_user, status="OPEN", no_show=False).first()
+            context["open_booking"] = open_booking
         return context
 
 
