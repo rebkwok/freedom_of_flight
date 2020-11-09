@@ -61,7 +61,13 @@ def paypal_return(request):
             failed = True
             error = "No invoice on PDT on return from paypal"
     if not failed:
-        context.update({"cart_items": invoice.items_dict().values()})
+        context = {
+            "cart_items": invoice.items_dict().values(),
+            "total_charged": invoice.amount,
+        }
+        if "total_voucher_code" in request.session:
+            context.update({"total_voucher_code": request.session["total_voucher_code"]})
+            del request.session["total_voucher_code"]
         return render(request, 'payments/valid_payment.html', context)
 
     error = error or "Failed status on PDT return from paypal"
@@ -143,7 +149,13 @@ def stripe_payment_complete(request):
     payment_intent.metadata.pop("invoice_id", None)
     payment_intent.metadata.pop("invoice_signature", None)
     if not failed:
-        context = {"cart_items": invoice.items_dict().values()}
+        context = {
+            "cart_items": invoice.items_dict().values(),
+            "total_charged": invoice.amount,
+        }
+        if "total_voucher_code" in request.session:
+            context.update({"total_voucher_code": request.session["total_voucher_code"]})
+            del request.session["total_voucher_code"]
         return render(request, 'payments/valid_payment.html', context)
     else:
         send_failed_payment_emails(payment_intent=payment_intent, error=error)

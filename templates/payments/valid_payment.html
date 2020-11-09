@@ -28,7 +28,11 @@
                             <td>{{ item.name }}</td>
                             <td>{{ item.cost }}</td>
                         </tr>
+
                     {% endfor %}
+                    <tr>
+                        <td>TOTAL CHARGED: £{{ total_charged|floatformat:2 }} {% if total_voucher_code %}(code applied: {{ total_voucher_code }}){% endif %}</td>
+                    </tr>
                 </tbody>
                 </table>
 

@@ -1,4 +1,5 @@
 from datetime import timedelta
+from decimal import Decimal
 from django.contrib.auth.models import User
 from django.utils import timezone
 
@@ -92,7 +93,7 @@ def get_available_user_subscription(user, event):
     return next(iter_available_subscriptions(user, event), None)
 
 
-def calculate_user_cart_total(unpaid_blocks=None, unpaid_subscriptions=None):
+def calculate_user_cart_total(unpaid_blocks=None, unpaid_subscriptions=None, total_voucher=None):
     block_cost = 0
     subscription_cost = 0
     def _block_cost(unpaid_block):
@@ -105,7 +106,19 @@ def calculate_user_cart_total(unpaid_blocks=None, unpaid_subscriptions=None):
         block_cost = sum(_block_cost(block) for block in unpaid_blocks)
     if unpaid_subscriptions:
         subscription_cost = sum(subscription.cost_as_of_today() for subscription in unpaid_subscriptions)
-    return block_cost + subscription_cost
+
+    cart_total = block_cost + subscription_cost
+    if total_voucher:
+        if total_voucher.discount:
+            percentage_to_pay = Decimal((100 - total_voucher.discount) / 100)
+            return (cart_total * percentage_to_pay).quantize(Decimal('.01'))
+        else:
+
+            if total_voucher.discount_amount > cart_total:
+                cart_total = 0
+            else:
+                cart_total -= Decimal(total_voucher.discount_amount)
+    return cart_total
 
 
 def booking_restricted_pre_event_start(event):

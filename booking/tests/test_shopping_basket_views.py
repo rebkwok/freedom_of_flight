@@ -10,7 +10,7 @@ from django.utils import timezone
 
 from stripe.error import InvalidRequestError
 
-from booking.models import Block, BlockConfig, BlockVoucher, Subscription, SubscriptionConfig
+from booking.models import Block, BlockConfig, BlockVoucher, Subscription, SubscriptionConfig, TotalVoucher
 from common.test_utils import TestUsersMixin
 from payments.models import Invoice, Seller
 
@@ -148,6 +148,26 @@ class ShoppingBasketViewTests(TestUsersMixin, TestCase):
         block.refresh_from_db()
         assert block.voucher == voucher
 
+    def test_total_voucher_application(self):
+        voucher = baker.make(TotalVoucher, code="test", discount=50)
+        block = baker.make_recipe("booking.dropin_block", block_config=self.dropin_block_config, user=self.student_user)
+        resp = self.client.get(self.url)
+        assert resp.context_data["total_cost"] == 20
+
+        resp = self.client.post(self.url, data={"add_voucher_code": "add_voucher_code", "code": "test"})
+        # no voucher code for block
+        assert list(resp.context_data["unpaid_block_info"]) == [
+            {"block": block, "original_cost": 20, 'voucher_applied': {'code': None, 'discounted_cost': None}}
+        ]
+        # but voucher code here because it's a total one
+        assert list(resp.context_data["applied_voucher_codes_and_discount"]) == [("test", 50, None)]
+        assert resp.context_data['total_cost_without_total_voucher'] == 20
+        assert resp.context_data["total_cost"] == 10
+
+        block.refresh_from_db()
+        assert block.voucher is None
+        assert self.client.session["total_voucher_code"] == "test"
+
     def test_remove_voucher(self):
         voucher = baker.make(BlockVoucher, code="test", discount=50)
         voucher.block_configs.add(self.dropin_block_config)
@@ -165,6 +185,19 @@ class ShoppingBasketViewTests(TestUsersMixin, TestCase):
         assert resp.context_data["total_cost"] == 20
         block.refresh_from_db()
         assert block.voucher is None
+
+    def test_remove_total_voucher(self):
+        baker.make(TotalVoucher, code="test", discount=50)
+        baker.make_recipe("booking.dropin_block", block_config=self.dropin_block_config, user=self.student_user)
+        resp = self.client.post(self.url, data={"add_voucher_code": "add_voucher_code", "code": "test"})
+        assert resp.context_data["total_cost"] == 10  # discount applied
+        assert resp.context_data['total_cost_without_total_voucher'] == 20
+        assert self.client.session["total_voucher_code"] == "test"
+
+        # remove it
+        resp = self.client.post(self.url, data={"remove_voucher_code": "remove_voucher_code", "code": "test"})
+        assert resp.context_data["total_cost"] == 20
+        assert "total_voucher_code" not in self.client.session
 
     def test_voucher_whitespace_removed(self):
         voucher = baker.make(BlockVoucher, code="test", discount=50)

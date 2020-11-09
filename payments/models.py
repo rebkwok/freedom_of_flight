@@ -24,6 +24,9 @@ class Invoice(models.Model):
     date_created = models.DateTimeField(default=timezone.now)
     paid = models.BooleanField(default=False)
     date_paid = models.DateTimeField(null=True, blank=True)
+    total_voucher_code = models.CharField(
+        max_length=255, null=True, blank=True, help_text="Voucher applied to invoice total"
+    )
 
     class Meta:
         ordering = ("-date_paid",)
@@ -64,9 +67,13 @@ class Invoice(models.Model):
     def items_metadata(self):
         # This is used for the payment intent metadata, which is limited to 40 chars keys and string values
         items = self.items_dict()
-        return {
+        metadata = {}
+        if self.total_voucher_code:
+            metadata = {"Voucher code used on total invoice": self.total_voucher_code}
+        items = {
             item["name"][:40]: f"{item['cost']} ({key})" for key, item in items.items()
         }
+        return {**metadata, **items}
 
     def save(self, *args, **kwargs):
         # set the default email on save, so Django doesn't think the model has changed when we're

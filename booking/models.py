@@ -372,6 +372,7 @@ class BlockConfig(models.Model):
 
 
 class BaseVoucher(models.Model):
+    code = models.CharField(max_length=255, unique=True)
     discount = models.PositiveIntegerField(
         verbose_name="Percentage discount", help_text="Discount value as a % of the purchased item cost. Enter a number between 1 and 100",
         null=True, blank=True
@@ -421,16 +422,19 @@ class BaseVoucher(models.Model):
             self.expiry_date = end_of_day_in_utc(self.expiry_date)
         super().save(*args, **kwargs)
 
+    def __str__(self):
+        return self.code
+
 
 class BlockVoucher(BaseVoucher):
-    code = models.CharField(max_length=255, unique=True)
     block_configs = models.ManyToManyField(BlockConfig)
 
     def check_block_config(self, block_config):
         return block_config in self.block_configs.all()
 
-    def __str__(self):
-        return self.code
+
+class TotalVoucher(BaseVoucher):
+    """A voucher that applies to the overall checkout total, not linked to any specific block"""
 
 
 class Block(models.Model):

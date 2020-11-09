@@ -18,7 +18,7 @@ from payments.models import Invoice, Seller, StripePaymentIntent
 from payments.utils import get_paypal_form
 
 from common.utils import full_name
-from ..models import Block, BlockVoucher
+from ..models import Block, BlockVoucher, TotalVoucher
 from ..utils import calculate_user_cart_total
 from .views_utils import data_privacy_required, get_unpaid_user_managed_blocks, get_unpaid_user_managed_subscriptions
 
@@ -44,6 +44,21 @@ def validate_voucher_max_total_uses(voucher, paid_only=True, user=None, exclude_
                 f'Voucher code {voucher.code} has limited number of total uses and expired before it could be used for all applicable blocks')
 
 
+def validate_total_voucher_max_total_uses(voucher, paid_only=True, user=None):
+    if voucher.max_vouchers is not None:
+        used_voucher_invoices = Invoice.objects.filter(total_voucher_code=voucher.code)
+        if paid_only:
+            # exclude any associated with unpaid invoices
+            used_voucher_invoices = used_voucher_invoices.filter(paid=True)
+        else:
+            # We're counting unpaid invoices, but still we need to
+            # exclude unpaid invoices with voucher for this user
+            used_voucher_invoices = used_voucher_invoices.exclude(paid=False, username=user.username)
+        if used_voucher_invoices.count() >= voucher.max_vouchers:
+            raise VoucherValidationError(
+                f'Voucher code {voucher.code} has limited number of total uses and has expired')
+
+
 def validate_voucher_properties(voucher):
     """Validate voucher properties that are not specific to number of uses"""
     if voucher.has_expired:
@@ -54,7 +69,10 @@ def validate_voucher_properties(voucher):
         raise VoucherValidationError(f'Voucher code is not valid until {voucher.start_date.strftime("%d %b %y")}')
     elif voucher.max_vouchers is not None:
         # validate max vouchers for paid blocks only
-        validate_voucher_max_total_uses(voucher, paid_only=True)
+        if isinstance(voucher, BlockVoucher):
+            validate_voucher_max_total_uses(voucher, paid_only=True)
+        else:
+            validate_total_voucher_max_total_uses(voucher, paid_only=True)
 
 
 def validate_unpaid_voucher_max_total_uses(user, voucher, exclude_block_id=None):
@@ -67,6 +85,14 @@ def validate_voucher_for_user(voucher, user):
     validate_voucher_properties(voucher)
     if voucher.max_per_user is not None and user.blocks.filter(paid=True, voucher=voucher).count() >= voucher.max_per_user:
         raise VoucherValidationError(f'{full_name(user)} has already used voucher code {voucher.code} the maximum number of times ({voucher.max_per_user})')
+
+
+def validate_total_voucher_for_checkout_user(voucher, user):
+    validate_voucher_properties(voucher)
+    if voucher.max_per_user is not None \
+            and Invoice.objects.filter(username=user.username, paid=True, total_voucher_code=voucher.code).count() >= voucher.max_per_user:
+        raise VoucherValidationError(
+            f'You have already used voucher code {voucher.code} the maximum number of times ({voucher.max_per_user})')
 
 
 def validate_voucher_for_block_configs_in_cart(voucher, cart_unpaid_blocks):
@@ -138,40 +164,59 @@ def shopping_basket(request):
             # if valid, apply this code to as many blocks as we can
             # report if not valid for use with any unpaid blocks
             voucher_errors = []
+            voucher_type = "block"
             try:
                 voucher = BlockVoucher.objects.get(code=code)
             except BlockVoucher.DoesNotExist:
-                voucher_errors.append(f'"{code}" is not a valid code')
-            else:
+                try:
+                    voucher = TotalVoucher.objects.get(code=code)
+                    voucher_type = "total"
+                except TotalVoucher.DoesNotExist:
+                    voucher_errors.append(f'"{code}" is not a valid code')
+            if not voucher_errors:
                 try:
                     # check overall user validation, not specific to the block user
                     validate_voucher_properties(voucher)
-                    validate_voucher_for_block_configs_in_cart(voucher, unpaid_blocks)
-                    # validate for each block user
-                    for user, user_unpaid_blocks in unpaid_blocks_by_user.items():
+                    if voucher_type == "block":
+                        validate_voucher_for_block_configs_in_cart(voucher, unpaid_blocks)
+                        # validate for each block user
+                        for user, user_unpaid_blocks in unpaid_blocks_by_user.items():
+                            try:
+                                validate_voucher_for_user(voucher, user)
+                                blocks_to_apply = []
+                                for block in user_unpaid_blocks:
+                                    if voucher.check_block_config(block.block_config):
+                                        try:
+                                            validate_voucher_for_unpaid_block(block, voucher)
+                                            blocks_to_apply.append(block)
+                                        except VoucherValidationError as user_voucher_error:
+                                            voucher_errors.append(str(user_voucher_error))
+                                # Passed all validation checks; apply it to blocks
+                                apply_voucher_to_unpaid_blocks(voucher, blocks_to_apply)
+                            except VoucherValidationError as user_voucher_error:
+                                voucher_errors.append(str(user_voucher_error))
+                    else:
                         try:
-                            validate_voucher_for_user(voucher, user)
-                            blocks_to_apply = []
-                            for block in user_unpaid_blocks:
-                                if voucher.check_block_config(block.block_config):
-                                    try:
-                                        validate_voucher_for_unpaid_block(block, voucher)
-                                        blocks_to_apply.append(block)
-                                    except VoucherValidationError as user_voucher_error:
-                                        voucher_errors.append(str(user_voucher_error))
-                            # Passed all validation checks; apply it to blocks
-                            apply_voucher_to_unpaid_blocks(voucher, blocks_to_apply)
+                            validate_total_voucher_for_checkout_user(voucher, request.user)
+                            request.session["total_voucher_code"] = voucher.code
                         except VoucherValidationError as user_voucher_error:
                             voucher_errors.append(str(user_voucher_error))
                 except VoucherValidationError as voucher_error:
                     voucher_errors.insert(0, str(voucher_error))
             context["voucher_add_error"] = voucher_errors
         elif "remove_voucher_code" in request.POST:
-            # Delete any used_vouchers for unpaid blocks
-            for block in unpaid_blocks:
-                if block.voucher and block.voucher.code == code:
-                    block.voucher = None
-                    block.save()
+            try:
+                # is it a total voucher code we're removing?
+                TotalVoucher.objects.get(code=code)
+                if "total_voucher_code" in request.session:
+                    del request.session["total_voucher_code"]
+            except TotalVoucher.DoesNotExist:
+                # It's a block voucher
+                # Delete any used_vouchers for unpaid blocks
+                for block in unpaid_blocks:
+                    if block.voucher and block.voucher.code == code:
+                        block.voucher = None
+                        block.save()
     voucher_applied_costs = {
         unpaid_block.id: get_valid_applied_voucher_info(unpaid_block) for unpaid_block in unpaid_blocks
     }
@@ -186,9 +231,19 @@ def shopping_basket(request):
         for block in unpaid_blocks
     ]
     # We do this AFTER generating the voucher applied costs, as that may have modified some used vouchers if they weren't valid
-    applied_voucher_codes_and_discount = Block.objects.filter(id__in=unpaid_block_ids, voucher__isnull=False)\
-        .order_by("voucher__code").distinct("voucher__code").values_list("voucher__code", "voucher__discount", "voucher__discount_amount")
+    applied_voucher_codes_and_discount = list(
+        Block.objects.filter(id__in=unpaid_block_ids, voucher__isnull=False)
+            .order_by("voucher__code")
+            .distinct("voucher__code")
+            .values_list("voucher__code", "voucher__discount", "voucher__discount_amount")
+        )
 
+    total_voucher_code = request.session.get("total_voucher_code")
+    if total_voucher_code:
+        total_voucher = TotalVoucher.objects.get(code=total_voucher_code)
+        applied_voucher_codes_and_discount.append((total_voucher.code, total_voucher.discount, total_voucher.discount_amount))
+    else:
+        total_voucher = None
     # calculate the unpaid subscription costs, including any partial reduced costs for current subscription periods
     unpaid_subscription_info = [
         {
@@ -204,7 +259,8 @@ def shopping_basket(request):
         "unpaid_block_info": unpaid_block_info,
         "applied_voucher_codes_and_discount": applied_voucher_codes_and_discount,
         "unpaid_subscription_info": unpaid_subscription_info,
-        "total_cost": calculate_user_cart_total(unpaid_blocks, unpaid_subscriptions)
+        "total_cost_without_total_voucher": calculate_user_cart_total(unpaid_blocks, unpaid_subscriptions),
+        "total_cost": calculate_user_cart_total(unpaid_blocks, unpaid_subscriptions, total_voucher)
     })
 
     return TemplateResponse(
@@ -231,6 +287,18 @@ def _verify_block_vouchers(unpaid_blocks):
                 block.save()
 
 
+def _get_and_verify_total_vouchers(request):
+    total_voucher_code = request.session.get("total_voucher_code")
+    if total_voucher_code:
+        total_voucher = TotalVoucher.objects.get(code=total_voucher_code)
+        try:
+            validate_voucher_properties(total_voucher)
+            validate_total_voucher_for_checkout_user(total_voucher, request.user)
+            return total_voucher
+        except VoucherValidationError:
+            del request.session["total_voucher_code"]
+
+
 def _check_items_and_get_updated_invoice(request):
     total = Decimal(request.POST.get("cart_total"))
     unpaid_blocks = get_unpaid_user_managed_blocks(request.user)
@@ -248,7 +316,11 @@ def _check_items_and_get_updated_invoice(request):
         return checked
 
     _verify_block_vouchers(unpaid_blocks)
-    check_total = calculate_user_cart_total(unpaid_blocks=unpaid_blocks, unpaid_subscriptions=unpaid_subscriptions)
+    total_voucher = _get_and_verify_total_vouchers(request)
+
+    check_total = calculate_user_cart_total(
+        unpaid_blocks=unpaid_blocks, unpaid_subscriptions=unpaid_subscriptions, total_voucher=total_voucher
+    )
     if total != check_total:
         messages.error(request, "Some cart items changed; please check and try again")
         checked.update({"redirect": True, "redirect_url": reverse("booking:shopping_basket")})
@@ -290,8 +362,10 @@ def _check_items_and_get_updated_invoice(request):
             subscription.invoice = invoice
             subscription.save()
     else:
-        # If an invoice with the expected items is found, make sure it's total is current
+        # If an invoice with the expected items is found, make sure it's total is current and any total voucher
+        # is updated
         invoice.amount = Decimal(total)
+        invoice.total_voucher_code = total_voucher.code if total_voucher is not None else None
         invoice.save()
 
     checked.update({"invoice": invoice})
@@ -395,6 +469,9 @@ def stripe_checkout(request):
 def check_total(request):
     unpaid_blocks = get_unpaid_user_managed_blocks(request.user)
     unpaid_subscriptions = get_unpaid_user_managed_subscriptions(request.user)
+    total_voucher = _get_and_verify_total_vouchers(request)
     _verify_block_vouchers(unpaid_blocks)
-    check_total = calculate_user_cart_total(unpaid_blocks=unpaid_blocks, unpaid_subscriptions=unpaid_subscriptions)
+    check_total = calculate_user_cart_total(
+        unpaid_blocks=unpaid_blocks, unpaid_subscriptions=unpaid_subscriptions, total_voucher=total_voucher
+    )
     return JsonResponse({"total": check_total})

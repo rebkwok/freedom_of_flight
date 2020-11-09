@@ -43,7 +43,9 @@
             {% endfor %}
         </tbody>
         <tfoot>
-            <tr><td colspan="2">TOTAL: £{{ cart_total }}</td></tr>
+            <tr><td colspan="2">TOTAL: £{{ cart_total }}
+            {% if request.session.total_voucher_code %}(voucher applied to cart total: <strong>{{ request.session.total_voucher_code }}</strong>){% endif %}
+            </td></tr>
         </tfoot>
         </table>
 

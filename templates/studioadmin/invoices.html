@@ -19,15 +19,25 @@
             <th>Amount</th>
             <th>Payment method</th>
             <th>Date Paid</th>
+            <th>Items</th>
+            <th>Total voucher applied</th>
         </thead>
         <tbody>
             {% for invoice in invoices %}
                 <tr>
                     <td>{{ invoice.invoice_id }}</td>
                     <td>{{ invoice.username }}</td>
-                    <td>{{ invoice.amount }}</td>
+                    <td>£{{ invoice.amount }}</td>
                     <td>{% if invoice.stripe_payment_intent_id %}Stripe{% else %}PayPal{% endif %}</td>
                     <td>{{ invoice.date_paid|date:"d-M-y H:i" }}</td>
+                    <td>
+                        <ul>
+                            {% for item in invoice.items_dict.values %}
+                            <li>{{ item.name }} - {{ item.cost }}</li>
+                            {% endfor %}
+                        </ul>
+                    </td>
+                    <td>{% if invoice.total_voucher_code %}{{ invoice.total_voucher_code }}{% endif %}</td>
                 </tr>
             {% endfor %}
         </tbody>
