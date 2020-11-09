@@ -447,8 +447,9 @@ class TotalVoucher(BaseVoucher):
     def uses(self):
         return self.blocks.count()
 
-    def __str__(self):
-        return self.code
+
+class TotalVoucher(BaseVoucher):
+    """A voucher that applies to the overall checkout total, not linked to any specific block"""
 
 
 class Block(models.Model):
