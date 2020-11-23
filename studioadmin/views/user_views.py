@@ -106,7 +106,7 @@ def users_with_unused_blocks(request):
     unused_blocks_by_config = {}
     for block_config in BlockConfig.objects.all():
         unused_blocks = [
-            block for block in Block.objects.filter(block_config=block_config, paid=True) if not block.bookings.exists()
+            block for block in Block.objects.filter(block_config=block_config, paid=True) if block.active_block and not block.bookings.exists()
         ]
         if unused_blocks:
             unused_blocks_by_config[block_config.name] = unused_blocks

@@ -508,6 +508,12 @@ class Block(models.Model):
         self.save()
 
     @property
+    def expired(self):
+        if self.expiry_date and self.expiry_date < timezone.now():
+            return True
+        return False
+
+    @property
     def full(self):
         if self.bookings.exists():
             return self.bookings.count() >= self.block_config.size
@@ -519,7 +525,7 @@ class Block(models.Model):
         A block is active if its not full and has been paid for.  This doesn't mean it
         is valid for a specific event (dependent on event date)
         """
-        return not self.full and self.paid
+        return not self.expired and (not self.full and self.paid)
 
     def _valid_and_active_for_event(self, event):
         # hasn't started yet OR event is within block date range
