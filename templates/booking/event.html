@@ -15,7 +15,7 @@
         {% else %}
             <div><a id="video_link_id" class="btn btn-info" href="{{ event.video_link }}">Join online class</a></div>
         {% endif %}
-    {% else %}
+    {% elif event.event_type.is_online %}
         <div id="video_link_disabled_id" class="btn btn-outline-secondary disabled">Video link enabled 20 mins before class</div>
     {% endif %}
 
