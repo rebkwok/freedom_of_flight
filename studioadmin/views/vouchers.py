@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from collections import Counter
 
 from django.contrib import messages
 from django.contrib.auth.models import User
@@ -11,17 +12,18 @@ from django.utils.safestring import mark_safe
 from braces.views import LoginRequiredMixin
 
 from common.utils import full_name
-from booking.models import GiftVoucher, BlockVoucher
+from booking.models import GiftVoucher, BaseVoucher, BlockVoucher, TotalVoucher
+from payments.models import Invoice
 from ..forms import BlockVoucherStudioadminForm
 from .utils import StaffUserMixin
 from activitylog.models import ActivityLog
 
 
 class VoucherListView(LoginRequiredMixin, StaffUserMixin, ListView):
-    model = BlockVoucher
+    model = BaseVoucher
     template_name = 'studioadmin/vouchers.html'
     context_object_name = 'vouchers'
-    queryset = BlockVoucher.objects.filter(is_gift_voucher=False).order_by('-start_date')
+    queryset = BaseVoucher.objects.filter(is_gift_voucher=False).order_by('-start_date')
     paginate_by = 20
 
 
@@ -29,7 +31,7 @@ class GiftVoucherListView(VoucherListView):
     template_name = 'studioadmin/vouchers.html'
     context_object_name = 'vouchers'
     paginate_by = 20
-    queryset = BlockVoucher.objects.filter(is_gift_voucher=True).order_by('-start_date')
+    queryset = BaseVoucher.objects.filter(is_gift_voucher=True).order_by('-start_date')
 
     def get_context_data(self, *args, **kwargs):
         context = super().get_context_data(*args, **kwargs)
@@ -40,19 +42,18 @@ class GiftVoucherListView(VoucherListView):
 class VoucherUpdateView(LoginRequiredMixin, StaffUserMixin, UpdateView):
 
     form_class = BlockVoucherStudioadminForm
-    model = BlockVoucher
+    model = BaseVoucher
     template_name = 'studioadmin/voucher_create_update.html'
     context_object_name = 'voucher'
 
     def form_valid(self, form):
+        voucher = form.save()
         if form.has_changed():
-            voucher = form.save()
-            msg = 'Voucher with code <strong>{}</strong> has been updated!'.format(
-                voucher.code
-            )
+            discount = f"£{voucher.discount_amount}" if voucher.discount_amount else f"{voucher.discount} %"
+            msg = f'Voucher with code <strong>{voucher.code}</strong> has been updated!'
             messages.success(self.request, mark_safe(msg))
             ActivityLog.objects.create(
-                log=f'Voucher code {voucher.code} (id {voucher.id}) updated by admin user {full_name(self.request.user)}'
+                log=f'Voucher code {voucher.code} (id {voucher.id}, discount {discount}) updated by admin user {full_name(self.request.user)}'
             )
         else:
             messages.info(self.request, 'No changes made')
@@ -67,7 +68,7 @@ class VoucherUpdateView(LoginRequiredMixin, StaffUserMixin, UpdateView):
 class VoucherCreateView(LoginRequiredMixin, StaffUserMixin, CreateView):
 
     form_class = BlockVoucherStudioadminForm
-    model = BlockVoucher
+    model = BaseVoucher
     template_name = 'studioadmin/voucher_create_update.html'
     context_object_name = 'voucher'
 
@@ -77,8 +78,10 @@ class VoucherCreateView(LoginRequiredMixin, StaffUserMixin, CreateView):
             voucher.code
         )
         messages.success(self.request, mark_safe(msg))
+        discount = f"£{voucher.discount_amount}" if voucher.discount_amount else f"{voucher.discount} %"
+
         ActivityLog.objects.create(
-            log=f'Voucher code {voucher.code} (id {voucher.id}) created by admin user {full_name(self.request.user)}'
+            log=f'Voucher code {voucher.code} (id {voucher.id}, discount {discount}) created by admin user {full_name(self.request.user)}'
         )
         return HttpResponseRedirect(self.get_success_url(voucher.id))
 
@@ -87,14 +90,23 @@ class VoucherCreateView(LoginRequiredMixin, StaffUserMixin, CreateView):
 
 
 class VoucherDetailView(LoginRequiredMixin, StaffUserMixin, DetailView):
-    model = BlockVoucher
+    model = BaseVoucher
     template_name = 'studioadmin/voucher_uses.html'
     context_object_name = 'voucher'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         voucher = context["voucher"]
-        voucher_users = User.objects.filter(blocks__voucher=voucher, blocks__paid=True).annotate(num_uses=Count("blocks"))
+        try:
+            voucher = BlockVoucher.objects.get(id=voucher.id)
+            voucher_users = User.objects.filter(blocks__voucher=voucher, blocks__paid=True).annotate(
+                num_uses=Count("blocks"))
+        except BlockVoucher.DoesNotExist:
+            voucher = TotalVoucher.objects.get(id=voucher.id)
+            invoice_usernames = Counter(Invoice.objects.filter(total_voucher_code=voucher.code, paid=True).values_list("username", flat=True))
+            voucher_users = User.objects.filter(username__in=invoice_usernames)
+            for user in voucher_users:
+                user.num_uses = invoice_usernames[user.username]
         context['voucher_users'] = voucher_users
         return context
 

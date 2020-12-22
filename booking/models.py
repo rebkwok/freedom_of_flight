@@ -440,16 +440,15 @@ class BlockVoucher(BaseVoucher):
     def check_block_config(self, block_config):
         return block_config in self.block_configs.all()
 
+    def uses(self):
+        return self.blocks.filter(paid=True).count()
+
 
 class TotalVoucher(BaseVoucher):
     """A voucher that applies to the overall checkout total, not linked to any specific block"""
 
     def uses(self):
-        return self.blocks.count()
-
-
-class TotalVoucher(BaseVoucher):
-    """A voucher that applies to the overall checkout total, not linked to any specific block"""
+        return Invoice.objects.filter(paid=True, total_voucher_code=self.code).count()
 
 
 class Block(models.Model):
@@ -644,7 +643,7 @@ class WaitingListUser(models.Model):
 class GiftVoucher(models.Model):
     """
     Defines gift vouchers that are available for purchase. Each one is associated with one Block config
-    and will be user to generate voucher codes for 100%, one-time use vouchers for one block of the 
+    and will be user to generate voucher codes for 100%, one-time use vouchers for one block of the
     specified block config.
     """
     block_config = models.ForeignKey(

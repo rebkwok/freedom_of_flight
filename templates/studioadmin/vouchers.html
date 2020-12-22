@@ -1,6 +1,6 @@
 {% extends "studioadmin/base.html" %}
 {% load static %}
-{% load bookingtags %}
+{% load bookingtags studioadmintags %}
 
 {% block subnav-xs %}
     {%  include "studioadmin/includes/navs/xs/vouchers_subnav.html" %}
@@ -23,6 +23,9 @@ credit block.
 <thead>
 <tr class="success">
     <th class="text-center">Voucher code</br><span class="helptext">Click to edit</span></th>
+    {% if gift_vouchers %}
+        <th class="text-center">Purchaser</th>
+    {% endif %}
     <th class="text-center">Discount</th>
     <th class="text-center">Start Date</th>
     <th class="text-center">Expiry Date</th>
@@ -38,18 +41,21 @@ credit block.
     {% for voucher in vouchers %}
     <tr {% if voucher.has_expired %}class="expired"{% endif %}>
         <td class="text-center"><a href="{% url 'studioadmin:edit_voucher' voucher.pk %}">{{ voucher.code }}</a></td>
+        {% if gift_vouchers %}
+            <td class="text-center">{{ voucher.purchaser_email }}</td>
+        {% endif %}
         <td class="text-center">{% if voucher.discount %}{{ voucher.discount }}%{% else %}£{{ voucher.discount_amount }}{% endif %}</td>
         <td class="text-center">{{ voucher.start_date|date:"d M Y" }}
         <td class="text-center">{% if voucher.expiry_date %}{{ voucher.expiry_date|date:"d M Y" }}{% else %}N/A{% endif %}</td>
         <td class="text-center">{% if voucher.max_per_user %}{{ voucher.max_per_user }}{% else %}N/A{% endif %}</td>
         <td class="text-center">{% if voucher.max_vouchers %}{{ voucher.max_vouchers }}{% else %}N/A{% endif %}</td>
-        <td class="text-center"><a href="{% url 'studioadmin:voucher_uses' voucher.pk %}">{{ voucher.uses }}</a></td>
-        <td>{% for bt in voucher.block_configs.all %}{{ bt }}</br>{% endfor %}</td>
+        <td class="text-center"><a href="{% url 'studioadmin:voucher_uses' voucher.pk %}">{{ voucher|uses }}</a></td>
+        <td>{% valid_for voucher %}</td>
         <td class="text-center"><a href="{% url 'studioadmin:voucher_uses' voucher.pk %}" target="_blank"><span class="fas fa-link"></span></a> </td>
     </tr>
     {% endfor %}
 {% else %}
-  <tr><td colspan="9">No vouchers found</td></tr>
+  <tr><td {% if gift_vouchers %}colspan="10"{% else %}colspan="9"{% endif %}>No vouchers found</td></tr>
 {% endif %}
 </tbody>
 </table>
