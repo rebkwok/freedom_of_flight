@@ -39,12 +39,20 @@ class GiftVoucherListView(VoucherListView):
         return context
 
 
-class VoucherUpdateView(LoginRequiredMixin, StaffUserMixin, UpdateView):
+class VoucherCreateUpdateMixin:
 
     form_class = BlockVoucherStudioadminForm
     model = BaseVoucher
     template_name = 'studioadmin/voucher_create_update.html'
     context_object_name = 'voucher'
+
+    def get_success_url(self, is_gift_voucher):
+        if is_gift_voucher:
+            return reverse('studioadmin:gift_vouchers')
+        return reverse('studioadmin:vouchers')
+
+
+class VoucherUpdateView(LoginRequiredMixin, StaffUserMixin, VoucherCreateUpdateMixin, UpdateView):
 
     def form_valid(self, form):
         voucher = form.save()
@@ -59,18 +67,8 @@ class VoucherUpdateView(LoginRequiredMixin, StaffUserMixin, UpdateView):
             messages.info(self.request, 'No changes made')
         return HttpResponseRedirect(self.get_success_url(is_gift_voucher=voucher.is_gift_voucher))
 
-    def get_success_url(self, is_gift_voucher):
-        if is_gift_voucher:
-            return reverse('studioadmin:gift_vouchers')
-        return reverse('studioadmin:vouchers')
 
-
-class VoucherCreateView(LoginRequiredMixin, StaffUserMixin, CreateView):
-
-    form_class = BlockVoucherStudioadminForm
-    model = BaseVoucher
-    template_name = 'studioadmin/voucher_create_update.html'
-    context_object_name = 'voucher'
+class VoucherCreateView(LoginRequiredMixin, StaffUserMixin, VoucherCreateUpdateMixin, CreateView):
 
     def form_valid(self, form):
         voucher = form.save()
@@ -83,10 +81,7 @@ class VoucherCreateView(LoginRequiredMixin, StaffUserMixin, CreateView):
         ActivityLog.objects.create(
             log=f'Voucher code {voucher.code} (id {voucher.id}, discount {discount}) created by admin user {full_name(self.request.user)}'
         )
-        return HttpResponseRedirect(self.get_success_url(voucher.id))
-
-    def get_success_url(self, voucher_id):
-        return reverse('studioadmin:edit_voucher', args=[voucher_id])
+        return HttpResponseRedirect(self.get_success_url(is_gift_voucher=voucher.is_gift_voucher))
 
 
 class VoucherDetailView(LoginRequiredMixin, StaffUserMixin, DetailView):
