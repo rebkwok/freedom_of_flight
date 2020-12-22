@@ -108,6 +108,7 @@ class EventCreateUpdateForm(forms.ModelForm):
             "name", "description", "start", "duration",
             "max_participants",
             "video_link",
+            "video_link_available_after_class",
             "show_on_site",
             "cancelled"
         )
@@ -129,7 +130,8 @@ class EventCreateUpdateForm(forms.ModelForm):
             ),
             Field("duration", type="integer"),
             Field("max_participants", type="integer"),
-            "video_link" if self.event_type.is_online else Hidden("cancelled", ""),
+            "video_link" if self.event_type.is_online else Hidden("video_link", ""),
+            "video_link_available_after_class" if self.event_type.is_online else Hidden("video_link_available_after_class", ""),
             "show_on_site",
             "cancelled" if self.instance.id and self.instance.cancelled else Hidden("cancelled", False),
             Submit('submit', 'Save')

@@ -97,7 +97,18 @@
                 {% with user_booking_info|lookup_dict:event.id as user_info %}
                     <div class="col-1 col-sm-1 pt-2 pb-2 pl-1">
                         <small>{{ event.start|date:"H:i"  }}-{{ event.end|date:"H:i" }}</small>
+                        {% if user_info.open %}
+                            {% if event.show_video_link %}
+                                <br/><a id="video_link_id_{{ event.id }}" class="btn btn-info btn-xs" href="{{ event.video_link }}">Join online class</a>
+                            {% elif event.event_type.is_online %}
+                                <br/>
+                                <span data-toggle="tooltip" title="Video link active 20 mins before class starts">
+                                    <span id="video_link_id_disabled_{{ event.id }}" class="btn btn-secondary btn-xs disabled">Join online class</span>
+                                </span>
+                            {% endif %}
+                        {% endif %}
                     </div>
+
                     <div class="col-6 col-sm-7 pt-2 pb-2">
                             <!-- Event name and info (availability, user blocks) on smaller screens -->
                             <span id="booked_tick_{{ event.id }}" {% if not user_info.open %}class="hidden"{% endif %}>
@@ -138,6 +149,7 @@
                                             <span class="helptext">Course has started<span/><br/>
                                                 <a class="btn btn-xs btn-outline-dark float-right" href="{% url 'booking:course_events' event.course.slug %}">More booking info</a>
                                             </span>
+                                        </span>
                                         {% elif user_info.can_book_or_cancel %}
                                             <span
                                                 id="book_{{ event.id }}"
@@ -153,7 +165,6 @@
                                         {% elif user_info.booking_restricted_pre_event_start %}
                                             <span class="float-right"><a class="btn btn-xs btn-secondary" disabled href="#"><span class="helptext">Unavailable {{ event.event_type.booking_restriction }} mins before start</span></a></span>
                                         {% endif %}
-                                    </span>
                                 {% else %}
                                     <span class="float-right">
                                     {% if user_info.has_booked and not event.is_past %}

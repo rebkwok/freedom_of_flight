@@ -266,6 +266,10 @@ class Event(models.Model):
     slug = AutoSlugField(populate_from=['name', 'start'], max_length=40, unique=True)
     cancelled = models.BooleanField(default=False)
     video_link = models.URLField(null=True, blank=True, help_text="Zoom/Video URL (for online classes only)")
+    video_link_available_after_class = models.BooleanField(
+        default=False,
+        help_text="Zoom/Video URL available after class is past (for online classes only)"
+    )
     show_on_site = models.BooleanField(default=False)
 
     class Meta:
@@ -308,6 +312,10 @@ class Event(models.Model):
                 events_in_order = self.course.uncancelled_events.order_by("start").values_list("id", flat=True)
                 return f"{list(events_in_order).index(self.id) + 1}/{events_in_order.count()}"
             return "-"
+
+    @property
+    def show_video_link(self):
+        return self.event_type.is_online and (timezone.now() > self.start - timedelta(minutes=20))
 
     def get_absolute_url(self):
         return reverse("booking:event", kwargs={'slug': self.slug})

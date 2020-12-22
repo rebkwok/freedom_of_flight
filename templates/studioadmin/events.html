@@ -37,6 +37,7 @@
                                 <th scope="col" class="text-center"></th>
                                 <th class="text-center"></th>
                                 <th class="text-center"></th>
+                                <th class="text-center"></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -97,6 +98,9 @@
                                     <div data-toggle="tooltip" data-placement="top" title="Clone this {{ event.event_type.label }}">
                                         <a href="{% url 'studioadmin:clone_event' event.slug %}"><i class="far fa-clone"></i></a>
                                     </div>
+                                </td>
+                                <td class="pr-0 pl-1 text-center">
+                                    {% if event.video_link %}<a href="{{ event.video_link }}"><span class="fas fa-link"></span></a>{% endif %}
                                 </td>
                                 <td class="pr-0 pl-1 text-center">
                                     {% if event.cancelled %}

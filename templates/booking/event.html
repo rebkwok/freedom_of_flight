@@ -4,6 +4,21 @@
 
 {% block content %}
 <div class="container-fluid">
+
+    {% if event.show_video_link and open_booking %}
+        {% if past %}
+            {% if booking.event.video_link_available_after_class %}
+                <div><a id="video_link_id" class="btn btn-info" href="{{ event.video_link }}">View video link</a></div>
+            {% else %}
+                <div id="video_link_disabled_id" class="btn btn-secondary disabled">Class is past</div>
+            {% endif %}
+        {% else %}
+            <div><a id="video_link_id" class="btn btn-info" href="{{ event.video_link }}">Join online class</a></div>
+        {% endif %}
+    {% else %}
+        <div id="video_link_disabled_id" class="btn btn-outline-secondary disabled">Video link enabled 20 mins before class</div>
+    {% endif %}
+
     <div class="mt-3">
     <div class="card">
         <div class="card-header"><h2>{{ event.name }} ({{ event.event_type.track.name }})</h2></div>
