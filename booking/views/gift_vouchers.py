@@ -14,7 +14,7 @@ from payments.helpers import create_gift_voucher_paypal_transaction
 from payments.models import PaypalGiftVoucherTransaction
 from ..context_helpers import get_paypal_dict
 from ..forms import GiftVoucherForm
-from ..models import BlockVoucher, EventVoucher, GiftVoucherType
+from ..models import BlockVoucher, TotalVoucher, GiftVoucher
 
 
 class GiftVoucherPurchaseView(FormView):
@@ -48,10 +48,9 @@ class GiftVoucherPurchaseView(FormView):
             try:
                 voucher = BlockVoucher.objects.get(code=self.kwargs["voucher_code"])
             except BlockVoucher.DoesNotExist:
-                voucher = EventVoucher.objects.get(code=self.kwargs["voucher_code"])
+                voucher = TotalVoucher.objects.get(code=self.kwargs["voucher_code"])
             kwargs["instance"] = voucher
         return kwargs
-
 
     def form_valid(self, form):
         voucher_type = form.cleaned_data["voucher_type"]
@@ -76,9 +75,9 @@ class GiftVoucherPurchaseView(FormView):
                 # codes are random UUIDs, we'll probably only have one transaction per code/voucher type
                 voucher.purchaser_email = email
                 if isinstance(voucher, BlockVoucher):
-                    old_voucher_type = GiftVoucherType.objects.get(block_type=voucher.block_types.first())
+                    old_voucher_type = GiftVoucher.objects.get(block_config=voucher.block_configs.first())
                 else:
-                    old_voucher_type = GiftVoucherType.objects.get(event_type=voucher.event_types.first())
+                    old_voucher_type = GiftVoucher.objects.get(event_type=voucher.event_types.first())
                 if old_voucher_type != voucher_type:
                     existing_ppt = PaypalGiftVoucherTransaction.objects.filter(voucher_code=voucher.code, voucher_type=old_voucher_type)
                     if existing_ppt:

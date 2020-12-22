@@ -59,7 +59,12 @@ class Invoice(models.Model):
                 "name": item.config.name, "cost": f"£{item.cost_as_of_today()}", "user": item.user
             } for item in self.subscriptions.all()
         }
-        return {**blocks, **subscriptions}
+        gift_vouchers = {
+            f"gift_voucher-{gift_voucher.id}": {
+                "code": gift_voucher.code, "cost": f"£{gift_voucher.gift_voucher_config.cost()}"
+            } for gift_voucher in self.gift_vouchers.all()
+        }
+        return {**blocks, **subscriptions, **gift_vouchers}
 
     def item_count(self):
         return sum([self.blocks.count(), self.subscriptions.count()])

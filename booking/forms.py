@@ -2,7 +2,7 @@ from datetime import timedelta
 from django import forms
 from django.utils import timezone
 
-from .models import Event, GiftVoucher, BlockVoucher
+from .models import Event, GiftVoucherConfig, BlockVoucher
 
 
 def get_available_users(user):
@@ -56,7 +56,7 @@ class GiftVoucherForm(forms.Form):
 
     voucher_type = forms.ModelChoiceField(
         label="Voucher for:",
-        queryset=GiftVoucher.objects.filter(active=True),
+        queryset=GiftVoucherConfig.objects.filter(active=True),
         widget=forms.Select(attrs={"class": "form-control"})
     )
     user_email = forms.EmailField(
@@ -94,7 +94,7 @@ class GiftVoucherForm(forms.Form):
                 self.fields["user_email"].disabled = True
                 self.fields["user_email1"].disabled = True
 
-            self.fields["voucher_type"].initial = GiftVoucher.objects.get(block_config=instance.block_configs.first()).id
+            self.fields["voucher_type"].initial = GiftVoucherConfig.objects.get(block_config=instance.block_configs.first()).id
 
             self.fields["recipient_name"].initial = instance.name
             self.fields["message"].initial = instance.message

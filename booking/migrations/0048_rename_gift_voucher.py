@@ -6,7 +6,7 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('booking', '0046_totalvoucher'),
+        ('booking', '0047_event_video_link_available_after_class'),
     ]
 
     operations = [
