@@ -28,19 +28,8 @@ def get_active_pane_class(context, tab_index, tab):
 
 @register.inclusion_tag("studioadmin/includes/voucher_valid_for.html")
 def valid_for(voucher):
-    try:
-        voucher = BlockVoucher.objects.get(id=voucher.id)
+    if isinstance(voucher, BlockVoucher):
         voucher_type = "block"
-    except BlockVoucher.DoesNotExist:
-        voucher = TotalVoucher.objects.get(id=voucher.id)
+    else:
         voucher_type = "total"
     return {"voucher_type": voucher_type, "voucher": voucher}
-
-
-@register.filter()
-def uses(voucher):
-    try:
-        voucher = BlockVoucher.objects.get(id=voucher.id)
-    except BlockVoucher.DoesNotExist:
-        voucher = TotalVoucher.objects.get(id=voucher.id)
-    return voucher.uses()

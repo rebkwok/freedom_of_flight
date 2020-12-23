@@ -93,9 +93,10 @@ def get_available_user_subscription(user, event):
     return next(iter_available_subscriptions(user, event), None)
 
 
-def calculate_user_cart_total(unpaid_blocks=None, unpaid_subscriptions=None, total_voucher=None):
+def calculate_user_cart_total(unpaid_blocks=None, unpaid_subscriptions=None, unpaid_gift_vouchers=None, total_voucher=None):
     block_cost = 0
     subscription_cost = 0
+    gift_voucher_cost = 0
     def _block_cost(unpaid_block):
         if unpaid_block.voucher:
             return unpaid_block.cost_with_voucher
@@ -106,8 +107,9 @@ def calculate_user_cart_total(unpaid_blocks=None, unpaid_subscriptions=None, tot
         block_cost = sum(_block_cost(block) for block in unpaid_blocks)
     if unpaid_subscriptions:
         subscription_cost = sum(subscription.cost_as_of_today() for subscription in unpaid_subscriptions)
-
-    cart_total = block_cost + subscription_cost
+    if unpaid_gift_vouchers:
+        gift_voucher_cost = sum(gift_voucher.gift_voucher_config.cost for gift_voucher in unpaid_gift_vouchers)
+    cart_total = block_cost + subscription_cost + gift_voucher_cost
     if total_voucher:
         if total_voucher.discount:
             percentage_to_pay = Decimal((100 - total_voucher.discount) / 100)

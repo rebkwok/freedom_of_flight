@@ -8,5 +8,6 @@ Invoice number: {{ invoice.invoice_id }}</p>
 User: {{ user.first_name}} {{ user.last_name}}
 Purchased:
 {% for block in invoice.blocks.all %}-{{ block }}{% endfor %}
-{% for subscription in invoice.subscription.all %}-{{ subscription }}{% endfor %}
+{% for subscription in invoice.subscriptions.all %}-{{ subscription }}{% endfor %}
+{% for gift_voucher in invoice.gift_vouchers.all %}-{{ gift_voucher.name }}*{% endfor %}
 {% endblock %}

@@ -7,5 +7,8 @@ Invoice number: {{ invoice.invoice_id }}</p>
 {% if invoice.transaction_id %}Paypal Transaction id: {{ invoice.transaction_id }}{% endif %}
 Purchased:
 {% for block in invoice.blocks.all %}-{{ block.block_config.name }} ({{ block.user.first_name }} {{ block.user.last_name }}){% endfor %}
-{% for subscription in invoice.subscription.all %}-{{ subscription.config.name }} ({{ subscription.user.first_name }} {{ subscription.user.last_name }}){% endfor %}
+{% for subscription in invoice.subscriptions.all %}-{{ subscription.config.name }} ({{ subscription.user.first_name }} {{ subscription.user.last_name }}){% endfor %}
+{% for gift_voucher in invoice.gift_vouchers.all %}-{{ gift_voucher.name }}*{% endfor %}
+
+{% if invoice.gift_vouchers.exists %}*Gift voucher codes and a link to a printable voucher will be sent in separate email(s){% endif %}
 {% endblock %}

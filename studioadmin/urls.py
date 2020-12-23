@@ -154,6 +154,7 @@ urlpatterns = [
     path('vouchers/', VoucherListView.as_view(), name="vouchers"),
     path('gift-vouchers/', GiftVoucherListView.as_view(), name="gift_vouchers"),
     path('vouchers/add/', VoucherCreateView.as_view(), name="add_voucher"),
+    path('gift-vouchers/add/', VoucherCreateView.as_view(), {'gift_voucher': True}, name="add_gift_voucher"),
     path('vouchers/<int:pk>/edit/', VoucherUpdateView.as_view(), name="edit_voucher"),
     path('vouchers/<int:pk>/', VoucherDetailView.as_view(), name="voucher_uses"),
 

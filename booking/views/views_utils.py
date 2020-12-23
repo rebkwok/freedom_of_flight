@@ -2,7 +2,7 @@ from django.urls import reverse
 from django.shortcuts import HttpResponseRedirect
 
 from accounts.models import DataPrivacyPolicy, has_active_disclaimer, has_active_data_privacy_agreement
-from booking.models import Block, Subscription
+from booking.models import Block, Subscription, GiftVoucher
 
 
 class DataPolicyAgreementRequiredMixin:
@@ -44,11 +44,21 @@ def get_unpaid_user_managed_subscriptions(user):
     return Subscription.objects.filter(user__in=_managed_user_plus_self(user), paid=False).order_by('user_id')
 
 
+def get_unpaid_user_gift_vouchers(user):
+    voucher_ids = [
+        gift_voucher.id for gift_voucher in GiftVoucher.objects.filter(paid=False)
+        if gift_voucher.purchaser_email == user.email
+    ]
+    return GiftVoucher.objects.filter(id__in=voucher_ids)
+
+
 def get_unpaid_user_managed_items(user):
     return {
         "blocks": get_unpaid_user_managed_blocks(user),
-        "subscription": get_unpaid_user_managed_subscriptions(user)
+        "subscription": get_unpaid_user_managed_subscriptions(user),
+        "gift_vouchers": get_unpaid_user_gift_vouchers(user)
     }
+
 
 def total_unpaid_item_count(user):
     return sum([queryset.count() for queryset in get_unpaid_user_managed_items(user).values()])

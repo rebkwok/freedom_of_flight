@@ -1,6 +1,6 @@
 {% if voucher_type == "block" %}
     {% for bt in voucher.block_configs.all %}
-        {{bt}} <br/>
+        - {{ bt }}<br/>
     {% endfor %}
 {% else %}
     Total checkout amount

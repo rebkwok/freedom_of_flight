@@ -28,7 +28,7 @@
                     <td>{{ invoice.invoice_id }}</td>
                     <td>{{ invoice.username }}</td>
                     <td>£{{ invoice.amount }}</td>
-                    <td>{% if invoice.stripe_payment_intent_id %}Stripe{% else %}PayPal{% endif %}</td>
+                    <td>{% if invoice.stripe_payment_intent_id %}Stripe{% elif invoice.amount > 0 %}PayPal{% else %}Gift Voucher{% endif %}</td>
                     <td>{{ invoice.date_paid|date:"d-M-y H:i" }}</td>
                     <td>
                         <ul>

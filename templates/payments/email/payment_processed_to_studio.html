@@ -10,8 +10,11 @@
         {% for block in invoice.blocks.all %}
             <li>{{ block }}</li>
         {% endfor %}
-        {% for subscription in invoice.subscription.all %}
+        {% for subscription in invoice.subscriptions.all %}
             <li>{{ subscription }}</li>
+        {% endfor %}
+        {% for gift_voucher in invoice.gift_vouchers.all %}
+            <li>{{ gift_voucher.name }}*</li>
         {% endfor %}
     </ul>
 </p>

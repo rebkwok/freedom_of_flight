@@ -61,7 +61,7 @@ class Invoice(models.Model):
         }
         gift_vouchers = {
             f"gift_voucher-{gift_voucher.id}": {
-                "code": gift_voucher.code, "cost": f"£{gift_voucher.gift_voucher_config.cost()}"
+                "name": gift_voucher.name, "cost": f"£{gift_voucher.gift_voucher_config.cost}"
             } for gift_voucher in self.gift_vouchers.all()
         }
         return {**blocks, **subscriptions, **gift_vouchers}

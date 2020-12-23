@@ -39,7 +39,6 @@ class BlockVoucherStudioadminForm(forms.ModelForm):
             'max_vouchers',
             'block_configs',
             "activated",
-            "is_gift_voucher",
             'name',
             'message',
             'purchaser_email'
@@ -52,8 +51,8 @@ class BlockVoucherStudioadminForm(forms.ModelForm):
         labels = {
             'discount': 'Discount (%)',
             'discount_amount': 'Discount amount (£)',
-            'name': 'Name (optional, for gift vouchers)',
-            'message': 'Message (optional, for gift vouchers)',
+            'name': 'Recipient Name',
+            'message': 'Message',
             'max_per_user': 'Maximum uses per user',
             'max_vouchers': 'Maximum total uses',
             'block_configs': ''
@@ -67,12 +66,12 @@ class BlockVoucherStudioadminForm(forms.ModelForm):
             'expiry_date': 'Optional: set an expiry date after which the '
                            'voucher will no longer be accepted',
             'block_configs': '',
-            'is_gift_voucher': 'For a standard, single use gift voucher, set max uses per user=1, max available vouchers=1, and discount=100%',
-            'purchaser_email': 'Read only; purchaser email for gift voucher',
+            'purchaser_email': 'Purchaser email for gift voucher',
             'activated': 'Tick to make voucher active and usable'
         }
 
     def __init__(self, *args, **kwargs):
+        is_gift_voucher = kwargs.pop("is_gift_voucher", False)
         super().__init__(*args, **kwargs)
         self.fields["start_date"].input_formats = ['%d-%b-%Y']
         self.fields["expiry_date"].input_formats = ['%d-%b-%Y']
@@ -95,7 +94,8 @@ class BlockVoucherStudioadminForm(forms.ModelForm):
             self.fields['total_voucher'].initial = isinstance(self.child_instance, TotalVoucher)
             if isinstance(self.child_instance, BlockVoucher):
                 self.fields['block_configs'].initial = self.child_instance.block_configs.values_list("id", flat=True)
-
+            if self.child_instance.gift_voucher.exists():
+                is_gift_voucher = True
         self.fields['purchaser_email'].disabled = True
 
         self.helper = FormHelper()
@@ -139,16 +139,17 @@ class BlockVoucherStudioadminForm(forms.ModelForm):
             ),
             Fieldset(
                 "Gift Voucher details",
-                "is_gift_voucher",
                 'name',
                 Field("message", rows=10),
                 'purchaser_email',
+            ) if is_gift_voucher else Fieldset(
+                '',
+                Hidden('name', self.instance.name if self.instance.id else ''),
+                Hidden('name', self.instance.message if self.instance.id else ''),
+                Hidden('name', self.instance.purchaser_email if self.instance.id else '')
             ),
             Submit('submit', 'Save')
         )
-
-    def get_uses(self):
-        return self.instance.blocks.filter(paid=True).count()
 
     def clean(self):
         super().clean()
@@ -196,8 +197,8 @@ class BlockVoucherStudioadminForm(forms.ModelForm):
                 self.add_error('expiry_date', 'Expiry date must be after start date')
 
         max_uses = self.cleaned_data.get('max_vouchers')
-        if self.instance.id and max_uses:
-            times_used = self.get_uses()
+        if self.child_instance and max_uses:
+            times_used = self.child_instance.uses()
             if times_used > max_uses:
                 self.add_error(
                     'max_vouchers',
@@ -252,18 +253,17 @@ class BlockVoucherStudioadminForm(forms.ModelForm):
 
         if not self.child_instance:
             # New instances
+            opts = self._meta
+            fields = list(opts.fields)
             if self.cleaned_data["total_voucher"]:
                 # creating a total voucher
-                try:
-                    opts = self._meta
-                    fields = list(opts.fields)
-                    fields.remove("block_configs")
-                    self.instance = TotalVoucher()
-                    self.instance = forms.models.construct_instance(self, self.instance, opts.fields, opts.exclude)
-                except ValidationError as e:
-                    self._update_errors(e)
+                fields.remove("block_configs")
+                self.instance = TotalVoucher()
+            else:
+                self.instance = BlockVoucher()
+            try:
+                self.instance = forms.models.construct_instance(self, self.instance, fields, opts.exclude)
+            except ValidationError as e:
+                self._update_errors(e)
 
-        # creating/updating a BlockVoucher just calls super
         return super().save(commit=commit)
-
-

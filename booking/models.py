@@ -14,6 +14,7 @@ from django.contrib.postgres.fields import JSONField
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.functional import cached_property
+from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 
 from delorean import Delorean
@@ -24,6 +25,7 @@ from activitylog.models import ActivityLog
 from common.utils import start_of_day_in_utc, end_of_day_in_utc, end_of_day_in_local_time
 from payments.models import Invoice
 
+from .email_helpers import send_user_and_studio_emails
 from .utils import has_available_block, has_available_subscription, get_active_user_block, get_available_user_subscription
 
 logger = logging.getLogger(__name__)
@@ -423,11 +425,14 @@ class BaseVoucher(models.Model):
         if self.discount and self.discount_amount:
             raise ValidationError("Only one of discount (%) or discount_amount (fixed amount) may be specified (not both)")
 
+    def _generate_code(self):
+        return slugify(ShortUUID().random(length=12))
+
     def save(self, *args, **kwargs):
         if not self.code:
-            self.code = ShortUUID().random(length=12)
+            self.code = self._generate_code()
             while BaseVoucher.objects.filter(code=self.code).exists():
-                self.code = ShortUUID().random(length=12)
+                self.code = self._generate_code()
         self.full_clean()
         # replace start time with very start of day
         self.start_date = start_of_day_in_utc(self.start_date)
@@ -664,14 +669,14 @@ class GiftVoucherConfig(models.Model):
     )
     active = models.BooleanField(default=True, help_text="Display on site; set to False instead of deleting unused gift vouchers")
 
-    @cached_property
+    @property
     def cost(self):
         return self.block_config.cost if self.block_config else self.discount_amount
 
     def __str__(self):
         if self.block_config:
             return f"{self.block_config} -  £{self.cost}"
-        return f"Total voucher - £{self.cost}"
+        return f"Voucher - £{self.cost}"
 
     def clean(self):
         if not (self.block_config or self.discount_amount):
@@ -687,11 +692,55 @@ class GiftVoucherConfig(models.Model):
 class GiftVoucher(models.Model):
     """Holds information about a gift voucher purchase"""
     gift_voucher_config = models.ForeignKey(GiftVoucherConfig, on_delete=models.CASCADE)
-    block_voucher = models.ForeignKey(BlockVoucher, null=True, blank=True, on_delete=models.SET_NULL)
-    total_voucher = models.ForeignKey(TotalVoucher, null=True, blank=True, on_delete=models.SET_NULL)
+    block_voucher = models.ForeignKey(BlockVoucher, null=True, blank=True, on_delete=models.SET_NULL, related_name="gift_voucher")
+    total_voucher = models.ForeignKey(TotalVoucher, null=True, blank=True, on_delete=models.SET_NULL, related_name="gift_voucher")
 
     invoice = models.ForeignKey(Invoice, null=True, blank=True, on_delete=models.SET_NULL, related_name="gift_vouchers")
     paid = models.BooleanField(default=False)
+    slug = models.SlugField(max_length=40, null=True, blank=True)
+
+    @property
+    def voucher(self):
+        if self.block_voucher:
+            return self.block_voucher
+        elif self.total_voucher:
+            return self.total_voucher
+
+    @property
+    def purchaser_email(self):
+        if self.voucher:
+            return self.voucher.purchaser_email
+
+    @property
+    def code(self):
+        if self.voucher:
+            return self.voucher.code
+
+    @property
+    def name(self):
+        if self.block_voucher:
+            return f"Voucher for: {self.gift_voucher_config.block_config.name}"
+        elif self.total_voucher:
+            return f"£{self.total_voucher.discount_amount} voucher"
+
+    def __str__(self):
+        return f"{self.code} - {self.name} - {self.gift_voucher_config.cost} - {self.purchaser_email}"
+
+    def send_voucher_email(self):
+        context = {"gift_voucher": self}
+        send_user_and_studio_emails(
+            context,
+            user=None,
+            send_to_studio=False,
+            subjects={"user": "Gift Voucher"},
+            template_short_name="gift_voucher",
+            user_email=self.voucher.purchaser_email
+        )
+
+    def delete(self, using=None, keep_parents=False):
+        if self.voucher:
+            self.voucher.delete()
+        return super().delete(using, keep_parents)
 
     def save(self, *args, **kwargs):
         if not self.id:
@@ -752,9 +801,10 @@ class GiftVoucher(models.Model):
                         activated=False,
                         is_gift_voucher=True,
                     )
-                if self.total_voucher:
+                if self.block_voucher:
                     self.block_voucher.delete()
-
+        if self.voucher and not self.slug:
+            self.slug = slugify(self.voucher.code)
         super().save(*args, **kwargs)
 
 

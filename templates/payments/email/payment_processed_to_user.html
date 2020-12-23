@@ -11,9 +11,17 @@
         {% for block in invoice.blocks.all %}
             <li>{{ block.block_config.name }} ({{ block.user.first_name }} {{ block.user.last_name }})</li>
         {% endfor %}
-        {% for subscription in invoice.subscription.all %}
+        {% for subscription in invoice.subscriptions.all %}
             <li>{{ subscription.config.name }} ({{ subscription.user.first_name }} {{ subscription.user.last_name }})</li>
+        {% endfor %}
+        {% for gift_voucher in invoice.gift_vouchers.all %}
+            <li>{{ gift_voucher.name }}*</li>
         {% endfor %}
     </ul>
 </p>
+
+{% if invoice.gift_vouchers.exists %}
+    <p>*Gift voucher codes and a link to a printable voucher will be sent in separate email(s)</p>
+{% endif %}
+
 {% endblock %}

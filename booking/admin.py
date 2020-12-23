@@ -4,7 +4,7 @@ from django.utils import timezone
 from common.utils import full_name
 
 from .models import (
-    Block, BlockConfig, Booking, BlockVoucher, GiftVoucher,
+    Block, BlockConfig, Booking, BlockVoucher, GiftVoucher, GiftVoucherConfig,
     Course, Event, EventType, Track, WaitingListUser, SubscriptionConfig, Subscription,
     TotalVoucher
 )
@@ -109,5 +109,6 @@ admin.site.register(WaitingListUser)
 admin.site.register(BlockVoucher)
 admin.site.register(TotalVoucher)
 admin.site.register(GiftVoucher)
+admin.site.register(GiftVoucherConfig)
 admin.site.register(Subscription, SubscriptionAdmin)
 admin.site.register(SubscriptionConfig)

@@ -7,14 +7,17 @@
   <div class="collapse navbar-collapse" id="navbarVouchersSubNav">
     <ul class="navbar-nav">
       </li>
-        <a class="nav-link" href="{% url 'studioadmin:vouchers' %}">Voucher list</a>
+        <a class="nav-link" href="{% url 'studioadmin:vouchers' %}">Voucher codes</a>
       </li>
      </li>
-        <a class="nav-link" href="{% url 'studioadmin:gift_vouchers' %}">Gift Voucher list</a>
+        <a class="nav-link" href="{% url 'studioadmin:gift_vouchers' %}">Gift Vouchers</a>
       </li>
       <li class="nav-item">
           <a class="nav-link" href="{% url 'studioadmin:add_voucher' %}">Add voucher</a>
       </li>
+    <li class="nav-item">
+      <a class="nav-link" href="{% url 'studioadmin:add_gift_voucher' %}">Add gift voucher</a>
+    </li>
       </ul>
   </div>
 </nav>
@@ -27,9 +30,10 @@
           Vouchers Menu
         </a>
         <div class="dropdown-menu" aria-labelledby="navbarDropdown">
-          <a class="dropdown-item" href="{% url 'studioadmin:vouchers' %}">Voucher List</a>
-          <a class="dropdown-item" href="{% url 'studioadmin:gift_vouchers' %}">Gift Voucher List</a>
+          <a class="dropdown-item" href="{% url 'studioadmin:vouchers' %}">Voucher Codes</a>
+          <a class="dropdown-item" href="{% url 'studioadmin:gift_vouchers' %}">Gift Vouchers</a>
           <a class="dropdown-item" href="{% url 'studioadmin:add_voucher' %}">Add voucher</a>
+          <a class="dropdown-item" href="{% url 'studioadmin:add_gift_voucher' %}">Add gift voucher</a>
         </div>
     </li>
 </ul>

@@ -26,6 +26,13 @@ class VoucherListView(LoginRequiredMixin, StaffUserMixin, ListView):
     queryset = BaseVoucher.objects.filter(is_gift_voucher=False).order_by('-start_date')
     paginate_by = 20
 
+    def get_queryset(self):
+        vouchers = [
+            TotalVoucher.objects.get(id=voucher.id) if TotalVoucher.objects.filter(id=voucher.id).exists()
+            else BlockVoucher.objects.get(id=voucher.id) for voucher in self.queryset
+        ]
+        return vouchers
+
 
 class GiftVoucherListView(VoucherListView):
     template_name = 'studioadmin/vouchers.html'
@@ -70,8 +77,21 @@ class VoucherUpdateView(LoginRequiredMixin, StaffUserMixin, VoucherCreateUpdateM
 
 class VoucherCreateView(LoginRequiredMixin, StaffUserMixin, VoucherCreateUpdateMixin, CreateView):
 
+    def get_form_kwargs(self):
+        form_kwargs = super().get_form_kwargs()
+        form_kwargs["is_gift_voucher"] = self.kwargs.get("gift_voucher", False)
+        return form_kwargs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["is_gift_voucher"] = self.kwargs.get("gift_voucher", False)
+        return context
+
     def form_valid(self, form):
         voucher = form.save()
+        if self.kwargs.get("gift_voucher"):
+            voucher.is_gift_voucher = True
+            voucher.save()
         msg = 'Voucher with code <strong>{}</strong> has been created!'.format(
             voucher.code
         )

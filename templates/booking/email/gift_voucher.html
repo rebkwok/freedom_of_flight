@@ -1,0 +1,11 @@
+{% extends 'email_base.html' %}
+
+{% block messagecontent %}
+
+<p>Thank you for purchasing a gift voucher.  Your voucher code is {{ gift_voucher.code }}.</p>
+
+<p>To view and print your gift voucher, please go to <a href="{{ host }}/gift-vouchers/{{ gift_voucher.slug }}">{{ host }}/gift-voucher/{{ gift_voucher.slug }}</a></p>
+
+<p>To update the recipient name or message on your gift voucher, please go to <a href="{{ host }}/gift-vouchers/{{ gift_voucher.slug }}/update">{{ host }}/gift-voucher/{{ gift_voucher.slug }}</a></p>
+
+{% endblock %}

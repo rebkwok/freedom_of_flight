@@ -11,7 +11,8 @@ from booking.views import (
     SubscriptionListView, SubscriptionDetailView,
     ajax_subscription_purchase,
     CourseListView,
-    stripe_checkout, check_total
+    stripe_checkout, check_total,
+    GiftVoucherPurchaseView, GiftVoucherUpdateView, GiftVoucherDetailView, voucher_details, gift_voucher_delete
 )
 
 
@@ -62,12 +63,14 @@ urlpatterns = [
     path('ajax-cart-item-delete/', ajax_cart_item_delete, name='ajax_cart_item_delete'),
     path('check-total/', check_total, name="check_total"),
 
+    path('gift-vouchers/', GiftVoucherPurchaseView.as_view(), name='buy_gift_voucher'),
+    path('gift-vouchers/<slug:slug>/update', GiftVoucherUpdateView.as_view(), name='gift_voucher_update'),
+    path('gift-vouchers/<slug:slug>', GiftVoucherDetailView.as_view(), name='gift_voucher_details'),
+    path('vouchers/<str:voucher_code>', voucher_details, name='voucher_details'),
+    path('gift-vouchers/<slug:slug>/delete', gift_voucher_delete, name='gift_voucher_delete'),
+
     # EVENTS LIST: needs to go last, catches everything else
     path('<slug:track>/', EventListView.as_view(), name='events'),
 
-    # path('gift-vouchers/', GiftVoucherPurchaseView.as_view(), name='buy_gift_voucher'),
-    # path('gift-voucher/<voucher_code>', gift_voucher_details, name='gift_voucher_details'),
-    # path('gift-voucher/<voucher_code>/update', GiftVoucherPurchaseView.as_view(), name='gift_voucher_update'),
-    # path('gift-voucher/<voucher_code>/delete', gift_voucher_delete, name='gift_voucher_delete'),
     path('', RedirectView.as_view(url='/schedule/', permanent=True)),
 ]
