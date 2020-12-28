@@ -4,7 +4,7 @@
 @font-face { font-family: chopin-script; src: url(../fonts/chopinscript.ttf); }
 
 .voucher-title {
-  font-family: chopin-script;
+  font-family: flaemische-kanzleischrift;
   font-style: italic;
   font-weight: bold;
   font-size: xx-large;
@@ -34,9 +34,11 @@
 }
 
 .voucher-bg {
-  background: linear-gradient(rgba(255,255,255,.8), rgba(255,255,255,.8)), url(../images/fof_logo_black.png) no-repeat 50%;
+  background: linear-gradient(rgba(255,255,255,0.8), rgba(255,255,255,0.8)), url(../images/fof_logo_black.png) no-repeat 50%;
   min-height: 200px;
   background-size: contain;
+  -webkit-print-color-adjust: exact !important;
+  color-adjust: exact !important;
 }
 
 .voucher-box {
