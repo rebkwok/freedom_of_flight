@@ -105,12 +105,11 @@ def _process_completed_stripe_payment(payment_intent, invoice, seller=None):
             subscription.save()
         for gift_voucher in invoice.gift_vouchers.all():
             gift_voucher.paid = True
-            gift_voucher.voucher.activated = True
-            gift_voucher.voucher.save()
             gift_voucher.save()
+            gift_voucher.activate()
         invoice.paid = True
         invoice.save()
-        # update/create the django model PaymentIntent - this isjust for records
+        # update/create the django model PaymentIntent - this is just for records
         StripePaymentIntent.update_or_create_payment_intent_instance(payment_intent, invoice, seller)
 
         # SEND EMAILS

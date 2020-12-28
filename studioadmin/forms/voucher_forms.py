@@ -219,51 +219,37 @@ class BlockVoucherStudioadminForm(forms.ModelForm):
                     'created' if self.instance._state.adding else 'changed',
                 )
             )
-        if self.child_instance and isinstance(self.child_instance, TotalVoucher):
-            # updating a TotalVoucher
-            if self.cleaned_data["total_voucher"]:
-                try:
-                    opts = self._meta
-                    fields = list(opts.fields)
-                    fields.remove("block_configs")
-                    self.instance = forms.models.construct_instance(self, self.child_instance, fields, opts.exclude)
-                except ValidationError as e:
-                    self._update_errors(e)
-            else:
-                # converting a TotalVoucher to a BlockVoucher
-                try:
-                    opts = self._meta
-                    self.instance = opts.model()
-                    self.instance = forms.models.construct_instance(self, self.instance, opts.fields, opts.exclude)
-                    self.child_instance.delete()
-                except ValidationError as e:
-                    self._update_errors(e)
+        models = {
+            "total": TotalVoucher,
+            "block": BlockVoucher
+        }
+        opts = self._meta
+        fields = list(opts.fields)
+        if self.cleaned_data["total_voucher"]:
+            new_type = "total"
+        else:
+            new_type = "block"
 
-        if self.child_instance and isinstance(self.child_instance, BlockVoucher) and self.cleaned_data["total_voucher"]:
-            # converting a BlockVoucher to a TotalVoucher
-            try:
-                opts = self._meta
-                fields = list(opts.fields)
-                fields.remove("block_configs")
-                self.instance = TotalVoucher()
-                self.instance = forms.models.construct_instance(self, self.instance, opts.fields, opts.exclude)
+        if new_type == "total":
+            fields.remove("block_configs")
+
+        if self.child_instance:
+            if isinstance(self.child_instance, TotalVoucher):
+                old_type = "total"
+            else:
+                old_type = "block"
+
+            if new_type != old_type:
+                self.instance = models[new_type]()
                 self.child_instance.delete()
-            except ValidationError as e:
-                self._update_errors(e)
-
-        if not self.child_instance:
-            # New instances
-            opts = self._meta
-            fields = list(opts.fields)
-            if self.cleaned_data["total_voucher"]:
-                # creating a total voucher
-                fields.remove("block_configs")
-                self.instance = TotalVoucher()
             else:
-                self.instance = BlockVoucher()
-            try:
-                self.instance = forms.models.construct_instance(self, self.instance, fields, opts.exclude)
-            except ValidationError as e:
-                self._update_errors(e)
+                self.instance = self.child_instance
+        else:
+            self.instance = models[new_type]()
+
+        try:
+            self.instance = forms.models.construct_instance(self, self.instance, opts.fields, opts.exclude)
+        except ValidationError as e:
+            self._update_errors(e)
 
         return super().save(commit=commit)

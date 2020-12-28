@@ -25,7 +25,6 @@ def active_user_managed_subscriptions(core_user, order_by_fields=("purchase_date
 
 
 @data_privacy_required
-@login_required
 def event_purchase_view(request, event_slug):
     event = get_object_or_404(Event, slug=event_slug)
     context = block_config_context(request, event=event)
@@ -34,7 +33,6 @@ def event_purchase_view(request, event_slug):
 
 
 @data_privacy_required
-@login_required
 def course_purchase_view(request, course_slug):
     course = get_object_or_404(Course, slug=course_slug)
     context = block_config_context(request, course=course)
@@ -43,7 +41,6 @@ def course_purchase_view(request, course_slug):
 
 
 @data_privacy_required
-@login_required
 def purchase_view(request):
     context = {**block_config_context(request), **subscription_config_context(request)}
     return render(request, "booking/purchase_options.html", context)

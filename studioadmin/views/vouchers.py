@@ -19,11 +19,10 @@ from .utils import StaffUserMixin
 from activitylog.models import ActivityLog
 
 
-class VoucherListView(LoginRequiredMixin, StaffUserMixin, ListView):
+class VoucherListMixin:
     model = BaseVoucher
     template_name = 'studioadmin/vouchers.html'
     context_object_name = 'vouchers'
-    queryset = BaseVoucher.objects.filter(is_gift_voucher=False).order_by('-start_date')
     paginate_by = 20
 
     def get_queryset(self):
@@ -34,10 +33,11 @@ class VoucherListView(LoginRequiredMixin, StaffUserMixin, ListView):
         return vouchers
 
 
-class GiftVoucherListView(VoucherListView):
-    template_name = 'studioadmin/vouchers.html'
-    context_object_name = 'vouchers'
-    paginate_by = 20
+class VoucherListView(LoginRequiredMixin, StaffUserMixin, VoucherListMixin, ListView):
+    queryset = BaseVoucher.objects.filter(is_gift_voucher=False).order_by('-start_date')
+
+
+class GiftVoucherListView(LoginRequiredMixin, StaffUserMixin, VoucherListMixin, ListView):
     queryset = BaseVoucher.objects.filter(is_gift_voucher=True).order_by('-start_date')
 
     def get_context_data(self, *args, **kwargs):
@@ -47,7 +47,6 @@ class GiftVoucherListView(VoucherListView):
 
 
 class VoucherCreateUpdateMixin:
-
     form_class = BlockVoucherStudioadminForm
     model = BaseVoucher
     template_name = 'studioadmin/voucher_create_update.html'
@@ -92,7 +91,8 @@ class VoucherCreateView(LoginRequiredMixin, StaffUserMixin, VoucherCreateUpdateM
         if self.kwargs.get("gift_voucher"):
             voucher.is_gift_voucher = True
             voucher.save()
-        msg = 'Voucher with code <strong>{}</strong> has been created!'.format(
+        msg = '{} with code <strong>{}</strong> has been created!'.format(
+            "Gift voucher" if voucher.is_gift_voucher else "Voucher",
             voucher.code
         )
         messages.success(self.request, mark_safe(msg))

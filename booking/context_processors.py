@@ -2,7 +2,7 @@ from datetime import timedelta
 from django.conf import settings
 from django.utils import timezone
 
-from .models import Block, Track, Event
+from .models import Block, Track, Event, GiftVoucherConfig
 from .utils import get_view_as_user
 from .views.views_utils import total_unpaid_item_count
 
@@ -33,5 +33,6 @@ def booking(request):
         'cart_item_count': cart_item_count,
         'view_as_user': view_as_user,
         'checkout_method': settings.CHECKOUT_METHOD,
+        'gift_vouchers_available': GiftVoucherConfig.objects.filter(active=True).exists()
     }
 

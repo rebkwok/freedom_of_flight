@@ -668,6 +668,10 @@ class GiftVoucherConfig(models.Model):
         null=True, blank=True, decimal_places=2, max_digits=6
     )
     active = models.BooleanField(default=True, help_text="Display on site; set to False instead of deleting unused gift vouchers")
+    duration = models.PositiveIntegerField(default=6, help_text="How many months will this gift voucher last?")
+
+    class Meta:
+        ordering = ("block_config", "discount_amount",)
 
     @property
     def cost(self):
@@ -677,6 +681,9 @@ class GiftVoucherConfig(models.Model):
         if self.block_config:
             return f"{self.block_config} -  £{self.cost}"
         return f"Voucher - £{self.cost}"
+
+    def name(self):
+        return str(self)
 
     def clean(self):
         if not (self.block_config or self.discount_amount):
@@ -725,6 +732,15 @@ class GiftVoucher(models.Model):
 
     def __str__(self):
         return f"{self.code} - {self.name} - {self.gift_voucher_config.cost} - {self.purchaser_email}"
+
+    def activate(self):
+        """Activate a voucher that isn't already actvated, and reset start/expiry dates if necessary"""
+        if self.voucher and not self.voucher.activated:
+            self.voucher.activated = True
+            if self.voucher.start_date < timezone.now():
+                self.voucher.start_date = timezone.now()
+            self.voucher.expiry_date = self.voucher.start_date + relativedelta(months=self.gift_voucher_config.duration)
+            self.voucher.save()
 
     def send_voucher_email(self):
         context = {"gift_voucher": self}

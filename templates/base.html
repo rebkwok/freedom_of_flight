@@ -53,17 +53,18 @@
             {% for track in tracks %}
             <li class="nav-item"><a class="nav-link" href="{% url 'booking:events' track.slug %}">{{ track.name }}</a></li>
             {% endfor %}
-{#              <li class="nav-item"><a class="nav-link" href="{% url 'booking:purchase_options' %}">Payment Plans</a></li>#}
               <li class="nav-item dropdown">
                 <a class="nav-link dropdown-toggle" href="#" id="navbarShopDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                   Shop
                 </a>
                 <div class="dropdown-menu" aria-labelledby="navbarShopDropdown">
-                    {% if request.user.is_authenticated %}
                     <a class="dropdown-item" href="{% url 'booking:purchase_options' %}">Payment Plans</a>
+                    {% if gift_vouchers_available %}
+                      <a class="dropdown-item" href="{% url 'booking:buy_gift_voucher' %}">Gift Vouchers</a>
                     {% endif %}
-                  <a class="dropdown-item" href="{% url 'booking:buy_gift_voucher' %}">Gift Vouchers</a>
-{#                  <a class="dropdown-item" href="#"><em>Merchandise</em></a>#}
+                    {% if merchandise_available %}
+                        <a class="dropdown-item" href="#"><em>Merchandise</em></a>
+                    {% endif %}
                 </div>
               </li>
             {% if request.user.is_authenticated %}

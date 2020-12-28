@@ -10,22 +10,35 @@
         <h3 class="mt-1">Buy a Gift Voucher</h3>
     {% endif %}
 
-        <div>
-            Choose your voucher type below.  If you provide a name and/or message, these will be displayed on the voucher.<br>
-            Please check your email address is correct; your voucher will be sent to this address.
-        </div>
+    {% if request.user.is_authenticated %}
 
-    {% if voucher %}
-        <div class="small"><em>Note: voucher type cannot be modified after purchase has been completed.</em></div>
-    {% endif %}
+            <div>
+                Choose your voucher type below.  If you provide a name and/or message, these will be displayed on the voucher.<br>
+                Please check your email address is correct; your voucher will be sent to this address.
+            </div>
 
-        {% if form.errors %}
-            <p class="text-danger">Please correct the errors below:</p>
+        {% if voucher %}
+            <div class="small"><em>Note: voucher type cannot be modified after purchase has been completed.</em></div>
         {% endif %}
-        <form method="post" action="">
-            {% csrf_token %}
-            {%  crispy form %}
-        </form>
+
+            {% if form.errors %}
+                <p class="text-danger">Please correct the errors below:</p>
+            {% endif %}
+            <form method="post" action="">
+                {% csrf_token %}
+                {%  crispy form %}
+            </form>
+    {% else %}
+        <div>
+            Gift voucher are available to purchase for the following:
+            <ul>
+            {% for config in gift_voucher_configs %}
+                <li>{{ config.name }}</li>
+            {% endfor%}
+            </ul>
+            <a href="{% url 'account_login' %}?next={{request.get_full_path}}">Log in</a> or <a href="{% url 'account_signup' %}">register</a> to purchase.
+        </div>
+    {% endif %}
 
 
 {% endblock content %}

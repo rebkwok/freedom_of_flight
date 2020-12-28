@@ -97,6 +97,11 @@ class SubscriptionAdmin(admin.ModelAdmin):
     inlines = (BookingInline,)
 
 
+class GiftVoucherConfigAdmin(admin.ModelAdmin):
+    model = GiftVoucherConfig
+    list_display = ("discount_amount", "block_config", "duration", "active",)
+
+
 admin.site.site_header = "Freedom of Flight Admin"
 admin.site.register(Event, EventAdmin)
 admin.site.register(Track, TrackAdmin)
@@ -109,6 +114,6 @@ admin.site.register(WaitingListUser)
 admin.site.register(BlockVoucher)
 admin.site.register(TotalVoucher)
 admin.site.register(GiftVoucher)
-admin.site.register(GiftVoucherConfig)
+admin.site.register(GiftVoucherConfig, GiftVoucherConfigAdmin)
 admin.site.register(Subscription, SubscriptionAdmin)
 admin.site.register(SubscriptionConfig)

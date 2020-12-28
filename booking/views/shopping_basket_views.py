@@ -396,8 +396,7 @@ def _check_items_and_get_updated_invoice(request):
         for gift_voucher in unpaid_gift_vouchers:
             gift_voucher.paid = True
             gift_voucher.save()
-            gift_voucher.voucher.activated = True
-            gift_voucher.voucher.save()
+            gift_voucher.activate()
             gift_voucher.send_voucher_email()
         invoice.paid = True
         invoice.save()
