@@ -45,6 +45,10 @@ class EventInline(admin.TabularInline):
     max_num = 0
 
 
+class GiftVoucherInline(admin.TabularInline):
+    model = GiftVoucher
+
+
 class EventTypeInline(admin.TabularInline):
     model = EventType
     can_delete = False
@@ -100,6 +104,7 @@ class SubscriptionAdmin(admin.ModelAdmin):
 class GiftVoucherConfigAdmin(admin.ModelAdmin):
     model = GiftVoucherConfig
     list_display = ("discount_amount", "block_config", "duration", "active",)
+    inlines = (GiftVoucherInline,)
 
 
 admin.site.site_header = "Freedom of Flight Admin"

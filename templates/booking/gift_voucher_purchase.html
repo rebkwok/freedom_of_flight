@@ -10,14 +10,13 @@
         <h3 class="mt-1">Buy a Gift Voucher</h3>
     {% endif %}
 
-    {% if request.user.is_authenticated %}
-
+    {% if request.user.is_authenticated or voucher %}
+        {% if not voucher %}
             <div>
                 Choose your voucher type below.  If you provide a name and/or message, these will be displayed on the voucher.<br>
                 Please check your email address is correct; your voucher will be sent to this address.
             </div>
-
-        {% if voucher %}
+        {% else %}
             <div class="small"><em>Note: voucher type cannot be modified after purchase has been completed.</em></div>
         {% endif %}
 

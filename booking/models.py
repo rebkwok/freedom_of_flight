@@ -671,7 +671,7 @@ class GiftVoucherConfig(models.Model):
     duration = models.PositiveIntegerField(default=6, help_text="How many months will this gift voucher last?")
 
     class Meta:
-        ordering = ("block_config", "discount_amount",)
+        ordering = ("block_config", "discount_amount")
 
     @property
     def cost(self):
