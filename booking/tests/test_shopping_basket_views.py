@@ -10,7 +10,9 @@ from django.utils import timezone
 
 from stripe.error import InvalidRequestError
 
-from booking.models import Block, BlockConfig, BlockVoucher, Subscription, SubscriptionConfig, TotalVoucher
+from booking.models import (
+    Block, BlockConfig, BlockVoucher, Subscription, SubscriptionConfig, TotalVoucher, GiftVoucher
+)
 from common.test_utils import TestUsersMixin
 from payments.models import Invoice, Seller
 
@@ -531,7 +533,7 @@ class AjaxShoppingBasketCheckoutTests(TestUsersMixin, TestCase):
         assert block.paid
         assert block.voucher == voucher
         assert resp["redirect"] is True
-        assert resp["url"] == reverse("booking:blocks")
+        assert resp["url"] == reverse("booking:schedule")
 
     def test_uses_existing_invoice(self):
         invoice = baker.make(
@@ -665,7 +667,41 @@ class StripeCheckoutTests(TestUsersMixin, TestCase):
         assert block.paid
         assert block.voucher == voucher
         assert resp.status_code == 302
-        assert resp.url == reverse("booking:blocks")
+        assert resp.url == reverse("booking:schedule")
+
+    @patch("booking.views.shopping_basket_views.stripe.PaymentIntent")
+    def test_zero_total_with_total_voucher(self, mock_payment_intent):
+        mock_payment_intent_obj = self.get_mock_payment_intent(id="foo")
+        mock_payment_intent.create.return_value = mock_payment_intent_obj
+        baker.make(TotalVoucher, activated=True, code="test", discount_amount=50, max_per_user=10)
+
+        block = baker.make_recipe(
+            "booking.dropin_block", block_config=self.dropin_block_config, user=self.student_user,
+        )
+        gift_voucher = baker.make(
+            GiftVoucher,
+            gift_voucher_config__discount_amount=10,
+        )
+        gift_voucher.voucher.purchaser_email = self.student_user.email
+        gift_voucher.voucher.save()
+
+        # Call shopping basket view to apply the total voucher code
+        self.client.post(reverse('booking:shopping_basket'), data={"add_voucher_code": "add_voucher_code", "code": "test"})
+        assert self.client.session["total_voucher_code"] == "test"
+
+        resp = self.client.post(self.url, data={"cart_total": 0})
+        block.refresh_from_db()
+        gift_voucher.refresh_from_db()
+        assert block.paid is True
+        assert gift_voucher.paid is True
+        assert gift_voucher.voucher.activated is True
+        assert resp.status_code == 302
+        assert resp.url == reverse("booking:schedule")
+
+        invoice = Invoice.objects.latest("id")
+        assert block in invoice.blocks.all()
+        assert gift_voucher in invoice.gift_vouchers.all()
+        assert invoice.paid is True
 
     @patch("booking.views.shopping_basket_views.stripe.PaymentIntent")
     def test_uses_existing_invoice(self, mock_payment_intent):
