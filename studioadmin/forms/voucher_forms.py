@@ -4,13 +4,14 @@ from datetime import datetime
 
 from django import forms
 from django.core.exceptions import ValidationError
+from django.shortcuts import reverse
 
 from crispy_forms.bootstrap import InlineCheckboxes, AppendedText, PrependedText
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Button, Layout, Submit, Row, Column, Field, Fieldset, Hidden, HTML
 
-from booking.models import BlockConfig, BlockVoucher, TotalVoucher
-from common.utils import start_of_day_in_utc, end_of_day_in_utc
+from booking.models import BlockConfig, BlockVoucher, GiftVoucherConfig, TotalVoucher
+from common.utils import end_of_day_in_utc
 
 
 def validate_discount(value):
@@ -253,3 +254,60 @@ class BlockVoucherStudioadminForm(forms.ModelForm):
             self._update_errors(e)
 
         return super().save(commit=commit)
+
+
+class GiftVoucherConfigForm(forms.ModelForm):
+    class Meta:
+        model = GiftVoucherConfig
+        fields = ("block_config", "discount_amount", "duration", "active")
+        labels = {
+            "block_config": "Credit block",
+            "discount_amount": "Voucher value",
+            "active": "Available for purchase on site"
+        }
+        help_texts = {
+            "duration": "Number of months until voucher expires (from completion of payment)",
+            "active": "Uncheck to remove this option from the gift voucher purchase options available to users"
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.required = False
+        self.fields["block_config"].queryset = BlockConfig.objects.filter(active=True)
+
+        self.helper = FormHelper()
+        back_url = reverse('studioadmin:gift_voucher_configs')
+        self.helper.layout = Layout(
+            HTML("<p>A gift voucher can be valid for either a single credit block <strong>OR</strong> a "
+                 "fixed value (valid as a discount on a users total shopping basket value)</p>"),
+            Row(
+                Column("block_config"),
+                Column(PrependedText("discount_amount", "£")),
+            ),
+            "duration",
+            "active",
+            Submit('submit', f'Save', css_class="btn btn-success"),
+            HTML(f'<a class="btn btn-outline-dark" href="{back_url}">Back</a>')
+        )
+
+    def clean(self):
+        # Don't allow change from total to block type voucher if it's already been used
+        block_config = self.cleaned_data.get("block_config")
+        discount_amount = self.cleaned_data.get("discount_amount")
+        if block_config and discount_amount:
+            self.add_error('__all__', 'Select either a credit block or a fixed voucher value (not both)')
+        elif not (block_config or discount_amount):
+            self.add_error('block_config', 'One of credit block or a fixed voucher value is required')
+            self.add_error('discount_amount', 'One of credit block or a fixed voucher value is required')
+
+    def full_clean(self):
+        super().full_clean()
+        if self.errors.get("__all__"):
+            errorlist = [*self.errors["__all__"]]
+            for error in self.errors["__all__"]:
+                # remove the default credit block/discount amount message, we should have added a nicer one already
+                if error.startswith("Only one of discount amount or block type") and len(self.errors["__all__"]) >= 2:
+                    errorlist.remove(error)
+            if errorlist != self.errors["__all__"]:
+                self.errors["__all__"] = errorlist

@@ -88,7 +88,7 @@ class GiftVoucherForm(forms.ModelForm):
         super().__init__(**kwargs)
 
         self.fields["gift_voucher_config"].queryset = GiftVoucherConfig.objects.filter(active=True)
-        self.fields["gift_voucher_config"].label = "Voucher for:"
+        self.fields["gift_voucher_config"].label = "Select gift voucher type:"
 
         if self.instance.id:
             voucher = self.instance.block_voucher or self.instance.total_voucher

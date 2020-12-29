@@ -4,7 +4,10 @@ from collections import Counter
 from django.contrib import messages
 from django.contrib.auth.models import User
 from django.db.models import Count
-from django.shortcuts import HttpResponseRedirect
+from django.http import JsonResponse
+from django.shortcuts import HttpResponseRedirect, get_object_or_404, render
+from django.template.loader import render_to_string
+from django.views.decorators.http import require_http_methods
 from django.views.generic import CreateView, DetailView, ListView, UpdateView
 from django.urls import reverse
 from django.utils.safestring import mark_safe
@@ -12,9 +15,9 @@ from django.utils.safestring import mark_safe
 from braces.views import LoginRequiredMixin
 
 from common.utils import full_name
-from booking.models import GiftVoucher, BaseVoucher, BlockVoucher, TotalVoucher
+from booking.models import GiftVoucherConfig, BaseVoucher, BlockVoucher, TotalVoucher
 from payments.models import Invoice
-from ..forms import BlockVoucherStudioadminForm
+from ..forms import BlockVoucherStudioadminForm, GiftVoucherConfigForm
 from .utils import StaffUserMixin
 from activitylog.models import ActivityLog
 
@@ -28,17 +31,21 @@ class VoucherListMixin:
     def get_queryset(self):
         vouchers = [
             TotalVoucher.objects.get(id=voucher.id) if TotalVoucher.objects.filter(id=voucher.id).exists()
-            else BlockVoucher.objects.get(id=voucher.id) for voucher in self.queryset
+            else BlockVoucher.objects.get(id=voucher.id) for voucher in self._queryset()
         ]
         return vouchers
 
 
 class VoucherListView(LoginRequiredMixin, StaffUserMixin, VoucherListMixin, ListView):
-    queryset = BaseVoucher.objects.filter(is_gift_voucher=False).order_by('-start_date')
+
+    def _queryset(self):
+        return BaseVoucher.objects.filter(is_gift_voucher=False).order_by('-start_date')
 
 
 class GiftVoucherListView(LoginRequiredMixin, StaffUserMixin, VoucherListMixin, ListView):
-    queryset = BaseVoucher.objects.filter(is_gift_voucher=True).order_by('-start_date')
+
+    def _queryset(self):
+        return BaseVoucher.objects.filter(is_gift_voucher=True).order_by('-start_date')
 
     def get_context_data(self, *args, **kwargs):
         context = super().get_context_data(*args, **kwargs)
@@ -125,3 +132,45 @@ class VoucherDetailView(LoginRequiredMixin, StaffUserMixin, DetailView):
         context['voucher_users'] = voucher_users
         return context
 
+
+class GiftVoucherConfigListView(LoginRequiredMixin, StaffUserMixin, ListView):
+    model = GiftVoucherConfig
+    context_object_name = "gift_voucher_configs"
+    template_name = 'studioadmin/gift_voucher_configs.html'
+    paginate_by = 20
+    queryset = GiftVoucherConfig.objects.order_by("-active", "block_config", "discount_amount")
+
+
+class GiftVoucherConfigMixin:
+    model = GiftVoucherConfig
+    template_name = 'studioadmin/gift_voucher_config_create_update.html'
+    form_class = GiftVoucherConfigForm
+
+    def get_success_url(self):
+        return reverse("studioadmin:gift_voucher_configs")
+
+
+class GiftVoucherConfigCreateView(LoginRequiredMixin, StaffUserMixin, GiftVoucherConfigMixin, CreateView):
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["new"] = True
+        return context
+
+
+class GiftVoucherConfigUpdateView(LoginRequiredMixin, StaffUserMixin, GiftVoucherConfigMixin, UpdateView):
+    ...
+
+
+@require_http_methods(['POST'])
+def ajax_toggle_gift_voucher_config_active(request):
+    config_id = request.POST["config_id"]
+    config = get_object_or_404(GiftVoucherConfig, pk=config_id)
+    config.active = not config.active
+    config.save()
+    ActivityLog.objects.create(
+        log=f"Gift Voucher purchase option '{config.name}' "
+            f"set to {'active' if config.active else 'not active'} by admin user {full_name(request.user)}"
+    )
+    html = render_to_string("studioadmin/includes/ajax_toggle_gift_voucher_config_active_btn.html", {"config": config}, request)
+    return JsonResponse({"html": html, "active": config.active})

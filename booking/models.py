@@ -726,20 +726,23 @@ class GiftVoucher(models.Model):
     @property
     def name(self):
         if self.block_voucher:
-            return f"Voucher for: {self.gift_voucher_config.block_config.name}"
+            return f"Gift Voucher: {self.gift_voucher_config.block_config.name}"
         elif self.total_voucher:
-            return f"£{self.total_voucher.discount_amount} voucher"
+            return f"Gift Voucher: £{self.total_voucher.discount_amount}"
 
     def __str__(self):
         return f"{self.code} - {self.name} - {self.gift_voucher_config.cost} - {self.purchaser_email}"
 
     def activate(self):
-        """Activate a voucher that isn't already actvated, and reset start/expiry dates if necessary"""
+        """Activate a voucher that isn't already activated, and reset start/expiry dates if necessary"""
         if self.voucher and not self.voucher.activated:
             self.voucher.activated = True
             if self.voucher.start_date < timezone.now():
                 self.voucher.start_date = timezone.now()
-            self.voucher.expiry_date = self.voucher.start_date + relativedelta(months=self.gift_voucher_config.duration)
+            if self.gift_voucher_config.duration:
+                self.voucher.expiry_date = end_of_day_in_utc(
+                    self.voucher.start_date + relativedelta(months=self.gift_voucher_config.duration)
+                )
             self.voucher.save()
 
     def send_voucher_email(self):

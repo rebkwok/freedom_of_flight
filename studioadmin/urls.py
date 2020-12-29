@@ -31,6 +31,8 @@ from studioadmin.views import (
     ajax_toggle_course_partial_booking, email_waiting_list_view, users_with_unused_blocks,
     StripeAuthorizeView, connect_stripe_view, StripeAuthorizeCallbackView, InvoiceListView,
     VoucherDetailView, VoucherUpdateView, VoucherCreateView, VoucherListView, GiftVoucherListView,
+    GiftVoucherConfigListView, GiftVoucherConfigCreateView, GiftVoucherConfigUpdateView,
+    ajax_toggle_gift_voucher_config_active
 )
 
 app_name = 'studioadmin'
@@ -157,6 +159,11 @@ urlpatterns = [
     path('gift-vouchers/add/', VoucherCreateView.as_view(), {'gift_voucher': True}, name="add_gift_voucher"),
     path('vouchers/<int:pk>/edit/', VoucherUpdateView.as_view(), name="edit_voucher"),
     path('vouchers/<int:pk>/', VoucherDetailView.as_view(), name="voucher_uses"),
+    path('gift-vouchers/purchase-options/', GiftVoucherConfigListView.as_view(), name="gift_voucher_configs"),
+    path('gift-vouchers/purchase-options/add/', GiftVoucherConfigCreateView.as_view(), name="add_gift_voucher_config"),
+    path('gift-vouchers/purchase-options/<int:pk>/edit/', GiftVoucherConfigUpdateView.as_view(), name="edit_gift_voucher_config"),
+    path('gift-vouchers/ajax-toggle-gift-voucher-config-active/', ajax_toggle_gift_voucher_config_active,
+         name="ajax_toggle_gift_voucher_config_active"),
 
     # help
     path('help/', help, name="help"),

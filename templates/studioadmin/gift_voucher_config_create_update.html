@@ -1,0 +1,37 @@
+{% extends "studioadmin/base.html" %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-multiselect/0.9.15/css/bootstrap-multiselect.css" integrity="sha512-EvvoSMXERW4Pe9LjDN9XDzHd66p8Z49gcrB7LCUplh0GcEHiV816gXGwIhir6PJiwl0ew8GFM2QaIg2TW02B9A==" crossorigin="anonymous" />
+{% endblock %}
+
+{% block subnav-xs %}
+    {%  include "studioadmin/includes/navs/xs/vouchers_subnav.html" %}
+{% endblock %}
+{% block precontent %}
+    {%  include "studioadmin/includes/navs/vouchers_subnav.html" %}
+{% endblock %}
+
+{% block content %}
+
+{{ form.media }}
+
+{% if new %}
+<h2 class="panel-title">Adding new gift voucher purchase option</h2>
+{% else %}
+<h2 class="panel-title">Edit gift voucher purchase option</h2>
+{% endif %}
+
+{% if form.errors %}
+    <div class="errorlist">
+        <p>Please correct the errors below:</p>
+    </div>
+    {% endif %}
+
+<form class="form dirty-check" method="post" action="">
+    {% csrf_token %}
+    {% crispy form %}
+</form>
+
+{% endblock content %}
