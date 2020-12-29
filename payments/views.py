@@ -6,7 +6,10 @@ from django.conf import settings
 from django.contrib.sites.models import Site
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET
+from django.views.generic import ListView
 from django.shortcuts import render, HttpResponse
+
+from braces.views import LoginRequiredMixin
 
 from paypal.standard.pdt.views import process_pdt
 import stripe
@@ -228,3 +231,13 @@ def stripe_webhook(request):
         send_failed_payment_emails(error=e)
         return HttpResponse(str(e), status=200)
     return HttpResponse(status=200)
+
+
+class UserInvoiceListView(LoginRequiredMixin, ListView):
+    paginate_by = 20
+    model = Invoice
+    context_object_name = "invoices"
+    template_name = "payments/invoices.html"
+
+    def get_queryset(self):
+        return Invoice.objects.filter(paid=True, username=self.request.user.email)
