@@ -796,15 +796,17 @@ class GiftVoucher(models.Model):
                     # changing a total voucher to a block voucher
                     assert not self.paid
                     self.block_voucher = BlockVoucher.objects.create(
-                        block_config=self.gift_voucher_config.block_config,
                         max_per_user=1,
                         max_vouchers=1,
                         discount=100,
                         activated=False,
                         is_gift_voucher=True,
                     )
+                    self.block_voucher.block_configs.add(self.gift_voucher_config.block_config)
                 if self.total_voucher:
-                    self.total_voucher.delete()
+                    to_delete = self.total_voucher
+                    self.total_voucher = None
+                    to_delete.delete()
             elif self.gift_voucher_config.discount_amount:
                 if self.total_voucher and (self.total_voucher.discount_amount != self.gift_voucher_config.discount_amount):
                     # changing a total voucher to a different amount
@@ -821,7 +823,9 @@ class GiftVoucher(models.Model):
                         is_gift_voucher=True,
                     )
                 if self.block_voucher:
-                    self.block_voucher.delete()
+                    to_delete = self.block_voucher
+                    self.block_voucher = None
+                    to_delete.delete()
         if self.voucher and not self.slug:
             self.slug = slugify(self.voucher.code)
         super().save(*args, **kwargs)

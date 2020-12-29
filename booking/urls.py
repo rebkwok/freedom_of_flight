@@ -63,6 +63,7 @@ urlpatterns = [
     path('ajax-cart-item-delete/', ajax_cart_item_delete, name='ajax_cart_item_delete'),
     path('check-total/', check_total, name="check_total"),
 
+    # GIFT VOUCHERS
     path('gift-vouchers/', GiftVoucherPurchaseView.as_view(), name='buy_gift_voucher'),
     path('gift-vouchers/<slug:slug>/update', GiftVoucherUpdateView.as_view(), name='gift_voucher_update'),
     path('gift-vouchers/<slug:slug>', GiftVoucherDetailView.as_view(), name='gift_voucher_details'),

@@ -134,11 +134,10 @@ class GiftVoucherForm(forms.ModelForm):
             self.add_error("user_email1", "Email addresses do not match")
 
     def save(self, commit=True):
-        gift_voucher = super(GiftVoucherForm, self).save(commit=commit)
+        gift_voucher = super().save(commit=commit)
         if commit:
-            voucher = gift_voucher.block_voucher or gift_voucher.total_voucher
-            voucher.name = self.cleaned_data["recipient_name"]
-            voucher.message = self.cleaned_data["message"]
-            voucher.purchaser_email = self.cleaned_data["user_email"]
-            voucher.save()
+            gift_voucher.voucher.name = self.cleaned_data["recipient_name"]
+            gift_voucher.voucher.message = self.cleaned_data["message"]
+            gift_voucher.voucher.purchaser_email = self.cleaned_data["user_email"]
+            gift_voucher.voucher.save()
         return gift_voucher

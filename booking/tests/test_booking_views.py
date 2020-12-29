@@ -117,6 +117,32 @@ class BookingListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         ...
 
 
-class BookingHistoryListViewTests(TestUsersMixin, TestCase):
-    # TODO
-    pass
+class BookingHistoryListViewTests(TestUsersMixin, EventTestMixin, TestCase):
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.url = reverse('booking:past_bookings')
+        cls.create_cls_tracks_and_event_types()
+        cls.past_aerial_event = baker.make_recipe("booking.past_event", event_type=cls.aerial_event_type)
+
+    def setUp(self):
+        self.create_users()
+        self.create_events_and_course()
+        for user in [self.student_user, self.manager_user, self.child_user]:
+            self.make_disclaimer(user)
+            self.make_data_privacy_agreement(user)
+        # 2 aerial events
+        self.aerial_bookings = [baker.make(Booking, user=self.student_user, event=event) for event in
+                                self.aerial_events]
+        baker.make(Booking, event=self.past_aerial_event, user=self.student_user)
+        self.login(self.student_user)
+
+    def test_booking_list(self):
+        """
+        Test that only past bookings are listed
+        """
+        resp = self.client.get(self.url)
+        assert "history" in resp.context_data
+        assert Booking.objects.all().count() == 3
+        assert resp.status_code == 200
+        assert resp.context_data['bookings'].count() == 1

@@ -112,3 +112,18 @@ class VoucherUsesViewTests(TestUsersMixin, TestCase):
         assert len(resp.context_data['voucher_users']) == 2
         for user_item in resp.context_data['voucher_users']:
             assert user_item.num_uses == 2
+
+
+class GiftVoucherConfigListViewTests(TestCase):
+    # TODO
+    pass
+
+
+class GiftVoucherConfigCreateViewTests(TestCase):
+    # TODO
+    pass
+
+
+class GiftVoucherConfigUpdateViewTests(TestCase):
+    # TODO
+    pass

@@ -5,7 +5,7 @@ from model_bakery import baker
 
 from django.test import TestCase
 
-from booking.models import Block, BlockConfig, BlockVoucher, TotalVoucher
+from booking.models import BaseVoucher, Block, BlockConfig, BlockVoucher, TotalVoucher
 from studioadmin.views.vouchers import BlockVoucherStudioadminForm
 
 
@@ -135,3 +135,32 @@ class BlockVoucherStudioadminFormTests(TestCase):
         form.save()
         assert BlockVoucher.objects.exists() is False
         assert TotalVoucher.objects.exists() is True
+
+    def test_form_save_change_voucher_type(self):
+        assert TotalVoucher.objects.exists() is False
+
+        block_type = baker.make(BlockConfig, active=True)
+        block_voucher = baker.make(BlockVoucher, discount=10)
+        block_voucher.block_configs.add(block_type)
+        assert BlockVoucher.objects.count() == 1
+        base_voucher = BaseVoucher.objects.get(id=block_voucher.id)
+        data = {
+            'id': block_voucher.id,
+            'code': 'test_code',
+            'discount': 10,
+            'start_date': '01-Jan-2016',
+            'expiry_date': '31-Jan-2016',
+            'max_vouchers': 2,
+            'total_voucher': True
+        }
+        form = BlockVoucherStudioadminForm(instance=base_voucher, data=data)
+        self.assertTrue(form.is_valid())
+        form.save()
+        assert BlockVoucher.objects.exists() is False
+        assert TotalVoucher.objects.exists() is True
+        assert TotalVoucher.objects.first().code == "test_code"
+
+
+class GiftVoucherConfigStudioadminFormTests(TestCase):
+    # TODO
+    pass
