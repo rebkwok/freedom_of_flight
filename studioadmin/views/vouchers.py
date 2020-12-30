@@ -119,16 +119,31 @@ class VoucherDetailView(LoginRequiredMixin, StaffUserMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         voucher = context["voucher"]
+        voucher_users = []
         try:
             voucher = BlockVoucher.objects.get(id=voucher.id)
-            voucher_users = User.objects.filter(blocks__voucher=voucher, blocks__paid=True).annotate(
-                num_uses=Count("blocks"))
+            block_voucher_users = User.objects.filter(blocks__voucher=voucher, blocks__paid=True).annotate(
+                num_uses=Count("blocks")
+            )
+            voucher_users = [
+                {"full_name": full_name(user), "email": user.email, "num_uses": user.num_uses}
+                for user in block_voucher_users
+            ]
         except BlockVoucher.DoesNotExist:
             voucher = TotalVoucher.objects.get(id=voucher.id)
+            # A block voucher will always be associated with a user, but in future a total voucher could be
+            # used by a non-logged in user (to buy gift vouchers or merchandise), so don't build the uses list
+            # based on registered users
             invoice_usernames = Counter(Invoice.objects.filter(total_voucher_code=voucher.code, paid=True).values_list("username", flat=True))
-            voucher_users = User.objects.filter(username__in=invoice_usernames)
-            for user in voucher_users:
-                user.num_uses = invoice_usernames[user.username]
+            for username in invoice_usernames:
+                matching_users = User.objects.filter(username__in=invoice_usernames)
+                voucher_users.append(
+                    {
+                        "email": username,
+                        "num_uses": invoice_usernames[username],
+                        "full_name": full_name(matching_users[0]) if matching_users.exists() else None
+                    }
+                )
         context['voucher_users'] = voucher_users
         return context
 

@@ -176,13 +176,13 @@ class BlockVoucherStudioadminForm(forms.ModelForm):
         discount = self.cleaned_data.get("discount")
         discount_amount = self.cleaned_data.get("discount_amount")
         if discount and discount_amount:
-            self.add_error('__all__', 'Enter either a  discount % or discount amount (not both)')
+            self.add_error('__all__', 'Enter either a discount % or discount amount (not both)')
         elif not (discount or discount_amount):
             self.add_error('discount', 'One of discount % or discount amount is required')
             self.add_error('discount_amount', 'One of discount % or discount amount is required')
 
         if block_configs and total_voucher:
-            self.add_error('__all__', 'Either add blocks for voucher or select total vaoucher')
+            self.add_error('__all__', 'Either add blocks for voucher or select total voucher')
         elif not (block_configs or total_voucher):
             self.add_error('block_configs', 'One of block types or total voucher is required')
             self.add_error('total_voucher', 'One of block types or total voucher required')
@@ -206,6 +206,17 @@ class BlockVoucherStudioadminForm(forms.ModelForm):
                     f'Voucher code has already been used {times_used} times in '
                     f'total; set max uses to {times_used} or greater'
                 )
+
+    def full_clean(self):
+        super().full_clean()
+        if self.errors.get("__all__"):
+            errorlist = [*self.errors["__all__"]]
+            for error in self.errors["__all__"]:
+                # remove the default credit discount %/discount amount message, we should have added a nicer one already
+                if error.startswith("Only one of") and len(self.errors["__all__"]) >= 2:
+                    errorlist.remove(error)
+            if errorlist != self.errors["__all__"]:
+                self.errors["__all__"] = errorlist
 
     def save(self, commit=True):
         """
@@ -266,7 +277,7 @@ class GiftVoucherConfigForm(forms.ModelForm):
             "active": "Available for purchase on site"
         }
         help_texts = {
-            "duration": "Number of months until voucher expires (from completion of payment)",
+            "duration": "Number of months until voucher expires (from completion of payment); defaults to 6 months",
             "active": "Uncheck to remove this option from the gift voucher purchase options available to users"
         }
 
@@ -290,24 +301,3 @@ class GiftVoucherConfigForm(forms.ModelForm):
             Submit('submit', f'Save', css_class="btn btn-success"),
             HTML(f'<a class="btn btn-outline-dark" href="{back_url}">Back</a>')
         )
-
-    def clean(self):
-        # Don't allow change from total to block type voucher if it's already been used
-        block_config = self.cleaned_data.get("block_config")
-        discount_amount = self.cleaned_data.get("discount_amount")
-        if block_config and discount_amount:
-            self.add_error('__all__', 'Select either a credit block or a fixed voucher value (not both)')
-        elif not (block_config or discount_amount):
-            self.add_error('block_config', 'One of credit block or a fixed voucher value is required')
-            self.add_error('discount_amount', 'One of credit block or a fixed voucher value is required')
-
-    def full_clean(self):
-        super().full_clean()
-        if self.errors.get("__all__"):
-            errorlist = [*self.errors["__all__"]]
-            for error in self.errors["__all__"]:
-                # remove the default credit block/discount amount message, we should have added a nicer one already
-                if error.startswith("Only one of discount amount or block type") and len(self.errors["__all__"]) >= 2:
-                    errorlist.remove(error)
-            if errorlist != self.errors["__all__"]:
-                self.errors["__all__"] = errorlist

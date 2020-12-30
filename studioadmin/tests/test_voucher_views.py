@@ -8,8 +8,9 @@ from django.urls import reverse
 from django.test import TestCase
 from django.utils import timezone
 
-from booking.models import Block, BlockConfig, BlockVoucher, TotalVoucher
+from booking.models import Block, BlockConfig, BlockVoucher, TotalVoucher, GiftVoucher, GiftVoucherConfig
 from common.test_utils import TestUsersMixin
+from payments.models import Invoice
 
 
 class BlockVoucherListViewTests(TestUsersMixin, TestCase):
@@ -85,15 +86,35 @@ class BlockVoucherListViewTests(TestUsersMixin, TestCase):
         assert 'class="expired"' in resp.rendered_content
 
 
+class GiftVoucherListViewTests(TestUsersMixin, TestCase):
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.block_type = baker.make(BlockConfig, active=True)
+        cls.url = reverse('studioadmin:gift_vouchers')
+        baker.make(BlockVoucher, discount=10, start_date=timezone.now() - timedelta(10))
+        cls.total_voucher = baker.make(TotalVoucher, discount_amount=10, start_date=timezone.now() - timedelta(10))
+        baker.make(GiftVoucher, gift_voucher_config__discount_amount=10, total_voucher=cls.total_voucher)
+
+    def setUp(self):
+        self.create_admin_users()
+
+    def test_gift_vouchers_listed(self):
+        self.client.login(username=self.staff_user.username, password='test')
+        resp = self.client.get(self.url)
+        assert len(resp.context_data['vouchers']) == 1
+        assert resp.context_data['vouchers'][0] == self.total_voucher
+
+
 class VoucherUsesViewTests(TestUsersMixin, TestCase):
 
     @classmethod
     def setUpTestData(cls):
         super(VoucherUsesViewTests, cls).setUpTestData()
-        cls.voucher = baker.make(BlockVoucher, discount=10, )
-        cls.voucher_url = reverse(
-            'studioadmin:voucher_uses', args=[cls.voucher.pk]
-        )
+        cls.voucher = baker.make(BlockVoucher, discount=10)
+        cls.total_voucher = baker.make(TotalVoucher, discount=10)
+        cls.voucher_url = reverse('studioadmin:voucher_uses', args=[cls.voucher.pk])
+        cls.total_voucher_url = reverse('studioadmin:voucher_uses', args=[cls.total_voucher.pk])
 
     def setUp(self):
         self.create_admin_users()
@@ -111,19 +132,140 @@ class VoucherUsesViewTests(TestUsersMixin, TestCase):
         resp = self.client.get(self.voucher_url)
         assert len(resp.context_data['voucher_users']) == 2
         for user_item in resp.context_data['voucher_users']:
-            assert user_item.num_uses == 2
+            assert user_item["num_uses"] == 2
+
+    def test_total_voucher_counts_listed(self):
+        user = baker.make(User, username="testvoucher@test.com", email="testvoucher@test.com")
+        baker.make(
+            Invoice, paid=True, total_voucher_code=self.total_voucher.code, username=user.email, _quantity=2
+        )
+        baker.make(
+            Invoice, paid=True, total_voucher_code=self.total_voucher.code, username="non_existant_user@test.com", _quantity=2
+        )
+
+        self.client.login(username=self.staff_user.username, password='test')
+        resp = self.client.get(self.total_voucher_url)
+        assert len(resp.context_data['voucher_users']) == 2
+        for user_item in resp.context_data['voucher_users']:
+            assert user_item["num_uses"] == 2
 
 
-class GiftVoucherConfigListViewTests(TestCase):
-    # TODO
-    pass
+class GiftVoucherConfigListViewTests(TestUsersMixin, TestCase):
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        block_config = baker.make(BlockConfig)
+        baker.make(GiftVoucherConfig, discount_amount=10, active=False)
+        cls.active = baker.make(GiftVoucherConfig, block_config=block_config, active=True)
+        baker.make(GiftVoucherConfig, block_config=block_config, active=False)
+        cls.url = reverse('studioadmin:gift_voucher_configs')
+
+    def setUp(self):
+        self.create_admin_users()
+        self.create_users()
+
+    def test_cannot_access_if_not_staff(self):
+        """
+        test that the page redirects if user is not a staff user
+        """
+        self.user_access_test(["staff"], self.url)
+
+    def test_configs_listed(self):
+        self.login(self.staff_user, "test")
+        resp = self.client.get(self.url)
+        assert len(resp.context_data["gift_voucher_configs"]) == 3
+        assert resp.context_data["gift_voucher_configs"][0] == self.active
 
 
-class GiftVoucherConfigCreateViewTests(TestCase):
-    # TODO
-    pass
+class GiftVoucherConfigCreateViewTests(TestUsersMixin, TestCase):
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        cls.block_config = baker.make(BlockConfig, active=True)
+        cls.url = reverse('studioadmin:add_gift_voucher_config')
+
+    def setUp(self):
+        self.create_admin_users()
+        self.create_users()
+        self.login(self.staff_user, "test")
+
+    def test_cannot_access_if_not_staff(self):
+        """
+        test that the page redirects if user is not a staff user
+        """
+        self.user_access_test(["staff"], self.url)
+
+    def test_create_gift_voucher_block_config(self):
+        assert GiftVoucherConfig.objects.exists() is False
+        data = {"block_config": self.block_config.id, "active": True, "duration": 6}
+        self.client.post(self.url, data)
+        assert GiftVoucherConfig.objects.exists() is True
+        new_config = GiftVoucherConfig.objects.first()
+        assert new_config.active is True
+        assert new_config.duration == 6
+
+    def test_create_gift_voucher_total_config(self):
+        assert GiftVoucherConfig.objects.exists() is False
+        data = {"discount_amount": 20}
+        self.client.post(self.url, data)
+        assert GiftVoucherConfig.objects.exists() is True
+        new_config = GiftVoucherConfig.objects.first()
+        assert new_config.active is False
+        # no duration, model default is 6
+        assert new_config.duration == 6
 
 
-class GiftVoucherConfigUpdateViewTests(TestCase):
-    # TODO
-    pass
+class GiftVoucherConfigUpdateViewTests(TestUsersMixin, TestCase):
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        cls.block_config = baker.make(BlockConfig, active=True)
+
+    def setUp(self):
+        self.create_admin_users()
+        self.create_users()
+        self.login(self.staff_user, "test")
+        self.voucher_config = baker.make(GiftVoucherConfig, block_config=self.block_config)
+        self.url = reverse('studioadmin:edit_gift_voucher_config', args=(self.voucher_config.id,))
+
+    def test_cannot_access_if_not_staff(self):
+        """
+        test that the page redirects if user is not a staff user
+        """
+        self.user_access_test(["staff"], self.url)
+
+    def test_update_gift_voucher_config(self):
+        data = {"discount_amount": 10}
+        self.client.post(self.url, data=data)
+        self.voucher_config.refresh_from_db()
+        assert self.voucher_config.block_config is None
+        assert self.voucher_config.discount_amount == 10
+
+
+class GiftVoucherToggleActiveViewTests(TestUsersMixin, TestCase):
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        cls.block_config = baker.make(BlockConfig, active=True)
+
+    def setUp(self):
+        self.create_admin_users()
+        self.create_users()
+        self.login(self.staff_user, "test")
+        self.voucher_config = baker.make(GiftVoucherConfig, block_config=self.block_config, active=True)
+        self.url = reverse('studioadmin:ajax_toggle_gift_voucher_config_active')
+
+    def test_toggle(self):
+        resp = self.client.post(self.url, {"config_id": self.voucher_config.id})
+        self.voucher_config.refresh_from_db()
+        assert resp.json()["active"] is False
+        assert self.voucher_config.active is False
+
+        resp = self.client.post(self.url, {"config_id": self.voucher_config.id})
+        self.voucher_config.refresh_from_db()
+        assert resp.json()["active"] is True
+        assert self.voucher_config.active is True

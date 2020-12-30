@@ -25,7 +25,8 @@
     <table class="table tablesorter" id="sortTable">
         <thead>
         <tr class="success">
-            <th class="text-center">User</th>
+            <th class="text-center">Username/Email</th>
+            <th class="text-center">Name</th>
             <th class="text-center">Times used</th>
         </tr>
         </thead>
@@ -33,7 +34,8 @@
         {% if voucher_users %}
             {% for user in voucher_users %}
             <tr>
-                <td class="text-center">{{ user|full_name }}</td>
+                <td class="text-center">{{ user.email }}</td>
+                <td class="text-center">{{ user.full_name }}</td>
                 <td class="text-center">{{ user.num_uses }}</td>
             </tr>
             {% endfor %}

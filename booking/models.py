@@ -689,9 +689,9 @@ class GiftVoucherConfig(models.Model):
 
     def clean(self):
         if not (self.block_config or self.discount_amount):
-            raise ValidationError("One of discount amount or block type is required")
+            raise ValidationError("One of credit block or a fixed voucher value is required")
         if self.block_config and self.discount_amount:
-            raise ValidationError("Only one of discount amount or block type may be specified (not both)")
+            raise ValidationError("Select either a credit block or a fixed voucher value (not both)")
 
     def save(self, *args, **kwargs):
         self.full_clean()
@@ -763,24 +763,32 @@ class GiftVoucher(models.Model):
             # New gift voucher, create voucher.  Name, message and purchaser will be added by the purchase
             # view after the GiftVoucher is created.
             if self.gift_voucher_config.block_config:
-                self.block_voucher = BlockVoucher.objects.create(
-                    max_per_user=1,
-                    max_vouchers=1,
-                    discount=100,
-                    activated=False,
-                    is_gift_voucher=True,
-                )
-                self.block_voucher.block_configs.add(self.gift_voucher_config.block_config)
-                self.total_voucher = None
+                if self.block_voucher is None:
+                    self.block_voucher = BlockVoucher.objects.create(
+                        max_per_user=1,
+                        max_vouchers=1,
+                        discount=100,
+                        activated=False,
+                        is_gift_voucher=True,
+                    )
+                    self.block_voucher.block_configs.add(self.gift_voucher_config.block_config)
+                    self.total_voucher = None
+                elif not self.block_voucher.is_gift_voucher:
+                        self.block_voucher.is_gift_voucher = True
+                        self.block_voucher.save()
             elif self.gift_voucher_config.discount_amount:
-                self.total_voucher = TotalVoucher.objects.create(
-                    discount_amount=self.gift_voucher_config.discount_amount,
-                    max_per_user=1,
-                    max_vouchers=1,
-                    activated=False,
-                    is_gift_voucher = True,
-                )
-                self.block_voucher = None
+                if self.total_voucher is None:
+                    self.total_voucher = TotalVoucher.objects.create(
+                        discount_amount=self.gift_voucher_config.discount_amount,
+                        max_per_user=1,
+                        max_vouchers=1,
+                        activated=False,
+                        is_gift_voucher=True,
+                    )
+                    self.block_voucher = None
+                elif not self.total_voucher.is_gift_voucher:
+                        self.total_voucher.is_gift_voucher = True
+                        self.total_voucher.save()
         else:
             # check for changes to voucher type (before payment processed)
             if self.gift_voucher_config.block_config:
@@ -824,7 +832,7 @@ class GiftVoucher(models.Model):
                     self.block_voucher = None
                     to_delete.delete()
         if self.voucher and not self.slug:
-            self.slug = slugify(self.voucher.code)
+            self.slug = slugify(self.voucher.code[:40])
         super().save(*args, **kwargs)
 
 
