@@ -16,6 +16,8 @@ from django.utils import timezone
 from django.utils.functional import cached_property
 from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
+from django.db.models.signals import post_delete
+from django.dispatch import receiver
 
 from delorean import Delorean
 from django_extensions.db.fields import AutoSlugField
@@ -731,7 +733,7 @@ class GiftVoucher(models.Model):
             return f"Gift Voucher: £{self.total_voucher.discount_amount}"
 
     def __str__(self):
-        return f"{self.code} - {self.name} - {self.gift_voucher_config.cost} - {self.purchaser_email}"
+        return f"{self.code} - {self.name} - {self.purchaser_email}"
 
     def activate(self):
         """Activate a voucher that isn't already activated, and reset start/expiry dates if necessary"""
@@ -755,11 +757,6 @@ class GiftVoucher(models.Model):
             template_short_name="gift_voucher",
             user_email=self.voucher.purchaser_email
         )
-
-    def delete(self, using=None, keep_parents=False):
-        if self.voucher:
-            self.voucher.delete()
-        return super().delete(using, keep_parents)
 
     def save(self, *args, **kwargs):
         if not self.id:
@@ -1465,3 +1462,11 @@ class Booking(models.Model):
         # if there is a subscription on the booking, make sure its start date is updated
         if self.subscription:
             self.subscription.set_start_date_from_bookings()
+
+
+@receiver(post_delete, sender=GiftVoucher)
+def delete_related_voucher(sender, instance, **kwargs):
+    if instance.voucher:
+        if instance.voucher.basevoucher_ptr_id is None:
+            instance.voucher.basevoucher_ptr_id = instance.voucher.id
+        instance.voucher.delete()
