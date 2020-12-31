@@ -14,9 +14,10 @@ import pytest
 
 from booking.models import (
     Course, Event, EventType, Block, Booking, BlockVoucher, Track,
-    BlockConfig, SubscriptionConfig, Subscription
+    BlockConfig, SubscriptionConfig, Subscription, GiftVoucher, GiftVoucherConfig, TotalVoucher
 )
 from common.test_utils import EventTestMixin, TestUsersMixin
+from payments.models import Invoice
 
 now = timezone.now()
 
@@ -284,6 +285,10 @@ class EventTypeTests(TestCase):
         evtype.save()
         assert evtype.valid_for_user(user) is False
 
+        user.userprofile.date_of_birth = None
+        user.userprofile.save()
+        assert evtype.valid_for_user(user) is False
+
     def test_age_restrictions(self):
         evtype = baker.make(EventType, minimum_age_for_booking=16)
         assert evtype.age_restrictions == "age 16 and over only"
@@ -492,6 +497,37 @@ class BlockVoucherTests(TestCase):
     def test_str(self):
         voucher = baker.make(BlockVoucher, code="testcode", discount=10)
         assert str(voucher) == 'testcode'
+
+    def test_create_code(self):
+        voucher = baker.make(BlockVoucher, code=None, discount=10)
+        assert voucher.code is not None
+        assert len(voucher.code) == 12
+
+    def test_uses(self):
+        dropin_block_config = baker.make(BlockConfig)
+        course_block_config = baker.make(BlockConfig, course=True)
+        voucher = baker.make(BlockVoucher, discount=10)
+        voucher.block_configs.add(dropin_block_config, course_block_config)
+
+        baker.make(Block, block_config=dropin_block_config, voucher=voucher, paid=True)
+        baker.make(Block, block_config=course_block_config, voucher=voucher, paid=True)
+        baker.make(Block, block_config=dropin_block_config, voucher=voucher, paid=False)
+        assert voucher.uses() == 2
+
+
+class TotalVoucherTests(TestCase):
+
+    def test_uses(self):
+        voucher = baker.make(TotalVoucher, code="test", discount=10)
+        assert voucher.uses() == 0
+
+        invoices = baker.make(Invoice, total_voucher_code="test", paid=False, _quantity=2)
+        assert voucher.uses() == 0
+
+        invoice = invoices[0]
+        invoice.paid = True
+        invoice.save()
+        assert voucher.uses() == 1
 
 
 class BlockTests(TestUsersMixin, TestCase):
@@ -1723,22 +1759,105 @@ class TestSubscription:
         assert subscription.valid_for_event(event) is False
 
 
-# class GiftVoucherTypeTests(TestCase):
-#
-#     def test_event_type_or_block_type_required(self):
-#
-#         block_type = baker.make_recipe("booking.blocktype5")
-#         event_type = baker.make_recipe("booking.event_type_PC")
-#
-#         with pytest.raises(ValidationError):
-#             gift_voucher = GiftVoucherType.objects.create()
-#             gift_voucher.clean()
-#
-#         with pytest.raises(ValidationError):
-#             gift_voucher = GiftVoucherType.objects.create(event_type=event_type, block_type=block_type)
-#             gift_voucher.clean()
-#
-#     def test_gift_voucher_cost(self):
-#         block_type = baker.make_recipe("booking.blocktype5", cost=40)
-#         gift_voucher_type = GiftVoucherType.objects.create(block_type=block_type)
-#         assert gift_voucher_type.cost == 40
+class GiftVoucherConfigTests(TestCase):
+
+    def test_discount_amount_or_block_config_required(self):
+
+        block_config = baker.make(BlockConfig)
+
+        with pytest.raises(ValidationError):
+            config = GiftVoucherConfig.objects.create()
+            config.clean()
+
+        with pytest.raises(ValidationError):
+            config = GiftVoucherConfig.objects.create(block_config=block_config, discount_amount=10)
+            config.clean()
+
+        GiftVoucherConfig.objects.create(block_config=block_config)
+
+    def test_gift_voucher_cost(self):
+        block_config = baker.make(BlockConfig, cost=40)
+        config = GiftVoucherConfig.objects.create(block_config=block_config)
+        assert config.cost == 40
+
+        config1 = GiftVoucherConfig.objects.create(discount_amount=10)
+        assert config1.cost == 10
+
+
+class GiftVoucherTests(TestCase):
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.block_config = baker.make(BlockConfig, active=True, cost=10, name="4 class block")
+        block_config1 = baker.make(BlockConfig, active=True, cost=10, name="2 class block")
+        cls.config_total = baker.make(GiftVoucherConfig, discount_amount=10, active=True)
+        cls.config_block = baker.make(GiftVoucherConfig, block_config=cls.block_config, active=True, duration=6)
+        cls.config_block1 = baker.make(GiftVoucherConfig, block_config=block_config1, active=True, duration=6)
+
+    def test_new_creates_voucher(self):
+        gift_voucher = baker.make(GiftVoucher, gift_voucher_config=self.config_block)
+        assert isinstance(gift_voucher.voucher, BlockVoucher)
+        assert gift_voucher.voucher.block_configs.count() == 1
+        assert gift_voucher.voucher.block_configs.first() == self.block_config
+
+        gift_voucher = baker.make(GiftVoucher, gift_voucher_config=self.config_total)
+        assert isinstance(gift_voucher.voucher, TotalVoucher)
+        assert gift_voucher.voucher.discount_amount == 10
+
+    def test_change_block_config(self):
+        gift_voucher = baker.make(GiftVoucher, gift_voucher_config=self.config_block)
+        assert gift_voucher.name == "Gift Voucher: 4 class block"
+        voucher_id = gift_voucher.voucher.id
+        gift_voucher.gift_voucher_config = self.config_block1
+        gift_voucher.save()
+        assert gift_voucher.name == "Gift Voucher: 2 class block"
+        assert gift_voucher.voucher.id == voucher_id
+        assert BlockVoucher.objects.count() == 1
+
+    def test_change_voucher_type(self):
+        gift_voucher = baker.make(GiftVoucher, gift_voucher_config=self.config_block)
+        assert isinstance(gift_voucher.voucher, BlockVoucher)
+
+        gift_voucher.gift_voucher_config = self.config_total
+        gift_voucher.save()
+        assert BlockVoucher.objects.exists() is False
+        assert isinstance(gift_voucher.voucher, TotalVoucher)
+
+        gift_voucher.gift_voucher_config = self.config_block
+        gift_voucher.save()
+        assert TotalVoucher.objects.exists() is False
+        assert isinstance(gift_voucher.voucher, BlockVoucher)
+        assert gift_voucher.voucher.block_configs.first() == self.block_config
+
+    def test_gift_voucher_activate(self):
+        gift_voucher = baker.make(GiftVoucher, gift_voucher_config=self.config_block)
+        start_date = timezone.now() - timedelta(weeks=6)
+        gift_voucher.voucher.start_date = start_date
+        gift_voucher.voucher.save()
+        assert gift_voucher.voucher.expiry_date is None
+        assert gift_voucher.paid is False
+        assert gift_voucher.voucher.activated is False
+        gift_voucher.activate()
+
+        gift_voucher.refresh_from_db()
+        assert gift_voucher.voucher.activated is True
+        assert gift_voucher.voucher.expiry_date is not None
+        assert gift_voucher.voucher.start_date > start_date
+
+    def test_name(self):
+        gift_voucher = baker.make(GiftVoucher, gift_voucher_config=self.config_block)
+        assert gift_voucher.name == "Gift Voucher: 4 class block"
+
+        gift_voucher1 = baker.make(GiftVoucher, gift_voucher_config=self.config_total)
+        assert gift_voucher1.name == "Gift Voucher: £10"
+
+    def test_str(self):
+        gift_voucher = baker.make(GiftVoucher, gift_voucher_config=self.config_block)
+        gift_voucher.voucher.purchaser_email = "foo@bar.com"
+        gift_voucher.save()
+        assert str(gift_voucher) == f"{gift_voucher.voucher.code} - Gift Voucher: 4 class block - foo@bar.com"
+
+        gift_voucher1 = baker.make(GiftVoucher, gift_voucher_config=self.config_total)
+        gift_voucher1.voucher.purchaser_email = "foo@bar.com"
+        gift_voucher1.save()
+        assert str(gift_voucher1) == f"{gift_voucher1.voucher.code} - Gift Voucher: £10 - foo@bar.com"

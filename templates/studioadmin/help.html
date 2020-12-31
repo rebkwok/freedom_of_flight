@@ -174,6 +174,46 @@
 
     <div class="anchor" id="vouchers">anchor</div>
     <h1>Vouchers</h1>
-    <p>Coming soon :)</p>
+    <h2>Voucher Codes</h2>
+    <p>
+    In the vouchers section you can generate new voucher codes and see lists of existing codes and their usages.
+    A voucher code can give the user a discount as a % or a fixed total amount.
+    </p>
+    <p>
+    Limit the number of uses of a voucher code with the "maximum uses per user" and "maximum total uses" options.  A voucher
+    with max per user = 1 and no max total vouchers can be used only once per user, but any number of total times.  A
+    voucher with a max total uses will expire after it has been used that many times, even if an individual user has
+    never used it before.
+    </p>
+    <p>
+    Set start and expiry dates to limit the time period over which a voucher code can be used. You can set up a voucher code
+    to only be valid from a future date and for a limited time period.
+    </p>
+    <p>
+    "Activated" is used to make a voucher usable; a voucher can be disabled even if its start/expiry dates are within range.
+    This is mostly used to activate gift vouchers.
+    </p>
+    <h2>Gift Vouchers</h2>
+    <p>
+        Gift vouchers are purchased online by users, who will be provided with a activated voucher code on completion of payment.
+    </p>
+    <p>
+       The code generated for a gift voucher is identical to a standard voucher code, with additional fields for showing a
+        recipient name and message on the printable gift voucher. You can also create a custom gift voucher in the admin.  The code is
+        generated when the user adds a gift voucher to their shopping basket, but is only activated on completion of payment.
+    </p>
+    <p>
+        After payment, the user is sent an email with their voucher code and a link to a printable voucher.  The link is also
+        available in the admin, in case you need to re-send it to a user.
+    </p>
+    <p>
+        Gift vouchers available for purchase on the site are configured with Gift Voucher Purchase Options.  Use these to allow users to
+        purchase vouchers redeemable for a single credit block (drop-in or course), or a fixed amount.  E.g. gift voucher
+        purchase options could be set up for a single Private lesson, an adult course block, £10, £20 etc.</p>
+    <p>
+        A gift voucher purchase generates a one-time use voucher (for either 100% off a single credit block or a fixed
+        £ amount off any purchases). However you can create a gift voucher in the admin that is valid for any selection
+        of credit blocks and %/£ discount.
+    </p>
 
 {% endblock content %}

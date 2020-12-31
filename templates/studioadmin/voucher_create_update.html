@@ -1,0 +1,76 @@
+{% extends "studioadmin/base.html" %}
+{% load static %}
+{% load bookingtags %}
+{% load crispy_forms_tags %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-multiselect/0.9.15/css/bootstrap-multiselect.css" integrity="sha512-EvvoSMXERW4Pe9LjDN9XDzHd66p8Z49gcrB7LCUplh0GcEHiV816gXGwIhir6PJiwl0ew8GFM2QaIg2TW02B9A==" crossorigin="anonymous" />
+{% endblock %}
+
+{% block subnav-xs %}
+    {%  include "studioadmin/includes/navs/xs/vouchers_subnav.html" %}
+{% endblock %}
+{% block precontent %}
+    {%  include "studioadmin/includes/navs/vouchers_subnav.html" %}
+{% endblock %}
+
+{% block content %}
+
+{{ form.media }}
+
+{% if voucher %}
+<h2 class="panel-title">Edit {% if is_gift_voucher %}Gift {% endif %}Voucher</h2>
+{% else %}
+<h2 class="panel-title">Adding new {% if is_gift_voucher %}gift {% endif %}voucher</h2>
+{% endif %}
+
+<div>
+    {% if is_gift_voucher %}
+    <a href="{% url 'studioadmin:gift_vouchers' %}" class="btn btn-warning btn-sm">Gift Voucher List</a>
+    {% else %}
+    <a href="{% url 'studioadmin:vouchers' %}" class="btn btn-warning btn-sm">View Voucher List</a>
+    {% endif %}
+</div>
+
+{% if is_gift_voucher %}
+<div>
+<p>
+    A gift voucher is identical to a standard voucher code, with additional fields for showing a recipient name and message
+    on the printable gift voucher.  Gift vouchers purchased online are associated with one Gift Voucher Purchase Option, which will
+    generate a one-time use voucher (for either 100% off a single credit block or a fixed £ amount off any purchases). However
+    you can create a gift voucher here that is valid for any selection of credit blocks and %/£ discount.
+</p>
+</div>
+{% endif %}
+
+{% if form.errors %}
+    <div class="errorlist">
+        <p>Please correct the errors below:</p>
+    </div>
+    {% endif %}
+
+<form class="form dirty-check" method="post" action="">
+    {% csrf_token %}
+    {% crispy form %}
+</form>
+
+
+{% endblock content %}
+
+
+
+{% block extra_js %}
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-multiselect/0.9.15/js/bootstrap-multiselect.min.js" integrity="sha512-aFvi2oPv3NjnjQv1Y/hmKD7RNMendo4CZ2DwQqMWzoURKxcqAoktj0nNG4LU8m23+Ws9X5uVDD4OXLqpUVXD5Q==" crossorigin="anonymous"></script>
+<script type="text/javascript">
+    $(document).ready(function() {
+        $('#id_block_configs').multiselect({
+            buttonClass: 'btn btn-sm btn-primary',
+            buttonWidth: '100%',
+            numberDisplayed: 4,
+            nonSelectedText: 'Click to choose allowed block types',
+        });
+    });
+</script>
+
+{% endblock %}

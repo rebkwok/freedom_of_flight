@@ -1,0 +1,63 @@
+{% extends "studioadmin/base.html" %}
+{% load static %}
+{% load bookingtags studioadmintags %}
+
+{% block extra_head %}
+{% include 'common/includes/ajax_head.html' %}
+{% endblock %}
+
+{% block subnav-xs %}
+    {%  include "studioadmin/includes/navs/xs/vouchers_subnav.html" %}
+{% endblock %}
+{% block precontent %}
+    {%  include "studioadmin/includes/navs/vouchers_subnav.html" %}
+{% endblock %}
+
+{% block content %}
+
+
+<h2>Gift Voucher Purchase Options</h2>
+
+<div class="m-2">
+    <a class="btn btn-success" href="{% url 'studioadmin:add_gift_voucher_config' %}">Add new purchase option</a>
+</div>
+
+<table class="table table-responsive tablesorter" id="sortTable">
+<thead>
+<tr class="success">
+    <th class="text-center">Valid for</br><span class="helptext">Click to edit</span></th>
+    <th class="text-center">Duration</th>
+    <th class="text-center">Active</th>
+</tr>
+</thead>
+<tbody>
+{% if gift_voucher_configs %}
+    {% for config in gift_voucher_configs %}
+    <tr id="row-{{ config.id }}" {% if not config.active %}class="expired"{% endif %}>
+        <td class="text-center"><a href="{% url 'studioadmin:edit_gift_voucher_config' config.pk %}">{{ config.name }}</a></td>
+        <td class="text-center">{% if config.duration %}{{ config.duration }} months{% else %}N/A{% endif %}</td>
+        <td class="text-center">
+            <span
+              id="active-{{ config.id }}"
+              data-config_id={{ config.id }}
+              class="active-btn"
+              >
+              {% include "studioadmin/includes/ajax_toggle_gift_voucher_config_active_btn.html" %}
+            </span>
+        </td>
+    </tr>
+    {% endfor %}
+{% else %}
+  <tr><td colspan="3">No gift voucher purchase options found</td></tr>
+{% endif %}
+</tbody>
+</table>
+
+{% include 'common/includes/single_page_pagination.html' %}
+
+
+{% endblock content %}
+
+{% block extra_js %}
+<script type='text/javascript' src="{% static 'studioadmin/js/gift_voucher_config_ajax-v1.js' %}"></script>
+{% endblock %}

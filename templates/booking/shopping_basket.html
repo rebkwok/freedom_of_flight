@@ -27,7 +27,7 @@
                     <tr><td colspan="2" class="table-secondary"><strong>Credit Blocks</strong></td></tr>
                 {% endif %}
                 {% for block_info in unpaid_block_info %}
-                    <tr id="cart-row-{{ block_info.block.id }}">
+                    <tr id="cart-row-block-{{ block_info.block.id }}">
                         <td class="p-1">{{ block_info.block.block_config }} <span class="badge badge-info">{{ block_info.block.user|full_name }}</span></td>
                         <td class="p-1">
                             <div>Cost: {% if block_info.voucher_applied.discounted_cost is not None %}
@@ -54,7 +54,7 @@
                     <tr><td colspan="2" class="table-secondary"><strong>Subscriptions/Memberships</strong></td></tr>
                 {% endif %}
                 {% for subscription_info in unpaid_subscription_info %}
-                    <tr id="cart-row-{{ subscription_info.subscription.id }}">
+                    <tr id="cart-row-subscription-{{ subscription_info.subscription.id }}">
                         <td class="p-1">{{ subscription_info.subscription.config.name }}
                             <span class="badge badge-info">{{ subscription_info.subscription.user|full_name }}</span><br/>
                             Start date: {% if subscription_info.subscription.start_date %}
@@ -74,6 +74,28 @@
                                         id="remove-subscription-{{ subscription_info.subscription.id }}"
                                         class="remove-subscription float-right"
                                         data-subscription_id="{{ subscription_info.subscription.id }}"
+                                        >
+                                    <a class="btn btn-sm btn-danger" href="#"><i class="fas fa-trash-alt"></i></a>
+                                </span>
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+
+                  {% if unpaid_gift_voucher_info %}
+                    <tr><td colspan="2" class="table-secondary"><strong>Gift Vouchers</strong></td></tr>
+                {% endif %}
+                {% for gift_voucher_info in unpaid_gift_voucher_info %}
+                    <tr id="cart-row-gift-voucher-{{ gift_voucher_info.gift_voucher.id }}">
+                        <td class="p-1">{{ gift_voucher_info.gift_voucher.name }}
+                            <a class="text-success" href="{% url 'booking:gift_voucher_update' gift_voucher_info.gift_voucher.slug %}"><span class="fas fa-edit"></span></a>
+                        </td>
+                        <td class="p-1">
+                            <div>Cost: £{{ gift_voucher_info.gift_voucher.gift_voucher_config.cost }}
+                                <span
+                                        id="remove-gift-voucher-{{ gift_voucher_info.gift_voucher.id }}"
+                                        class="remove-gift-voucher float-right"
+                                        data-gift_voucher_id="{{ gift_voucher_info.gift_voucher.id }}"
                                         >
                                     <a class="btn btn-sm btn-danger" href="#"><i class="fas fa-trash-alt"></i></a>
                                 </span>
@@ -110,7 +132,9 @@
                           <input class="btn btn-xs btn-xs-wide btn-warning mb-1" type="submit" value="{% if total_cost > 0 %}Checkout{% else %}Submit{% endif %}">
                       </form>
                     {% endif %}
-                      <a class="btn btn-xs btn-outline-primary" href="{% url 'booking:purchase_options' %}">Add more items</a>
+                      <div>Add additional items:<br/>
+                      <a class="btn btn-xs btn-outline-primary" href="{% url 'booking:purchase_options' %}">Payment plans</a>
+                          <a class="btn btn-xs btn-outline-primary" href="{% url 'booking:buy_gift_voucher' %}">Gift vouchers</a></div>
                       <hr>
                           <form name="block_voucher_form" class="form-inline" method="post" action="">
                             {% csrf_token %}
@@ -141,7 +165,10 @@
 {% else %}
     <div class="col-12">
     <p>Your cart is empty</p>
-    <p><a class="btn btn-xs btn-outline-primary" href="{% url 'booking:purchase_options' %}">Add items</a></p>
+    <p>
+        <a class="btn btn-xs btn-outline-primary" href="{% url 'booking:purchase_options' %}">Add payment plans</a>
+        <a class="btn btn-xs btn-outline-primary" href="{% url 'booking:buy_gift_voucher' %}">Add gift vouchers</a>
+    </p>
     </div>
 {% endif %}
 </div>
@@ -150,5 +177,5 @@
 
 
 {% block extra_js %}
-<script type='text/javascript' src="{% static 'booking/js/shopping_basket_ajax.js' %}"></script>
+<script type='text/javascript' src="{% static 'booking/js/shopping_basket_ajax-v1.js' %}"></script>
 {% endblock %}

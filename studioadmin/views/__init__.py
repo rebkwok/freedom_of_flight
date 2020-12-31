@@ -38,5 +38,9 @@ from .user_views import (
     UserSubscriptionsListView, SubscriptionAddView, SubscriptionEditView, ajax_subscription_delete,
     course_booking_add_view, course_block_change_view, export_users, users_with_unused_blocks
 )
-
+from .vouchers import (
+    VoucherListView, VoucherCreateView, VoucherDetailView, VoucherUpdateView, GiftVoucherListView,
+    GiftVoucherConfigListView, GiftVoucherConfigCreateView, GiftVoucherConfigUpdateView,
+    ajax_toggle_gift_voucher_config_active
+)
 from .waiting_list import ajax_remove_from_waiting_list, event_waiting_list_view

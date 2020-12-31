@@ -6,3 +6,5 @@ from .forms import (
     SearchForm, StudioadminDisclaimerContentForm, StudioadminDataPrivacyPolicyForm, SubscriptionConfigForm, TimetableSessionCreateUpdateForm,
     UploadTimetableForm, EmailWaitingListUsersForm, RegisterFormSet
 )
+from .voucher_forms import BlockVoucherStudioadminForm, GiftVoucherConfigForm
+

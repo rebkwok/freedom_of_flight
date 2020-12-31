@@ -10,7 +10,9 @@ from django.utils import timezone
 
 from stripe.error import InvalidRequestError
 
-from booking.models import Block, BlockConfig, BlockVoucher, Subscription, SubscriptionConfig, TotalVoucher
+from booking.models import (
+    Block, BlockConfig, BlockVoucher, Subscription, SubscriptionConfig, TotalVoucher, GiftVoucher
+)
 from common.test_utils import TestUsersMixin
 from payments.models import Invoice, Seller
 
@@ -292,6 +294,81 @@ class ShoppingBasketViewTests(TestUsersMixin, TestCase):
             ]
             assert resp.context_data["total_cost"] == 20
 
+    def test_total_voucher_validation(self):
+        voucher_with_discount = baker.make(TotalVoucher, code="test", discount=50, activated=False)
+        voucher_with_discount_amount = baker.make(TotalVoucher, code="test_amount", discount_amount=10, activated=False)
+        baker.make_recipe(
+            "booking.dropin_block", block_config=self.dropin_block_config, user=self.student_user,
+        )
+        for voucher in [voucher_with_discount, voucher_with_discount_amount]:
+            # invalid code
+            resp = self.client.post(self.url, data={"add_voucher_code": "add_voucher_code", "code": "foo"})
+            assert resp.context_data["voucher_add_error"] == ['"foo" is not a valid code']
+            assert resp.context_data["total_cost"] == 20
+
+            # not activated yet
+            resp = self.client.post(self.url, data={"add_voucher_code": "add_voucher_code", "code": voucher.code})
+            assert resp.context_data["voucher_add_error"] == ["Voucher has not been activated yet"]
+            assert resp.context_data["total_cost"] == 20
+
+            voucher.activated = True
+            voucher.save()
+            # voucher not started
+            voucher.start_date = timezone.now() + timedelta(2)
+            voucher.save()
+            resp = self.client.post(self.url, data={"add_voucher_code": "add_voucher_code", "code": voucher.code})
+            assert resp.context_data["voucher_add_error"] == [
+                f"Voucher code is not valid until {voucher.start_date.strftime('%d %b %y')}"
+            ]
+            assert resp.context_data["total_cost"] == 20
+
+            # voucher expired
+            voucher.start_date = timezone.now() - timedelta(5)
+            voucher.expiry_date = timezone.now() - timedelta(2)
+            voucher.save()
+            resp = self.client.post(self.url, data={"add_voucher_code": "add_voucher_code", "code": voucher.code})
+            assert resp.context_data["voucher_add_error"] == [f"Voucher has expired"]
+            assert resp.context_data["total_cost"] == 20
+
+            # voucher max uses per user expired
+            voucher.expiry_date = None
+            voucher.max_per_user = 1
+            voucher.save()
+            baker.make(
+                Invoice, username=self.student_user.email, total_voucher_code=voucher.code, paid=True
+            )
+            resp = self.client.post(self.url, data={"add_voucher_code": "add_voucher_code", "code": voucher.code})
+            assert resp.context_data["voucher_add_error"] == [
+                f"You have already used voucher code {voucher.code} the maximum number of times (1)"]
+            assert resp.context_data["total_cost"] == 20
+
+            # voucher max total uses expired
+            voucher.max_per_user = None
+            voucher.max_vouchers = 2
+            voucher.save()
+            baker.make(
+                Invoice, username=self.student_user.email, total_voucher_code=voucher.code, paid=True, _quantity=2
+            )
+            resp = self.client.post(self.url, data={"add_voucher_code": "add_voucher_code", "code": voucher.code})
+            assert resp.context_data["voucher_add_error"] == [
+                f"Voucher code {voucher.code} has limited number of total uses and has expired"]
+            assert resp.context_data["total_cost"] == 20
+
+    def test_total_voucher_greater_than_checkout_amount(self):
+        voucher = baker.make(TotalVoucher, code="test_amount", discount_amount=10, activated=True)
+        baker.make_recipe(
+            "booking.dropin_block", block_config=self.dropin_block_config, user=self.student_user,
+        )
+        # block cost is 20, total shows block cost minus voucher
+        resp = self.client.post(self.url, data={"add_voucher_code": "add_voucher_code", "code": "test_amount"})
+        assert resp.context_data["total_cost"] == 10
+
+        # voucher is valid for x2 block costs, total shows 0
+        voucher.discount_amount = 40
+        voucher.save()
+        resp = self.client.post(self.url, data={"add_voucher_code": "add_voucher_code", "code": "test_amount"})
+        assert resp.context_data["total_cost"] == 0
+
     def test_apply_voucher_to_multiple_blocks(self):
         voucher = baker.make(BlockVoucher, code="test", discount=50, max_per_user=10)
         voucher.block_configs.add(self.dropin_block_config)
@@ -531,7 +608,7 @@ class AjaxShoppingBasketCheckoutTests(TestUsersMixin, TestCase):
         assert block.paid
         assert block.voucher == voucher
         assert resp["redirect"] is True
-        assert resp["url"] == reverse("booking:blocks")
+        assert resp["url"] == reverse("booking:schedule")
 
     def test_uses_existing_invoice(self):
         invoice = baker.make(
@@ -665,7 +742,41 @@ class StripeCheckoutTests(TestUsersMixin, TestCase):
         assert block.paid
         assert block.voucher == voucher
         assert resp.status_code == 302
-        assert resp.url == reverse("booking:blocks")
+        assert resp.url == reverse("booking:schedule")
+
+    @patch("booking.views.shopping_basket_views.stripe.PaymentIntent")
+    def test_zero_total_with_total_voucher(self, mock_payment_intent):
+        mock_payment_intent_obj = self.get_mock_payment_intent(id="foo")
+        mock_payment_intent.create.return_value = mock_payment_intent_obj
+        baker.make(TotalVoucher, activated=True, code="test", discount_amount=50, max_per_user=10)
+
+        block = baker.make_recipe(
+            "booking.dropin_block", block_config=self.dropin_block_config, user=self.student_user,
+        )
+        gift_voucher = baker.make(
+            GiftVoucher,
+            gift_voucher_config__discount_amount=10,
+        )
+        gift_voucher.voucher.purchaser_email = self.student_user.email
+        gift_voucher.voucher.save()
+
+        # Call shopping basket view to apply the total voucher code
+        self.client.post(reverse('booking:shopping_basket'), data={"add_voucher_code": "add_voucher_code", "code": "test"})
+        assert self.client.session["total_voucher_code"] == "test"
+
+        resp = self.client.post(self.url, data={"cart_total": 0})
+        block.refresh_from_db()
+        gift_voucher.refresh_from_db()
+        assert block.paid is True
+        assert gift_voucher.paid is True
+        assert gift_voucher.voucher.activated is True
+        assert resp.status_code == 302
+        assert resp.url == reverse("booking:schedule")
+
+        invoice = Invoice.objects.latest("id")
+        assert block in invoice.blocks.all()
+        assert gift_voucher in invoice.gift_vouchers.all()
+        assert invoice.paid is True
 
     @patch("booking.views.shopping_basket_views.stripe.PaymentIntent")
     def test_uses_existing_invoice(self, mock_payment_intent):

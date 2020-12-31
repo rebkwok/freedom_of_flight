@@ -7,7 +7,7 @@ from django.test import TestCase
 
 from model_bakery import baker
 
-from booking.models import Block, Subscription
+from booking.models import Block, Subscription, GiftVoucher
 from ..models import Invoice, Seller
 
 
@@ -52,19 +52,22 @@ class TestModels(TestCase):
         invoice = baker.make(
             Invoice, invoice_id="foo123",
             blocks=baker.make(Block, _quantity=2),
-            subscriptions=baker.make(Subscription, _quantity=1)
+            subscriptions=baker.make(Subscription, _quantity=1),
+            gift_vouchers=baker.make(GiftVoucher, gift_voucher_config__discount_amount=10, _quantity=1)
         )
-        assert invoice.item_count() == 3
+        assert invoice.item_count() == 4
 
     @pytest.mark.usefixtures("invoice_keyenv")
     def test_invoice_items_metadata(self):
         invoice = baker.make(Invoice, invoice_id="foo123")
         block = baker.make(Block, block_config__cost=10, block_config__name="test block", invoice=invoice)
         subscription = baker.make(Subscription, config__name="test subscription", config__cost=50, invoice=invoice)
+        gift_voucher = baker.make(GiftVoucher, gift_voucher_config__discount_amount=10, invoice=invoice)
 
         assert invoice.items_metadata() == {
             "test block": f"£10.00 (block-{block.id})",
             "test subscription": f"£50.00 (subscription-{subscription.id})",
+            "Gift Voucher: £10.00": f"£10.00 (gift_voucher-{gift_voucher.id})",
         }
 
     def seller_str(self):

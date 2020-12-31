@@ -72,7 +72,7 @@ var processRemoveBlock = function()  {
     var processResult = function(
        result, status, jqXHR)  {
       //console.log("sf result='" + result + "', status='" + status + "', jqXHR='" + jqXHR + "'");
-    $('#cart-row-' + block_id).html("");
+    $('#cart-row-block-' + block_id).html("");
     $('#cart_item_menu_count').text(result.cart_item_menu_count);
     $('#total').text(result.cart_total);
     $('#checkout-btn').data('total', result.cart_total);
@@ -115,7 +115,7 @@ var processRemoveSubscription = function()  {
     var processResult = function(
        result, status, jqXHR)  {
       //console.log("sf result='" + result + "', status='" + status + "', jqXHR='" + jqXHR + "'");
-    $('#cart-row-' + subscription_id).html("");
+    $('#cart-row-subscription-' + subscription_id).html("");
     $('#cart_item_menu_count').text(result.cart_item_menu_count);
     $('#total').text(result.cart_total);
     $('#checkout-btn').data('total', result.cart_total);
@@ -136,6 +136,49 @@ var processRemoveSubscription = function()  {
           dataType: 'json',
           type: 'POST',
           data: {csrfmiddlewaretoken: window.CSRF_TOKEN, item_type: "subscription", item_id: subscription_id},
+          success: processResult,
+          //Should also have a "fail" call as well.
+          error: processFailure
+       }
+    );
+
+};
+
+
+var processRemoveGiftVoucher = function()  {
+
+    //In this scope, "this" is the button just clicked on.
+    //The "this" in processResult is *not* the button just clicked
+    //on.
+    var $button_just_clicked_on = $(this);
+
+    //The value of the "data-event_id" attribute.
+    var gift_voucher_id = $button_just_clicked_on.data('gift_voucher_id');
+
+    var processResult = function(
+       result, status, jqXHR)  {
+      //console.log("sf result='" + result + "', status='" + status + "', jqXHR='" + jqXHR + "'");
+    $('#cart-row-gift-voucher-' + gift_voucher_id).html("");
+    $('#cart_item_menu_count').text(result.cart_item_menu_count);
+    $('#total').text(result.cart_total);
+    $('#checkout-btn').data('total', result.cart_total);
+    $('#payment-btn').html(result.payment_button_html);
+   };
+
+    var processFailure = function(
+       result, status, jqXHR)  {
+      //console.log("sf result='" + result + "', status='" + status + "', jqXHR='" + jqXHR + "'");
+      if (result.responseText) {
+        vNotify.error({text:result.responseText,title:'Error',position: 'bottomRight'});
+      }
+   };
+
+   $.ajax(
+       {
+          url: '/ajax-cart-item-delete/',
+          dataType: 'json',
+          type: 'POST',
+          data: {csrfmiddlewaretoken: window.CSRF_TOKEN, item_type: "gift_voucher", item_id: gift_voucher_id},
           success: processResult,
           //Should also have a "fail" call as well.
           error: processFailure
@@ -177,6 +220,7 @@ $(document).ready(function()  {
 
   $('.remove-block').click(_.debounce(processRemoveBlock, MILLS_TO_IGNORE, true));
   $('.remove-subscription').click(_.debounce(processRemoveSubscription, MILLS_TO_IGNORE, true));
+  $('.remove-gift-voucher').click(_.debounce(processRemoveGiftVoucher, MILLS_TO_IGNORE, true));
 
   // delegate events for the paypal form input
   $( "#paypal-btn-wrapper" ).on('click', 'input[type=image]', function( event ) {

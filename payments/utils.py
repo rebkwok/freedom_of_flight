@@ -1,6 +1,8 @@
 import logging
 from django.urls import reverse
 
+from activitylog.models import ActivityLog
+from .emails import send_processed_payment_emails
 from .exceptions import PayPalProcessingError, StripeProcessingError
 from .forms import PayPalPaymentsFormWithId, PayPalPaymentsForm
 from .models import Invoice
@@ -151,3 +153,26 @@ def check_stripe_data(payment_intent, invoice):
             f"Invoice amount is not correct: payment intent {payment_intent.id} ({payment_intent.amount/100}); "
             f"invoice id {invoice.invoice_id} ({invoice.amount})"
         )
+
+def process_invoice_items(invoice, payment_method, transaction_id=None):
+    for block in invoice.blocks.all():
+        block.paid = True
+        block.save()
+    for subscription in invoice.subscriptions.all():
+        subscription.paid = True
+        subscription.save()
+    for gift_voucher in invoice.gift_vouchers.all():
+        gift_voucher.paid = True
+        gift_voucher.save()
+        gift_voucher.activate()
+    if transaction_id:
+        invoice.transaction_id = transaction_id
+    invoice.paid = True
+    invoice.save()
+    # SEND EMAILS
+    send_processed_payment_emails(invoice)
+    for gift_voucher in invoice.gift_vouchers.all():
+        gift_voucher.send_voucher_email()
+    ActivityLog.objects.create(
+        log=f"Invoice {invoice.invoice_id} (user {invoice.username}) paid by {payment_method}"
+    )

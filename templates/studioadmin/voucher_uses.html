@@ -1,0 +1,49 @@
+{% extends "studioadmin/base.html" %}
+{% load static %}
+{% load bookingtags accounttags %}
+
+{% block subnav-xs %}
+    {%  include "studioadmin/includes/navs/xs/vouchers_subnav.html" %}
+{% endblock %}
+{% block precontent %}
+    {%  include "studioadmin/includes/navs/vouchers_subnav.html" %}
+{% endblock %}
+
+{% block content %}
+
+<h2>Voucher Uses: {{ voucher.code }}</h2>
+
+<div>
+    {% if voucher.is_gift_voucher %}
+    <a href="{% url 'studioadmin:gift_vouchers' %}" class="btn btn-warning btn-sm">Gift Voucher List</a>
+    {% else %}
+    <a href="{% url 'studioadmin:vouchers' %}" class="btn btn-warning btn-sm">View Voucher List</a>
+    {% endif %}
+</div><br/>
+
+<div class="table-responsive">
+    <table class="table tablesorter" id="sortTable">
+        <thead>
+        <tr class="success">
+            <th class="text-center">Username/Email</th>
+            <th class="text-center">Name</th>
+            <th class="text-center">Times used</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% if voucher_users %}
+            {% for user in voucher_users %}
+            <tr>
+                <td class="text-center">{{ user.email }}</td>
+                <td class="text-center">{{ user.full_name }}</td>
+                <td class="text-center">{{ user.num_uses }}</td>
+            </tr>
+            {% endfor %}
+        {% else %}
+          <tr><td colspan="2">Voucher not used</td></tr>
+        {% endif %}
+        </tbody>
+    </table>
+</div>
+
+{% endblock content %}

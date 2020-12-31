@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 import logging
 import pytz
+from shortuuid import ShortUUID
 
 from django.db import models
 from django.conf import settings
@@ -13,7 +14,10 @@ from django.contrib.postgres.fields import JSONField
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.functional import cached_property
+from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
+from django.db.models.signals import post_delete
+from django.dispatch import receiver
 
 from delorean import Delorean
 from django_extensions.db.fields import AutoSlugField
@@ -23,6 +27,7 @@ from activitylog.models import ActivityLog
 from common.utils import start_of_day_in_utc, end_of_day_in_utc, end_of_day_in_local_time
 from payments.models import Invoice
 
+from .email_helpers import send_user_and_studio_emails
 from .utils import has_available_block, has_available_subscription, get_active_user_block, get_available_user_subscription
 
 logger = logging.getLogger(__name__)
@@ -422,7 +427,14 @@ class BaseVoucher(models.Model):
         if self.discount and self.discount_amount:
             raise ValidationError("Only one of discount (%) or discount_amount (fixed amount) may be specified (not both)")
 
+    def _generate_code(self):
+        return slugify(ShortUUID().random(length=12))
+
     def save(self, *args, **kwargs):
+        if not self.code:
+            self.code = self._generate_code()
+            while BaseVoucher.objects.filter(code=self.code).exists():
+                self.code = self._generate_code()
         self.full_clean()
         # replace start time with very start of day
         self.start_date = start_of_day_in_utc(self.start_date)
@@ -440,9 +452,15 @@ class BlockVoucher(BaseVoucher):
     def check_block_config(self, block_config):
         return block_config in self.block_configs.all()
 
+    def uses(self):
+        return self.blocks.filter(paid=True).count()
+
 
 class TotalVoucher(BaseVoucher):
     """A voucher that applies to the overall checkout total, not linked to any specific block"""
+
+    def uses(self):
+        return Invoice.objects.filter(paid=True, total_voucher_code=self.code).count()
 
 
 class Block(models.Model):
@@ -634,18 +652,188 @@ class WaitingListUser(models.Model):
         ]
 
 
-class GiftVoucherType(models.Model):
+class GiftVoucherConfig(models.Model):
+    """
+    Defines configuration for gift vouchers that are available for purchase.
+    Each one is associated with EITHER:
+    1) one Block config and will be used to generate voucher codes for 100%, one-time use vouchers (BlockVoucher)for one block of the
+    specified block config.
+    OR:
+    2) a discount amount, and will be used to generate voucher codes for one-time use vouchers (TotalVoucher) of that discount
+    amount, valid against the user's total checkout amount, irresepctive of items
+    """
     block_config = models.ForeignKey(
-        BlockConfig, null=True, blank=True, on_delete=models.SET_NULL, related_name="gift_vouchers"
+        BlockConfig, null=True, blank=True, on_delete=models.SET_NULL, related_name="gift_vouchers",
     )
-    active = models.BooleanField(default=True, help_text="Display on site; set to False instead of deleting unused voucher types")
+    discount_amount = models.DecimalField(
+        verbose_name="Exact amount discount",
+        null=True, blank=True, decimal_places=2, max_digits=6
+    )
+    active = models.BooleanField(default=True, help_text="Display on site; set to False instead of deleting unused gift vouchers")
+    duration = models.PositiveIntegerField(default=6, help_text="How many months will this gift voucher last?")
 
-    @cached_property
+    class Meta:
+        ordering = ("block_config", "discount_amount")
+
+    @property
     def cost(self):
-        return self.block_config.cost
+        return self.block_config.cost if self.block_config else self.discount_amount
 
     def __str__(self):
-        return f"{self.block_config} -  £{self.cost}"
+        if self.block_config:
+            return f"{self.block_config} -  £{self.cost}"
+        return f"Voucher - £{self.cost}"
+
+    def name(self):
+        return str(self)
+
+    def clean(self):
+        if not (self.block_config or self.discount_amount):
+            raise ValidationError("One of credit block or a fixed voucher value is required")
+        if self.block_config and self.discount_amount:
+            raise ValidationError("Select either a credit block or a fixed voucher value (not both)")
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+
+class GiftVoucher(models.Model):
+    """Holds information about a gift voucher purchase"""
+    gift_voucher_config = models.ForeignKey(GiftVoucherConfig, on_delete=models.CASCADE)
+    block_voucher = models.ForeignKey(BlockVoucher, null=True, blank=True, on_delete=models.SET_NULL, related_name="gift_voucher")
+    total_voucher = models.ForeignKey(TotalVoucher, null=True, blank=True, on_delete=models.SET_NULL, related_name="gift_voucher")
+
+    invoice = models.ForeignKey(Invoice, null=True, blank=True, on_delete=models.SET_NULL, related_name="gift_vouchers")
+    paid = models.BooleanField(default=False)
+    slug = models.SlugField(max_length=40, null=True, blank=True)
+
+    @property
+    def voucher(self):
+        if self.block_voucher:
+            return self.block_voucher
+        elif self.total_voucher:
+            return self.total_voucher
+
+    @property
+    def purchaser_email(self):
+        if self.voucher:
+            return self.voucher.purchaser_email
+
+    @property
+    def code(self):
+        if self.voucher:
+            return self.voucher.code
+
+    @property
+    def name(self):
+        if self.block_voucher:
+            return f"Gift Voucher: {self.gift_voucher_config.block_config.name}"
+        elif self.total_voucher:
+            return f"Gift Voucher: £{self.total_voucher.discount_amount}"
+
+    def __str__(self):
+        return f"{self.code} - {self.name} - {self.purchaser_email}"
+
+    def activate(self):
+        """Activate a voucher that isn't already activated, and reset start/expiry dates if necessary"""
+        if self.voucher and not self.voucher.activated:
+            self.voucher.activated = True
+            if self.voucher.start_date < timezone.now():
+                self.voucher.start_date = timezone.now()
+            if self.gift_voucher_config.duration:
+                self.voucher.expiry_date = end_of_day_in_utc(
+                    self.voucher.start_date + relativedelta(months=self.gift_voucher_config.duration)
+                )
+            self.voucher.save()
+
+    def send_voucher_email(self):
+        context = {"gift_voucher": self}
+        send_user_and_studio_emails(
+            context,
+            user=None,
+            send_to_studio=False,
+            subjects={"user": "Gift Voucher"},
+            template_short_name="gift_voucher",
+            user_email=self.voucher.purchaser_email
+        )
+
+    def save(self, *args, **kwargs):
+        if not self.id:
+            # New gift voucher, create voucher.  Name, message and purchaser will be added by the purchase
+            # view after the GiftVoucher is created.
+            if self.gift_voucher_config.block_config:
+                if self.block_voucher is None:
+                    self.block_voucher = BlockVoucher.objects.create(
+                        max_per_user=1,
+                        max_vouchers=1,
+                        discount=100,
+                        activated=False,
+                        is_gift_voucher=True,
+                    )
+                    self.block_voucher.block_configs.add(self.gift_voucher_config.block_config)
+                    self.total_voucher = None
+                elif not self.block_voucher.is_gift_voucher:
+                        self.block_voucher.is_gift_voucher = True
+                        self.block_voucher.save()
+            elif self.gift_voucher_config.discount_amount:
+                if self.total_voucher is None:
+                    self.total_voucher = TotalVoucher.objects.create(
+                        discount_amount=self.gift_voucher_config.discount_amount,
+                        max_per_user=1,
+                        max_vouchers=1,
+                        activated=False,
+                        is_gift_voucher=True,
+                    )
+                    self.block_voucher = None
+                elif not self.total_voucher.is_gift_voucher:
+                        self.total_voucher.is_gift_voucher = True
+                        self.total_voucher.save()
+        else:
+            # check for changes to voucher type (before payment processed)
+            if self.gift_voucher_config.block_config:
+                if self.block_voucher and (self.gift_voucher_config.block_config not in self.block_voucher.block_configs.all()):
+                    # changing a block voucher to a different block
+                    assert not self.paid
+                    self.block_voucher.block_configs.clear()
+                    self.block_voucher.block_configs.add(self.gift_voucher_config.block_config)
+                elif self.block_voucher is None:
+                    # changing a total voucher to a block voucher
+                    assert not self.paid
+                    self.block_voucher = BlockVoucher.objects.create(
+                        max_per_user=1,
+                        max_vouchers=1,
+                        discount=100,
+                        activated=False,
+                        is_gift_voucher=True,
+                    )
+                    self.block_voucher.block_configs.add(self.gift_voucher_config.block_config)
+                if self.total_voucher:
+                    to_delete = self.total_voucher
+                    self.total_voucher = None
+                    to_delete.delete()
+            elif self.gift_voucher_config.discount_amount:
+                if self.total_voucher and (self.total_voucher.discount_amount != self.gift_voucher_config.discount_amount):
+                    # changing a total voucher to a different amount
+                    assert not self.paid
+                    self.total_voucher.discount_amount = self.gift_voucher_config.discount_amount
+                elif self.total_voucher is None:
+                    assert not self.paid
+                    # changing a block voucher to a total voucher
+                    self.total_voucher = TotalVoucher.objects.create(
+                        discount_amount=self.gift_voucher_config.discount_amount,
+                        max_per_user=1,
+                        max_vouchers=1,
+                        activated=False,
+                        is_gift_voucher=True,
+                    )
+                if self.block_voucher:
+                    to_delete = self.block_voucher
+                    self.block_voucher = None
+                    to_delete.delete()
+        if self.voucher and not self.slug:
+            self.slug = slugify(self.voucher.code[:40])
+        super().save(*args, **kwargs)
 
 
 class SubscriptionConfig(models.Model):
@@ -1282,3 +1470,11 @@ class Booking(models.Model):
         # if there is a subscription on the booking, make sure its start date is updated
         if self.subscription:
             self.subscription.set_start_date_from_bookings()
+
+
+@receiver(post_delete, sender=GiftVoucher)
+def delete_related_voucher(sender, instance, **kwargs):
+    if instance.voucher:
+        if instance.voucher.basevoucher_ptr_id is None:
+            instance.voucher.basevoucher_ptr_id = instance.voucher.id
+        instance.voucher.delete()

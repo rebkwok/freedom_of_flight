@@ -1,0 +1,69 @@
+{% extends "studioadmin/base.html" %}
+{% load static %}
+{% load bookingtags studioadmintags %}
+
+{% block subnav-xs %}
+    {%  include "studioadmin/includes/navs/xs/vouchers_subnav.html" %}
+{% endblock %}
+{% block precontent %}
+    {%  include "studioadmin/includes/navs/vouchers_subnav.html" %}
+{% endblock %}
+
+{% block content %}
+
+
+<h2>{% if gift_vouchers %}Gift {% endif %}Vouchers</h2>
+<table class="table table-responsive tablesorter" id="sortTable">
+<thead>
+<tr class="success">
+    <th class="text-center">Code</br><span class="helptext">Click to edit</span></th>
+    {% if gift_vouchers %}
+        <th class="text-center">Purchaser</th>
+        <th class="text-center">Paid</th>
+    {% endif %}
+    <th class="text-center">Activated</th>
+    <th class="text-center">Discount</th>
+    <th class="text-center">Start</th>
+    <th class="text-center">Expiry</th>
+    <th class="text-center">Max<br/>(user)</th>
+    <th class="text-center">Max<br/>(total)</th>
+    <th class="text-center">Times used</br><span class="helptext">Click for details</span></th>
+    <th>Valid for</th>
+    <th class="text-center">Printable<br/>voucher</th>
+</tr>
+</thead>
+<tbody>
+{% if vouchers %}
+    {% for voucher in vouchers %}
+    <tr {% if voucher.has_expired or voucher.uses >= voucher.max_vouchers %}class="expired"{% endif %}>
+        <td class="text-center"><a href="{% url 'studioadmin:edit_voucher' voucher.pk %}">{{ voucher.code }}</a></td>
+        {% if gift_vouchers %}
+            <td class="text-center">{% if voucher.purchaser_email %}{{ voucher.purchaser_email }}{% else %}-{% endif %}</td>
+            <td class="text-center">
+                {% if voucher.gift_voucher.exists %}
+                    {%  if voucher.gift_voucher.first.paid %}<span class="text-success fas fa-check-circle"></span>{% else %}<span class="fas fa-times-circle"></span>{% endif %}</td>
+                {% else %}
+                    N/A
+                {% endif %}
+            {% endif %}
+        <td class="text-center">{% if voucher.activated %}<span class="text-success fas fa-check-circle"></span>{% else %}<span class="fas fa-times-circle"></span>{% endif %}</td>
+        <td class="text-center">{% if voucher.discount %}{{ voucher.discount }}%{% else %}£{{ voucher.discount_amount }}{% endif %}</td>
+        <td class="text-center">{{ voucher.start_date|date:"d M Y" }}
+        <td class="text-center">{% if voucher.expiry_date %}{{ voucher.expiry_date|date:"d M Y" }}{% else %}N/A{% endif %}</td>
+        <td class="text-center">{% if voucher.max_per_user %}{{ voucher.max_per_user }}{% else %}N/A{% endif %}</td>
+        <td class="text-center">{% if voucher.max_vouchers %}{{ voucher.max_vouchers }}{% else %}N/A{% endif %}</td>
+        <td class="text-center"><a href="{% url 'studioadmin:voucher_uses' voucher.pk %}">{{ voucher.uses }}</a></td>
+        <td>{% valid_for voucher %}</td>
+        <td class="text-center"><a href="{% url 'booking:voucher_details' voucher.code %}" target="_blank"><span class="fas fa-link"></span></a> </td>
+    </tr>
+    {% endfor %}
+{% else %}
+  <tr><td {% if gift_vouchers %}colspan="12"{% else %}colspan="11"{% endif %}>No vouchers found</td></tr>
+{% endif %}
+</tbody>
+</table>
+
+{% include 'common/includes/single_page_pagination.html' %}
+
+
+{% endblock content %}

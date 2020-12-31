@@ -96,10 +96,6 @@ div.accounts-subnav {
   color: blue;
 }
 
-#navbarCoursesSubNavContainer {
-  background-color: #f0fff0;
-}
-
 #navbarSiteConfigSubNavContainer {
   background-color: #f7edfa;
 }
@@ -113,11 +109,19 @@ a#siteConfigNavbarDropdown {
   background-color: #f7edfa;
 }
 
+#siteConfigNav > li.nav-item > a.nav-link {
+  color: purple;
+}
+
 #navbarCoursesSubNavContainer {
   background-color: #f0fff0;
 }
 
 #navbarCoursesSubNav > ul > li.nav-item.active > a {
+  color: green;
+}
+
+#coursesNav > li.nav-item > a.nav-link {
   color: green;
 }
 
@@ -129,11 +133,19 @@ a#siteConfigNavbarDropdown {
   color: orange;
 }
 
+#timetableNav > li.nav-item > a.nav-link {
+  color: orange;
+}
+
 #navbarPoliciesSubNavContainer {
   background-color: #fff0f1;
 }
 
 #navbarPoliciesSubNav > ul > li.nav-item.active > a {
+  color: darkred;
+}
+
+#policiesNav > li.nav-item > a.nav-link {
   color: darkred;
 }
 
@@ -150,6 +162,21 @@ a.userDetailsNavbar {
   background-color: #f5fffd;
 }
 
+#userDetailsNav > li.nav-item > a.nav-link {
+  color: #0aa182;
+}
+
+#navbarVouchersSubNavContainer {
+  background-color: #fce6f0;
+}
+
+#navbarVouchersSubNav > ul > li.nav-item.active > a {
+  color: #fc1981;
+}
+
+#vouchersNav > li.nav-item > a.nav-link {
+  color: #fc1981;
+}
 
 
 #eventsTrackTabs > a.nav-item.nav-link {
@@ -420,4 +447,11 @@ td.sort-col {
 
 #div_id_events > div > span.invalid-feedback {
   display: block;
+}
+
+/*GIFT VOUCHERS*/
+
+#gift-form > div .col-xs-10, #gift-form > div > div .col-xs-10#gift-form > div .col-xs-2 {
+  padding-right: 0px;
+  padding-left: 0px;
 }

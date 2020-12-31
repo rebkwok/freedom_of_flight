@@ -1,0 +1,40 @@
+{% extends 'account/base.html' %}
+
+{% load static %}
+
+{% block content %}
+    <h1>Payment History</h1>
+
+    <table class="table table-responsive table-striped">
+        <thead>
+            <th>Invoice</th>
+            <th>Amount</th>
+            <th>Payment method</th>
+            <th>Date Paid</th>
+            <th>Items</th>
+        </thead>
+        <tbody>
+            {% for invoice in invoices %}
+                <tr>
+                    <td>{{ invoice.invoice_id }}</td>
+                    <td>£{{ invoice.amount }}</td>
+                    <td>{% if invoice.stripe_payment_intent_id %}Stripe{% elif invoice.amount > 0 %}PayPal{% else %}Gift Voucher{% endif %}</td>
+                    <td>{{ invoice.date_paid|date:"d-M-y H:i" }}</td>
+                    <td>
+                            {% for item in invoice.items_dict.values %}
+                            - {{ item.name }} - {{ item.cost }}<br/>
+                            {% endfor %}
+                        {% if invoice.total_voucher_code %}<span class="helptext">Voucher applied - {{ invoice.total_voucher_code }}</span>{% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    {% include 'common/includes/single_page_pagination.html' %}
+
+{% endblock content %}
+{% block extra_js %}
+
+
+{% endblock %}

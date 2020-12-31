@@ -16,14 +16,16 @@ from accounts.models import has_active_disclaimer
 from activitylog.models import ActivityLog
 
 from common.utils import full_name, start_of_day_in_utc
-from ..models import Booking, Block, Course, Event, WaitingListUser, BlockConfig, Subscription, SubscriptionConfig
+from ..models import Booking, Block, Course, Event, WaitingListUser, BlockConfig, Subscription, \
+    SubscriptionConfig, GiftVoucher
 from ..utils import (
     calculate_user_cart_total, has_available_block, has_available_subscription,
     get_active_user_course_block,
     get_user_booking_info, get_available_user_subscription, has_available_course_block,
 )
 from ..email_helpers import send_waiting_list_email, send_user_and_studio_emails
-from .views_utils import total_unpaid_item_count, get_unpaid_user_managed_items, get_unpaid_user_managed_subscriptions, get_unpaid_user_managed_blocks
+from .views_utils import total_unpaid_item_count, get_unpaid_user_managed_items, get_unpaid_user_managed_subscriptions, \
+    get_unpaid_user_managed_blocks, get_unpaid_user_gift_vouchers
 
 
 logger = logging.getLogger(__name__)
@@ -336,7 +338,8 @@ def ajax_course_booking(request, course_id):
 
 ITEM_TYPE_MODEL_MAPPING = {
     "block": Block,
-    "subscription": Subscription
+    "subscription": Subscription,
+    "gift_voucher": GiftVoucher
 }
 
 @login_required
@@ -348,7 +351,8 @@ def ajax_cart_item_delete(request):
     item.delete()
     unpaid_blocks = get_unpaid_user_managed_blocks(request.user)
     unpaid_subscriptions = get_unpaid_user_managed_subscriptions(request.user)
-    total = calculate_user_cart_total(unpaid_blocks, unpaid_subscriptions)
+    unpaid_gift_vouchers = get_unpaid_user_gift_vouchers(request.user)
+    total = calculate_user_cart_total(unpaid_blocks, unpaid_subscriptions, unpaid_gift_vouchers)
     payment_button_html = render(
         request, f"booking/includes/payment_button.txt", {"total_cost": total}
     )

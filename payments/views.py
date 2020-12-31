@@ -6,7 +6,10 @@ from django.conf import settings
 from django.contrib.sites.models import Site
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET
+from django.views.generic import ListView
 from django.shortcuts import render, HttpResponse
+
+from braces.views import LoginRequiredMixin
 
 from paypal.standard.pdt.views import process_pdt
 import stripe
@@ -16,7 +19,7 @@ from .emails import send_processed_payment_emails, send_failed_payment_emails, s
 from .exceptions import PayPalProcessingError, StripeProcessingError
 from .models import Invoice, Seller, StripePaymentIntent
 from .utils import check_paypal_data, get_paypal_form, get_invoice_from_ipn_or_pdt, \
-    get_invoice_from_payment_intent, check_stripe_data
+    get_invoice_from_payment_intent, check_stripe_data, process_invoice_items
 
 logger = logging.getLogger(__name__)
 
@@ -40,20 +43,7 @@ def paypal_return(request):
                     error = f"Error processing paypal PDT {e}",
                 else:
                     # Everything is OK
-                    for block in invoice.blocks.all():
-                        block.paid = True
-                        block.save()
-                    for subscription in invoice.subscriptions.all():
-                        subscription.paid = True
-                        subscription.save()
-                    invoice.transaction_id = pdt_obj.txn_id
-                    invoice.paid = True
-                    invoice.save()
-                    # SEND EMAILS
-                    send_processed_payment_emails(invoice)
-                    ActivityLog.objects.create(
-                        log=f"Invoice {invoice.invoice_id} (user {invoice.username}) paid by PayPal"
-                    )
+                    process_invoice_items(invoice, payment_method="PayPal", transaction_id=pdt_obj.txn_id)
             else:
                 logger.info("PDT signal received for invoice %s; already processed", invoice.invoice_id)
         else:
@@ -97,22 +87,9 @@ def _process_completed_stripe_payment(payment_intent, invoice, seller=None):
         logger.info("Updating items to paid for invoice %s", invoice.invoice_id)
         check_stripe_data(payment_intent, invoice)
         logger.info("Stripe check OK")
-        for block in invoice.blocks.all():
-            block.paid = True
-            block.save()
-        for subscription in invoice.subscriptions.all():
-            subscription.paid = True
-            subscription.save()
-        invoice.paid = True
-        invoice.save()
-        # update/create the django model PaymentIntent - this isjust for records
+        process_invoice_items(invoice, payment_method="Stripe")
+        # update/create the django model PaymentIntent - this is just for records
         StripePaymentIntent.update_or_create_payment_intent_instance(payment_intent, invoice, seller)
-
-        # SEND EMAILS
-        send_processed_payment_emails(invoice)
-        ActivityLog.objects.create(
-            log=f"Invoice {invoice.invoice_id} (user {invoice.username}) paid by Stripe"
-        )
     else:
         logger.info(
             "Payment Intents signal received for invoice %s; already processed", invoice.invoice_id
@@ -222,3 +199,13 @@ def stripe_webhook(request):
         send_failed_payment_emails(error=e)
         return HttpResponse(str(e), status=200)
     return HttpResponse(status=200)
+
+
+class UserInvoiceListView(LoginRequiredMixin, ListView):
+    paginate_by = 20
+    model = Invoice
+    context_object_name = "invoices"
+    template_name = "payments/invoices.html"
+
+    def get_queryset(self):
+        return Invoice.objects.filter(paid=True, username=self.request.user.email)
