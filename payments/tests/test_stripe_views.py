@@ -10,7 +10,7 @@ from django.test import TestCase, override_settings
 import stripe
 from model_bakery import baker
 
-from booking.models import Block, Subscription
+from booking.models import Block, Subscription, GiftVoucher
 from common.test_utils import TestUsersMixin
 from ..models import Invoice, Seller, StripePaymentIntent
 
@@ -122,13 +122,57 @@ class StripePaymentCompleteViewTests(TestUsersMixin, TestCase):
         assert "Your payment has been processed" in mail.outbox[1].subject
 
     @patch("payments.views.stripe.PaymentIntent")
-    def test_return_with_matching_invoice_block_and_subscription(self, mock_payment_intent):
+    def test_return_with_matching_invoice_and_gift_voucher(self, mock_payment_intent):
+        assert StripePaymentIntent.objects.exists() is False
+        invoice = baker.make(
+            Invoice, invoice_id="foo", amount=10, business_email="testreceiver@test.com",
+            username=self.student_user.username, stripe_payment_intent_id="mock-intent-id"
+        )
+        gift_voucher = baker.make(
+            GiftVoucher, gift_voucher_config__discount_amount=10, paid=False, invoice=invoice
+        )
+        gift_voucher.voucher.purchaser_email = self.student_user.email
+        gift_voucher.voucher.save()
+        metadata = {
+            "invoice_id": "foo",
+            "invoice_signature": invoice.signature(),
+            **invoice.items_metadata(),
+        }
+        mock_payment_intent.retrieve.return_value = get_mock_payment_intent(metadata=metadata)
+
+        resp = self.client.post(self.url, data={"payload": json.dumps({"id": "mock-intent-id"})})
+        assert resp.status_code == 200
+        assert "Payment Processed" in resp.content.decode("utf-8")
+        gift_voucher.refresh_from_db()
+        gift_voucher.voucher.refresh_from_db()
+        invoice.refresh_from_db()
+
+        assert gift_voucher.paid is True
+        assert gift_voucher.voucher.activated is True
+        assert invoice.transaction_id is None
+        payment_intent_obj = StripePaymentIntent.objects.latest("id")
+        assert payment_intent_obj.invoice == invoice
+
+        assert len(mail.outbox) == 3
+        assert mail.outbox[0].to == [settings.DEFAULT_STUDIO_EMAIL]
+        assert mail.outbox[1].to == [self.student_user.email]
+        assert "Your payment has been processed" in mail.outbox[1].subject
+        assert mail.outbox[2].to == [self.student_user.email]
+        assert "Gift Voucher" in mail.outbox[2].subject
+
+    @patch("payments.views.stripe.PaymentIntent")
+    def test_return_with_matching_invoice_block_subscription_gift_voucher(self, mock_payment_intent):
         invoice = baker.make(
             Invoice, invoice_id="foo", amount=10, business_email="testreceiver@test.com",
             username=self.student_user.username, stripe_payment_intent_id="mock-intent-id"
         )
         block = baker.make(Block, paid=False, invoice=invoice, user=self.student_user)
         subscription = baker.make(Subscription, paid=False, invoice=invoice, user=self.student_user)
+        gift_voucher = baker.make(
+            GiftVoucher, gift_voucher_config__discount_amount=10, paid=False, invoice=invoice
+        )
+        gift_voucher.voucher.purchaser_email = self.student_user.email
+        gift_voucher.voucher.save()
         metadata = {
             "invoice_id": "foo",
             "invoice_signature": invoice.signature(),
@@ -141,15 +185,24 @@ class StripePaymentCompleteViewTests(TestUsersMixin, TestCase):
         assert "Payment Processed" in resp.content.decode("utf-8")
         subscription.refresh_from_db()
         block.refresh_from_db()
+        gift_voucher.refresh_from_db()
+        gift_voucher.voucher.refresh_from_db()
         invoice.refresh_from_db()
 
         assert subscription.paid is True
         assert block.paid is True
+        assert gift_voucher.paid is True
+        assert gift_voucher.voucher.activated is True
         assert invoice.paid is True
         assert invoice.transaction_id is None
         payment_intent_obj = StripePaymentIntent.objects.latest("id")
         assert payment_intent_obj.invoice == invoice
-        assert len(mail.outbox) == 2
+        assert len(mail.outbox) == 3
+        assert mail.outbox[0].to == [settings.DEFAULT_STUDIO_EMAIL]
+        assert mail.outbox[1].to == [self.student_user.email]
+        assert "Your payment has been processed" in mail.outbox[1].subject
+        assert mail.outbox[2].to == [self.student_user.email]
+        assert "Gift Voucher" in mail.outbox[2].subject
 
     @patch("payments.views.stripe.PaymentIntent")
     def test_return_with_invalid_invoice(self, mock_payment_intent):
@@ -173,7 +226,7 @@ class StripePaymentCompleteViewTests(TestUsersMixin, TestCase):
         assert "No invoice could be retrieved from succeeded payment intent mock-intent-id" in mail.outbox[0].body
 
     @patch("payments.views.stripe.PaymentIntent")
-    def test_return_with_valid_pdt_with_matching_invoice_multiple_blocks(self, mock_payment_intent):
+    def test_return_with_matching_invoice_multiple_blocks(self, mock_payment_intent):
         invoice = baker.make(
             Invoice, invoice_id="foo", amount=10, business_email="testreceiver@test.com",
             username=self.manager_user.username, stripe_payment_intent_id="mock-intent-id"

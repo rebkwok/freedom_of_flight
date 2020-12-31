@@ -67,7 +67,7 @@ class Invoice(models.Model):
         return {**blocks, **subscriptions, **gift_vouchers}
 
     def item_count(self):
-        return sum([self.blocks.count(), self.subscriptions.count()])
+        return sum([self.blocks.count(), self.subscriptions.count(), self.gift_vouchers.count()])
 
     def items_metadata(self):
         # This is used for the payment intent metadata, which is limited to 40 chars keys and string values

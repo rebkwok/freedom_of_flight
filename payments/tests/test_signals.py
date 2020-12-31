@@ -12,7 +12,7 @@ from django.urls import reverse
 from django.test import TestCase, override_settings
 from django.utils import timezone
 
-from booking.models import Block, Subscription
+from booking.models import Block, Subscription, GiftVoucher
 
 from paypal.standard.ipn.models import PayPalIPN
 
@@ -156,7 +156,40 @@ class PaypalSignalsTests(TestUsersMixin, TestCase):
         assert "Your payment has been processed" in mail.outbox[1].subject
 
     @patch('paypal.standard.ipn.models.PayPalIPN._postback')
-    def test_valid_ipn_with_matching_invoice_subscription_and_block(self, mock_postback):
+    def test_valid_ipn_with_matching_invoice_and_gift_voucher(self, mock_postback):
+        mock_postback.return_value = b"VERIFIED"
+        invoice = baker.make(
+            Invoice, invoice_id="foo", amount=10, business_email=TEST_RECEIVER_EMAIL,
+            username=self.student_user.username
+        )
+        gift_voucher = baker.make(
+            GiftVoucher, gift_voucher_config__discount_amount=10, paid=False, invoice=invoice
+        )
+        gift_voucher.voucher.purchaser_email = self.student_user.email
+        gift_voucher.voucher.save()
+        assert PayPalIPN.objects.exists() is False
+        self.paypal_post(
+            {
+                **IPN_POST_PARAMS,
+                "invoice": b"foo",
+                "custom": f"{invoice.id}_{invoice.signature()}".encode("utf-8"),
+                "mc_gross": b"10.00"
+            }
+        )
+        assert PayPalIPN.objects.count() == 1
+        gift_voucher.refresh_from_db()
+        gift_voucher.voucher.refresh_from_db()
+        assert gift_voucher.paid is True
+        assert gift_voucher.voucher.activated is True
+        assert len(mail.outbox) == 3
+        assert mail.outbox[0].to == [settings.DEFAULT_STUDIO_EMAIL]
+        assert mail.outbox[1].to == [self.student_user.email]
+        assert "Your payment has been processed" in mail.outbox[1].subject
+        assert mail.outbox[2].to == [self.student_user.email]
+        assert "Gift Voucher" in mail.outbox[2].subject
+
+    @patch('paypal.standard.ipn.models.PayPalIPN._postback')
+    def test_valid_ipn_with_matching_invoice_subscription_block_gift_voucher(self, mock_postback):
         mock_postback.return_value = b"VERIFIED"
         invoice = baker.make(
             Invoice, invoice_id="foo", amount=10, business_email=TEST_RECEIVER_EMAIL,
@@ -166,6 +199,11 @@ class PaypalSignalsTests(TestUsersMixin, TestCase):
             Subscription, paid=False, invoice=invoice, user=self.student_user, purchase_date=timezone.now() - timedelta(3)
         )
         block = baker.make(Block, paid=False, invoice=invoice, user=self.student_user)
+        gift_voucher = baker.make(
+            GiftVoucher, gift_voucher_config__discount_amount=10, paid=False, invoice=invoice
+        )
+        gift_voucher.voucher.purchaser_email = self.student_user.email
+        gift_voucher.voucher.save()
         assert PayPalIPN.objects.exists() is False
         self.paypal_post(
             {
@@ -178,13 +216,19 @@ class PaypalSignalsTests(TestUsersMixin, TestCase):
         assert PayPalIPN.objects.count() == 1
         block.refresh_from_db()
         subscription.refresh_from_db()
+        gift_voucher.refresh_from_db()
+        gift_voucher.voucher.refresh_from_db()
         assert block.paid is True
         assert subscription.paid is True
         assert subscription.purchase_date.date() == timezone.now().date()
-        assert len(mail.outbox) == 2
+        assert gift_voucher.paid is True
+        assert gift_voucher.voucher.activated is True
+        assert len(mail.outbox) == 3
         assert mail.outbox[0].to == [settings.DEFAULT_STUDIO_EMAIL]
         assert mail.outbox[1].to == [self.student_user.email]
         assert "Your payment has been processed" in mail.outbox[1].subject
+        assert mail.outbox[2].to == [self.student_user.email]
+        assert "Gift Voucher" in mail.outbox[2].subject
 
     @patch('paypal.standard.ipn.models.PayPalIPN._postback')
     def test_valid_ipn_no_invoice(self, mock_postback):
