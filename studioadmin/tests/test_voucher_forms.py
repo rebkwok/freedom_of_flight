@@ -339,15 +339,15 @@ class GiftVoucherConfigFormTests(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-        cls.active_block_configs = baker.make(BlockConfig, active=True, _quantity=2)
-        baker.make(BlockConfig, active=False, _quantity=2)
+        cls.other_block_config = baker.make(BlockConfig, active=False)
+        cls.active_block_config = baker.make(BlockConfig, active=True)
 
     def test_block_config_options(self):
-        # active block configs only
+        # active block configs first
         form = GiftVoucherConfigForm()
-        assert sorted([
+        assert [
             block_config.id for block_config in form.fields["block_config"].queryset
-        ]) == sorted([block_config.id for block_config in self.active_block_configs])
+        ] == [self.active_block_config.id, self.other_block_config.id]
 
     def test_block_config_or_discount_amount_required(self):
         form = GiftVoucherConfigForm(data={})
@@ -357,7 +357,7 @@ class GiftVoucherConfigFormTests(TestCase):
         }
         assert form.non_field_errors() == ['One of credit block or a fixed voucher value is required']
 
-        form = GiftVoucherConfigForm(data={"block_config": self.active_block_configs[0].id, "discount_amount": 10})
+        form = GiftVoucherConfigForm(data={"block_config": self.active_block_config.id, "discount_amount": 10})
         assert form.is_valid() is False
         assert form.errors == {
             "__all__": ["Select either a credit block or a fixed voucher value (not both)"]
@@ -367,5 +367,5 @@ class GiftVoucherConfigFormTests(TestCase):
         form = GiftVoucherConfigForm(data={"discount_amount": 10})
         assert form.is_valid() is True
 
-        form = GiftVoucherConfigForm(data={"block_config": self.active_block_configs[0].id})
+        form = GiftVoucherConfigForm(data={"block_config": self.active_block_config.id})
         assert form.is_valid() is True

@@ -267,6 +267,11 @@ class BlockVoucherStudioadminForm(forms.ModelForm):
         return super().save(commit=commit)
 
 
+class BlockConfigModelChoiceField(forms.ModelChoiceField):
+    def label_from_instance(self, obj):
+        return f"{obj}{' (inactive)' if not obj.active else ''}"
+
+
 class GiftVoucherConfigForm(forms.ModelForm):
     class Meta:
         model = GiftVoucherConfig
@@ -285,7 +290,9 @@ class GiftVoucherConfigForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         for field in self.fields.values():
             field.required = False
-        self.fields["block_config"].queryset = BlockConfig.objects.filter(active=True)
+        self.fields["block_config"] = BlockConfigModelChoiceField(
+            queryset=BlockConfig.objects.order_by("-active"), required=False
+        )
 
         self.helper = FormHelper()
         back_url = reverse('studioadmin:gift_voucher_configs')
