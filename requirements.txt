@@ -1,4 +1,4 @@
-Django==3.0.10
+Django==3.0.12
 coverage==4.5.4
 Delorean==1.0.0
 dj-database-url==0.5.0
