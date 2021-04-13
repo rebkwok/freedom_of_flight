@@ -21,7 +21,7 @@ psycopg2==2.8.4
 python-dateutil==2.8.0
 #PyYAML==5.1.2
 model-bakery==1.0.1
-pillow==7.1.2
+pillow==8.1.1
 gunicorn==19.7.1
 #static3==0.7.0
 shortuuid==0.5.0
