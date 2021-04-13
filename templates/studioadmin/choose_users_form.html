@@ -1,0 +1,140 @@
+{% extends "studioadmin/base.html" %}
+{% load static studioadmintags accounttags email_obfuscator crispy_forms_tags %}
+
+{% block precontent %}
+{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-multiselect/0.9.15/css/bootstrap-multiselect.css" integrity="sha512-EvvoSMXERW4Pe9LjDN9XDzHd66p8Z49gcrB7LCUplh0GcEHiV816gXGwIhir6PJiwl0ew8GFM2QaIg2TW02B9A==" crossorigin="anonymous" />
+{% endblock %}
+
+{% block content %}
+        <h2>Choose Students to Email </h2>
+        <p>Select by class, course and/or select specific students.</p>
+
+    <div id="spin-container">
+        <i id="spin1" class="fa-2x fas fa-spinner fa-spin email-spinner"></i>
+        <i id="spin2" class="fa-2x fas fa-spinner fa-spin email-spinner"></i>
+        <i id="spin3" class="fa-2x fas fa-spinner fa-spin email-spinner"></i>
+    </div>
+        <a id="toggler" href="#" data-toggle="collapse" data-target="#userfilters">
+            <h4 class="mb-4"><span class="fa fa-plus-square"></span> View/hide selection options</h4>
+        </a>
+            <div class="card card-wm">
+                <span id="userfilters" class="collapse">
+
+                <div class="card-body">
+                    <form action="" method="post">
+                        {% csrf_token %}
+                        {{ userfilterform|crispy }}
+                        <div class="col-12 mt-2">
+                            <input class="btn btn-secondary" name="filter" type="submit" value="Show Students" /><br/>
+                        </div>
+                    </form>
+                </div>
+                </span>
+            {% if usersformset.forms %}
+
+                <form method="post" action="">
+                    {% csrf_token %}
+                    {{ usersformset.management_form }}
+
+                    <table class="table table-sm tablesorter" id="sortTable">
+                            <thead>
+                            <tr class="table-success">
+                                <th class="text-center">Name <span class="fa fa-sort"></span></th>
+                                <th class="text-center">Contact Email</th>
+                                <th class="text-center">Select students to email</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            <tr>
+                                <td></td>
+                                <td></td>
+                                <td class="text-center">
+                                    <input checked="checked" id="select-all" type="checkbox"><label for={{ "select-all" }}></label>
+                                    <span>Select/unselect all</span>
+                                </td>
+                            </tr>
+                            {% for userform in usersformset %}
+                            <tr class="compress">
+                                <span class="hide">{{ userform.id }}</span>
+                                <td class="text-center">{{ userform.instance|full_name|truncatechars:30 }}</td>
+                                <td class="text-center">
+                                    {{ userform.instance.contact_email|obfuscate }}
+                                </td>
+                                <td class="text-center studioadmin-tbl">{{ userform.email_user }}<label for={{ userform.email_user_cbox_id }}></label></td>
+                            </tr>
+                            {% endfor %}
+                            <tr>
+                        </tbody>
+                            <tr>
+                            <td colspan="4">
+                                <input class="btn btn-success" name="formset_submitted" type="submit" value="Email selected students" />
+                            </td>
+                            </tr>
+
+                        </table>
+                </form>
+            {% elif showing_students %}
+                <div>No students match selected options.</div>
+            {% endif %}
+        </div>
+
+{% endblock content %}
+
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-multiselect/0.9.15/js/bootstrap-multiselect.min.js" integrity="sha512-aFvi2oPv3NjnjQv1Y/hmKD7RNMendo4CZ2DwQqMWzoURKxcqAoktj0nNG4LU8m23+Ws9X5uVDD4OXLqpUVXD5Q==" crossorigin="anonymous"></script>
+<script type="text/javascript">
+    $(document).ready(function() {
+        function alerted1 (select, container) {
+            $("#spin1").hide();
+        }
+        function alerted2 (select, container) {
+            $("#spin2").hide();
+        }
+        function alerted3 (select, container) {
+            $("#spin3").hide();
+        }
+
+        $('#id_filter-events').multiselect({
+            buttonClass: 'btn btn-sm btn-primary mt-2',
+            buttonWidth: '100%',
+            maxHeight: 300,
+            disableIfEmpty: true,
+            numberDisplayed: 1,
+            nonSelectedText: 'Click to choose classes',
+            enableFiltering: true,
+            enableCaseInsensitiveFiltering: true,
+            onInitialized: alerted1
+        });
+        $('#id_filter-courses').multiselect({
+            buttonClass: 'btn btn-sm btn-primary mt-2',
+            buttonWidth: '100%',
+            maxHeight: 300,
+            disableIfEmpty: true,
+            numberDisplayed: 1,
+            nonSelectedText: 'Click to choose courses',
+            enableFiltering: true,
+            enableCaseInsensitiveFiltering: true,
+            onInitialized: alerted2
+        });
+        $('#id_filter-students').multiselect({
+            buttonClass: 'btn btn-sm btn-primary mt-2',
+            buttonWidth: '100%',
+            maxHeight: 300,
+            disableIfEmpty: true,
+            numberDisplayed: 1,
+            nonSelectedText: 'Click to choose students',
+            enableFiltering: true,
+            enableCaseInsensitiveFiltering: true,
+            onInitialized: alerted3
+        });
+
+
+    });
+</script>
+
+{% endblock %}

@@ -588,6 +588,14 @@ def manager_user(self):
         return self.childuserprofile.parent_user_profile.user
     return None
 
+
+@property
+def contact_email(self):
+    if hasattr(self, "childuserprofile"):
+        return self.childuserprofile.parent_user_profile.user.email
+    return self.email
+
+
 User.add_to_class("managed_users", managed_users)
 User.add_to_class("managed_users_excluding_self", managed_users_excluding_self)
 User.add_to_class("managed_student_users", managed_student_users)
@@ -597,3 +605,4 @@ User.add_to_class("is_seller", is_seller)
 User.add_to_class("is_instructor", is_instructor)
 User.add_to_class("manager_user", manager_user)
 User.add_to_class("age", user_age)
+User.add_to_class("contact_email", contact_email)

@@ -32,7 +32,8 @@ from studioadmin.views import (
     StripeAuthorizeView, connect_stripe_view, StripeAuthorizeCallbackView, InvoiceListView,
     VoucherDetailView, VoucherUpdateView, VoucherCreateView, VoucherListView, GiftVoucherListView,
     GiftVoucherConfigListView, GiftVoucherConfigCreateView, GiftVoucherConfigUpdateView,
-    ajax_toggle_gift_voucher_config_active
+    ajax_toggle_gift_voucher_config_active,
+    choose_users_to_email, email_users_view
 )
 
 app_name = 'studioadmin'
@@ -133,6 +134,8 @@ urlpatterns = [
         r'^policies/disclaimer-version/edit/(?P<version>\d+\.\d+)/$', DisclaimerContentUpdateView.as_view(), name='edit_disclaimer_content'
     ),
     # users
+    path('users/email/', choose_users_to_email, name="choose_email_users"),
+    path('users/email/emailform/', email_users_view, name="email_users_view"),
     path('users/export/', export_users, name="export_users"),
     path('users/unused-blocks/', users_with_unused_blocks, name="unused_blocks"),
     path('users/', UserListView.as_view(), name="users"),

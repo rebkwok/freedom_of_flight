@@ -13,6 +13,7 @@
     {% crispy search_form %}
     </form>
     <div class="mt-0 mb-2">
+        <a class="btn btn-sm btn-outline-success" href="{% url 'studioadmin:choose_email_users' %}"><i class="fas fa-envelope"></i> Email users by course/class</a>
         <a class="btn btn-sm btn-outline-success" href="{% url 'studioadmin:export_users' %}"><i class="fas fa-file-download"></i> Download emails</a>
         <a class="btn btn-sm btn-outline-dark" href="{% url 'studioadmin:unused_blocks' %}">Unused credit blocks</a>
     </div>

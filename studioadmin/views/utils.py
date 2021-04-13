@@ -1,6 +1,6 @@
 from datetime import datetime
-
 from functools import wraps
+from urllib.parse import urlencode
 
 from django.core.cache import cache
 from django.contrib.auth.models import Group
@@ -129,3 +129,7 @@ def utc_adjusted_datetime(naive_target_datetime):
     utcoffset = uk_datetime.datetime.utcoffset()
     # return a datetime obj, not the Delorean datetime
     return naive_datetime_in_utc.datetime - utcoffset
+
+
+def url_with_querystring(path, **kwargs):
+    return path + '?' + urlencode(kwargs)

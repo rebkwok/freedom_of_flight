@@ -4,6 +4,7 @@ from .course_views import (
     ajax_toggle_course_visible, cancel_course_view, PastCourseAdminListView, clone_course_view,
     ajax_toggle_course_partial_booking, NotStartedYetCourseAdminListView
 )
+from .email_users import choose_users_to_email, email_users_view
 from .event_views import (
     EventAdminListView, ajax_toggle_event_visible, cancel_event_view, EventCreateView,
     event_create_choice_view, EventUpdateView, PastEventAdminListView
