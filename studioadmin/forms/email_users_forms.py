@@ -7,14 +7,14 @@ from django.forms.models import modelformset_factory, BaseModelFormSet
 from django.utils import timezone
 from booking.models import Course, Event
 
-from ..views.utils import get_current_courses, get_not_yet_started_courses
+from ..views.utils import get_current_courses, get_current_and_started_courses
 
 
 def get_event_names():
 
     def callable():
         EVENT_CHOICES = [
-            (event.id, f"{event.name} - {event.start.strftime('%d-%b-%y, %H:%M')}")
+            (event.id, f"{event.name} - {event.start.strftime('%a %d %b %y, %H:%M')}")
             for event in Event.objects.filter(start__gte=timezone.now()).order_by('start')]
         return tuple(EVENT_CHOICES)
 
@@ -26,10 +26,11 @@ def get_course_names():
     def callable():
         def _course_start(course):
             if course.start:
-                return f"start {course.start.strftime('%d-%b')}"
+                return f"start {course.start.strftime('%a %d %b %y, %H:%M')}"
             return "not started"
+        # exclude not started courses
         queryset = Course.objects.all()
-        COURSE_CHOICES = [(course.id, f"{course.name} - {_course_start(course)}") for course in get_current_courses(queryset)]
+        COURSE_CHOICES = [(course.id, f"{course.name} - {_course_start(course)}") for course in get_current_and_started_courses(queryset)]
         return tuple(COURSE_CHOICES)
     return callable
 

@@ -175,13 +175,6 @@ def email_users_view(request, template_name='studioadmin/email_users_form.html')
                         if (i == 0 and cc and not test_email) else [],
                         reply_to=[from_address]
                         )
-                    # msg.attach_alternative(
-                    #     get_template(
-                    #         'studioadmin/email/email_users.html').render(
-                    #           ctx
-                    #       ),
-                    #     "text/html"
-                    # )
                     msg.send(fail_silently=False)
 
                     if not test_email:
