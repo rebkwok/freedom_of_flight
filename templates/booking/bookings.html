@@ -48,6 +48,7 @@
                                     data-ref="bookings"
                                     data-page="{{ request.GET.page }}"
                                     data-event_id="{{ booking.event.id }}"
+                                    data-event_str="{{ booking.event.name }} ({{ booking.event.start|date:'D d b H:i'|title }})"
                                     data-show_warning={{ booking|show_booking_warning|yesno:"1,0" }}
                                     data-cancellation_allowed={{ booking.event.event_type.allow_booking_cancellation|yesno:"1,0" }}
                                     class="ajax_events_btn">
@@ -95,5 +96,5 @@
 
 
 {% block extra_js %}
-<script type='text/javascript' src="{% static 'booking/js/events_booking_ajax-v3.js' %}"></script>
+<script type='text/javascript' src="{% static 'booking/js/events_booking_ajax-v4.js' %}"></script>
 {% endblock %}

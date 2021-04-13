@@ -19,6 +19,7 @@ var processBookingToggleRequest = function()  {
 
     //The value of the "data-event_id" attribute.
     var event_id = $button_just_clicked_on.data('event_id');
+    var event_str = $button_just_clicked_on.data('event_str');
     var user_id = $button_just_clicked_on.data('user_id');
     var ref = $button_just_clicked_on.data('ref');
     var page = $button_just_clicked_on.data('page');
@@ -34,17 +35,18 @@ var processBookingToggleRequest = function()  {
             dialogClass: "no-close",
             title: "Warning!",
             open: function() {
-              var contentText;
+              let contentText;
+              const eventText = "<strong>" + event_str + "</strong><br/>";
               if (!cancellation_allowed) {
                   contentText = "Cancellation is not allowed; if you choose to cancel you will not receive any credit back to your block/subscription or any refund.";
               } else {
                   contentText = 'The allowed cancellation period has passed; if you choose to cancel you will not receive any credit back to your block/subscription or any refund.';
               }
-              $(this).html(contentText + "<br>Please confirm you want to continue.");
+              $(this).html(eventText + contentText + "<br>Please confirm you want to continue.");
             },
             buttons: [
                 {
-                    text: "OK",
+                    text: "Continue",
                     click: function () {
                         doTheAjax();
                         $(this).dialog('close');
@@ -52,7 +54,7 @@ var processBookingToggleRequest = function()  {
                     "class": "btn btn-success"
                 },
                 {
-                    text: "Cancel",
+                    text: "Go back",
                     click: function () {
                         $(this).dialog('close');
                     },

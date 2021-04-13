@@ -158,6 +158,7 @@
                                             <span
                                                 id="book_{{ event.id }}"
                                                 data-event_id="{{ event.id }}"
+                                                data-event_str="{{ event.name }} ({{ event.start|date:'D d b H:i'|title }})"
                                                 data-user_id="{{ view_as_user.id }}"
                                                 data-ref="events"
                                                 data-page="{{ request.GET.page }}"
@@ -176,6 +177,7 @@
                                         <span
                                             id="book_{{ event.id }}"
                                             data-event_id="{{ event.id }}"
+                                            data-event_str="{{ event }}"
                                             data-user_id="{{ view_as_user.id }}"
                                             data-ref="course"
                                             data-show_warning={{ user_info.show_warning|yesno:"1,0" }}
@@ -246,5 +248,5 @@
 
 
 {% block extra_js %}
-<script type='text/javascript' src="{% static 'booking/js/events_booking_ajax-v3.js' %}"></script>
+<script type='text/javascript' src="{% static 'booking/js/events_booking_ajax-v4.js' %}"></script>
 {% endblock %}
