@@ -91,6 +91,12 @@ class ManagedProfileUpdateView(ProfileUpdateView):
         context["managed_user"] = True
         return context
 
+    def form_valid(self, form):
+        # Delete user_id from session so it can be set to the child user if applicable
+        if "user_id" in self.request.session:
+            del self.request.session["user_id"]
+        return super().form_valid()
+
 
 class ChildUserCreateView(LoginRequiredMixin, CreateView):
 
@@ -129,6 +135,10 @@ class ChildUserCreateView(LoginRequiredMixin, CreateView):
         ActivityLog.objects.create(
             log=f"Managed user account created for {child_user.first_name} {child_user.last_name} by {self.request.user.first_name} { self.request.user.last_name}"
         )
+
+        # Delete user_id from session so it can be set to the child user if applicable
+        if "user_id" in self.request.session:
+            del self.request.session["user_id"]
         return HttpResponseRedirect(self.get_success_url(child_user.id))
 
     def get_success_url(self, child_user_id):

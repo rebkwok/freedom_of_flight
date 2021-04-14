@@ -75,7 +75,7 @@ class BaseUserProfile(models.Model):
 
 
 class UserProfile(BaseUserProfile):
-    student = models.BooleanField(default=True)
+    student = models.BooleanField(default=False)
     manager = models.BooleanField(default=False)
     seller = models.BooleanField(default=False)
 
