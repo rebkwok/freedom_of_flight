@@ -95,7 +95,7 @@ class ManagedProfileUpdateView(ProfileUpdateView):
         # Delete user_id from session so it can be set to the child user if applicable
         if "user_id" in self.request.session:
             del self.request.session["user_id"]
-        return super().form_valid()
+        return super().form_valid(form)
 
 
 class ChildUserCreateView(LoginRequiredMixin, CreateView):
