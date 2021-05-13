@@ -69,6 +69,7 @@ class ChildUserCreateViewTests(TestUsersMixin, TestCase):
         child_user = User.objects.get(first_name="Bugs")
         assert child_user.email == ""
         assert child_user.manager_user == self.manager_user
+        assert child_user.is_student is True
 
 
 class ProfileTests(TestUsersMixin, TestCase):

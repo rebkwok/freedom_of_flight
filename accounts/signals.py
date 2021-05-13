@@ -33,7 +33,18 @@ def userprofile_save(sender, instance, created, **kwargs):
         if not instance.seller and existing_seller:
             existing_seller.delete()
     if instance.user.manager_user:
+        if created:
+            instance.student = True
+            instance.save()
         _delete_managed_users_cache(instance.user.manager_user)
+
+
+@receiver(post_save, sender=ChildUserProfile)
+def childuserprofile_save(sender, instance, created, **kwargs):
+    if created:
+        user_profile, _ = UserProfile.objects.get_or_create(user=instance.user)
+        user_profile.student = True
+        user_profile.save()
 
 
 @receiver(post_delete, sender=OnlineDisclaimer)
