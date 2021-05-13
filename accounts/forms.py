@@ -74,6 +74,16 @@ class CoreAccountFormMixin:
             return
         return date_of_birth
 
+    def clean(self):
+        cleaned_data = super().clean()
+        student = cleaned_data.get("student", False)
+        manager = cleaned_data.get("manager", False)
+        if not student and not manager:
+            self.add_error(
+                None, "You must select at least one role: student or manager (or both)"
+            )
+        return cleaned_data
+
 
 class SignupForm(CoreAccountFormMixin, AccountFormMixin, forms.Form):
 
