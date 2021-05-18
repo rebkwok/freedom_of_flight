@@ -1,8 +1,11 @@
+    {% if form.errors %}
+        <div class="errorlist">Please correct the errors below</div>
+    {% endif %}
     {{ form.non_field_errors }}
     {% for field in form %}
         {% if field.name  == 'data_privacy_confirmation' %}
-    <div class="dp-box pre-scrollable" xmlns="https://www.w3.org/1999/html"><h2>Data Privacy Policy</h2>
-            <h5>Version: {{ form.data_privacy_policy.version }}.  Issue date: {{ form.data_privacy_policy.issue_date | date:'d M Y' }}.</h5>
+            <div class="dp-box pre-scrollable" xmlns="https://www.w3.org/1999/html"><h2>Data Privacy Policy</h2>
+                <h5>Version: {{ form.data_privacy_policy.version }}.  Issue date: {{ form.data_privacy_policy.issue_date | date:'d M Y' }}.</h5>
                 {{ form.data_privacy_policy.content|safe }}
             </div>
             <div class="form-group">
@@ -13,8 +16,15 @@
                </div>
            </div>
 
-        {% elif field.name  == 'student' or field.name  == 'manager' %}
+        {% elif field.name  == 'student' %}
+            <label>Role*</label>
             <div class="form-check">
+                {{ field }}
+                <label class="form-check-label" for="{{ field.name }}_id">{{  field.label }}</label>
+                {% if field.help_text %}<br/><span class="helptext">{{ field.help_text }}</span>{% endif %}
+            </div>
+        {% elif field.name  == 'manager' %}
+            <div class="form-check mb-2">
                 {{ field }}
                 <label class="form-check-label" for="{{ field.name }}_id">{{  field.label }}</label>
                 {% if field.help_text %}<br/><span class="helptext">{{ field.help_text }}</span>{% endif %}
