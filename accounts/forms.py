@@ -112,12 +112,11 @@ class SignupForm(CoreAccountFormMixin, AccountFormMixin, forms.Form):
 
         non_profile_fields = [
             'first_name', 'last_name', 'password1', 'password2', 'username',
-            'email', 'email2', 'data_privacy_confirmation', 'student', 'manager'
+            'email', 'email2', 'data_privacy_confirmation'
         ]
         for field in non_profile_fields:
             if field in profile_data:
                 del profile_data[field]
-
         UserProfile.objects.create(user=user, **profile_data)
 
         if hasattr(self, 'data_privacy_policy'):
