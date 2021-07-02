@@ -1,6 +1,5 @@
 from django.urls import path, re_path
 from django.views.generic import RedirectView
-from django.views.i18n import JavaScriptCatalog
 from studioadmin.views import (
     help,
     EventAdminListView, ajax_toggle_event_visible, RegisterListView, register_view,
@@ -33,7 +32,7 @@ from studioadmin.views import (
     VoucherDetailView, VoucherUpdateView, VoucherCreateView, VoucherListView, GiftVoucherListView,
     GiftVoucherConfigListView, GiftVoucherConfigCreateView, GiftVoucherConfigUpdateView,
     ajax_toggle_gift_voucher_config_active,
-    choose_users_to_email, email_users_view
+    choose_users_to_email, email_users_view, download_register
 )
 
 app_name = 'studioadmin'
@@ -75,6 +74,7 @@ urlpatterns = [
 
     path('registers/', RegisterListView.as_view(), name='registers'),
     path('registers/<int:event_id>', register_view, name='register'),
+    path('registers/<int:event_id>/download/', download_register, name='download_register'),
     path('registers/<int:event_id>/ajax-add-booking/', ajax_add_register_booking, name='bookingregisteradd'),
     path('register/<int:booking_id>/ajax-toggle-attended/', ajax_toggle_attended, name='ajax_toggle_attended'),
 

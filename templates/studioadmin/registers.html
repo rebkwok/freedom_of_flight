@@ -31,6 +31,7 @@
                                 <th scope="col" class="text-center">Time</th>
                                 <th scope="col" class="text-center">Spaces</th>
                                 <th scope="col" class="text-center">Waiting List</th>
+                                <th scope="col" class="text-center">Download</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -38,7 +39,9 @@
                             <tr class="table-secondary table-divider"><td colspan="9">{{ event_date|date:"D d M Y" }}</td></tr>
                             {% for event in events %}
                                 <tr>
-                                    <td><a href="{% url 'studioadmin:register' event.id %}">{{ event.name }} {% if event.course %}({{ event.course.name }}){% endif  %}</a></td>
+                                    <td>
+                                        <a href="{% url 'studioadmin:register' event.id %}">{{ event.name }} {% if event.course %}({{ event.course.name }}){% endif  %}</a>
+                                    </td>
                                     <td class="text-center">{{ event.start|date:"H:i" }} - {{ event.end|date:"H:i" }}</td>
                                     <td class="text-center">
                                         <span class="badge badge-light pr-2 pl-2">
@@ -46,6 +49,10 @@
                                         </span>
                                     <td class="text-center">
                                         <a href="{% url 'studioadmin:event_waiting_list' event.id %}">{{ event.waitinglistusers.count }}</a>
+                                    </td>
+                                    <td class="text-center">
+                                        <a class="btn btn-sm btn-outline-success" href="{% url 'studioadmin:download_register' event.id %}"><i class="fas fa-file-download"></i>
+                                        </a>
                                     </td>
                                 </tr>
                             {% endfor %}

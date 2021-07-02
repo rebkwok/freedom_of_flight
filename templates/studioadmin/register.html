@@ -22,6 +22,8 @@
     <h3><a href="{{ event.video_link }}">{{ event.video_link }}</a></h3>
     {% endif %}
 
+    <a class="btn btn-sm btn-outline-success mb-2" href="{% url 'studioadmin:download_register' event.id %}"><i class="fas fa-file-download"></i> Download attendees</a>
+
     <div class="table-responsive">
         <table class="table">
             <thead>

@@ -8,14 +8,16 @@ from django.template.loader import render_to_string
 from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_http_methods
 from django.utils import timezone
+from django.utils.text import slugify
 from django.urls import reverse
 
 from braces.views import LoginRequiredMixin
+import xlwt
 
 from activitylog.models import ActivityLog
 from booking.email_helpers import send_waiting_list_email
 from booking.models import Booking, Event, WaitingListUser
-from booking.utils import get_active_user_block, get_available_user_subscription
+from common.utils import full_name
 
 from ..forms import AddRegisterBookingForm, RegisterFormSet
 from .event_views import BaseEventAdminListView
@@ -169,3 +171,68 @@ def ajax_toggle_attended(request, booking_id):
     return JsonResponse(
         {'attended': booking.attended, 'no_show': booking.no_show, "spaces_left": booking.event.spaces_left, 'alert_msg': alert_msg}
     )
+
+
+@login_required
+@is_instructor_or_staff
+def download_register(request, event_id):
+    event = get_object_or_404(Event, pk=event_id)
+    bookings = event.bookings.filter(status="OPEN", no_show=False)
+
+    childrens_event = False
+    if bookings.exists() and bookings.first().user.age < 17:
+        childrens_event = True
+
+    filename = f"{slugify(event.name)}_{slugify(event.start.strftime('%d %b %Y'))}.xlsx"
+
+    response = HttpResponse(content_type='application/ms-excel')
+    response['Content-Disposition'] = 'attachment; filename={}'.format(filename)
+    wb = xlwt.Workbook(encoding='utf-8')
+    columns = [
+        ("Name", 5000), ("Date of Birth", 4000), ("Emergency Contact", 5000), ("Emergency Contact Relationship", 5000), ("Emergency Contact Phone", 5000)
+    ]
+    if childrens_event:
+        columns.insert(2, ("Age", 2000))
+
+    worksheet_name = slugify(f"{event.name} {event.start.strftime('%d %b %Y, %H:%M')}")
+    row_num = 0
+
+    ws = wb.add_sheet(worksheet_name)
+
+    font_style = xlwt.XFStyle()
+    font_style.alignment.wrap = 1
+    font_style.font.bold = True
+    font_style.font.height = 320  # 16 * 20, for 16 point
+
+    end_col_index = 5 if childrens_event else 4
+    ws.write_merge(row_num, 0, 0, end_col_index, f"{event.name} {event.start.strftime('%d %b %Y, %H:%M')}", font_style)
+    row_num += 1
+    for column_index, (column_name, column_width) in enumerate(columns):
+        ws.write(row_num, column_index, column_name, font_style)
+        # set column width
+        ws.col(column_index).width = column_width
+
+    font_style.font.bold = False
+    font_style.font.height = 220  # 11 * 20, for 11 point
+    for booking in bookings:
+        user = booking.user
+        disclaimer = user.online_disclaimer.latest("id")
+        if user.manager_user is not None:
+            profile = user.childuserprofile
+        else:
+            profile = user.userprofile
+        row_num += 1
+        age = [profile.user.age] if childrens_event else []
+        row = [
+            full_name(user),
+            profile.date_of_birth.strftime("%d %b %Y")
+        ] + age + [
+            disclaimer.emergency_contact_name,
+            disclaimer.emergency_contact_relationship,
+            disclaimer.emergency_contact_phone
+        ]
+        for value_index, value in enumerate(row):
+            ws.write(row_num, value_index, value, font_style)
+
+    wb.save(response)
+    return response
