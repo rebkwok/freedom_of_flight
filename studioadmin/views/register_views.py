@@ -194,7 +194,7 @@ def download_register(request, event_id):
     if childrens_event:
         columns.insert(2, ("Age", 2000))
 
-    worksheet_name = slugify(f"{event.name} {event.start.strftime('%d %b %Y, %H:%M')}")
+    worksheet_name = slugify(f"{event.name} {event.start.strftime('%d %b %Y, %H:%M')}")[:31]
     row_num = 0
 
     ws = wb.add_sheet(worksheet_name)
