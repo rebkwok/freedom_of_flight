@@ -17,6 +17,7 @@ django-paypal==1.0.0
 dynamic-django-forms==0.1.4
 #djangorestframework==3.10.3
 #dj-static==0.0.6
+openpyxl==3.0.7
 psycopg2==2.8.4
 python-dateutil==2.8.0
 #PyYAML==5.1.2

@@ -12,7 +12,11 @@ from django.utils.text import slugify
 from django.urls import reverse
 
 from braces.views import LoginRequiredMixin
-import xlwt
+
+from openpyxl import Workbook
+from openpyxl.writer.excel import save_virtual_workbook
+from openpyxl.cell.cell import WriteOnlyCell
+from openpyxl.styles import Alignment, Font
 
 from activitylog.models import ActivityLog
 from booking.email_helpers import send_waiting_list_email
@@ -185,35 +189,42 @@ def download_register(request, event_id):
 
     filename = f"{slugify(event.name)}_{slugify(event.start.strftime('%d %b %Y'))}.xlsx"
 
-    response = HttpResponse(content_type='application/ms-excel')
-    response['Content-Disposition'] = 'attachment; filename={}'.format(filename)
-    wb = xlwt.Workbook(encoding='utf-8')
-    columns = [
-        ("Name", 5000), ("Date of Birth", 4000), ("Emergency Contact", 5000), ("Emergency Contact Relationship", 5000), ("Emergency Contact Phone", 5000)
-    ]
-    if childrens_event:
-        columns.insert(2, ("Age", 2000))
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename={filename}'
 
+    header_font = Font(name='Calibri', size=14, bold=True)
+    cell_font = Font(name='Calibri', size=11, bold=False)
+    alignment = Alignment(wrap_text=True)
+
+    wb = Workbook()
     worksheet_name = slugify(f"{event.name} {event.start.strftime('%d %b %Y, %H:%M')}")[:31]
-    row_num = 0
+    sheet = wb.active
+    sheet.title = worksheet_name
 
-    ws = wb.add_sheet(worksheet_name)
+    def _write_row(data, is_header=False):
+        font = header_font if is_header else cell_font
+        row = []
+        for cell in data:
+            cell = WriteOnlyCell(sheet, cell)
+            cell.font = font
+            cell.alignment = alignment
+            row.append(cell)
+        sheet.append(row)
 
-    font_style = xlwt.XFStyle()
-    font_style.alignment.wrap = 1
-    font_style.font.bold = True
-    font_style.font.height = 320  # 16 * 20, for 16 point
+    header = [
+        "Name", "Date of Birth", "Emergency Contact",
+        "Emergency Contact Relationship", "Emergency Contact Phone"
+    ]
+    col_widths = [20, 12, 20, 20, 20]
 
-    end_col_index = 5 if childrens_event else 4
-    ws.write_merge(row_num, 0, 0, end_col_index, f"{event.name} {event.start.strftime('%d %b %Y, %H:%M')}", font_style)
-    row_num += 1
-    for column_index, (column_name, column_width) in enumerate(columns):
-        ws.write(row_num, column_index, column_name, font_style)
-        # set column width
-        ws.col(column_index).width = column_width
+    if childrens_event:
+        header.insert(2, "Age")
+        col_widths.insert(2, 8)
 
-    font_style.font.bold = False
-    font_style.font.height = 220  # 11 * 20, for 11 point
+    _write_row(header, is_header=True)
+
     for booking in bookings:
         user = booking.user
         disclaimer = user.online_disclaimer.latest("id")
@@ -221,7 +232,7 @@ def download_register(request, event_id):
             profile = user.childuserprofile
         else:
             profile = user.userprofile
-        row_num += 1
+        # row_num += 1
         age = [profile.user.age] if childrens_event else []
         row = [
             full_name(user),
@@ -231,8 +242,12 @@ def download_register(request, event_id):
             disclaimer.emergency_contact_relationship,
             disclaimer.emergency_contact_phone
         ]
-        for value_index, value in enumerate(row):
-            ws.write(row_num, value_index, value, font_style)
+        _write_row(row)
 
-    wb.save(response)
+    for i, column_cells in enumerate(sheet.columns):
+        sheet.column_dimensions[column_cells[0].column_letter].width = col_widths[i]
+
+    workbook = save_virtual_workbook(wb)
+    container = [response.make_bytes(workbook)]
+    response.content = b''.join(container)
     return response
