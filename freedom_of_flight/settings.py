@@ -26,9 +26,7 @@ env = environ.Env(
     SHOW_DEBUG_TOOLBAR=(bool, False),
     SEND_ALL_STUDIO_EMAILS=(bool, False),
     USE_MAILCATCHER=(bool, False),
-    TRAVIS=(bool, False),
-    HEROKU=(bool, False),
-    LOCAL=(bool, False),
+    CI=(bool, False),
     USE_CDN=(bool, False),
 )
 
@@ -232,9 +230,47 @@ SUPPORT_EMAIL = 'rebkwok@gmail.com'
 
 
 # #####LOGGING######
-if not env('HEROKU') and not env('TRAVIS'):  # pragma: no cover
-    LOG_FOLDER = env('LOG_FOLDER')
-
+LOG_FOLDER = env('LOG_FOLDER')
+# Log to console for CI and Local
+if env('CI') or env('LOCAL'):  # pragma: no cover
+    LOGGING = {
+        'version': 1,
+        'disable_existing_loggers': False,
+        'handlers': {
+            'console': {
+                'level': 'DEBUG',
+                'class': 'logging.StreamHandler',
+            },
+        },
+        'loggers': {
+            'django.request': {
+                'handlers': ['console'],
+                'level': 'INFO',
+                'propagate': True,
+            },
+            'booking': {
+                'handlers': ['console'],
+                'level': 'INFO',
+                'propogate': True,
+            },
+            'payments': {
+                'handlers': ['console'],
+                'level': 'INFO',
+                'propogate': True,
+            },
+            'studioadmin': {
+                'handlers': ['console'],
+                'level': 'INFO',
+                'propogate': True,
+            },
+            'timetable': {
+                'handlers': ['console'],
+                'level': 'INFO',
+                'propogate': True,
+            },
+        },
+    }
+else:  # pragma: no cover
     LOGGING = {
         'version': 1,
         'disable_existing_loggers': False,
@@ -249,8 +285,7 @@ if not env('HEROKU') and not env('TRAVIS'):  # pragma: no cover
             'file_app': {
                 'level': 'INFO',
                 'class': 'logging.handlers.RotatingFileHandler',
-                # 'filename': '/var/log/pipsevents/pipsevents.log',
-                'filename': os.path.join(LOG_FOLDER, 'pipsevents.log'),
+                'filename': os.path.join(LOG_FOLDER, 'freedom_of_flight.log'),
                 'maxBytes': 1024*1024*5,  # 5 MB
                 'backupCount': 5,
                 'formatter': 'verbose'
@@ -310,7 +345,6 @@ if not env('HEROKU') and not env('TRAVIS'):  # pragma: no cover
 
 ADMINS = [("Becky Smith", SUPPORT_EMAIL)]
 
-# ####HEROKU#######
 
 # Honor the 'X-Forwarded-Proto' header for request.is_secure()
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
@@ -330,45 +364,6 @@ if env('USE_MAILCATCHER'):  # pragma: no cover
 
 TESTING = any([test_str in arg for arg in sys.argv for test_str in ["test", "pytest"]])
 
-# TRAVIS and HEROKU logging
-if env('TRAVIS') or env('HEROKU') or TESTING or env('LOCAL'):  # pragma: no cover
-    LOGGING = {
-        'version': 1,
-        'disable_existing_loggers': False,
-        'handlers': {
-            'console': {
-                'level': 'DEBUG',
-                'class': 'logging.StreamHandler',
-            },
-        },
-        'loggers': {
-            'django.request': {
-                'handlers': ['console'],
-                'level': 'INFO',
-                'propagate': True,
-            },
-            'booking': {
-                'handlers': ['console'],
-                'level': 'INFO',
-                'propogate': True,
-            },
-            'payments': {
-                'handlers': ['console'],
-                'level': 'INFO',
-                'propogate': True,
-            },
-            'studioadmin': {
-                'handlers': ['console'],
-                'level': 'INFO',
-                'propogate': True,
-            },
-            'timetable': {
-                'handlers': ['console'],
-                'level': 'INFO',
-                'propogate': True,
-            },
-        },
-    }
 
 if TESTING:  # use local cache for tests
     CACHES = {

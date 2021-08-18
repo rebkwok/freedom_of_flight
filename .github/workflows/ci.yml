@@ -63,8 +63,7 @@ jobs:
           DEFAULT_PAYPAL_EMAIL: dummy-email@hotmail.com
           PAYPAL_TEST: True
           LOG_FOLDER: log_folder
-          TRAVIS: True
-          HEROKU: False
+          CI: True
           SEND_ALL_STUDIO_EMAILS: True
           INVOICE_KEY: dummy_key
           PAYPAL_IDENTITY_TOKEN: dummy_token
