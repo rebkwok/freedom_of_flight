@@ -1,0 +1,44 @@
+.bg-site-colour {
+    background-color: #343a40!important;
+}
+
+.bg-hr-colour {
+    background-color: #ffc107!important;
+}
+
+.expired > td > a {
+  color: lightskyblue;
+}
+
+.event-card {
+  margin-top: 5px;
+  border: 1px solid rgba(0,0,0,.125);
+}
+
+.event-card-header {
+  border-top-left-radius: .2rem;
+  border-top-right-radius: .2rem;
+  color: #0c5460;
+  background-color: #bee5eb;
+}
+
+.event-card-item {
+  margin-top: 0;
+  border-top-width: 0;
+}
+
+.event-card-item-header {
+  background-color: #bee5eb;
+}
+
+.badge-course {
+    font-weight: normal;
+    background-color: darkslateblue;
+    color: white;
+}
+
+.badge-active-block {
+  font-weight: normal;
+  background-color: darkorange;
+  color: white;
+}
