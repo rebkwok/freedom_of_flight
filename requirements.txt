@@ -16,7 +16,7 @@ certifi==2021.5.30
     # via requests
 charset-normalizer==2.0.4
     # via requests
-coverage==4.5.4
+coverage==3.7.1
     # via
     #   -r requirements.in
     #   pytest-cov
@@ -105,7 +105,7 @@ pytest==5.4.3
     #   pytest-django
     #   pytest-freezegun
     #   pytest-mock
-pytest-cov==2.10.0
+pytest-cov==2.5.1
     # via -r requirements.in
 pytest-django==3.9.0
     # via -r requirements.in
