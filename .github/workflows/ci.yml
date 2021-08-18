@@ -57,8 +57,14 @@ jobs:
 
       - name: Run tests
         env:
+          SITE_NAME: freedom_of_flight
+          SITE_TITLE: Freedom of Flight Aerial
           SECRET_KEY: 'dummy_secret'
+          EMAIL_HOST_USER: dummy-email@testmail.com
           EMAIL_HOST_PASSWORD: 'dummy_password'
+          ACCOUNT_EMAIL_SUBJECT_PREFIX: "Freedom of Flight Aerial: "
+          DEFAULT_FROM_EMAIL: dummy-email@testmail.com
+          DEFAULT_STUDIO_EMAIL: dummy-studio-email@testmail.com
           DATABASE_URL: postgres://postgres:postgres@localhost/ci_test
           DEFAULT_PAYPAL_EMAIL: dummy-email@hotmail.com
           PAYPAL_TEST: True
