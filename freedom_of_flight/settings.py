@@ -27,6 +27,7 @@ env = environ.Env(
     SEND_ALL_STUDIO_EMAILS=(bool, False),
     USE_MAILCATCHER=(bool, False),
     CI=(bool, False),
+    LOCAL=(bool, False),
     USE_CDN=(bool, False),
 )
 
