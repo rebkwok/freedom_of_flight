@@ -6,7 +6,7 @@
 <!doctype html>
 <html lang="en">
 
-{% with favicon_image='images/sites/'|add:site|add:'/favicon.png' nav_logo_image='images/sites/'|add:site|add:'/logo.png' site_css='css/sites/'|add:site|add:'/'|add:site|add:'.css'%}
+{% with favicon_image='images/sites/'|add:site_code|add:'/favicon.png' nav_logo_image='images/sites/'|add:site_code|add:'/logo.png' site_css='css/sites/'|add:site_code|add:'/'|add:site_code|add:'.css'%}
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no user-scalable=yes">
@@ -138,7 +138,7 @@
     <footer class="footer">
       <div class="container-fluid">
         <span class="text-muted">
-       {% with 'sites/'|add:site|add:'/footer.html' as snippet %}
+       {% with 'sites/'|add:site_code|add:'/footer.html' as snippet %}
             {% include snippet %}
         {% endwith %}
          <span class="footer-credit float-right mr-0 pr-0 mt-0 pt-0">

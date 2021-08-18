@@ -9,7 +9,7 @@
     {% block messagecontent %}{% endblock %}
     </div>
     <div class="row" style="padding-top: 3em;">
-        {% with 'sites/'|add:site|add:'/email_footer_logo.html' as snippet %}
+        {% with 'sites/'|add:site_code|add:'/email_footer_logo.html' as snippet %}
             {% include snippet %}
         {% endwith %}
         <div class="col-12" style="font-family: sans-serif; padding-top: 1em;">

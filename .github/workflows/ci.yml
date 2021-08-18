@@ -57,7 +57,7 @@ jobs:
 
       - name: Run tests
         env:
-          SITE_NAME: example_site
+          SITE_CODE: example_site
           SITE_TITLE: Example Site
           SECRET_KEY: 'dummy_secret'
           EMAIL_HOST_USER: dummy-email@testmail.com
@@ -83,6 +83,6 @@ jobs:
           pytest --cov-config=.coveragerc --cov=.
 
       - name: Coveralls
-        uses: AndreMiras/coveralls-python-action@develop
+        uses: AndreMiras/coveralls-python-action@v20201129
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}

@@ -34,7 +34,7 @@ env = environ.Env(
 
 environ.Env.read_env(root('.env'))  # reading .env file
 
-SITE = env("SITE_NAME")
+SITE_CODE = env("SITE_CODE")
 SITE_TITLE = env("SITE_TITLE")
 
 BASE_DIR = root()
@@ -289,7 +289,7 @@ else:  # pragma: no cover
             'file_app': {
                 'level': 'INFO',
                 'class': 'logging.handlers.RotatingFileHandler',
-                'filename': os.path.join(LOG_FOLDER, f'{SITE}.log'),
+                'filename': os.path.join(LOG_FOLDER, f'{SITE_CODE}.log'),
                 'maxBytes': 1024*1024*5,  # 5 MB
                 'backupCount': 5,
                 'formatter': 'verbose'
@@ -409,8 +409,8 @@ DEBUG_TOOLBAR_CONFIG = {
 DATA_UPLOAD_MAX_NUMBER_FIELDS = 8000
 
 
-S3_LOG_BACKUP_PATH = f"s3://backups.polefitstarlet.co.uk/{SITE}_activitylogs"
-S3_LOG_BACKUP_ROOT_FILENAME = f"{SITE}_activity_logs_backup"
+S3_LOG_BACKUP_PATH = f"s3://backups.polefitstarlet.co.uk/{SITE_CODE}_activitylogs"
+S3_LOG_BACKUP_ROOT_FILENAME = f"{SITE_CODE}_activity_logs_backup"
 
 SITE_ID=1
 

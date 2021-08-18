@@ -2,7 +2,7 @@
 
 <!DOCTYPE html>
 <html lang="en">
-{% with favicon_image='images/sites/'|add:site|add:'/favicon.png' nav_logo_image='images/sites/'|add:site|add:'/logo.png'  %}
+{% with favicon_image='images/sites/'|add:site_code|add:'/favicon.png' nav_logo_image='images/sites/'|add:site_code|add:'/logo.png'  %}
   <head>
       <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1"/>
@@ -31,6 +31,8 @@
 
        <!-- Custom styles --->
     <link href="{% static 'css/custom-v1.7.css' %}" rel="stylesheet">
+    <!-- Custom styles for site -->
+      <link href="{% static site_css %}" rel="stylesheet">
      <link rel="stylesheet" href="{% static 'css/print.css' %}"  type="text/css" media="print" />
 
     </head>
