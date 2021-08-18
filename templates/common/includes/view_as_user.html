@@ -3,13 +3,13 @@
 {% if request.user.is_authenticated %}
     <hr class="mt-0 mb-2 bg-warning">
     <div class="pt-0 pb-0 mb-0 row">
-        <div class="col-4 col-sm-3 col-lg-2">
+        <div class="col-5 col-sm-3 col-lg-2">
             <small><strong><em>Viewing for user:
             {% if available_users|length <= 1 %} {{ view_as_user|full_name }}{% endif %}
             </em></strong></small>
         </div>
         {% if available_users|length > 1 %}
-        <form class="col-8 col-sm-9 col-lg-6 mb-2" method="post">
+        <form class="col-7 col-sm-9 col-lg-6 mb-2" method="post">
             {% csrf_token %}
                 {{ available_users_form.view_as_user }}
         </form>

@@ -33,6 +33,13 @@
                         {%  if request.user.is_authenticated %}<td class="text-center">User</td>{% else %}<td></td>{% endif %}
                         <td></td>
                     </tr>
+                    {% if not blocklist.0.course %}
+                    <tr>
+                        <td class="helptext text-danger" colspan="3">
+                            Drop-in credit blocks are NOT valid for classes that are part of a course.
+                        </td>
+                    </tr>
+                    {% endif %}
                     {% for available_block_config in blocklist %}
                     <tr {% if available_block_config.id in target_block_config_ids %}class="table-success"{% endif %}>
                         <td class="pl-2 pb-0">
@@ -63,9 +70,6 @@
                                 <p class="helptext mb-0">
                                     <strong>NOTE: {{ available_block_config.age_restrictions }}</strong>
                                 </p>
-                            {% endif %}
-                            {% if not available_block_config.course %}
-                                <p class="helptext">Please note that drop-in credit blocks are not valid for classes that are part of a course.<p/>
                             {% endif %}
 
                         </p>

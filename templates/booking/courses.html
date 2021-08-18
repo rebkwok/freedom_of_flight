@@ -12,12 +12,19 @@
 
    {% include 'common/includes/view_as_user.html' %}
 
-    <h2 class="mt-1">{{ title }}: Courses</h2>
+    <h2 class="mt-1">Courses</h2>
+    <h3 class="mt-1">{{ title }}
+    {% for track_obj in tracks %}
+        {% if track_obj != track %}
+            <span class="expired expired-track">| <a class="expired" href="{% url 'booking:courses' track_obj.slug %}">{{ track_obj.name }}</a></span>
+        {% endif %}
+    {% endfor %}
+    </h3>
 
     <div class="row">
     <div class="col-12">
         <span class="float-left"><a class="btn btn-outline-primary btn-sm" href="{% url 'booking:events' track.slug %}">View {{ track.pluralized_event_type_label }}</a></span>
-        {% if request.user.is_authenticated %}<span class="float-right"><a href="{% url 'booking:bookings' %}">My Bookings</a></span>{% endif %}
+        {% if request.user.is_authenticated %}<span class="float-right"><a class="btn btn-outline-primary btn-sm" href="{% url 'booking:bookings' %}">My Bookings</a></span>{% endif %}
     </div>
     </div>
 
@@ -43,7 +50,10 @@
                         <strong>{{ course.event_type.label|title }} Dates:</strong>
                         <ul class="pl-1">
                         {% for event in course.uncancelled_events %}
-                        <li style="list-style: none;" {% if event.is_past %}class="expired"{% endif %}>{{ event.start|date:"D d-M-y, H:i" }}-{{ event.end|date:"H:i" }}</li>
+                        <li style="list-style: none;" class="ninety-pct"
+                            {% if event.is_past %}class="expired"{% endif %}>
+                            {{ event.start|date:"D d-M-y, H:i" }}-{{ event.end|date:"H:i" }}
+                        </li>
                         {% endfor %}
                         </ul>
                     </div>

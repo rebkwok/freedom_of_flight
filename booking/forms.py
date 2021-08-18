@@ -50,7 +50,7 @@ class EventNameFilterForm(forms.Form):
         self.fields["event_name"] = forms.ChoiceField(
             choices=get_available_event_names(track),
             widget=forms.Select(
-                attrs={"class": "ml-2 form-control form-control-sm", "onchange": "form.submit()"},
+                attrs={"class": "form-control form-control-sm", "onchange": "form.submit()"},
             ),
             label=''
         )

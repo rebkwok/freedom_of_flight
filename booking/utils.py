@@ -235,6 +235,8 @@ def get_user_booking_info(user, event):
                 "available_block": get_active_user_course_block(user, event.course),
              }
         )
+    else:
+        info.update({"hide_block_info_divider": True})
     if user_booking:
         if available_subscription == user_booking.subscription:
             booking_subscription_info = available_subscription_info

@@ -399,6 +399,14 @@ hr.tooltip-hr {
   color: lightskyblue;
 }
 
+.expired-track {
+  font-size: 60%;
+}
+
+.ninety-pct {
+  font-size: 90%;
+}
+
 tr.expired .btn-toggle {
   border-color: lightgrey;
   color: lightgrey;
