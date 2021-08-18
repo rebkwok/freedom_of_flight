@@ -1,2 +1,3 @@
 [run]
-omit = freedom_of_flight/asgi.py,freedom_of_flight/wsgi.py,manage.py
+omit=venv/*,../*migrations*,../*asgi*,../*wsgi*,../*__init__*,manage.py
+relative_files = True
