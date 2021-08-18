@@ -9,21 +9,10 @@
 {% block content %}
 <div id="confirm-dialog"></div>
 
-    <h2 class="mt-2">{% if history %}Past{% else %}Active{% endif %} Bookings</h2>
+   {% include 'common/includes/view_as_user.html' %}
 
-    {% if request.user.is_authenticated %}
-        <hr class="mt-3 mb-0">
-        <p class="pt-0 pb-0 mb-0"><em>Viewing for <strong class="text-primary">{{ view_as_user|full_name }}</strong></em></p>
-        <hr class="mt-0 mb-2">
-    {% endif %}
-    {% if available_users|length > 1 %}
-        <small>
-            <form class="form-inline pb-3" method="post">
-            {% csrf_token %}
-            {{ available_users_form }}
-            </form>
-        </small>
-    {% endif %}
+
+    <h2 class="mt-2">{% if history %}Past{% else %}Active{% endif %} Bookings</h2>
 
     {% if bookings_by_date %}
 

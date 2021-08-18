@@ -35,11 +35,11 @@ class AvailableUsersForm(forms.Form):
         self.fields["view_as_user"] = forms.CharField(
             max_length=255,
             widget=forms.Select(
-                attrs={"class": "form-control form-control-sm", "onchange": "form.submit()"},
+                attrs={"class": "form-control form-control-sm", "style": "font-size: small;", "onchange": "form.submit()"},
                 choices=get_available_users(request.user),
             ),
             initial=initial_view_as_user.id,
-            label="Change user"
+            label="Change"
         )
 
 
