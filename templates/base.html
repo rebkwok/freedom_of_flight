@@ -5,16 +5,18 @@
 
 <!doctype html>
 <html lang="en">
+
+{% with favicon_image='images/sites/'|add:site|add:'/favicon.png' nav_logo_image='images/sites/'|add:site|add:'/logo.png' site_css='css/sites/'|add:site|add:'/'|add:site|add:'.css'%}
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no user-scalable=yes">
     <meta name="description" content="">
-    <!--<link rel="shortcut icon" href="{% static 'images/fof_logo_letter.png' %}" type="image/vnd.microsoft.icon">-->
-    <link rel="icon" type="image/png" href="{% static 'images/fof_logo_letter.png' %}">
-    <link rel="shortcut icon" type="image/png" href="{% static 'images/fof_logo_letter.png' %}">
-    <link rel="apple-touch-icon" href="{% static 'images/fof_logo_letter.png' %}">
+    <link rel="shortcut icon" href="{% static favicon_image %}" type="image/vnd.microsoft.icon">
+    <link rel="icon" type="image/png" href="{% static favicon_image %}">
+    <link rel="shortcut icon" type="image/png" href="{% static favicon_image %}">
+    <link rel="apple-touch-icon" href="{% static favicon_image %}">
 
-    <title>Freedom of Flight Aerial Booking</title>
+    <title>{{ site_title }} Booking</title>
 
 
   {# Load from local if in dev mode (debug on) and not specifically set #}
@@ -33,6 +35,8 @@
 
   <!-- Custom styles for this template -->
     <link href="{% static 'css/custom-v1.7.css' %}" rel="stylesheet">
+  <!-- Custom styles for site -->
+      <link href="{% static site_css %}" rel="stylesheet">
 
     {% block extra_head %}{% endblock %}
 
@@ -43,7 +47,7 @@
     <header>
       <!-- Fixed navbar -->
       <nav class="navbar navbar-expand-md navbar-dark fixed-top bg-dark p-1">
-        <a class="navbar-brand p-0" href="/"><img class="nav-logo" src="{% static 'images/fof_logo.png' %}"></a>
+        <a class="navbar-brand p-0" href="/"><img class="nav-logo" src="{% static nav_logo_image %}"></a>
         <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
           <span class="navbar-toggler-icon"></span>
         </button>
@@ -104,7 +108,7 @@
     {% cookielaw_banner %}
 
         {% block body %}
-        {% block precontent %}<div class="container-fluid"><h1 class="pt-2">Freedom of Flight Aerial</h1></div>{% endblock %}
+        {% block precontent %}<div class="container-fluid"><h1 class="pt-2">{{ site_title }}</h1></div>{% endblock %}
 
         {% if messages %}
           <div class="container-fluid mt-2" id="message-row">
@@ -134,24 +138,11 @@
     <footer class="footer">
       <div class="container-fluid">
         <span class="text-muted">
-          <span class="footer-credit float-left">
-            <a href="https://www.facebook.com/freedomofflightaerial"><i class="fab fa-facebook-square fa-lg"></i></a>
-            <a href="https://www.instagram.com/freedom_of_flight_aerial"><i class="fab fa-instagram-square fa-lg"></i></a>
-            <a href="https://freedomofflightaerial.com/"><i class="fas fa-globe fa-lg"></i></a>
-          </span>
-          <span class="footer-credit ml-2 mb-0 pb-0">
-              <a style="color: #0B0B61" href="{% url 'accounts:data_privacy_policy' %}">
-                  <span class="d-none d-sm-inline-block">Code of Conduct & Data Privacy</span>
-                  <span class="d-sm-none d-inline-block">CoC & Privacy</span></a> |
-              <a style="color: #0B0B61" href="{% url 'booking:covid19_policy' %}">
-                  <span class="d-none d-sm-inline-block">Covid-19 Policy</span>
-                  <span class="d-sm-none d-inline-block">Covid-19</span></a> |
-              <a style="color: #0B0B61" href="{% url 'booking:terms_and_conditions' %}">
-                  <span class="d-none d-sm-inline-block">Terms & Conditions</span>
-                  <span class="d-sm-none d-inline-block">T&C</span></a>
-             </span>
-             <span class="footer-credit float-right mr-0 pr-0 mt-0 pt-0">&#169; <a href="https://twitter.com/rebkwok" target="_blank" style="color: #0B0B61">Becky Smith</a><br/>
-
+       {% with 'sites/'|add:site|add:'/footer.html' as snippet %}
+            {% include snippet %}
+        {% endwith %}
+         <span class="footer-credit float-right mr-0 pr-0 mt-0 pt-0">
+             &#169; <a href="https://twitter.com/rebkwok" target="_blank" style="color: #0B0B61">Becky Smith</a><br/>
           </span>
         </span>
       </div>
@@ -209,5 +200,6 @@
     {% block extra_js %}{% endblock %}
 
   </body>
+{% endwith %}
 </html>
 

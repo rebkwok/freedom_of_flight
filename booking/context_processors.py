@@ -26,6 +26,8 @@ def booking(request):
         view_as_user = request.user
 
     return {
+        'site': settings.SITE,
+        'site_title': settings.SITE_TITLE,
         'use_cdn': not settings.DEBUG or settings.USE_CDN,
         'studio_email': settings.DEFAULT_STUDIO_EMAIL,
         'tracks': tracks,

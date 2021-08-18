@@ -2,15 +2,16 @@
 
 <!DOCTYPE html>
 <html lang="en">
+{% with favicon_image='images/sites/'|add:site|add:'/favicon.png' nav_logo_image='images/sites/'|add:site|add:'/logo.png'  %}
   <head>
       <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1"/>
-        <!--<link rel="shortcut icon" href="{% static 'images/fof_logo_letter.png' %}" type="image/vnd.microsoft.icon">-->
-        <link rel="icon" type="image/png" href="{% static 'images/fof_logo_letter.png' %}">
-        <link rel="shortcut icon" type="image/png" href="{% static 'images/fof_logo_letter.png' %}">
-        <link rel="apple-touch-icon" href="{% static 'images/fof_logo_letter.png' %}">
+        <link rel="shortcut icon" href="{% static 'images/favicon.png' %}" type="image/vnd.microsoft.icon">
+        <link rel="icon" type="image/png" href="{% static 'images/favicon.png' %}">
+        <link rel="shortcut icon" type="image/png" href="{% static 'images/favicon.png' %}">
+        <link rel="apple-touch-icon" href="{% static 'images/favicon.png' %}">
 
-        <title>Freedom of Flight Aerial Booking</title>
+        <title>{{ site_title }} Booking</title>
 
         {% block extra_head %}
         {% endblock %}
@@ -33,7 +34,7 @@
      <link rel="stylesheet" href="{% static 'css/print.css' %}"  type="text/css" media="print" />
 
     </head>
-
+{% endwith %}
   <body>
 
     {% block body %}

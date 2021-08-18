@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib import admin
 from django.utils import timezone
 
@@ -107,7 +108,7 @@ class GiftVoucherConfigAdmin(admin.ModelAdmin):
     inlines = (GiftVoucherInline,)
 
 
-admin.site.site_header = "Freedom of Flight Admin"
+admin.site.site_header = f"{settings.SITE_TITLE} Admin"
 admin.site.register(Event, EventAdmin)
 admin.site.register(Track, TrackAdmin)
 admin.site.register(Course, CourseAdmin)
