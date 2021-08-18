@@ -1,5 +1,5 @@
 """
-ASGI config for freedom_of_flight project.
+ASGI config for rebk_booking_systems project.
 
 It exposes the ASGI callable as a module-level variable named ``application``.
 
@@ -11,6 +11,6 @@ import os
 
 from django.core.asgi import get_asgi_application
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'freedom_of_flight.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'rebk_booking_systems.settings')
 
 application = get_asgi_application()

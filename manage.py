@@ -5,7 +5,7 @@ import sys
 
 
 def main():
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'freedom_of_flight.settings')
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'rebk_booking_systems.settings')
     try:
         from django.core.management import execute_from_command_line
     except ImportError as exc:
