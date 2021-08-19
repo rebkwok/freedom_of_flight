@@ -1,0 +1,72 @@
+.bg-site-colour {
+    background-color: darkred!important;
+}
+
+.bg-hr-colour {
+    background-color: #dc3545!important;
+}
+
+.btn-primary {
+    background-color: orangered;
+    border-color: orangered;
+}
+
+.btn-primary:hover {
+    background-color: red;
+    border-color: orangered;
+}
+
+.btn-outline-primary {
+    border-color: darkred;
+    color: darkred;
+}
+
+.btn-outline-primary:hover {
+    background-color: darkred;
+    border-color: darkred;
+    color: lightpink;
+}
+
+a, a.page-link {
+    color: darkred;
+}
+
+a:hover, a.page-link:hover {
+    color: red;
+}
+
+.expired > td > a {
+  color: lightpink;
+}
+
+.event-card {
+  margin-top: 5px;
+  border: 1px solid rgba(0,0,0,.125);
+}
+.event-card-header {
+  border-top-left-radius: .2rem;
+  border-top-right-radius: .2rem;
+  color: orange;
+  background-color: palegoldenrod;
+}
+
+.event-card-item {
+  margin-top: 0;
+  border-top-width: 0;
+}
+
+.event-card-item-header {
+  background-color: palegoldenrod;
+}
+
+.badge-course {
+    font-weight: normal;
+    background-color: darkolivegreen;
+    color: white;
+}
+
+.badge-active-block {
+  font-weight: normal;
+  background-color: darkorange;
+  color: white;
+}

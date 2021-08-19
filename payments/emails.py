@@ -18,7 +18,9 @@ def send_processed_payment_emails(invoice):
         'host': f"https://{Site.objects.get_current().domain}",
         'user': user,
         'invoice': invoice,
-        "studio_email": settings.DEFAULT_STUDIO_EMAIL
+        "studio_email": settings.DEFAULT_STUDIO_EMAIL,
+        "site_code": settings.SITE_CODE,
+        "site_title": settings.SITE_TITLE
     }
 
     # send email to studio
@@ -49,7 +51,9 @@ def send_processed_refund_emails(invoice):
         'host': f"https://{Site.objects.get_current().domain}",
         'user': user,
         'invoice': invoice,
-        "studio_email": settings.DEFAULT_STUDIO_EMAIL
+        "studio_email": settings.DEFAULT_STUDIO_EMAIL,
+        "site_code": settings.SITE_CODE,
+        "site_title": settings.SITE_TITLE,
     }
 
     # send email to support only for checking;
@@ -68,7 +72,13 @@ def send_failed_payment_emails(ipn_or_pdt=None, payment_intent=None, error=None)
     send_mail(
         'WARNING: Something went wrong with a payment!',
         get_template('payments/email/payment_error.txt').render(
-            {"ipn_or_pdt": ipn_or_pdt, "payment_intent": payment_intent, "error": error}
+            {
+                "ipn_or_pdt": ipn_or_pdt,
+                "payment_intent": payment_intent,
+                "error": error,
+                "site_code": settings.SITE_CODE,
+                "site_title": settings.SITE_TITLE,
+            }
         ),
         settings.DEFAULT_FROM_EMAIL,
         [settings.SUPPORT_EMAIL],

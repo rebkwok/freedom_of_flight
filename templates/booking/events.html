@@ -79,7 +79,7 @@
 <div class="row">
     <div class="col-12">
     {% if course.description %}
-        <div class="row event-card event-card-header list-group-item-info">
+        <div class="row event-card event-card-header">
             <div class="col-12 p-2">Details</div>
         </div>
         <div class="row event-card event-card-item p-2">{{ course.description|linebreaks }}</div>
@@ -87,7 +87,7 @@
 
     {% if events_by_date %}
         {% for date, events in events_by_date.items %}
-            <div class="row event-card event-card-header list-group-item-secondary">
+            <div class="row event-card event-card-header event-card-item-header">
                 <div class="col-12 p-1">{{ date|date:"D d M Y" }}</div>
             </div>
             {% for event in events %}

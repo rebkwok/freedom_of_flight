@@ -15,20 +15,22 @@ def send_waiting_list_email(event, waiting_list_users, host):
             waiting_list_user.user.manager_user.email if waiting_list_user.user.manager_user else waiting_list_user.user.email
             for waiting_list_user in waiting_list_users
         ]
-
+        context = {
+            'event': event,
+            'host': host,
+            "site_code": settings.SITE_CODE,
+            "site_title": settings.SITE_TITLE,
+            "studio_email": settings.DEFAULT_STUDIO_EMAIL,
+        }
         msg = EmailMultiAlternatives(
             '{} {}'.format(settings.ACCOUNT_EMAIL_SUBJECT_PREFIX, event),
-            get_template('booking/email/waiting_list_email.txt').render(
-                {'event': event, 'host': host, "studio_email": settings.DEFAULT_STUDIO_EMAIL}
-            ),
+            get_template('booking/email/waiting_list_email.txt').render(context),
             settings.DEFAULT_FROM_EMAIL,
             bcc=user_emails,
         )
         msg.attach_alternative(
             get_template(
-                'booking/email/waiting_list_email.html').render(
-                {'event': event, 'host': host}
-            ),
+                'booking/email/waiting_list_email.html').render(context),
             "text/html"
         )
         msg.send(fail_silently=False)
@@ -41,6 +43,12 @@ def send_waiting_list_email(event, waiting_list_users, host):
 def send_bcc_emails(context, bcc_user_emails, subject, template_without_ext, reply_to=None, cc=False):
     if "host" not in context:
         context["host"] = f"https://{Site.objects.get_current().domain}"
+    context.update(
+        {
+            "site_code": settings.SITE_CODE,
+            "site_title": settings.SITE_TITLE,
+        }
+    )
     msg = EmailMultiAlternatives(
         subject,
         get_template(f"{template_without_ext}.txt").render(context),
@@ -64,7 +72,13 @@ def send_user_and_studio_emails(
     ):
     if "host" not in context:
         context["host"] = f"https://{Site.objects.get_current().domain}"
-    context.update({"studio_email": settings.DEFAULT_STUDIO_EMAIL})
+    context.update(
+        {
+            "studio_email": settings.DEFAULT_STUDIO_EMAIL,
+            "site_code": settings.SITE_CODE,
+            "site_title": settings.SITE_TITLE,
+        }
+    )
     # send email to user
     send_mail(
         f'{settings.ACCOUNT_EMAIL_SUBJECT_PREFIX} {subjects["user"]}',

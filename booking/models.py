@@ -95,7 +95,7 @@ class EventType(models.Model):
     )
     description = models.TextField(help_text="Description", null=True, blank=True)
     track = models.ForeignKey(Track, on_delete=models.SET_NULL, null=True, related_name="event_types")
-    contact_email = models.EmailField(default=settings.DEFAULT_STUDIO_EMAIL)
+    contact_email = models.EmailField(null=True, blank=True)
     booking_restriction = models.PositiveIntegerField(
         default=15, help_text="Time (minutes) to prevent booking prior to event start. Set to 0 to allow unrestricted booking "
                               "up to the event start time",
@@ -148,6 +148,8 @@ class EventType(models.Model):
             return f"age {self.maximum_age_for_booking} and under only"
 
     def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
+        if not self.contact_email:
+            self.contact_email = settings.DEFAULT_STUDIO_EMAIL
         self.name = self.name.lower()
         self.label = self.label.lower()
         self.plural_suffix = self.plural_suffix.lower().replace(" ", "")

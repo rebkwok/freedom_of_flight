@@ -28,23 +28,6 @@ body > .container-fluid {
   padding: 60px 25px 0 25px;
 }
 
-.event-card {
-  margin-top: 5px;
-  border: 1px solid rgba(0,0,0,.125);
-}
-.event-card-header {
-  border-top-left-radius: .2rem;
-  border-top-right-radius: .2rem;
-}
-.event-card-item {
-  margin-top: 0;
-  border-top-width: 0;
-}
-
-.event-card-info {
-  background-color: #bee5eb;
-}
-
 
 @media only screen and (max-width: 768px) {
   h1 {
@@ -359,18 +342,6 @@ hr.tooltip-hr {
   max-width: 300px;
 }
 
-.badge-course {
-  font-weight: normal;
-  background-color: darkslateblue;
-  color: white;
-}
-
-.badge-active-block {
-  font-weight: normal;
-  background-color: darkorange;
-  color: white;
-}
-
 .btn-group {
   display: flex;
 }
@@ -393,10 +364,6 @@ hr.tooltip-hr {
 
 .expired {
   color: lightgrey;
-}
-
-.expired > td > a {
-  color: lightskyblue;
 }
 
 .expired-track {

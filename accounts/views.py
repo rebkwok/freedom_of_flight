@@ -278,7 +278,9 @@ class NonRegisteredDisclaimerCreateView(CreateView):
         host = 'https://{}'.format(self.request.META.get('HTTP_HOST'))
         ctx = {
             'host': host,
-            'contact_email': settings.DEFAULT_STUDIO_EMAIL
+            'contact_email': settings.DEFAULT_STUDIO_EMAIL,
+            "site_code": settings.SITE_CODE,
+            "site_title": settings.SITE_TITLE,
         }
         send_mail('{}Disclaimer recevied'.format(settings.ACCOUNT_EMAIL_SUBJECT_PREFIX),
             get_template('accounts/email/nonregistered_disclaimer_received.txt').render(ctx),
