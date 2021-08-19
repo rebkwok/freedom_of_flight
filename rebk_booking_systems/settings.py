@@ -56,20 +56,12 @@ if str(DEBUG).lower() in ['true', 'on']:  # pragma: no cover
 else:  # pragma: no cover
     DEBUG = False
 
-ALLOWED_HOSTS = [
-    'booking.freedomofflightaerial.com',
-    'test73623839.freedomofflightaerial.com',
-    'test.freedomofflightaerial.rebkwok.co.uk',
-    'vagrant.booking.freedomofflightaerial.com',
-    'vagrant.test73623839.freedomofflightaerial.com',
-    'vagrant.test.freedomofflight.rebkwok.co.uk',
-]
-if env('LOCAL'):  # pragma: no cover
+if env('LOCAL') or env('CI'):  # pragma: no cover
     ALLOWED_HOSTS = ['*']
-
+else:
+    ALLOWED_HOSTS = env.list("ALLOWED_HOSTS")
 
 # Application definition
-
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
