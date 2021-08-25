@@ -11,7 +11,7 @@ from crispy_forms.bootstrap import InlineCheckboxes, AppendedText, PrependedText
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Button, Layout, Submit, Row, Column, Field, Fieldset, Hidden, HTML
 
-from booking.models import ProductCategory, Product, ProductPurchase, ProductStock, ProductVariant
+from merchandise.models import ProductCategory, Product, ProductPurchase, ProductStock, ProductVariant
 from common.utils import full_name
 from .form_utils import Formset
 

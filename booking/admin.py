@@ -6,7 +6,7 @@ from common.utils import full_name
 from .models import (
     Block, BlockConfig, Booking, BlockVoucher, GiftVoucher, GiftVoucherConfig,
     Course, Event, EventType, Track, WaitingListUser, SubscriptionConfig, Subscription,
-    TotalVoucher, Product, ProductCategory, ProductPurchase, ProductVariant, ProductStock
+    TotalVoucher
 )
 
 
@@ -52,38 +52,6 @@ class GiftVoucherInline(admin.TabularInline):
 class EventTypeInline(admin.TabularInline):
     model = EventType
     can_delete = False
-
-
-class ProductInline(admin.TabularInline):
-    model = Product
-
-
-class ProductStockInline(admin.TabularInline):
-    model = ProductStock
-
-
-class ProductVariantInline(admin.TabularInline):
-    model = ProductVariant
-
-
-@admin.register(Product)
-class ProductAdmin(admin.ModelAdmin):
-    inlines = (ProductVariantInline,)
-
-
-@admin.register(ProductCategory)
-class ProductCategoryAdmin(admin.ModelAdmin):
-    inlines = (ProductInline,)
-
-
-@admin.register(ProductVariant)
-class ProductAdmin(admin.ModelAdmin):
-    inlines = (ProductStockInline,)
-
-
-@admin.register(ProductPurchase)
-class ProductPurchaseAdmin(admin.ModelAdmin):
-    ...
 
 
 class TrackAdmin(admin.ModelAdmin):

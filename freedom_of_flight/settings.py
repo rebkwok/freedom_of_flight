@@ -87,6 +87,7 @@ INSTALLED_APPS = [
     'accounts',
     'activitylog',
     'booking',
+    'merchandise',
     'timetable',
     'studioadmin',
     'ckeditor',

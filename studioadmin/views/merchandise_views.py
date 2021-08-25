@@ -20,7 +20,7 @@ from django.utils.safestring import mark_safe
 from braces.views import LoginRequiredMixin
 
 from common.utils import full_name
-from booking.models import Product, ProductCategory, ProductPurchase, ProductStock, ProductVariant
+from merchandise.models import Product, ProductCategory, ProductPurchase, ProductStock, ProductVariant
 from payments.models import Invoice
 from ..forms.merchandise_forms import ProductCategoryCreateUpdateForm, ProductCreateUpdateForm, \
     ProductVariantForm, ProductPurchaseCreateUpdateForm
