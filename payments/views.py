@@ -97,7 +97,13 @@ def _process_completed_stripe_payment(payment_intent, invoice, seller=None):
 
 
 def stripe_payment_complete(request):
-    payload = json.loads(request.POST.get("payload"))
+    payload = request.POST.get("payload")
+    if payload is None:
+        logger.error("No payload found %s", payload)
+        send_failed_payment_emails(payment_intent=None, error=str(request.POST))
+        return render(request, 'payments/non_valid_payment.html')
+
+    payload = json.loads(payload)
     logger.info("Processing payment intent from payload %s", payload)
     stripe.api_key = settings.STRIPE_SECRET_KEY
     seller = Seller.objects.filter(site=Site.objects.get_current(request)).first()
