@@ -37,6 +37,33 @@ class ProductVariantForm(forms.Form):
     quantity_in_stock = forms.IntegerField()
 
 
+class BaseProductVariantFormset(forms.BaseFormSet):
+
+    def clean(self):
+        """
+        Checks that there will be at least one ProductVariant
+        Checks that there is only one if the size is empty
+        Checks that sizes are not duplicated
+        """
+        if any(self.errors):
+            # Don't bother validating the formset unless each form is valid on its own
+            return
+        undeleted_sizes = []
+
+        for form in self.forms:
+            if form.cleaned_data and not form.cleaned_data.get('DELETE'):
+                size = form.cleaned_data.get('size')
+                if size in undeleted_sizes:
+                    raise forms.ValidationError("Sizes must not be duplicated.")
+                undeleted_sizes.append(size)
+
+        if not undeleted_sizes:
+            raise forms.ValidationError("At least one purchase option is needed.")
+
+        if len(undeleted_sizes) > 1 and "" in undeleted_sizes:
+            raise forms.ValidationError("If more than one option is specified, size is required.")
+
+
 class ProductCreateUpdateForm(forms.ModelForm):
 
     class Meta:

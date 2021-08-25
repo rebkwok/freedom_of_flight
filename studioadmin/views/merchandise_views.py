@@ -23,7 +23,7 @@ from common.utils import full_name
 from merchandise.models import Product, ProductCategory, ProductPurchase, ProductStock, ProductVariant
 from payments.models import Invoice
 from ..forms.merchandise_forms import ProductCategoryCreateUpdateForm, ProductCreateUpdateForm, \
-    ProductVariantForm, ProductPurchaseCreateUpdateForm
+    ProductVariantForm, ProductPurchaseCreateUpdateForm, BaseProductVariantFormset
 from .utils import StaffUserMixin, staff_required
 from activitylog.models import ActivityLog
 
@@ -82,12 +82,16 @@ class ProductMixin(LoginRequiredMixin, StaffUserMixin):
 
     def form_invalid(self, form):
         context = self.get_context_data(form=form)
-        context["product_variant_formset"] = formset_factory(ProductVariantForm, extra=1, can_delete=True)(self.request.POST)
+        context["product_variant_formset"] = formset_factory(
+            ProductVariantForm, formset=BaseProductVariantFormset, extra=1, can_delete=True
+        )(self.request.POST)
         return self.render_to_response(context)
 
     def form_valid(self, form):
         product = form.save(commit=False)
-        formset = formset_factory(ProductVariantForm, extra=1, can_delete=True)(self.request.POST)
+        formset = formset_factory(
+            ProductVariantForm, extra=1, can_delete=True, formset=BaseProductVariantFormset
+        )(self.request.POST)
         if formset.is_valid():
             product.save()
             for variant_form in formset.forms:
@@ -108,8 +112,7 @@ class ProductMixin(LoginRequiredMixin, StaffUserMixin):
                         variant.delete()
         else:
             context = self.get_context_data(form=form)
-            context["product_variant_formset"] = formset_factory(
-                ProductVariantForm, extra=1, can_delete=True)(self.request.POST)
+            context["product_variant_formset"] = formset
             return self.render_to_response(context)
         self.log_success(product)
         messages.success(self.request, "Product saved")

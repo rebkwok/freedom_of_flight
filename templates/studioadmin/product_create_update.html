@@ -30,11 +30,15 @@
     <a href="{% url 'studioadmin:products' %}" class="btn btn-warning btn-sm">View Product List</a>
 </div>
 
-{% if form.errors %}
+{% if form.errors or product_variant_formset.errors or product_variant_formset.non_form_errors %}
     <div class="errorlist">
         <p>Please correct the errors below:</p>
+        {% if product_variant_formset.non_form_errors %}
+            {{ product_variant_formset.non_form_errors }}
+        {% endif %}
     </div>
-    {% endif %}
+{% endif %}
+
 
 <form class="form dirty-check" method="post" action="">
     {% csrf_token %}
