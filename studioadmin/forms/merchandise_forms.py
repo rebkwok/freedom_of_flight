@@ -87,16 +87,22 @@ class ProductPurchaseCreateUpdateForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         product = kwargs.pop("product")
         super().__init__(*args, **kwargs)
-        self.fields["option"] = ProductVariantModelChoiceField(queryset=ProductVariant.objects.filter(product=product))
+        self.fields["option"] = ProductVariantModelChoiceField(
+            queryset=ProductVariant.objects.filter(product=product)
+        )
         if self.instance.id:
             try:
-                matching_variant = ProductVariant.objects.get(product=product, size=self.instance.size, cost=self.instance.cost)
+                matching_variant = ProductVariant.objects.get(
+                    product=product, size=self.instance.size, cost=self.instance.cost
+                )
                 self.fields["option"].initial = matching_variant.id
             except ProductVariant.DoesNotExist:
                 matching_variant = None
                 self.fields["option"].required = False
 
-        self.fields["user"] = UserModelChoiceField(queryset=User.objects.all().order_by("first_name"), required=True, label="Purchaser")
+        self.fields["user"] = UserModelChoiceField(
+            queryset=User.objects.all().order_by("first_name"), required=True, label="Purchaser"
+        )
         self.fields["date_paid"] = forms.DateField(
             widget=forms.DateInput(attrs={"autocomplete": "off"}, format='%d %b %Y'),
             input_formats=['%d %b %Y'],
