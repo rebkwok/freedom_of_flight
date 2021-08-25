@@ -94,22 +94,34 @@ class ProductMixin(LoginRequiredMixin, StaffUserMixin):
         )(self.request.POST)
         if formset.is_valid():
             product.save()
+            seen = []
             for variant_form in formset.forms:
                 if variant_form.is_valid():
                     if "cost" not in variant_form.cleaned_data and "quantity_in_stock" not in variant_form.cleaned_data:
                         continue
 
-                    variant, _ = ProductVariant.objects.get_or_create(
-                        product=product, size=variant_form.cleaned_data["size"], defaults={"cost": variant_form.cleaned_data["cost"]}
-                    )
                     if not variant_form.cleaned_data["DELETE"]:
+                        variant, _ = ProductVariant.objects.get_or_create(
+                            product=product, size=variant_form.cleaned_data["size"],
+                            defaults={"cost": variant_form.cleaned_data["cost"]}
+                        )
                         variant.cost = variant_form.cleaned_data["cost"]
                         variant.save()
+                        seen.append(variant.size)
                         stock, _ = ProductStock.objects.get_or_create(product_variant=variant)
                         stock.quantity = variant_form.cleaned_data["quantity_in_stock"]
                         stock.save()
                     else:
-                        variant.delete()
+                        # if we've seen this size already in this formset, we've already
+                        # updated it and we don't want to delete. Just ignore this form.
+                        if variant_form.cleaned_data["size"] not in seen:
+                            try:
+                                variant = ProductVariant.objects.get(
+                                    product=product, size=variant_form.cleaned_data["size"],
+                                )
+                                variant.delete()
+                            except ProductVariant.DoesNotExist:
+                                ...
         else:
             context = self.get_context_data(form=form)
             context["product_variant_formset"] = formset
@@ -192,7 +204,7 @@ class PurchaseListView(LoginRequiredMixin, StaffUserMixin, ListView):
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        return queryset.filter(product=self.product).order_by("-date_paid")
+        return queryset.filter(product=self.product).order_by("-created_at")
 
 
 class PurchaseMixin(LoginRequiredMixin, StaffUserMixin):

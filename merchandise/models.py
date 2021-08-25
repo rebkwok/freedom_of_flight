@@ -42,6 +42,18 @@ class ProductVariant(models.Model):
     def __str__(self):
         return f"{self.product} - size {self.size}"
 
+    def update_stock(self, quantity):
+        stock, _ = ProductStock.objects.get_or_create(
+            product_variant=self, defaults={"quantity": quantity}
+        )
+        stock.quantity = quantity
+        stock.save()
+
+    @property
+    def current_stock(self):
+        stock, _ = ProductStock.objects.get_or_create(product_variant=self, defaults={"quantity": 0})
+        return stock.quantity
+
 
 class ProductStock(models.Model):
     product_variant = models.OneToOneField(

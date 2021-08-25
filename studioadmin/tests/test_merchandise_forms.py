@@ -3,7 +3,7 @@ from model_bakery import baker
 
 import pytest
 
-from booking.models import ProductPurchase, Product, ProductStock, ProductVariant
+from merchandise.models import ProductPurchase, Product, ProductStock, ProductVariant
 from ..forms.merchandise_forms import ProductPurchaseCreateUpdateForm
 
 
