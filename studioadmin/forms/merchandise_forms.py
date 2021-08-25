@@ -78,7 +78,7 @@ class UserModelChoiceField(forms.ModelChoiceField):
         return full_name(obj)
 
 
-class ProductPurchaseCreateForm(forms.ModelForm):
+class ProductPurchaseCreateUpdateForm(forms.ModelForm):
 
     class Meta:
         model = ProductPurchase

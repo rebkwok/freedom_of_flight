@@ -5,7 +5,7 @@ from django.test import TestCase
 
 from booking.models import BaseVoucher, Block, BlockConfig, BlockVoucher, TotalVoucher, GiftVoucher, GiftVoucherConfig
 from payments.models import Invoice
-from studioadmin.views.vouchers import BlockVoucherStudioadminForm, GiftVoucherConfigForm
+from studioadmin.forms.voucher_forms import BlockVoucherStudioadminForm, GiftVoucherConfigForm
 
 
 class BlockVoucherStudioadminFormTests(TestCase):

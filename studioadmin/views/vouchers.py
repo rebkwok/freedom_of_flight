@@ -17,7 +17,7 @@ from braces.views import LoginRequiredMixin
 from common.utils import full_name
 from booking.models import GiftVoucherConfig, BaseVoucher, BlockVoucher, TotalVoucher
 from payments.models import Invoice
-from ..forms import BlockVoucherStudioadminForm, GiftVoucherConfigForm
+from ..forms.voucher_forms import BlockVoucherStudioadminForm, GiftVoucherConfigForm
 from .utils import StaffUserMixin
 from activitylog.models import ActivityLog
 

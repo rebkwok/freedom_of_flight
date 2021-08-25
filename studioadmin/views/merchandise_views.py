@@ -23,7 +23,7 @@ from common.utils import full_name
 from booking.models import Product, ProductCategory, ProductPurchase, ProductStock, ProductVariant
 from payments.models import Invoice
 from ..forms.merchandise_forms import ProductCategoryCreateUpdateForm, ProductCreateUpdateForm, \
-    ProductVariantForm, ProductPurchaseCreateForm
+    ProductVariantForm, ProductPurchaseCreateUpdateForm
 from .utils import StaffUserMixin, staff_required
 from activitylog.models import ActivityLog
 
@@ -196,7 +196,7 @@ class PurchaseMixin(LoginRequiredMixin, StaffUserMixin):
     template_name = 'studioadmin/product_purchase_create.html'
     model = ProductPurchase
     context_object_name = 'purchase'
-    form_class = ProductPurchaseCreateForm
+    form_class = ProductPurchaseCreateUpdateForm
 
     def dispatch(self, request, *args, **kwargs):
         self.product = get_object_or_404(Product, pk=self.kwargs["product_id"])

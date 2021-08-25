@@ -23,7 +23,7 @@ from booking.email_helpers import send_waiting_list_email
 from booking.models import Booking, Event, WaitingListUser
 from common.utils import full_name
 
-from ..forms import AddRegisterBookingForm, RegisterFormSet
+from ..forms.forms import AddRegisterBookingForm, RegisterFormSet
 from .event_views import BaseEventAdminListView
 from .utils import is_instructor_or_staff, InstructorOrStaffUserMixin, generate_workbook_response
 

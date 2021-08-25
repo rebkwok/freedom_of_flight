@@ -15,7 +15,7 @@ from activitylog.models import ActivityLog
 from booking.models import EventType, BlockConfig, SubscriptionConfig, Subscription, Block
 from common.utils import full_name
 
-from ..forms import BlockConfigForm, SubscriptionConfigForm, BookableEventTypesForm
+from ..forms.forms import BlockConfigForm, SubscriptionConfigForm, BookableEventTypesForm
 from .utils import staff_required, StaffUserMixin, generate_workbook_response
 
 

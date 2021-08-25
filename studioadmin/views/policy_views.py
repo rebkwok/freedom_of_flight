@@ -12,7 +12,7 @@ from accounts.models import CookiePolicy, DataPrivacyPolicy, DisclaimerContent
 from activitylog.models import ActivityLog
 from common.utils import full_name
 
-from ..forms import StudioadminDisclaimerContentForm, StudioadminCookiePolicyForm, StudioadminDataPrivacyPolicyForm
+from ..forms.forms import StudioadminDisclaimerContentForm, StudioadminCookiePolicyForm, StudioadminDataPrivacyPolicyForm
 from .utils import StaffUserMixin, is_instructor_or_staff
 
 
