@@ -206,7 +206,7 @@ jQuery(document).ready(function () {
     });
 
     //VOUCHERS
-        jQuery('#id_expiry_date').datetimepicker({
+    jQuery('#id_expiry_date').datetimepicker({
         format:'d-M-Y',
         formatDate:'d-M-Y',
         timepicker: false,
@@ -220,4 +220,36 @@ jQuery(document).ready(function () {
     $('#id_expiry_date').click(function(){
         $('#id_expiry_date').datetimepicker('show');
     });
+
+    //PURCHASES
+    jQuery('#id_date_paid').datetimepicker({
+        format:'d M Y',
+        formatDate:'d M Y',
+        timepicker: false,
+        minDate: 0,
+        step: 5,
+        closeOnDateSelect: true,
+        scrollMonth: false,
+        scrollTime: false,
+        scrollInput: false,
+    });
+    $('#id_date_paid').click(function(){
+        $('#id_date_paid').datetimepicker('show');
+    });
+
+        jQuery('#id_date_received').datetimepicker({
+        format:'d M Y',
+        formatDate:'d M Y',
+        timepicker: false,
+        minDate: 0,
+        step: 5,
+        closeOnDateSelect: true,
+        scrollMonth: false,
+        scrollTime: false,
+        scrollInput: false,
+    });
+    $('#id_date_received').click(function(){
+        $('#id_date_received').datetimepicker('show');
+    });
+
 });

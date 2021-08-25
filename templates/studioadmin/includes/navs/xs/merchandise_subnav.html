@@ -1,0 +1,11 @@
+{#smallest size - dropdown within main nav#}
+<li class="nav-item dropdown d-block d-md-none">
+    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+      Merchandise Options
+    </a>
+    <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+          <a class="dropdown-item" href="{% url 'studioadmin:product_categories' %}">Categories</a>
+          <a class="dropdown-item" href="{% url 'studioadmin:products' %}">Products</a>
+          <a class="dropdown-item" href="{% url 'studioadmin:add_product' %}">Add Product</a>
+    </div>
+</li>

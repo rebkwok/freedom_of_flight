@@ -1,0 +1,40 @@
+{% extends "studioadmin/base.html" %}
+{% load static %}
+{% load bookingtags studioadmintags %}
+
+{% block subnav-xs %}
+    {%  include "studioadmin/includes/navs/xs/merchandise_subnav.html" %}
+{% endblock %}
+{% block precontent %}
+    {%  include "studioadmin/includes/navs/merchandise_subnav.html" %}
+{% endblock %}
+
+{% block content %}
+
+
+<h2>Categories</h2>
+<table class="table table-responsive tablesorter" id="sortTable">
+<thead>
+    <tr>
+        <td colspan="2"><a href="{% url 'studioadmin:add_product_category' %}"><div class="btn btn-sm btn-success">Add new category</div></a>
+        </td>
+    </tr>
+</thead>
+<tbody>
+{% if categories %}
+    {% for category in categories %}
+    <tr>
+        <td><a href="{% url 'studioadmin:edit_product_category' category.id %}">{{ category.name }}</a></td>
+        <td><a href="{% url 'studioadmin:add_product' %}?category={{category.id}}"><div class="btn btn-xs btn-success">Add product</div></a></td>
+    </tr>
+    {% endfor %}
+{% else %}
+  <tr><td>No categories found</td></tr>
+{% endif %}
+</tbody>
+</table>
+
+{% include 'common/includes/single_page_pagination.html' %}
+
+
+{% endblock content %}

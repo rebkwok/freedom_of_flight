@@ -9,6 +9,13 @@ from .event_views import (
     EventAdminListView, ajax_toggle_event_visible, cancel_event_view, EventCreateView,
     event_create_choice_view, EventUpdateView, PastEventAdminListView
 )
+from .merchandise_views import (
+    ProductCategoryListView, ProductCategoryCreateView, ProductCategoryUpdateView,
+    ProductListView, ProductCreateView, ProductUpdateView, PurchaseListView,
+    ajax_toggle_product_active, ajax_toggle_purchase_paid, ajax_toggle_purchase_received,
+    PurchaseCreateView, PurchaseUpdateView
+)
+
 from .policy_views import (
     CookiePolicyListView, DataPrivacyPolicyListView, DisclaimerContentListView,
     CookiePolicyDetailView, DataPrivacyPolicyDetailView, DisclaimerContentDetailView,

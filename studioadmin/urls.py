@@ -32,7 +32,11 @@ from studioadmin.views import (
     VoucherDetailView, VoucherUpdateView, VoucherCreateView, VoucherListView, GiftVoucherListView,
     GiftVoucherConfigListView, GiftVoucherConfigCreateView, GiftVoucherConfigUpdateView,
     ajax_toggle_gift_voucher_config_active,
-    choose_users_to_email, email_users_view, download_register
+    choose_users_to_email, email_users_view, download_register,
+    ProductCategoryListView, ProductCategoryCreateView, ProductCategoryUpdateView,
+    ProductListView, ProductCreateView, ProductUpdateView, PurchaseListView,
+    ajax_toggle_product_active, ajax_toggle_purchase_paid, ajax_toggle_purchase_received,
+    PurchaseCreateView, PurchaseUpdateView
 )
 
 app_name = 'studioadmin'
@@ -170,6 +174,30 @@ urlpatterns = [
     path('gift-vouchers/purchase-options/<int:pk>/edit/', GiftVoucherConfigUpdateView.as_view(), name="edit_gift_voucher_config"),
     path('gift-vouchers/ajax-toggle-gift-voucher-config-active/', ajax_toggle_gift_voucher_config_active,
          name="ajax_toggle_gift_voucher_config_active"),
+
+    # merchandise
+    path('merchandise/categories/', ProductCategoryListView.as_view(), name="product_categories"),
+    path('merchandise/categories/add/', ProductCategoryCreateView.as_view(), name="add_product_category"),
+    path('merchandise/categories/<int:pk>/edit/', ProductCategoryUpdateView.as_view(), name="edit_product_category"),
+    path('merchandise/products/', ProductListView.as_view(), name="products"),
+    path('merchandise/products/add/', ProductCreateView.as_view(),
+         name="add_product"),
+    path('merchandise/products/ajax-toggle-product-active/',
+         ajax_toggle_product_active,
+         name="ajax_toggle_product_active"),
+    path('merchandise/products/<int:pk>/edit/', ProductUpdateView.as_view(), name="edit_product"),
+    path('merchandise/products/<int:product_id>/purchases/add', PurchaseCreateView.as_view(), name="add_purchase"),
+    path('merchandise/products/<int:product_id>/purchases/<int:pk>/edit', PurchaseUpdateView.as_view(), name="edit_purchase"),
+    path('merchandise/products/<int:product_id>/purchases/', PurchaseListView.as_view(), name="product_purchases"),
+
+    path(
+        'merchandise/products/ajax-toggle-purchase-paid/',
+         ajax_toggle_purchase_paid, name="ajax_toggle_purchase_paid"
+    ),
+    path(
+        'merchandise/products/ajax-toggle-purchase-received/',
+         ajax_toggle_purchase_received, name="ajax_toggle_purchase_received"
+    ),
 
     # help
     path('help/', help, name="help"),
