@@ -492,6 +492,8 @@ class Block(models.Model):
 
     @property
     def cost_with_voucher(self):
+        if not self.voucher:
+            return self.block_config.cost
         block_cost = Decimal(float(self.block_config.cost))
         if self.voucher.discount_amount:
             if self.voucher.discount_amount > block_cost:
