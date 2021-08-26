@@ -14,7 +14,7 @@ from studioadmin.views import (
     TrackCreateView, TrackListView, TrackUpdateView, EventTypeListView, toggle_track_default,
     choose_track_for_event_type, EventTypeCreateView, EventTypeUpdateView, event_type_delete_view,
     block_config_list_view, ajax_toggle_block_config_active, block_config_delete_view, choose_block_config_type,
-    BlockConfigCreateView, BlockConfigUpdateView,
+    BlockConfigCreateView, BlockConfigUpdateView, BlockPurchaseList, download_block_config_purchases,
     subscription_config_list_view, ajax_toggle_subscription_config_active, subscription_config_delete_view,
     choose_subscription_config_type, SubscriptionConfigCreateView, SubscriptionConfigUpdateView, clone_subscription_config_view,
     SubscriptionListView,
@@ -100,6 +100,9 @@ urlpatterns = [
     path('site-config/credit-block/create/', choose_block_config_type, name="choose_block_config_type"),
     path('site-config/credit-block/<block_config_type>/create/', BlockConfigCreateView.as_view(), name="add_block_config"),
     path('site-config/credit-block/<int:pk>/update/', BlockConfigUpdateView.as_view(), name="edit_block_config"),
+    path('site-config/credit-block/<int:block_config_id>/purchases/', BlockPurchaseList.as_view(), name="block_config_purchases"),
+    path('site-config/credit-block/<int:block_config_id>/purchases/download/', download_block_config_purchases, name="download_block_config_purchases"),
+
     # subscription configs
     path('site-config/subscription-configs/', subscription_config_list_view, name="subscription_configs"),
     path('site-config/ajax-toggle-subscription-config-active/', ajax_toggle_subscription_config_active, name="ajax_toggle_subscription_config_active"),

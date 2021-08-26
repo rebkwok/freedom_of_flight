@@ -1,5 +1,4 @@
 from datetime import datetime
-import xlwt
 
 from django.contrib.auth.models import User
 from django.contrib import messages
@@ -24,7 +23,7 @@ from ..forms import (
     EmailUsersForm, SearchForm, AddEditBookingForm, AddEditBlockForm, AddEditSubscriptionForm,
     CourseBookingAddChangeForm, EmailWaitingListUsersForm
 )
-from .utils import staff_required, is_instructor_or_staff, InstructorOrStaffUserMixin
+from .utils import staff_required, is_instructor_or_staff, InstructorOrStaffUserMixin, generate_workbook_response
 
 
 @login_required
@@ -116,44 +115,29 @@ def users_with_unused_blocks(request):
 
 def export_users(request):
     filename = 'students.xls'
-    response = HttpResponse(content_type='application/ms-excel')
-    response['Content-Disposition'] = 'attachment; filename={}'.format(
-        filename
-    )
-    wb = xlwt.Workbook(encoding='utf-8')
-    columns = [
-        ("First Name", 4000), ("Last Name", 4000), ("Email", 6000), ("Managed Users", 6000)
-    ]
-    worksheet_name = "Students"
-    row_num = 0
+    sheet_title = "Students"
+    header_info = {
+        "First Name": 14,
+        "Last Name": 14,
+        "Email": 30,
+        "Managed Users": 20
+    }
     users = User.objects.all().order_by("first_name", "last_name")
 
-    ws = wb.add_sheet(worksheet_name)
-
-    font_style = xlwt.XFStyle()
-    font_style.alignment.wrap = 1
-    font_style.font.bold = True
-
-    for column_index, (column_name, column_width) in enumerate(columns):
-        ws.write(row_num, column_index, column_name, font_style)
-        # set column width
-        ws.col(column_index).width = column_width
-
-    font_style.font.bold = False
-    for user in users:
+    def user_to_row(user):
         if user.email:
             managed_users = user.managed_users
             if user in managed_users:
                 managed_users.remove(user)
 
-            row_num += 1
-            row = [user.first_name, user.last_name, user.email, ", ".join([full_name(managed_user) for managed_user in managed_users])]
+            return [
+                user.first_name,
+                user.last_name,
+                user.email,
+                ", ".join([full_name(managed_user) for managed_user in managed_users])
+            ]
 
-            for value_index, value in enumerate(row):
-                ws.write(row_num, value_index, value, font_style)
-
-    wb.save(response)
-    return response
+    return generate_workbook_response(filename, sheet_title, header_info, users, user_to_row)
 
 
 class UserListView(LoginRequiredMixin, InstructorOrStaffUserMixin, ListView):

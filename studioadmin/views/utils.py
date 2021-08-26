@@ -4,11 +4,17 @@ from urllib.parse import urlencode
 
 from django.core.cache import cache
 from django.contrib.auth.models import Group
+from django.http import HttpResponse
 from django.urls import reverse
 from django.shortcuts import HttpResponseRedirect
 from django.utils import timezone
 
 from delorean import Delorean
+
+from openpyxl import Workbook
+from openpyxl.writer.excel import save_virtual_workbook
+from openpyxl.cell.cell import WriteOnlyCell
+from openpyxl.styles import Alignment, Font
 
 from booking.models import Course
 
@@ -144,3 +150,43 @@ def utc_adjusted_datetime(naive_target_datetime):
 
 def url_with_querystring(path, **kwargs):
     return path + '?' + urlencode(kwargs)
+
+
+def generate_workbook_response(filename, sheet_title, header_info, object_list, object_to_row):
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename={filename}'
+
+    header_font = Font(name='Calibri', size=12, bold=True)
+    cell_font = Font(name='Calibri', size=11, bold=False)
+    alignment = Alignment(wrap_text=True)
+
+    wb = Workbook()
+    sheet = wb.active
+    sheet.title = sheet_title
+
+    def _write_row(data, is_header=False):
+        font = header_font if is_header else cell_font
+        row = []
+        for cell in data:
+            cell = WriteOnlyCell(sheet, cell)
+            cell.font = font
+            cell.alignment = alignment
+            row.append(cell)
+        sheet.append(row)
+
+    _write_row(header_info.keys(), is_header=True)
+
+    for obj in object_list:
+        row = object_to_row(obj)
+        if row:
+            _write_row(row)
+
+    for i, column_cells in enumerate(sheet.columns):
+        sheet.column_dimensions[column_cells[0].column_letter].width = list(header_info.values())[i]
+
+    workbook = save_virtual_workbook(wb)
+    container = [response.make_bytes(workbook)]
+    response.content = b''.join(container)
+    return response

@@ -61,7 +61,8 @@
                         <td class="text-center">{{ block_config.size }}</td>
                         <td class="text-center">{{ block_config.duration }}</td>
                         <td class="text-center">£{{ block_config.cost }}</td>
-                        <td class="text-center">{{ block_config.blocks_purchased }}</td>
+                        <td class="text-center">
+                            <a href="{% url 'studioadmin:block_config_purchases' block_config.id %}">{{ block_config.blocks_purchased }}</a></td>
                         <td class="text-center">
                             {% if not block_config.blocks_purchased %}
                                 <div

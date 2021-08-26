@@ -1,0 +1,49 @@
+{%  extends "studioadmin/base.html" %}
+
+{% load accounttags studioadmintags static %}
+
+{% block subnav-xs %}
+    {%  include "studioadmin/includes/navs/xs/payment_plans_subnav.html" %}
+{% endblock %}
+{% block precontent %}
+    {%  include "studioadmin/includes/navs/payment_plans_subnav.html" %}
+{% endblock %}
+
+{% block content %}
+    <h1>Purchases for {{ block_config }}</h1>
+
+    <a class="btn btn-sm btn-outline-success mb-2" href="{% url 'studioadmin:download_block_config_purchases' block_config.id %}"><i class="fas fa-file-download"></i> Download</a>
+
+    {% if not purchased_blocks %}
+        <p>No purchases found</p>
+    {% else %}
+
+        <table class="table table-sm">
+            <thead>
+                <tr>
+                    <th class="text-center">User</th>
+                    <th class="text-center">Purchase date</th>
+                    <th class="text-center">Cost</th>
+                    <th class="text-center">Code</th>
+                    <th class="text-center">Invoice #</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for purchased_block in purchased_blocks %}
+                <tr>
+                    <td class="text-center">{{ purchased_block.user|full_name }}</td>
+                    <td class="text-center">{{ purchased_block.purchase_date|date:'d M Y' }}</td>
+                    <td class="text-center">£{{ purchased_block.cost_with_voucher }}</td>
+                    <td class="text-center">{{ purchased_block.voucher.code }}</td>
+                    <td class="text-center">{{ purchased_block.invoice.invoice_id }}</td>
+                </tr>
+            {% endfor %}
+
+            </tbody>
+        </table>
+
+      {% include 'common/includes/single_page_pagination.html' %}
+
+    {% endif %}
+
+{% endblock %}

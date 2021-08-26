@@ -20,7 +20,7 @@ from .payment_plan_views import (
     BlockConfigCreateView, BlockConfigUpdateView,
     subscription_config_list_view, ajax_toggle_subscription_config_active, subscription_config_delete_view,
     choose_subscription_config_type, SubscriptionConfigCreateView, SubscriptionConfigUpdateView, clone_subscription_config_view,
-    SubscriptionListView,
+    SubscriptionListView, BlockPurchaseList, download_block_config_purchases
 )
 from .site_config_views import (
     TrackCreateView, TrackListView, TrackUpdateView, EventTypeListView, toggle_track_default, help,

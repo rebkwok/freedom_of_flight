@@ -29,5 +29,4 @@ pytest-cov<2.6
 pytest-django
 pytest-freezegun
 pytest-mock
-xlwt
 stripe

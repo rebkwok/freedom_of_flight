@@ -25,7 +25,7 @@ from common.utils import full_name
 
 from ..forms import AddRegisterBookingForm, RegisterFormSet
 from .event_views import BaseEventAdminListView
-from .utils import is_instructor_or_staff, InstructorOrStaffUserMixin
+from .utils import is_instructor_or_staff, InstructorOrStaffUserMixin, generate_workbook_response
 
 
 class RegisterListView(LoginRequiredMixin, InstructorOrStaffUserMixin, BaseEventAdminListView):
@@ -188,44 +188,24 @@ def download_register(request, event_id):
         childrens_event = True
 
     filename = f"{slugify(event.name)}_{slugify(event.start.strftime('%d %b %Y'))}.xlsx"
-
-    response = HttpResponse(
-        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    )
-    response['Content-Disposition'] = f'attachment; filename={filename}'
-
-    header_font = Font(name='Calibri', size=14, bold=True)
-    cell_font = Font(name='Calibri', size=11, bold=False)
-    alignment = Alignment(wrap_text=True)
-
-    wb = Workbook()
     worksheet_name = slugify(f"{event.name} {event.start.strftime('%d %b %Y, %H:%M')}")[:31]
-    sheet = wb.active
-    sheet.title = worksheet_name
 
-    def _write_row(data, is_header=False):
-        font = header_font if is_header else cell_font
-        row = []
-        for cell in data:
-            cell = WriteOnlyCell(sheet, cell)
-            cell.font = font
-            cell.alignment = alignment
-            row.append(cell)
-        sheet.append(row)
-
-    header = [
-        "Name", "Date of Birth", "Emergency Contact",
-        "Emergency Contact Relationship", "Emergency Contact Phone"
-    ]
-    col_widths = [20, 12, 20, 20, 20]
+    header_info = {
+        "Name": 20,
+        "Date of Birth": 12,
+    }
 
     if childrens_event:
-        header.insert(2, "Age")
-        col_widths.insert(2, 8)
+        header_info.update({"Age": 8})
+    header_info.update(
+        {
+            "Emergency Contact": 20,
+            "Emergency Contact Relationship": 20,
+            "Emergency Contact Phone": 20
+        }
+    )
 
-    _write_row(header, is_header=True)
-
-    for booking in bookings:
+    def booking_to_row(booking):
         user = booking.user
         disclaimer = user.online_disclaimer.latest("id")
         if user.manager_user is not None:
@@ -242,12 +222,6 @@ def download_register(request, event_id):
             disclaimer.emergency_contact_relationship,
             disclaimer.emergency_contact_phone
         ]
-        _write_row(row)
+        return row
 
-    for i, column_cells in enumerate(sheet.columns):
-        sheet.column_dimensions[column_cells[0].column_letter].width = col_widths[i]
-
-    workbook = save_virtual_workbook(wb)
-    container = [response.make_bytes(workbook)]
-    response.content = b''.join(container)
-    return response
+    return generate_workbook_response(filename, worksheet_name, header_info, bookings, booking_to_row)

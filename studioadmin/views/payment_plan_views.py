@@ -1,22 +1,22 @@
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.core.exceptions import ValidationError
-from django.http import HttpResponseBadRequest, JsonResponse
+from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
 from django.forms.models import formset_factory
 from django.shortcuts import get_object_or_404, render, HttpResponseRedirect
 from django.views.decorators.http import require_http_methods
 from django.views.generic import ListView, CreateView, UpdateView
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.text import slugify
 
 from braces.views import LoginRequiredMixin
 
 from activitylog.models import ActivityLog
-from booking.models import EventType, BlockConfig, SubscriptionConfig, Subscription
+from booking.models import EventType, BlockConfig, SubscriptionConfig, Subscription, Block
 from common.utils import full_name
 
 from ..forms import BlockConfigForm, SubscriptionConfigForm, BookableEventTypesForm
-from .utils import staff_required, StaffUserMixin
+from .utils import staff_required, StaffUserMixin, generate_workbook_response
 
 
 @login_required
@@ -30,6 +30,52 @@ def block_config_list_view(request):
         }
     }
     return render(request, "studioadmin/credit_blocks.html", context)
+
+
+class BlockPurchaseList(LoginRequiredMixin, StaffUserMixin, ListView):
+
+    model = Block
+    template_name = "studioadmin/credit_block_purchases.html"
+    context_object_name = "purchased_blocks"
+    paginate_by = 30
+
+    def dispatch(self, request, *args, **kwargs):
+        self.block_config = get_object_or_404(BlockConfig, pk=kwargs["block_config_id"])
+        return super(BlockPurchaseList, self).dispatch(request, *args, **kwargs)
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        return qs.filter(block_config=self.block_config, paid=True).order_by("-purchase_date")
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["block_config"] = self.block_config
+        return context
+
+
+@login_required
+@staff_required
+def download_block_config_purchases(request, block_config_id):
+    block_config = get_object_or_404(BlockConfig, pk=block_config_id)
+    purchased_blocks = Block.objects.filter(block_config=block_config, paid=True).order_by("-purchase_date")
+
+    filename = f"{slugify(block_config.name)}_purchases_{timezone.now().isoformat()}.xlsx"
+    sheet_name = slugify(block_config.name)[:31]
+
+    header_info = {
+        "User": 20, "Purchase Date": 16, "Cost": 10, "Discount Code": 16, "Invoice #": 24
+    }
+
+    def block_to_row(block):
+        return [
+            full_name(block.user),
+            block.purchase_date.strftime("%d-%b-%Y"),
+            block.cost_with_voucher,
+            block.voucher.code if block.voucher else "",
+            block.invoice.invoice_id if block.invoice else ""
+        ]
+
+    return generate_workbook_response(filename, sheet_name, header_info, purchased_blocks, block_to_row)
 
 
 @require_http_methods(['POST'])
