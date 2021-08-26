@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% load accounttags bookingtags static %}
+
+{% block content %}
+    <h2 class="mt-1">Merchandise</h2>
+        {%  if request.user.is_authenticated %}
+          <div class="mb-2">
+              <a class="btn btn-outline-primary btn-xs" href="{% url 'booking:shopping_basket' %}"><span>View cart <i class="fas fa-shopping-cart"></i></span></a>
+          </div>
+        {% endif %}
+      <h2>Products</h2>
+        {% if products %}
+            {% for product in products %}
+                <a href="{% url 'merchandise:product' product.id %}">{{ product.name }}</a>
+            {% endfor %}
+        {% else %}
+            <p>No products are available for purchase</p>
+        {% endif %}
+
+{% endblock content %}

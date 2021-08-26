@@ -63,7 +63,7 @@
                       <a class="dropdown-item" href="{% url 'booking:buy_gift_voucher' %}">Gift Vouchers</a>
                     {% endif %}
                     {% if merchandise_available %}
-                        <a class="dropdown-item" href="#"><em>Merchandise</em></a>
+                        <a class="dropdown-item" href="{% url 'merchandise:products' %}">Merchandise</a>
                     {% endif %}
                 </div>
               </li>
