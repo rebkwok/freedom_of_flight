@@ -1,5 +1,8 @@
 from datetime import datetime
-import xlwt
+from openpyxl import Workbook
+from openpyxl.writer.excel import save_virtual_workbook
+from openpyxl.cell.cell import WriteOnlyCell
+from openpyxl.styles import Alignment, Font
 
 from django.contrib.auth.models import User
 from django.contrib import messages
@@ -116,43 +119,55 @@ def users_with_unused_blocks(request):
 
 def export_users(request):
     filename = 'students.xls'
-    response = HttpResponse(content_type='application/ms-excel')
-    response['Content-Disposition'] = 'attachment; filename={}'.format(
-        filename
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
-    wb = xlwt.Workbook(encoding='utf-8')
-    columns = [
-        ("First Name", 4000), ("Last Name", 4000), ("Email", 6000), ("Managed Users", 6000)
-    ]
-    worksheet_name = "Students"
-    row_num = 0
+    response['Content-Disposition'] = f'attachment; filename={filename}'
+
+    header_font = Font(name='Calibri', size=12, bold=True)
+    cell_font = Font(name='Calibri', size=11, bold=False)
+    alignment = Alignment(wrap_text=True)
+
+    wb = Workbook()
+    sheet = wb.active
+    sheet.title = "Students"
+
+    def _write_row(data, is_header=False):
+        font = header_font if is_header else cell_font
+        row = []
+        for cell in data:
+            cell = WriteOnlyCell(sheet, cell)
+            cell.font = font
+            cell.alignment = alignment
+            row.append(cell)
+        sheet.append(row)
+
+    header = ["First Name", "Last Name", "Email", "Managed Users"]
+    col_widths = [14, 14, 30, 20]
+
+    _write_row(header, is_header=True)
+
     users = User.objects.all().order_by("first_name", "last_name")
-
-    ws = wb.add_sheet(worksheet_name)
-
-    font_style = xlwt.XFStyle()
-    font_style.alignment.wrap = 1
-    font_style.font.bold = True
-
-    for column_index, (column_name, column_width) in enumerate(columns):
-        ws.write(row_num, column_index, column_name, font_style)
-        # set column width
-        ws.col(column_index).width = column_width
-
-    font_style.font.bold = False
     for user in users:
         if user.email:
             managed_users = user.managed_users
             if user in managed_users:
                 managed_users.remove(user)
 
-            row_num += 1
-            row = [user.first_name, user.last_name, user.email, ", ".join([full_name(managed_user) for managed_user in managed_users])]
+            row = [
+                user.first_name,
+                user.last_name,
+                user.email,
+                ", ".join([full_name(managed_user) for managed_user in managed_users])
+            ]
+        _write_row(row)
 
-            for value_index, value in enumerate(row):
-                ws.write(row_num, value_index, value, font_style)
+    for i, column_cells in enumerate(sheet.columns):
+        sheet.column_dimensions[column_cells[0].column_letter].width = col_widths[i]
 
-    wb.save(response)
+    workbook = save_virtual_workbook(wb)
+    container = [response.make_bytes(workbook)]
+    response.content = b''.join(container)
     return response
 
 
