@@ -11,17 +11,12 @@ from django.utils.text import slugify
 
 from braces.views import LoginRequiredMixin
 
-from openpyxl import Workbook
-from openpyxl.writer.excel import save_virtual_workbook
-from openpyxl.cell.cell import WriteOnlyCell
-from openpyxl.styles import Alignment, Font
-
 from activitylog.models import ActivityLog
 from booking.models import EventType, BlockConfig, SubscriptionConfig, Subscription, Block
 from common.utils import full_name
 
 from ..forms import BlockConfigForm, SubscriptionConfigForm, BookableEventTypesForm
-from .utils import staff_required, StaffUserMixin
+from .utils import staff_required, StaffUserMixin, generate_workbook_response
 
 
 @login_required
@@ -65,38 +60,14 @@ def download_block_config_purchases(request, block_config_id):
     purchased_blocks = Block.objects.filter(block_config=block_config, paid=True).order_by("-purchase_date")
 
     filename = f"{slugify(block_config.name)}_purchases_{timezone.now().isoformat()}.xlsx"
+    sheet_name = slugify(block_config.name)[:31]
 
-    response = HttpResponse(
-        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    )
-    response['Content-Disposition'] = f'attachment; filename={filename}'
+    header_info = {
+        "User": 20, "Purchase Date": 16, "Cost": 10, "Discount Code": 16, "Invoice #": 24
+    }
 
-    header_font = Font(name='Calibri', size=12, bold=True)
-    cell_font = Font(name='Calibri', size=11, bold=False)
-    alignment = Alignment(wrap_text=True)
-
-    wb = Workbook()
-    sheet = wb.active
-
-    def _write_row(data, is_header=False):
-        font = header_font if is_header else cell_font
-        row = []
-        for cell in data:
-            cell = WriteOnlyCell(sheet, cell)
-            cell.font = font
-            cell.alignment = alignment
-            row.append(cell)
-        sheet.append(row)
-
-    header = [
-        "User", "Purchase Date", "Cost", "Discount Code", "Invoice #"
-    ]
-    col_widths = [20, 16, 10, 16, 24]
-
-    _write_row(header, is_header=True)
-
-    for block in purchased_blocks:
-        row = [
+    def block_to_row(block):
+        return [
             full_name(block.user),
             block.purchase_date.strftime("%d-%b-%Y"),
             block.cost_with_voucher,
@@ -104,15 +75,7 @@ def download_block_config_purchases(request, block_config_id):
             block.invoice.invoice_id if block.invoice else ""
         ]
 
-        _write_row(row)
-
-    for i, column_cells in enumerate(sheet.columns):
-        sheet.column_dimensions[column_cells[0].column_letter].width = col_widths[i]
-
-    workbook = save_virtual_workbook(wb)
-    container = [response.make_bytes(workbook)]
-    response.content = b''.join(container)
-    return response
+    return generate_workbook_response(filename, sheet_name, header_info, purchased_blocks, block_to_row)
 
 
 @require_http_methods(['POST'])

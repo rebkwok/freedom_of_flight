@@ -1,8 +1,4 @@
 from datetime import datetime
-from openpyxl import Workbook
-from openpyxl.writer.excel import save_virtual_workbook
-from openpyxl.cell.cell import WriteOnlyCell
-from openpyxl.styles import Alignment, Font
 
 from django.contrib.auth.models import User
 from django.contrib import messages
@@ -27,7 +23,7 @@ from ..forms import (
     EmailUsersForm, SearchForm, AddEditBookingForm, AddEditBlockForm, AddEditSubscriptionForm,
     CourseBookingAddChangeForm, EmailWaitingListUsersForm
 )
-from .utils import staff_required, is_instructor_or_staff, InstructorOrStaffUserMixin
+from .utils import staff_required, is_instructor_or_staff, InstructorOrStaffUserMixin, generate_workbook_response
 
 
 @login_required
@@ -119,56 +115,29 @@ def users_with_unused_blocks(request):
 
 def export_users(request):
     filename = 'students.xls'
-    response = HttpResponse(
-        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    )
-    response['Content-Disposition'] = f'attachment; filename={filename}'
-
-    header_font = Font(name='Calibri', size=12, bold=True)
-    cell_font = Font(name='Calibri', size=11, bold=False)
-    alignment = Alignment(wrap_text=True)
-
-    wb = Workbook()
-    sheet = wb.active
-    sheet.title = "Students"
-
-    def _write_row(data, is_header=False):
-        font = header_font if is_header else cell_font
-        row = []
-        for cell in data:
-            cell = WriteOnlyCell(sheet, cell)
-            cell.font = font
-            cell.alignment = alignment
-            row.append(cell)
-        sheet.append(row)
-
-    header = ["First Name", "Last Name", "Email", "Managed Users"]
-    col_widths = [14, 14, 30, 20]
-
-    _write_row(header, is_header=True)
-
+    sheet_title = "Students"
+    header_info = {
+        "First Name": 14,
+        "Last Name": 14,
+        "Email": 30,
+        "Managed Users": 20
+    }
     users = User.objects.all().order_by("first_name", "last_name")
-    for user in users:
+
+    def user_to_row(user):
         if user.email:
             managed_users = user.managed_users
             if user in managed_users:
                 managed_users.remove(user)
 
-            row = [
+            return [
                 user.first_name,
                 user.last_name,
                 user.email,
                 ", ".join([full_name(managed_user) for managed_user in managed_users])
             ]
-        _write_row(row)
 
-    for i, column_cells in enumerate(sheet.columns):
-        sheet.column_dimensions[column_cells[0].column_letter].width = col_widths[i]
-
-    workbook = save_virtual_workbook(wb)
-    container = [response.make_bytes(workbook)]
-    response.content = b''.join(container)
-    return response
+    return generate_workbook_response(filename, sheet_title, header_info, users, user_to_row)
 
 
 class UserListView(LoginRequiredMixin, InstructorOrStaffUserMixin, ListView):
