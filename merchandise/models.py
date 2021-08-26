@@ -80,31 +80,47 @@ class ProductPurchase(models.Model):
     date_received = models.DateTimeField(null=True, blank=True, help_text="Leave blank for today")
 
     def __str__(self):
-        paid_status = "paid" if self.paid else "not_paid"
+        paid_status = "paid" if self.paid else "not paid"
         return f"{self.product} - {self.user} - {paid_status}"
 
     def get_stock(self, obj):
-        variant = ProductVariant.objects.get(product=obj.product, size=obj.size)
-        stock = ProductStock.objects.get(product_variant=variant)
+        try:
+            variant = ProductVariant.objects.get(product=obj.product, size=obj.size)
+        except ProductVariant.DoesNotExist as e:
+            if self.id:
+                stock = None
+            else:
+                raise e
+        else:
+            stock = ProductStock.objects.get(product_variant=variant)
         return stock
 
     def _pre_save_purchase(self):
         return ProductPurchase.objects.get(pk=self.pk)
 
     def check_stock(self):
+        # Run this in the views before saving, NOT in clean method when size/cost
+        # have not been assigned yet
         stock = self.get_stock(self)
-        if stock.quantity <= 0:
+        if stock is not None and stock.quantity <= 0:
             if not self.id or (self.id and (self._pre_save_purchase().size != self.size)):
                 raise ValidationError("Out of stock")
 
     def reduce_stock(self, obj):
         stock = self.get_stock(obj)
-        # can't reduce stock below 0
-        if stock.quantity > 1:
-            stock.quantity -= 1
-        stock.save()
+        if stock is not None:
+            # can't reduce stock below 0
+            if stock.quantity > 1:
+                stock.quantity -= 1
+            stock.save()
 
     def save(self, *args, **kwargs):
+        if self.product and self.cost and self.size:
+            # only check the stock if we have the required fields already; views that do a
+            # form.save(commit=False) before assigning these fields need to call check_stock
+            # explicitly
+            self.check_stock()
+
         if not self.id:
             # new purchase, reduce stock quantity
             self.reduce_stock(self)
@@ -112,13 +128,11 @@ class ProductPurchase(models.Model):
             presave = self._pre_save_purchase()
             if presave.size != self.size:
                 # size has changed, update stock for old and new variant
-                try:
-                    presave_stock = self.get_stock(presave)
+                presave_stock = self.get_stock(presave)
+                if presave_stock is not None:
+                    # old variant removed, no stock to update
                     presave_stock.quantity += 1
                     presave_stock.save()
-                except ProductVariant.DoesNotExist:
-                    # old variant removed, no stock to update
-                    ...
                 self.reduce_stock(self)
 
         if self.paid:
@@ -137,6 +151,6 @@ class ProductPurchase(models.Model):
 
     def delete(self, using=None, keep_parents=False):
         super().delete(using=using, keep_parents=keep_parents)
-        stock = self.get_stock()
+        stock = self.get_stock(self)
         stock.quantity += 1
         stock.save()
