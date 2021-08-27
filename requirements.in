@@ -1,5 +1,5 @@
 Django
-coverage<4
+coverage
 Delorean
 dj-database-url
 django-allauth
@@ -12,6 +12,7 @@ django-debug-toolbar
 django-email-obfuscator
 django-environ
 django-extensions
+django-imagekit
 django-migration-testcase
 django-paypal
 dynamic-django-forms
@@ -25,7 +26,7 @@ shortuuid
 beautifulsoup4
 python-memcached
 pytest
-pytest-cov<2.6
+pytest-cov
 pytest-django
 pytest-freezegun
 pytest-mock

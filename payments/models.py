@@ -2,7 +2,6 @@ from os import environ
 
 from django.contrib.auth.models import User
 from django.contrib.sites.models import Site
-from django.contrib.postgres.fields import JSONField
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
@@ -111,7 +110,7 @@ class StripePaymentIntent(models.Model):
     status = models.CharField(max_length=255)
     invoice = models.ForeignKey(Invoice, on_delete=models.SET_NULL, null=True, blank=True)
     seller = models.ForeignKey(Seller, on_delete=models.SET_NULL, null=True, blank=True)
-    metadata = JSONField()
+    metadata = models.JSONField()
     client_secret = models.CharField(max_length=255)
     currency = models.CharField(max_length=3)
 
