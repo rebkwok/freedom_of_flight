@@ -482,3 +482,10 @@ td.sort-col {
   height: 100%;
   position: absolute;
 }
+
+img.placeholder {
+  width:150px;
+  height:150px;
+  object-fit:cover;
+  background: url(/static/images/placeholder_thumbnail.png) no-repeat scroll 0 0;
+}

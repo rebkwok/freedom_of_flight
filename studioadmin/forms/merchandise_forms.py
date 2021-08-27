@@ -3,6 +3,7 @@ import pytz
 from datetime import datetime
 
 from django import forms
+from django.forms.widgets import ClearableFileInput
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.shortcuts import reverse
@@ -32,7 +33,7 @@ class ProductCategoryCreateUpdateForm(forms.ModelForm):
 
 
 class ProductVariantForm(forms.Form):
-    size = forms.CharField(max_length=50, required=False)
+    size = forms.CharField(max_length=50, required=False, label="Size or other option")
     cost = forms.DecimalField(decimal_places=2, max_digits=10)
     quantity_in_stock = forms.IntegerField()
 
@@ -68,18 +69,26 @@ class ProductCreateUpdateForm(forms.ModelForm):
 
     class Meta:
         model = Product
-        fields = ('name', 'category', 'active')
+        fields = ('name', 'category', 'image', 'active')
 
     def __init__(self, *args, **kwargs):
         category_id = kwargs.pop("category_id", None)
         super().__init__(*args, **kwargs)
         if category_id:
             self.fields["category"].initial = category_id
+        self.fields['image'] = forms.ImageField(
+            label='Photo',
+            error_messages={'invalid': "Image files only"},
+            widget=ClearableFileInput(),
+            required=False
+        )
         self.helper = FormHelper()
         self.helper.layout = Layout(
             "name",
             "category",
             "active",
+            "image",
+            HTML(f"<img src={self.instance.thumbnail.url} />") if self.instance.id and self.instance.thumbnail else HTML(""),
             Fieldset(
                 "Purchase Options",
                 HTML("<span class='helptext'>Note: size must be unique; duplicate sizes will be overwritten. "

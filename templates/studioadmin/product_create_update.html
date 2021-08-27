@@ -39,8 +39,7 @@
     </div>
 {% endif %}
 
-
-<form class="form dirty-check" method="post" action="">
+<form class="form dirty-check" method="post" action=""  enctype="multipart/form-data">
     {% csrf_token %}
     {% crispy form %}
 </form>

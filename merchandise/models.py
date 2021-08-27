@@ -4,6 +4,9 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 
+from imagekit.models import ImageSpecField, ProcessedImageField
+from imagekit.processors import ResizeToFill
+
 from activitylog.models import ActivityLog
 
 
@@ -22,6 +25,18 @@ class Product(models.Model):
     name = models.CharField(max_length=255)
     category = models.ForeignKey(ProductCategory, on_delete=models.CASCADE, related_name="products")
     active = models.BooleanField(default=True, help_text="Visible on site and available to purchase")
+
+    image = ProcessedImageField(
+        upload_to='merchandise',
+        format='JPEG',
+        options={'quality': 70},
+        null=True, blank=True,
+    )
+
+    thumbnail = ImageSpecField(source='image',
+                               processors=[ResizeToFill(150, 150)],
+                               format='JPEG',
+                               options={'quality': 100})
 
     class Meta:
         ordering = ("-active", "category", "name")

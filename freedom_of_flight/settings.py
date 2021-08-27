@@ -84,6 +84,7 @@ INSTALLED_APPS = [
     'debug_toolbar',
     'crispy_forms',
     'dynamic_forms',
+    'imagekit',
     'accounts',
     'activitylog',
     'booking',
