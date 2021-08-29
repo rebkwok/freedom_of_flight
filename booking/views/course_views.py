@@ -14,6 +14,7 @@ from ..models import Course, Event, Track
 from ..utils import get_view_as_user, get_user_course_booking_info
 from .views_utils import DataPolicyAgreementRequiredMixin
 
+
 class CourseListView(DataPolicyAgreementRequiredMixin, ListView):
 
     model = Course

@@ -3,15 +3,29 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.utils import timezone
+from django.db.models.signals import post_delete
+from django.dispatch import receiver
 
 from imagekit.models import ImageSpecField, ProcessedImageField
 from imagekit.processors import ResizeToFill
 
 from activitylog.models import ActivityLog
+from payments.models import Invoice
+
+
+class CategoryManager(models.Manager):
+
+    def active(self):
+        category_ids = Product.objects.filter(active=True)\
+            .order_by().distinct("category")\
+            .values_list("category", flat=True)
+        return self.get_queryset().filter(id__in=category_ids)
 
 
 class ProductCategory(models.Model):
     name = models.CharField(max_length=255, unique=True)
+
+    objects = CategoryManager()
 
     class Meta:
         verbose_name_plural = "product categories"
@@ -45,6 +59,14 @@ class Product(models.Model):
     def __str__(self):
         return f"{self.category} - {self.name}"
 
+    def min_cost(self):
+        if self.variants.exists():
+            return min(self.variants.values_list("cost", flat=True))
+
+    def max_cost(self):
+        if self.variants.exists():
+            return max(self.variants.values_list("cost", flat=True))
+
 
 class ProductVariant(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="variants")
@@ -69,6 +91,10 @@ class ProductVariant(models.Model):
         stock, _ = ProductStock.objects.get_or_create(product_variant=self, defaults={"quantity": 0})
         return stock.quantity
 
+    @property
+    def out_of_stock(self):
+        return self.current_stock == 0
+
 
 class ProductStock(models.Model):
     product_variant = models.OneToOneField(
@@ -87,22 +113,27 @@ class ProductPurchase(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="purchases")
     user = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name="purchases")
     cost = models.DecimalField(max_digits=10, decimal_places=2)
-    size = models.CharField(max_length=50)
+    size = models.CharField(max_length=50, null=True, blank=True)
     created_at = models.DateTimeField(default=timezone.now)
     paid = models.BooleanField(default=False)
     date_paid = models.DateTimeField(null=True, blank=True, help_text="Leave blank for today")
     received = models.BooleanField(default=False)
     date_received = models.DateTimeField(null=True, blank=True, help_text="Leave blank for today")
+    invoice = models.ForeignKey(
+        Invoice, null=True, blank=True, on_delete=models.SET_NULL, related_name="product_purchases"
+    )
 
     def __str__(self):
         paid_status = "paid" if self.paid else "not paid"
-        return f"{self.product} - {self.user} - {paid_status}"
+        size_str = f" - {self.size}" if self.size else ""
+        return f"{self.product}{size_str} - {self.user} - {paid_status}"
 
-    def get_stock(self, obj):
+    @classmethod
+    def get_stock(cls, obj):
         try:
             variant = ProductVariant.objects.get(product=obj.product, size=obj.size)
         except ProductVariant.DoesNotExist as e:
-            if self.id:
+            if obj.id:
                 stock = None
             else:
                 raise e
@@ -164,8 +195,10 @@ class ProductPurchase(models.Model):
 
         return super().save(*args, **kwargs)
 
-    def delete(self, using=None, keep_parents=False):
-        super().delete(using=using, keep_parents=keep_parents)
-        stock = self.get_stock(self)
+
+@receiver(post_delete, sender=ProductPurchase)
+def update_stock(sender, instance, **kwargs):
+    stock = ProductPurchase.get_stock(instance)
+    if stock is not None:
         stock.quantity += 1
         stock.save()

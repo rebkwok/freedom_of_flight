@@ -29,7 +29,7 @@
     <tr>
         <td>Name</td>
         <td>Category</td>
-        <td>Sizes/Options</td>
+        <td>Sizes/Options (stock)</td>
         <td>Available for purchase on site<br/><span class="helptext">Click to change</span></td>
         <td>Purchases</td>
     </tr>
@@ -42,7 +42,8 @@
         <td>{{ product.category }}
         <td>
             {% for variant in product.variants.all %}
-                {% if variant.size %}{{ variant.size }}{% else %}-{% endif %}
+                {% if variant.size %}{{ variant.size }}{% else %}N/A{% endif %}
+                 ({{ variant.stock.quantity }})
             {% if not forloop.last %}|{% endif %}
             {% endfor %}
         </td>
@@ -59,7 +60,7 @@
     </tr>
     {% endfor %}
 {% else %}
-  <tr><td>No products found</td></tr>
+  <tr><td colspan="5">No products found</td></tr>
 {% endif %}
 </tbody>
 </table>

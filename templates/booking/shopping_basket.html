@@ -104,6 +104,33 @@
                     </tr>
                 {% endfor %}
 
+                {% if unpaid_merchandise %}
+                    <tr>
+                        <td colspan="2" class="table-secondary"><strong>Merchandise</strong><br/>
+                            <span class="text-danger">
+                                NOTE: merchandise cart items will be removed after 30 minutes
+                            </span>
+
+                        </td>
+                    </tr>
+                {% endif %}
+                {% for product_purchase in unpaid_merchandise %}
+                    <tr id="cart-row-product_purchase-{{ product_purchase.id }}">
+                        <td class="p-1">{{ product_purchase.product }}{% if product_purchase.size %} - {{ product_purchase.size }}{% endif %}</td>
+                        <td class="p-1">
+                            <div>Cost: £{{ product_purchase.cost }}
+                                <span
+                                        id="remove-product_purchase-{{ product_purchase.id }}"
+                                        class="remove-product_purchase float-right"
+                                        data-product_purchase_id="{{ product_purchase.id }}"
+                                        >
+                                    <a class="btn btn-sm btn-danger" href="#"><i class="fas fa-trash-alt"></i></a>
+                                </span>
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+
               </tbody>
               <tfoot>
               <tr>
@@ -134,7 +161,9 @@
                     {% endif %}
                       <div>Add additional items:<br/>
                       <a class="btn btn-xs btn-outline-primary" href="{% url 'booking:purchase_options' %}">Payment plans</a>
-                          <a class="btn btn-xs btn-outline-primary" href="{% url 'booking:buy_gift_voucher' %}">Gift vouchers</a></div>
+                      <a class="btn btn-xs btn-outline-primary" href="{% url 'booking:buy_gift_voucher' %}">Gift vouchers</a>
+                      <a class="btn btn-xs btn-outline-primary" href="{% url 'merchandise:products' %}">Merchandise</a>
+                      </div>
                       <hr>
                           <form name="block_voucher_form" class="form-inline" method="post" action="">
                             {% csrf_token %}
@@ -168,6 +197,7 @@
     <p>
         <a class="btn btn-xs btn-outline-primary" href="{% url 'booking:purchase_options' %}">Add payment plans</a>
         <a class="btn btn-xs btn-outline-primary" href="{% url 'booking:buy_gift_voucher' %}">Add gift vouchers</a>
+        <a class="btn btn-xs btn-outline-primary" href="{% url 'merchandise:products' %}">Add merchandise</a>
     </p>
     </div>
 {% endif %}

@@ -27,8 +27,11 @@ def get_paypal_form(request, invoice, paypal_test=False):
 
     blocks = invoice.blocks.all()
     subscriptions = invoice.subscriptions.all()
-    # TODO products - for later
-    for i, block in enumerate(blocks, start=1):
+    gift_vouchers = invoice.gift_vouchers.all()
+    product_purchases = invoice.product_purchases.all()
+
+    item_count = 1
+    for i, block in enumerate(blocks, start=item_count):
         if block.voucher:
             amount = block.cost_with_voucher
         else:
@@ -41,7 +44,9 @@ def get_paypal_form(request, invoice, paypal_test=False):
                 'quantity_{}'.format(i): 1,
             }
         )
-    for i, subscription in enumerate(subscriptions, start=len(blocks) + 1):
+        item_count += 1
+
+    for i, subscription in enumerate(subscriptions, start=item_count):
         invoiced_amount = subscription.cost_as_of_today()
         # save the invoiced amount to the Subscription instance.  This will get updated if necessary if the
         # payment isn't processed immediately, but means we can track if a subscription was charged at a
@@ -55,10 +60,36 @@ def get_paypal_form(request, invoice, paypal_test=False):
                 'quantity_{}'.format(i): 1,
             }
         )
+        item_count += 1
+
+    for i, gift_voucher in enumerate(gift_vouchers, start=item_count):
+        invoiced_amount = gift_voucher.gift_voucher_config.cost
+        paypal_dict.update(
+            {
+                'item_name_{}'.format(i): f"{gift_voucher.name}",
+                'amount_{}'.format(i): invoiced_amount,
+                'quantity_{}'.format(i): 1,
+            }
+        )
+        item_count += 1
+
+    for i, product_purchase in enumerate(product_purchases, start=item_count):
+        name = f"{product_purchase.product} - {product_purchase.size}" \
+            if product_purchase.size else product_purchase.product
+        paypal_dict.update(
+            {
+                'item_name_{}'.format(i): name,
+                'amount_{}'.format(i): product_purchase.cost,
+                'quantity_{}'.format(i): 1,
+            }
+        )
+        item_count += 1
 
     if paypal_test:
         assert not invoice.blocks.exists()
         assert not invoice.subscriptions.exists()
+        assert not invoice.gift_vouchers.exists()
+        assert not invoice.product_purchases.exists()
         paypal_dict.update(
             {
                 'item_name_1': "paypal_test",
@@ -71,7 +102,6 @@ def get_paypal_form(request, invoice, paypal_test=False):
     else:
         # Create the instance.
         form = PayPalPaymentsFormWithId(initial=paypal_dict)
-
 
     return form
 
@@ -165,6 +195,9 @@ def process_invoice_items(invoice, payment_method, transaction_id=None):
         gift_voucher.paid = True
         gift_voucher.save()
         gift_voucher.activate()
+    for product_purchase in invoice.product_purchases.all():
+        product_purchase.paid = True
+        product_purchase.save()
     if transaction_id:
         invoice.transaction_id = transaction_id
     invoice.paid = True

@@ -63,10 +63,29 @@ class Invoice(models.Model):
                 "name": gift_voucher.name, "cost": f"£{gift_voucher.gift_voucher_config.cost}"
             } for gift_voucher in self.gift_vouchers.all()
         }
-        return {**blocks, **subscriptions, **gift_vouchers}
+
+        def _product_purchase_name_str(pp):
+            if pp.size:
+                return f"{pp.product} - {pp.size}"
+            return pp.product
+
+        merchandise = {
+            f"product_purchase-{product_purchase.id}": {
+                "name": _product_purchase_name_str(product_purchase),
+                "cost": f"£{product_purchase.cost}"
+            } for product_purchase in self.product_purchases.all()
+        }
+        return {**blocks, **subscriptions, **gift_vouchers, **merchandise}
 
     def item_count(self):
-        return sum([self.blocks.count(), self.subscriptions.count(), self.gift_vouchers.count()])
+        return sum(
+            [
+                self.blocks.count(),
+                self.subscriptions.count(),
+                self.gift_vouchers.count(),
+                self.product_purchases.count()
+            ]
+        )
 
     def items_metadata(self):
         # This is used for the payment intent metadata, which is limited to 40 chars keys and string values

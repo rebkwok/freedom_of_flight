@@ -49,9 +49,13 @@ def test_product_stock_str(product_variants):
 def test_product_purchase_str(product_variants, user):
     variant = product_variants[0]
     purchase = baker.make(ProductPurchase, user=user, product=variant.product, size=variant.size, cost=variant.cost)
-    assert str(purchase) == f"Clothing - Hoodie - {user.username} - not paid"
+    assert str(purchase) == f"Clothing - Hoodie - s - {user.username} - not paid"
 
     purchase.paid = True
+    purchase.save()
+    assert str(purchase) == f"Clothing - Hoodie - s - {user.username} - paid"
+
+    purchase.size = ""
     purchase.save()
     assert str(purchase) == f"Clothing - Hoodie - {user.username} - paid"
 

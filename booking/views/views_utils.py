@@ -1,8 +1,13 @@
+from datetime import timedelta
+
 from django.urls import reverse
 from django.shortcuts import HttpResponseRedirect
+from django.utils import timezone
 
 from accounts.models import DataPrivacyPolicy, has_active_disclaimer, has_active_data_privacy_agreement
+from activitylog.models import ActivityLog
 from booking.models import Block, Subscription, GiftVoucher
+from merchandise.models import ProductPurchase
 
 
 class DataPolicyAgreementRequiredMixin:
@@ -52,11 +57,29 @@ def get_unpaid_user_gift_vouchers(user):
     return GiftVoucher.objects.filter(id__in=voucher_ids)
 
 
+def get_unpaid_user_merchandise(user):
+    unpaid_purchases = ProductPurchase.objects.filter(user=user, paid=False)
+    unpaid_purchases_within_time = unpaid_purchases.filter(
+        created_at__gte=timezone.now() - timedelta(seconds=60 * 30)
+    )
+    old_unpaid_purchases = unpaid_purchases.exclude(id__in=unpaid_purchases_within_time.values_list("id", flat=True))
+
+    if old_unpaid_purchases.exists():
+        ActivityLog.objects.create(
+            log=f"{old_unpaid_purchases.count()} product cart items "
+                f"(ids {','.join(str(purchase.id) for purchase in old_unpaid_purchases.all())} "
+                f"for user {user} expired and were deleted"
+        )
+        old_unpaid_purchases.delete()
+    return unpaid_purchases_within_time
+
+
 def get_unpaid_user_managed_items(user):
     return {
         "blocks": get_unpaid_user_managed_blocks(user),
         "subscription": get_unpaid_user_managed_subscriptions(user),
-        "gift_vouchers": get_unpaid_user_gift_vouchers(user)
+        "gift_vouchers": get_unpaid_user_gift_vouchers(user),
+        "merchandise": get_unpaid_user_merchandise(user)
     }
 
 
