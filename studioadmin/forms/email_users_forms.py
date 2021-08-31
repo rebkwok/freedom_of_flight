@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import pytz
 
 from django import forms
 from django.conf import settings
@@ -9,12 +10,16 @@ from booking.models import Course, Event
 
 from ..views.utils import get_current_courses, get_current_and_started_courses
 
+DATETIME_FORMAT = '%a %d %b %y, %H:%M'
 
 def get_event_names():
 
     def callable():
         EVENT_CHOICES = [
-            (event.id, f"{event.name} - {event.start.strftime('%a %d %b %y, %H:%M')}")
+            (
+                event.id,
+                f"{event.name} - {event.start.astimezone(pytz.timezone('Europe/London')).strftime(DATETIME_FORMAT)}"
+            )
             for event in Event.objects.filter(start__gte=timezone.now()).order_by('start')]
         return tuple(EVENT_CHOICES)
 
@@ -26,7 +31,7 @@ def get_course_names():
     def callable():
         def _course_start(course):
             if course.start:
-                return f"start {course.start.strftime('%a %d %b %y, %H:%M')}"
+                return f"start {course.start.astimezone(pytz.timezone('Europe/London')).strftime(DATETIME_FORMAT)}"
             return "not started"
         # exclude not started courses
         queryset = Course.objects.all()
