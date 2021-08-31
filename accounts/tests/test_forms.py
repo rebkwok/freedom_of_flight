@@ -106,19 +106,6 @@ class SignUpFormTests(TestUsersMixin, TestCase):
 #         form = NonRegisteredDisclaimerForm(data=self.form_data)
 #         self.assertTrue(form.is_valid())
 #
-#     def test_custom_validators(self):
-#         self.form_data['terms_accepted'] = False
-#         form = NonRegisteredDisclaimerForm(data=self.form_data)
-#         self.assertFalse(form.is_valid())
-#         self.assertEqual(
-#             form.errors,
-#             {'terms_accepted': [
-#                 'You must confirm that you accept the disclaimer terms'
-#             ]}
-#         )
-#
-#         self.form_data['terms_accepted'] = True
-#
 #     def test_mismatched_confirm_name(self):
 #         # name must match exactly, including case
 #         self.form_data['confirm_name'] = 'Test user'
