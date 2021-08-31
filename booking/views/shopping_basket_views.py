@@ -269,7 +269,6 @@ def shopping_basket(request):
         for gift_voucher in unpaid_gift_vouchers
     ]
 
-
     context.update({
         "unpaid_items": unpaid_block_info or unpaid_subscription_info or unpaid_gift_voucher_info or unpaid_merchandise,
         "unpaid_block_info": unpaid_block_info,

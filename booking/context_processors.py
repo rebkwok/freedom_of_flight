@@ -1,3 +1,5 @@
+import os
+
 from datetime import timedelta
 from django.conf import settings
 from django.utils import timezone
@@ -35,6 +37,7 @@ def booking(request):
         'view_as_user': view_as_user,
         'checkout_method': settings.CHECKOUT_METHOD,
         'gift_vouchers_available': GiftVoucherConfig.objects.filter(active=True).exists(),
-        'merchandise_available': Product.objects.filter(active=True).exists()
+        'merchandise_available': Product.objects.filter(active=True).exists(),
+        'merchandise_cart_timeout_mins': os.environ.get("MERCHANDISE_CART_TIMEOUT_SECONDS", 15) * 60,
     }
 

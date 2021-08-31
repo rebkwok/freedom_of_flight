@@ -16,6 +16,14 @@ def test_product_category_str(category):
 
 
 @pytest.mark.django_db
+def test_product_category_active(category, product):
+    assert ProductCategory.objects.active().count() == 1
+    product.active = False
+    product.save()
+    assert ProductCategory.objects.active().exists() is False
+
+
+@pytest.mark.django_db
 def test_product_str(product):
     assert str(product) == "Clothing - Hoodie"
 
@@ -23,6 +31,18 @@ def test_product_str(product):
 @pytest.mark.django_db
 def test_product_variant_str(product_variants):
     assert str(product_variants[0]) == "Clothing - Hoodie - size s"
+
+
+@pytest.mark.django_db
+def test_product_min_and_max_cost(product, product_variants):
+    assert product.min_cost() == 10
+    assert product.max_cost() == 10
+    baker.make(ProductVariant, product=product, cost=5, size='xs')
+    assert product.min_cost() == 5
+    assert product.max_cost() == 10
+
+    ProductVariant.objects.all().delete()
+    assert product.min_cost() == product.max_cost() == None
 
 
 @pytest.mark.django_db
@@ -36,6 +56,9 @@ def test_product_variant_current_stock(product_variants):
     assert ProductStock.objects.filter(product_variant=new_variant).exists() is False
     assert new_variant.current_stock == 0
     assert ProductStock.objects.filter(product_variant=new_variant).exists() is True
+
+    assert variant.out_of_stock is False
+    assert new_variant.out_of_stock is True
 
 
 @pytest.mark.django_db

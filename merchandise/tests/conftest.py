@@ -16,6 +16,7 @@ def user():
 
 
 @pytest.fixture
+@pytest.mark.django_db(transaction=True)
 def category():
     yield baker.make(ProductCategory, name="Clothing")
 

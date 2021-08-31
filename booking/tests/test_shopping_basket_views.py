@@ -14,6 +14,7 @@ from booking.models import (
     Block, BlockConfig, BlockVoucher, Subscription, SubscriptionConfig, TotalVoucher, GiftVoucher
 )
 from common.test_utils import TestUsersMixin
+from merchandise.models import Product, ProductVariant, ProductPurchase
 from payments.models import Invoice, Seller
 
 
@@ -33,6 +34,10 @@ class ShoppingBasketViewTests(TestUsersMixin, TestCase):
         self.dropin_block_config = baker.make(BlockConfig, cost=20)
         self.course_block_config = baker.make(BlockConfig, course=True, cost=40)
         self.subscription_config = baker.make(SubscriptionConfig, cost=50)
+        self.product = baker.make(Product, active=True)
+        self.variant = baker.make(ProductVariant, product=self.product, cost=10, size=None)
+        self.variant.update_stock(5)
+        self.variant.save()
 
     def test_no_unpaid_blocks(self):
         resp = self.client.get(self.url)
@@ -101,11 +106,66 @@ class ShoppingBasketViewTests(TestUsersMixin, TestCase):
         ]
         assert resp.context_data["total_cost"] == 20
 
-    def test_shows_user_managed_unpaid_blocks_and_subscriptions(self):
+    def test_merchandise(self):
+        resp = self.client.get(self.url)
+        assert list(resp.context_data["unpaid_merchandise"]) == []
+        assert resp.context_data["total_cost"] == 0
+        assert "Your cart is empty" in resp.rendered_content
+
+        p1 = baker.make(
+            ProductPurchase, user=self.student_user, product=self.product,
+            cost=self.variant.cost, size=None, paid=False
+        )
+        baker.make(
+            ProductPurchase, user=self.student_user, product=self.product,
+            cost=self.variant.cost, size=None, paid=True
+        )
+        resp = self.client.get(self.url)
+        assert [pp.id for pp in resp.context_data["unpaid_merchandise"]] == [p1.id]
+        assert resp.context_data["total_cost"] == 10
+
+    def test_merchandise_no_matching_variant(self):
+        variant = baker.make(ProductVariant, product=self.product, cost=8, size="unknown")
+        variant.update_stock(1)
+        p1 = baker.make(
+            ProductPurchase, user=self.student_user, product=self.product,
+            cost=variant.cost, size=variant.size, paid=False
+        )
+        p2 = baker.make(
+            ProductPurchase, user=self.student_user, product=self.product,
+            cost=self.variant.cost, size=None, paid=False
+        )
+        variant.delete()
+        resp = self.client.get(self.url)
+        # purchase without current matching variant is deleted and doesn't get included in cart
+        assert [pp.id for pp in resp.context_data["unpaid_merchandise"]] == [p2.id]
+        assert resp.context_data["total_cost"] == 10
+        assert ProductPurchase.objects.count() == 1
+
+    def test_merchandise_expired_purchase(self):
+        baker.make(
+            ProductPurchase, user=self.student_user, product=self.product,
+            cost=self.variant.cost, size=None, paid=False, created_at=timezone.now() - timedelta(minutes=16)
+        )
+        p2 = baker.make(
+            ProductPurchase, user=self.student_user, product=self.product,
+            cost=self.variant.cost, size=None, paid=False
+        )
+        resp = self.client.get(self.url)
+        # expired purchase is deleted and doesn't get included in cart
+        assert [pp.id for pp in resp.context_data["unpaid_merchandise"]] == [p2.id]
+        assert resp.context_data["total_cost"] == 10
+        assert ProductPurchase.objects.count() == 1
+
+    def test_shows_user_managed_unpaid_blocks_and_subscriptions_and_merch(self):
         self.login(self.manager_user)
         block1 = baker.make_recipe("booking.dropin_block", block_config=self.dropin_block_config, user=self.manager_user)
         block2 = baker.make_recipe("booking.dropin_block", block_config__cost=10, user=self.child_user)
         subscription = baker.make(Subscription, config=self.subscription_config, user=self.child_user)
+        product_purchase = baker.make(
+            ProductPurchase, user=self.manager_user, product=self.product,
+            cost=self.variant.cost, size=None
+        )
 
         resp = self.client.get(self.url)
         assert list(resp.context_data["unpaid_block_info"]) == [
@@ -116,7 +176,8 @@ class ShoppingBasketViewTests(TestUsersMixin, TestCase):
         assert list(resp.context_data["unpaid_subscription_info"]) == [
             {"subscription": subscription, "full_cost": 50, "cost": 50}
         ]
-        assert resp.context_data["total_cost"] == 80
+        assert [pp.id for pp in resp.context_data["unpaid_merchandise"]] == [product_purchase.id]
+        assert resp.context_data["total_cost"] == 90
 
     def test_voucher_application(self):
         voucher = baker.make(BlockVoucher, code="test", discount=50)
@@ -535,6 +596,26 @@ class AjaxShoppingBasketCheckoutTests(TestUsersMixin, TestCase):
         # basket shows the correct cost
         assert resp.context_data["total_cost"] == 20
 
+    def test_rechecks_product_expiry(self):
+        product = baker.make(Product)
+        variant = baker.make(ProductVariant, product=product, cost=7)
+        variant.update_stock(5)
+        purchase = baker.make(ProductPurchase, product=product, user=self.student_user, cost=7)
+        purchase1 = baker.make(ProductPurchase, product=product, user=self.student_user, cost=7)
+        resp = self.client.post(self.url, data={"cart_total": 14}).json()
+        assert "redirect" not in resp
+
+        # make one expired
+        purchase.created_at = timezone.now() - timedelta(60*60)
+        purchase.save()
+        resp = self.client.post(self.url, data={"cart_total": 14}).json()
+        # redirects to basket
+        assert resp["redirect"] is True
+        assert resp["url"] == reverse("booking:shopping_basket")
+        resp = self.client.get(reverse("booking:shopping_basket"))
+        # basket shows the correct cost
+        assert resp.context_data["total_cost"] == 7
+
     def test_creates_invoice_and_applies_to_unpaid_blocks_and_subscriptions(self):
         block = baker.make_recipe(
             "booking.dropin_block", block_config=self.dropin_block_config, user=self.student_user,
@@ -657,9 +738,16 @@ class StripeCheckoutTests(TestUsersMixin, TestCase):
         self.dropin_block_config = baker.make(BlockConfig, cost=20)
         self.course_block_config = baker.make(BlockConfig, cost=40)
         self.subscription_config = baker.make(SubscriptionConfig, cost=50)
+        self.product = baker.make(Product, name="Hoodie")
+        self.variants = [
+            baker.make(ProductVariant, product=self.product, size=size, cost=10)
+            for size in ['s', 'm', 'l']
+        ]
+        for variant in self.variants:
+            variant.update_stock(10)
 
     @patch("booking.views.shopping_basket_views.stripe.PaymentIntent")
-    def test_creates_invoice_and_applies_to_unpaid_blocks_and_subscriptions(self, mock_payment_intent):
+    def test_creates_invoice_and_applies_to_unpaid_blocks_and_subscriptions_and_merch(self, mock_payment_intent):
         mock_payment_intent_obj = self.get_mock_payment_intent(id="foo")
         mock_payment_intent.create.return_value = mock_payment_intent_obj
         block = baker.make_recipe(
@@ -668,19 +756,24 @@ class StripeCheckoutTests(TestUsersMixin, TestCase):
         subscription = baker.make(
             Subscription, config=self.subscription_config, user=self.student_user
         )
+        product_purchase = ProductPurchase.objects.create(
+            product=self.product, user=self.student_user, cost=10, size="s"
+        )
         assert Invoice.objects.exists() is False
         # total is correct
-        resp = self.client.post(self.url, data={"cart_total": 70})
+        resp = self.client.post(self.url, data={"cart_total": 80})
         assert resp.status_code == 200
-        assert resp.context_data["cart_total"] == 70.00
+        assert resp.context_data["cart_total"] == 80.00
         block.refresh_from_db()
         subscription.refresh_from_db()
+        product_purchase.refresh_from_db()
         assert Invoice.objects.exists()
         invoice = Invoice.objects.first()
         assert invoice.username == self.student_user.username
-        assert invoice.amount == 70
+        assert invoice.amount == 80
         assert block.invoice == invoice
         assert subscription.invoice == invoice
+        assert product_purchase.invoice == invoice
 
     @patch("booking.views.shopping_basket_views.stripe.PaymentIntent")
     def test_invoice_user_is_manager_user(self, mock_payment_intent):

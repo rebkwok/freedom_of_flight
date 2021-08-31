@@ -1,3 +1,4 @@
+import os
 from datetime import timedelta
 
 from django.urls import reverse
@@ -7,7 +8,7 @@ from django.utils import timezone
 from accounts.models import DataPrivacyPolicy, has_active_disclaimer, has_active_data_privacy_agreement
 from activitylog.models import ActivityLog
 from booking.models import Block, Subscription, GiftVoucher
-from merchandise.models import ProductPurchase
+from merchandise.models import ProductPurchase, ProductVariant
 
 
 class DataPolicyAgreementRequiredMixin:
@@ -58,9 +59,10 @@ def get_unpaid_user_gift_vouchers(user):
 
 
 def get_unpaid_user_merchandise(user):
+    timeout = os.environ.get("MERCHANDISE_CART_TIMEOUT_SECONDS", 15)
     unpaid_purchases = ProductPurchase.objects.filter(user=user, paid=False)
     unpaid_purchases_within_time = unpaid_purchases.filter(
-        created_at__gte=timezone.now() - timedelta(seconds=60 * 30)
+        created_at__gte=timezone.now() - timedelta(seconds=60 * timeout)
     )
     old_unpaid_purchases = unpaid_purchases.exclude(id__in=unpaid_purchases_within_time.values_list("id", flat=True))
 
@@ -71,6 +73,21 @@ def get_unpaid_user_merchandise(user):
                 f"for user {user} expired and were deleted"
         )
         old_unpaid_purchases.delete()
+
+    # remove any without valid variants, in case a cost has been updated since
+    deleted = False
+    for unpaid_purchase in unpaid_purchases_within_time:
+        variant = ProductVariant.objects.filter(
+            size=unpaid_purchase.size, cost=unpaid_purchase.cost, product=unpaid_purchase.product
+        )
+        if not variant.exists():
+            unpaid_purchase.delete()
+            deleted = True
+    if deleted:
+        unpaid_purchases_within_time = unpaid_purchases.filter(
+            created_at__gte=timezone.now() - timedelta(seconds=60 * 30)
+        )
+
     return unpaid_purchases_within_time
 
 
