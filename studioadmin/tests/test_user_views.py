@@ -135,9 +135,14 @@ class UserListViewTests(TestUsersMixin, TestCase):
     def test_instructor_and_staff_can_access(self):
         self.user_access_test(["staff", "instructor"], self.url)
 
-    def test_all_users_listed(self):
+    def test_all_active_users_listed(self):
         resp = self.client.get(self.url)
         assert len(resp.context_data["users"]) == User.objects.count()
+
+        self.student_user.is_active = False
+        self.student_user.save()
+        resp = self.client.get(self.url)
+        assert len(resp.context_data["users"]) == User.objects.count() - 1
 
     def test_user_search(self):
         resp = self.client.get(self.url + "?search=manager&action=Search")

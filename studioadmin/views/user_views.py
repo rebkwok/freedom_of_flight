@@ -122,7 +122,7 @@ def export_users(request):
         "Email": 30,
         "Managed Users": 20
     }
-    users = User.objects.all().order_by("first_name", "last_name")
+    users = User.objects.filter(is_active=True).order_by("first_name", "last_name")
 
     def user_to_row(user):
         if user.email:
@@ -148,7 +148,7 @@ class UserListView(LoginRequiredMixin, InstructorOrStaffUserMixin, ListView):
     paginate_by = 30
 
     def get_queryset(self):
-        queryset = super().get_queryset().order_by("first_name")
+        queryset = super().get_queryset().filter(is_active=True).order_by("first_name")
         search = self.request.GET.get('search')
         action = self.request.GET.get('action')
         if self.request.GET.get('search') and action == "Search":
