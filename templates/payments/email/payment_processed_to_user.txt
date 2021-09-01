@@ -9,6 +9,9 @@ Purchased:
 {% for block in invoice.blocks.all %}-{{ block.block_config.name }} ({{ block.user.first_name }} {{ block.user.last_name }}){% endfor %}
 {% for subscription in invoice.subscriptions.all %}-{{ subscription.config.name }} ({{ subscription.user.first_name }} {{ subscription.user.last_name }}){% endfor %}
 {% for gift_voucher in invoice.gift_vouchers.all %}-{{ gift_voucher.name }}*{% endfor %}
+{% for purchase in invoice.product_purchases.all %}-{{ purchase.product.name }}{% if purchase.size %} - {{ purchase.product }}{% endif %}**{% endfor %}
 
 {% if invoice.gift_vouchers.exists %}*Gift voucher codes and a link to a printable voucher will be sent in separate email(s){% endif %}
+{% if invoice.product_purchases.exists %}**Merchandise is available to collect from the studio{% endif %}
+
 {% endblock %}

@@ -16,6 +16,9 @@
         {% for gift_voucher in invoice.gift_vouchers.all %}
             <li>{{ gift_voucher.name }}*</li>
         {% endfor %}
+        {% for purchase in invoice.product_purchases.all %}
+            <li>{{ purchase.product.name }}{% if purchase.size %} - {{ purchase.product }}{% endif %}**</li>
+        {% endfor %}
     </ul>
 </p>
 {% endblock %}

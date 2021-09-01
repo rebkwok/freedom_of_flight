@@ -10,4 +10,5 @@ Purchased:
 {% for block in invoice.blocks.all %}-{{ block }}{% endfor %}
 {% for subscription in invoice.subscriptions.all %}-{{ subscription }}{% endfor %}
 {% for gift_voucher in invoice.gift_vouchers.all %}-{{ gift_voucher.name }}*{% endfor %}
+{% for purchase in invoice.product_purchases.all %}-{{ purchase.product.name }}{% if purchase.size %} - {{ purchase.product }}{% endif %}**{% endfor %}
 {% endblock %}
