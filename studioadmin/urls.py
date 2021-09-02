@@ -199,7 +199,10 @@ urlpatterns = [
          ajax_toggle_purchase_received, name="ajax_toggle_purchase_received"
     ),
     path("merchandise/purchases-for-collection/", purchases_for_collection, name="purchases_for_collection"),
-
+    path(
+        "merchandise/",
+        RedirectView.as_view(url='/studioadmin/merchandise/purchases-for-collection/', permanent=True)
+    ),
     # help
     path('help/', help, name="help"),
 

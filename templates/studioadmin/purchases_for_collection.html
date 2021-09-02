@@ -21,16 +21,15 @@
 <table class="table table-responsive tablesorter" id="sortTable">
 <thead>
     <tr><td colspan="7">
-     <a
-        href="{% url 'studioadmin:products'%}"
-    ><div class="btn btn-sm btn-success">View Products</div></a>
+     <a class="btn btn-sm btn-success" href="{% url 'studioadmin:products'%}">View Products</a>
     </td></tr>
+
     <tr>
         <td>User</td>
         <td>Size</td>
         <td>Cost</td>
         <td>Date Paid</td>
-        <td>Received<br/><small class="helptext">Click to change</small></td>
+        <td>Received<br/>{% if purchases %}<small class="helptext">Click to change</small>{% endif %}</td>
         <td>Date Received</td>
     </tr>
 </thead>
@@ -38,7 +37,7 @@
 {% if purchases %}
     {% for purchase in purchases %}
     <tr>
-        <td><a href="{% url 'studioadmin:edit_purchase' product.id purchase.id %}">{{ purchase.user|full_name }}</a></td>
+        <td><a href="{% url 'studioadmin:edit_purchase' purchase.product.id purchase.id %}">{{ purchase.user|full_name }}</a></td>
         <td>{{ purchase.size }}</td>
         <td>£{{ purchase.cost }}</td>
         <td id="date-paid-{{ purchase.id }}">{{ purchase.date_paid|date:'d M Y' }}</td>
