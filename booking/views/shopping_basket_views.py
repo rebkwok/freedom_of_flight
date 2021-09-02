@@ -322,6 +322,8 @@ def _check_items_and_get_updated_invoice(request):
     unpaid_subscriptions = get_unpaid_user_managed_subscriptions(request.user)
     unpaid_gift_vouchers = get_unpaid_user_gift_vouchers(request.user)
     unpaid_merchandise = get_unpaid_user_merchandise(request.user)
+    for pp in unpaid_merchandise:
+        pp.mark_checked()
     checked = {
         "total": total,
         "invoice": None,

@@ -125,6 +125,8 @@ class ProductPurchase(models.Model):
     invoice = models.ForeignKey(
         Invoice, null=True, blank=True, on_delete=models.SET_NULL, related_name="product_purchases"
     )
+    # Flag to set when cart total is checked to avoid deleting when payment activity may be in progress
+    time_checked = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
         paid_status = "paid" if self.paid else "not paid"
@@ -163,13 +165,24 @@ class ProductPurchase(models.Model):
                 stock.quantity -= 1
             stock.save()
 
+    def mark_checked(self):
+        self.time_checked = timezone.now()
+        self.save()
+
     @classmethod
     def cleanup_expired_purchases(cls, user=None):
         timeout = os.environ.get("MERCHANDISE_CART_TIMEOUT_SECONDS", 15)
         if user:
+            # If we have a user, we're at the checkout, so get all unpaid purchases
             unpaid_purchases = cls.objects.filter(user=user, paid=False)
         else:
-            unpaid_purchases = cls.objects.filter(paid=False)
+            # no user, doing a general cleanup.  Don't delete anything that was time-checked
+            # (done at final checkout stage)
+            # within the past 5 mins, in case we delete something that's in the process of
+            # being paid
+            unpaid_purchases = cls.objects.filter(
+                paid=False, time_checked__lt=timezone.now() - timedelta(seconds=60 * 5)
+            )
         expired_purchases = unpaid_purchases.filter(
             created_at__lt=timezone.now() - timedelta(seconds=60 * timeout)
         )
