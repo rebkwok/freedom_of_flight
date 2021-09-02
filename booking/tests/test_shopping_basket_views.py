@@ -631,7 +631,7 @@ class AjaxShoppingBasketCheckoutTests(TestUsersMixin, TestCase):
 
         assert Invoice.objects.exists() is False
         # total is correct
-        resp = self.client.post(self.url, data={"cart_total": 95}).json()
+        resp = self.client.post(self.url, data={"cart_total": 90}).json()
         block.refresh_from_db()
         subscription.refresh_from_db()
         gift_voucher.refresh_from_db()
@@ -640,7 +640,7 @@ class AjaxShoppingBasketCheckoutTests(TestUsersMixin, TestCase):
         assert Invoice.objects.exists()
         invoice = Invoice.objects.first()
         assert invoice.username == self.student_user.username
-        assert invoice.amount == 95
+        assert invoice.amount == 90
         for item in [block, subscription, gift_voucher, product_purchase]:
             assert item.invoice == invoice
 
@@ -851,7 +851,7 @@ class StripeCheckoutTests(TestUsersMixin, TestCase):
     def test_zero_total_with_total_voucher(self, mock_payment_intent):
         mock_payment_intent_obj = self.get_mock_payment_intent(id="foo")
         mock_payment_intent.create.return_value = mock_payment_intent_obj
-        baker.make(TotalVoucher, activated=True, code="test", discount_amount=50, max_per_user=10)
+        baker.make(TotalVoucher, activated=True, code="test", discount_amount=100, max_per_user=10)
 
         block = baker.make_recipe(
             "booking.dropin_block", block_config=self.dropin_block_config, user=self.student_user,
@@ -862,16 +862,19 @@ class StripeCheckoutTests(TestUsersMixin, TestCase):
         )
         gift_voucher.voucher.purchaser_email = self.student_user.email
         gift_voucher.voucher.save()
+        subscription = baker.make(
+            Subscription, config=self.subscription_config, user=self.student_user
+        )
+        product_purchase = make_purchase(user=self.student_user)
 
         # Call shopping basket view to apply the total voucher code
         self.client.post(reverse('booking:shopping_basket'), data={"add_voucher_code": "add_voucher_code", "code": "test"})
         assert self.client.session["total_voucher_code"] == "test"
 
         resp = self.client.post(self.url, data={"cart_total": 0})
-        block.refresh_from_db()
-        gift_voucher.refresh_from_db()
-        assert block.paid is True
-        assert gift_voucher.paid is True
+        for item in [block, gift_voucher, subscription, product_purchase]:
+            item.refresh_from_db()
+            assert item.paid is True
         assert gift_voucher.voucher.activated is True
         assert resp.status_code == 302
         assert resp.url == reverse("booking:schedule")
@@ -879,6 +882,8 @@ class StripeCheckoutTests(TestUsersMixin, TestCase):
         invoice = Invoice.objects.latest("id")
         assert block in invoice.blocks.all()
         assert gift_voucher in invoice.gift_vouchers.all()
+        assert product_purchase in invoice.product_purchases.all()
+        assert subscription in invoice.subscriptions.all()
         assert invoice.paid is True
 
     @patch("booking.views.shopping_basket_views.stripe.PaymentIntent")

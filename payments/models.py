@@ -67,7 +67,7 @@ class Invoice(models.Model):
         def _product_purchase_name_str(pp):
             if pp.size:
                 return f"{pp.product} - {pp.size}"
-            return pp.product
+            return str(pp.product)
 
         merchandise = {
             f"product_purchase-{product_purchase.id}": {

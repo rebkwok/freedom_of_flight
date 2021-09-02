@@ -65,15 +65,15 @@ class TestModels(TestCase):
         block = baker.make(Block, block_config__cost=10, block_config__name="test block", invoice=invoice)
         subscription = baker.make(Subscription, config__name="test subscription", config__cost=50, invoice=invoice)
         gift_voucher = baker.make(GiftVoucher, gift_voucher_config__discount_amount=10, invoice=invoice)
-        product_purchase = make_purchase()
-        product_purchase.invoice = invoice
-        product_purchase.save()
+        product_purchase = make_purchase(invoice=invoice)
+        product_purchase_no_size = make_purchase(size=None, product_name="Onesie", invoice=invoice)
 
         assert invoice.items_metadata() == {
             "test block": f"£10.00 (block-{block.id})",
             "test subscription": f"£50.00 (subscription-{subscription.id})",
             "Gift Voucher: £10.00": f"£10.00 (gift_voucher-{gift_voucher.id})",
             "Clothing - Hoodie - S": f"£5.00 (product_purchase-{product_purchase.id})",
+            "Clothing - Onesie": f"£5.00 (product_purchase-{product_purchase_no_size.id})",
         }
 
     def test_seller_str(self):
