@@ -8,6 +8,7 @@ from django.test import TestCase
 from model_bakery import baker
 
 from booking.models import Block, Subscription, GiftVoucher
+from merchandise.tests.utils import make_purchase
 from ..models import Invoice, Seller
 
 
@@ -16,9 +17,9 @@ def invoice_keyenv():
     old = os.environ.get("INVOICE_KEY")
     os.environ["INVOICE_KEY"] = "test"
     yield os.environ["INVOICE_KEY"]
-    if old is None:
+    if old is None:  # pragma: no cover
         del os.environ["INVOICE_KEY"]
-    else:
+    else:  # pragma: no cover
         os.environ["INVOICE_KEY"] = old
 
 
@@ -53,9 +54,10 @@ class TestModels(TestCase):
             Invoice, invoice_id="foo123",
             blocks=baker.make(Block, _quantity=2),
             subscriptions=baker.make(Subscription, _quantity=1),
-            gift_vouchers=baker.make(GiftVoucher, gift_voucher_config__discount_amount=10, _quantity=1)
+            gift_vouchers=baker.make(GiftVoucher, gift_voucher_config__discount_amount=10, _quantity=1),
+            product_purchases=make_purchase(quantity=2)
         )
-        assert invoice.item_count() == 4
+        assert invoice.item_count() == 6
 
     @pytest.mark.usefixtures("invoice_keyenv")
     def test_invoice_items_metadata(self):
@@ -63,13 +65,17 @@ class TestModels(TestCase):
         block = baker.make(Block, block_config__cost=10, block_config__name="test block", invoice=invoice)
         subscription = baker.make(Subscription, config__name="test subscription", config__cost=50, invoice=invoice)
         gift_voucher = baker.make(GiftVoucher, gift_voucher_config__discount_amount=10, invoice=invoice)
+        product_purchase = make_purchase()
+        product_purchase.invoice = invoice
+        product_purchase.save()
 
         assert invoice.items_metadata() == {
             "test block": f"£10.00 (block-{block.id})",
             "test subscription": f"£50.00 (subscription-{subscription.id})",
             "Gift Voucher: £10.00": f"£10.00 (gift_voucher-{gift_voucher.id})",
+            "Clothing - Hoodie - S": f"£5.00 (product_purchase-{product_purchase.id})",
         }
 
-    def seller_str(self):
+    def test_seller_str(self):
         seller = baker.make(Seller, user__email="testuser@test.com")
         assert str(seller) == "testuser@test.com"

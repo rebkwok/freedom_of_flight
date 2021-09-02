@@ -15,6 +15,7 @@ from booking.models import (
 )
 from common.test_utils import TestUsersMixin
 from merchandise.models import Product, ProductVariant, ProductPurchase
+from merchandise.tests.utils import make_purchase
 from payments.models import Invoice, Seller
 
 
@@ -616,24 +617,33 @@ class AjaxShoppingBasketCheckoutTests(TestUsersMixin, TestCase):
         # basket shows the correct cost
         assert resp.context_data["total_cost"] == 7
 
-    def test_creates_invoice_and_applies_to_unpaid_blocks_and_subscriptions(self):
+    def test_creates_invoice_and_applies_to_unpaid_items(self):
         block = baker.make_recipe(
             "booking.dropin_block", block_config=self.dropin_block_config, user=self.student_user,
         )
         subscription = baker.make(
             Subscription, config=self.subscription_config, user=self.student_user
         )
+        gift_voucher = baker.make(GiftVoucher, gift_voucher_config__discount_amount=15)
+        gift_voucher.voucher.purchaser_email = self.student_user.email
+        gift_voucher.voucher.save()
+        product_purchase = make_purchase("S", 10, user=self.student_user)
+
         assert Invoice.objects.exists() is False
         # total is correct
-        resp = self.client.post(self.url, data={"cart_total": 70}).json()
+        resp = self.client.post(self.url, data={"cart_total": 95}).json()
         block.refresh_from_db()
         subscription.refresh_from_db()
+        gift_voucher.refresh_from_db()
+        product_purchase.refresh_from_db()
+
         assert Invoice.objects.exists()
         invoice = Invoice.objects.first()
         assert invoice.username == self.student_user.username
-        assert invoice.amount == 70
-        assert block.invoice == invoice
-        assert subscription.invoice == invoice
+        assert invoice.amount == 95
+        for item in [block, subscription, gift_voucher, product_purchase]:
+            assert item.invoice == invoice
+
         assert "paypal_form_html" in resp
 
     def test_invoice_user_is_manager_user(self):

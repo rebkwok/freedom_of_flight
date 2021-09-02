@@ -14,6 +14,7 @@ from paypal.standard.pdt.models import PayPalPDT
 
 from booking.models import Block, Subscription, GiftVoucher
 from common.test_utils import TestUsersMixin
+from merchandise.tests.utils import make_purchase
 from ..models import Invoice
 
 
@@ -22,6 +23,32 @@ class PaypalCancelReturnViewTests(TestCase):
     def test_get(self):
         resp = self.client.get(reverse("payments:paypal_cancel"))
         assert resp.status_code == 200
+
+
+class PaypalTestViewTests(TestUsersMixin, TestCase):
+
+    def setUp(self):
+        self.create_users()
+        self.url = reverse("payments:paypal_test")
+
+    def test_get_anonymous_user(self):
+        assert Invoice.objects.exists() is False
+        resp = self.client.get(self.url)
+        assert resp.status_code == 200
+        form = resp.context["form"]
+        assert form.initial["item_name_1"] == "paypal_test"
+        assert Invoice.objects.exists() is True
+        assert Invoice.objects.first().username == "paypal_test"
+
+    def test_get_logged_in_user(self):
+        assert Invoice.objects.exists() is False
+        self.client.login(username=self.student_user.username, password="test")
+        resp = self.client.get(self.url)
+        assert resp.status_code == 200
+        form = resp.context["form"]
+        assert form.initial["item_name_1"] == "paypal_test"
+        assert Invoice.objects.exists() is True
+        assert Invoice.objects.first().username == self.student_user.username
 
 
 @override_settings(SEND_ALL_STUDIO_EMAILS=True)
@@ -141,7 +168,36 @@ class PaypalReturnViewTests(TestUsersMixin, TestCase):
         assert "Gift Voucher" in mail.outbox[2].subject
 
     @patch("payments.views.process_pdt")
-    def test_return_with_valid_pdt_with_matching_invoice_block_subscription_gift_voucher(self, process_pdt):
+    def test_return_with_valid_pdt_with_matching_invoice_and_merch(self, process_pdt):
+        invoice = baker.make(
+            Invoice, invoice_id="foo", amount=10, business_email="testreceiver@test.com",
+            username=self.student_user.username
+        )
+        product_purchase = make_purchase('M', 10, user=self.student_user, invoice=invoice, paid=False)
+        pdt_obj = baker.make(
+            PayPalPDT, invoice="foo", custom=f"{invoice.id}_{invoice.signature()}", txn_id="bar", mc_gross=10,
+            mc_currency="GBP", receiver_email="testreceiver@test.com"
+        )
+        process_pdt.return_value = (pdt_obj, False)
+
+        resp = self.client.get(self.url)
+        assert resp.status_code == 200
+        assert "Payment Processed" in resp.content.decode("utf-8")
+        product_purchase.refresh_from_db()
+        invoice.refresh_from_db()
+        pdt_obj.refresh_from_db()
+
+        assert product_purchase.paid is True
+        assert invoice.transaction_id == "bar"
+        assert pdt_obj.invoice == "foo"
+
+        assert len(mail.outbox) == 2
+        assert mail.outbox[0].to == [settings.DEFAULT_STUDIO_EMAIL]
+        assert mail.outbox[1].to == [self.student_user.email]
+        assert "Your payment has been processed" in mail.outbox[1].subject
+
+    @patch("payments.views.process_pdt")
+    def test_return_with_valid_pdt_with_matching_invoice_block_subscription_gift_voucher_merch(self, process_pdt):
         invoice = baker.make(
             Invoice, invoice_id="foo", amount=10, business_email="testreceiver@test.com",
             username=self.student_user.username
@@ -153,6 +209,8 @@ class PaypalReturnViewTests(TestUsersMixin, TestCase):
         )
         gift_voucher.voucher.purchaser_email = self.student_user.email
         gift_voucher.voucher.save()
+        product_purchase = make_purchase('M', 10, user=self.student_user, invoice=invoice, paid=False)
+
         pdt_obj = baker.make(
             PayPalPDT, invoice="foo", custom=f"{invoice.id}_{invoice.signature()}", txn_id="bar", mc_gross=10,
             mc_currency="GBP", receiver_email="testreceiver@test.com"
@@ -162,16 +220,11 @@ class PaypalReturnViewTests(TestUsersMixin, TestCase):
         resp = self.client.get(self.url)
         assert resp.status_code == 200
         assert "Payment Processed" in resp.content.decode("utf-8")
-        subscription.refresh_from_db()
-        block.refresh_from_db()
-        gift_voucher.refresh_from_db()
-        gift_voucher.voucher.refresh_from_db()
         invoice.refresh_from_db()
         pdt_obj.refresh_from_db()
-
-        assert subscription.paid is True
-        assert block.paid is True
-        assert gift_voucher.paid is True
+        for item in [block, subscription, gift_voucher, product_purchase]:
+            item.refresh_from_db()
+            assert item.paid is True
         assert gift_voucher.voucher.activated is True
         assert invoice.transaction_id == "bar"
         assert pdt_obj.invoice == "foo"
@@ -217,6 +270,30 @@ class PaypalReturnViewTests(TestUsersMixin, TestCase):
         pdt_obj = baker.make(
             PayPalPDT, invoice="foo",
             custom=f"unk_{invoice.signature()}", txn_id="bar", mc_gross=10,
+            mc_currency="GBP",
+            receiver_email="testreceiver@test.com"
+        )
+        process_pdt.return_value = (pdt_obj, False)
+
+        resp = self.client.get(self.url)
+        assert resp.status_code == 200
+        assert "Error Processing Payment" in resp.content.decode("utf-8")
+
+        # No invoice matching PDT value, send failed emails
+        assert len(mail.outbox) == 1
+        assert mail.outbox[0].subject == "WARNING: Something went wrong with a payment!"
+        assert "No invoice on PDT on return from paypal" in mail.outbox[0].body
+
+    @patch("payments.views.process_pdt")
+    def test_return_with_valid_pdt_no_invoice_from_pdt_single_custom(self, process_pdt):
+        invoice = baker.make(
+            Invoice, invoice_id="", amount=10, business_email="testreceiver@test.com",
+            username=self.student_user.username
+        )
+        baker.make(Block, paid=False, invoice=invoice, user=self.student_user)
+        pdt_obj = baker.make(
+            PayPalPDT, invoice="foo",
+            custom="unk", txn_id="bar", mc_gross=10,
             mc_currency="GBP",
             receiver_email="testreceiver@test.com"
         )

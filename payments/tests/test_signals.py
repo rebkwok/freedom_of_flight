@@ -17,6 +17,8 @@ from booking.models import Block, Subscription, GiftVoucher
 from paypal.standard.ipn.models import PayPalIPN
 
 from common.test_utils import TestUsersMixin
+from merchandise.tests.utils import make_purchase
+
 from ..exceptions import PayPalProcessingError
 from ..models import Invoice
 
@@ -189,7 +191,32 @@ class PaypalSignalsTests(TestUsersMixin, TestCase):
         assert "Gift Voucher" in mail.outbox[2].subject
 
     @patch('paypal.standard.ipn.models.PayPalIPN._postback')
-    def test_valid_ipn_with_matching_invoice_subscription_block_gift_voucher(self, mock_postback):
+    def test_valid_ipn_with_matching_invoice_and_merch(self, mock_postback):
+        mock_postback.return_value = b"VERIFIED"
+        invoice = baker.make(
+            Invoice, invoice_id="foo", amount=10, business_email=TEST_RECEIVER_EMAIL,
+            username=self.student_user.username
+        )
+        product_purchase = make_purchase(invoice=invoice, user=self.student_user)
+        assert PayPalIPN.objects.exists() is False
+        self.paypal_post(
+            {
+                **IPN_POST_PARAMS,
+                "invoice": b"foo",
+                "custom": f"{invoice.id}_{invoice.signature()}".encode("utf-8"),
+                "mc_gross": b"10.00"
+            }
+        )
+        assert PayPalIPN.objects.count() == 1
+        product_purchase.refresh_from_db()
+        assert product_purchase.paid is True
+        assert len(mail.outbox) == 2
+        assert mail.outbox[0].to == [settings.DEFAULT_STUDIO_EMAIL]
+        assert mail.outbox[1].to == [self.student_user.email]
+        assert "Your payment has been processed" in mail.outbox[1].subject
+
+    @patch('paypal.standard.ipn.models.PayPalIPN._postback')
+    def test_valid_ipn_with_matching_invoice_subscription_block_gift_voucher_merch(self, mock_postback):
         mock_postback.return_value = b"VERIFIED"
         invoice = baker.make(
             Invoice, invoice_id="foo", amount=10, business_email=TEST_RECEIVER_EMAIL,
@@ -204,6 +231,8 @@ class PaypalSignalsTests(TestUsersMixin, TestCase):
         )
         gift_voucher.voucher.purchaser_email = self.student_user.email
         gift_voucher.voucher.save()
+        product_purchase = make_purchase(invoice=invoice, user=self.student_user)
+
         assert PayPalIPN.objects.exists() is False
         self.paypal_post(
             {
@@ -214,15 +243,15 @@ class PaypalSignalsTests(TestUsersMixin, TestCase):
             }
         )
         assert PayPalIPN.objects.count() == 1
-        block.refresh_from_db()
-        subscription.refresh_from_db()
-        gift_voucher.refresh_from_db()
-        gift_voucher.voucher.refresh_from_db()
-        assert block.paid is True
-        assert subscription.paid is True
+
+        for item in [block, subscription, gift_voucher, product_purchase]:
+            item.refresh_from_db()
+            assert item.paid
+
+        assert product_purchase.date_paid.date() == timezone.now().date()
         assert subscription.purchase_date.date() == timezone.now().date()
-        assert gift_voucher.paid is True
         assert gift_voucher.voucher.activated is True
+
         assert len(mail.outbox) == 3
         assert mail.outbox[0].to == [settings.DEFAULT_STUDIO_EMAIL]
         assert mail.outbox[1].to == [self.student_user.email]
@@ -250,6 +279,33 @@ class PaypalSignalsTests(TestUsersMixin, TestCase):
         assert PayPalIPN.objects.count() == 1
         block.refresh_from_db()
         assert block.paid is True
+
+    @patch('paypal.standard.ipn.models.PayPalIPN._postback')
+    def test_valid_ipn_no_matching_invoice_from_custom(self, mock_postback):
+        mock_postback.return_value = b"VERIFIED"
+        invoice = baker.make(
+            Invoice, invoice_id="foo", amount=10, business_email=TEST_RECEIVER_EMAIL,
+            username=self.student_user.username
+        )
+        block = baker.make(Block, paid=False, invoice=invoice, user=self.student_user)
+        assert PayPalIPN.objects.exists() is False
+        self.paypal_post(
+            {
+                **IPN_POST_PARAMS,
+                "invoice": b"",
+                "custom": f"unk_{invoice.signature()}".encode("utf-8"),
+                "mc_gross": b"10.00"
+            }
+        )
+        assert PayPalIPN.objects.exists() is True
+        block.refresh_from_db()
+        assert block.paid is False
+
+        # one error email sent
+        assert len(mail.outbox) == 1
+        assert mail.outbox[0].to == [settings.SUPPORT_EMAIL]
+        assert mail.outbox[0].subject == "WARNING: Something went wrong with a payment!"
+        assert "could not find invoice" in mail.outbox[0].body
 
     @patch('paypal.standard.ipn.models.PayPalIPN._postback')
     def test_valid_ipn_with_matching_invoice_multiple_blocks(self, mock_postback):
@@ -400,3 +456,28 @@ class PaypalSignalsTests(TestUsersMixin, TestCase):
         assert len(mail.outbox) == 1
         assert mail.outbox[0].subject == 'WARNING: Something went wrong with a payment!'
         assert "IPN signal received with unexpecting status" in mail.outbox[0].body
+
+    @patch('paypal.standard.ipn.models.PayPalIPN._postback')
+    def test_valid_ipn_paypal_test_anonymous_user(self, mock_postback):
+        mock_postback.return_value = b"VERIFIED"
+        assert PayPalIPN.objects.exists() is False
+        invoice = baker.make(
+            Invoice, invoice_id="foo", amount=1, business_email=TEST_RECEIVER_EMAIL,
+            username="paypal_test",
+        )
+        self.paypal_post(
+            {
+                **IPN_POST_PARAMS,
+                "invoice": b"foo",
+                "txn_id": b"txn1",
+                "custom": f"{invoice.id}_{invoice.signature()}".encode("utf-8"),
+                "mc_gross": b"1.00",
+            }
+        )
+        assert PayPalIPN.objects.count() == 1
+        # 2 email sent, to studio and to support email instead of anon user
+        assert len(mail.outbox) == 2
+        assert mail.outbox[0].to == [settings.DEFAULT_STUDIO_EMAIL]
+        assert mail.outbox[1].to == [settings.SUPPORT_EMAIL]
+        assert "Payment processed" in mail.outbox[0].subject
+        assert "Your payment has been processed" in mail.outbox[1].subject

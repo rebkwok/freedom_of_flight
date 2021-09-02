@@ -7,9 +7,10 @@ from django.template.loader import get_template
 
 def _get_user_from_invoice(invoice):
     if invoice.username == "paypal_test":
-        return User.objects.get(email=settings.SUPPORT_EMAIL)
+        user, _ = User.objects.get_or_create(email=settings.SUPPORT_EMAIL)
     else:
-        return User.objects.get(username=invoice.username)
+        user = User.objects.get(username=invoice.username)
+    return user
 
 
 def send_processed_payment_emails(invoice):

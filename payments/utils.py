@@ -4,7 +4,7 @@ from django.urls import reverse
 from activitylog.models import ActivityLog
 from .emails import send_processed_payment_emails
 from .exceptions import PayPalProcessingError, StripeProcessingError
-from .forms import PayPalPaymentsFormWithId, PayPalPaymentsForm
+from .forms import PayPalPaymentsFormWithId
 from .models import Invoice
 
 
@@ -98,7 +98,7 @@ def get_paypal_form(request, invoice, paypal_test=False):
             }
         )
         # Create the instance.
-        form = PayPalPaymentsForm(initial=paypal_dict)
+        form = PayPalPaymentsFormWithId(initial=paypal_dict)
     else:
         # Create the instance.
         form = PayPalPaymentsFormWithId(initial=paypal_dict)
@@ -183,6 +183,7 @@ def check_stripe_data(payment_intent, invoice):
             f"Invoice amount is not correct: payment intent {payment_intent.id} ({payment_intent.amount/100}); "
             f"invoice id {invoice.invoice_id} ({invoice.amount})"
         )
+
 
 def process_invoice_items(invoice, payment_method, transaction_id=None):
     for block in invoice.blocks.all():
