@@ -36,7 +36,7 @@ from studioadmin.views import (
     ProductCategoryListView, ProductCategoryCreateView, ProductCategoryUpdateView,
     ProductListView, ProductCreateView, ProductUpdateView, PurchaseListView,
     ajax_toggle_product_active, ajax_toggle_purchase_paid, ajax_toggle_purchase_received,
-    PurchaseCreateView, PurchaseUpdateView
+    PurchaseCreateView, PurchaseUpdateView, purchases_for_collection
 )
 
 app_name = 'studioadmin'
@@ -198,6 +198,7 @@ urlpatterns = [
         'merchandise/products/ajax-toggle-purchase-received/',
          ajax_toggle_purchase_received, name="ajax_toggle_purchase_received"
     ),
+    path("merchandise/purchases-for-collection/", purchases_for_collection, name="purchases_for_collection"),
 
     # help
     path('help/', help, name="help"),

@@ -1,0 +1,76 @@
+{% extends "studioadmin/base.html" %}
+{% load static %}
+{% load accounttags bookingtags studioadmintags %}
+
+{% block extra_head %}
+{% include 'common/includes/ajax_head.html' %}
+{% endblock %}
+
+{% block subnav-xs %}
+    {%  include "studioadmin/includes/navs/xs/merchandise_subnav.html" %}
+{% endblock %}
+{% block precontent %}
+    {%  include "studioadmin/includes/navs/merchandise_subnav.html" %}
+{% endblock %}
+
+{% block content %}
+
+
+<h2>Purchases for collection</h2>
+
+<table class="table table-responsive tablesorter" id="sortTable">
+<thead>
+    <tr><td colspan="7">
+     <a
+        href="{% url 'studioadmin:products'%}"
+    ><div class="btn btn-sm btn-success">View Products</div></a>
+    </td></tr>
+    <tr>
+        <td>User</td>
+        <td>Size</td>
+        <td>Cost</td>
+        <td>Date Paid</td>
+        <td>Received<br/><small class="helptext">Click to change</small></td>
+        <td>Date Received</td>
+    </tr>
+</thead>
+<tbody>
+{% if purchases %}
+    {% for purchase in purchases %}
+    <tr>
+        <td><a href="{% url 'studioadmin:edit_purchase' product.id purchase.id %}">{{ purchase.user|full_name }}</a></td>
+        <td>{{ purchase.size }}</td>
+        <td>£{{ purchase.cost }}</td>
+        <td id="date-paid-{{ purchase.id }}">{{ purchase.date_paid|date:'d M Y' }}</td>
+        <td>
+            <span
+              id="received-{{ purchase.id }}"
+              data-purchase_id={{ purchase.id }}
+              class="received-btn"
+              >
+              {% include "studioadmin/includes/ajax_toggle_purchase_received_btn.html" %}
+            </span>
+        </td>
+        <td id="date-received-{{ purchase.id }}">{{ purchase.date_received|date:'d M Y' }}</td>
+    </tr>
+    {% endfor %}
+{% else %}
+  <tr><td colspan="7">No purchases pending collection</td></tr>
+{% endif %}
+</tbody>
+</table>
+
+{% include 'common/includes/single_page_pagination.html' %}
+
+
+{% endblock content %}
+
+{% block extra_js %}
+{# Load from local if in dev mode (debug on) and not specifically set #}
+{% if use_cdn %}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.form/4.3.0/jquery.form.min.js" integrity="sha512-YUkaLm+KJ5lQXDBdqBqk7EVhJAdxRnVdT2vtCzwPHSweCzyMgYV/tgGF4/dCyqtCC2eCphz0lRQgatGVdfR0ww==" crossorigin="anonymous"></script>
+{% else %}
+    <script type='text/javascript' src="{% static 'js/jquery.form-4.3.0.min.js' %}"></script>
+{% endif %}
+<script type='text/javascript' src="{% static 'studioadmin/js/product_ajax-v1.js' %}"></script>
+{% endblock %}

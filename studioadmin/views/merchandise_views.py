@@ -314,3 +314,10 @@ def ajax_toggle_purchase_received(request):
     return JsonResponse(
         {"html": html, "date_received": purchase.date_received.strftime("%d %b %Y") if purchase.date_received else None}
     )
+
+
+def purchases_for_collection(request):
+    purchases = ProductPurchase.objects.filter(paid=True, received=False).order_by("-date_paid")
+    return TemplateResponse(
+        request, "studioadmin/purchases_for_collection.html", {"purchases": purchases}
+    )
