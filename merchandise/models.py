@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+from datetime import timedelta
+import os
+
 from django.db import models
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
@@ -159,6 +162,31 @@ class ProductPurchase(models.Model):
             if stock.quantity > 1:
                 stock.quantity -= 1
             stock.save()
+
+    @classmethod
+    def cleanup_expired_purchases(cls, user=None):
+        timeout = os.environ.get("MERCHANDISE_CART_TIMEOUT_SECONDS", 15)
+        if user:
+            unpaid_purchases = cls.objects.filter(user=user, paid=False)
+        else:
+            unpaid_purchases = cls.objects.filter(paid=False)
+        expired_purchases = unpaid_purchases.filter(
+            created_at__lt=timezone.now() - timedelta(seconds=60 * timeout)
+        )
+        if expired_purchases.exists():
+            if user is not None:
+                ActivityLog.objects.create(
+                    log=f"{expired_purchases.count()} product cart items "
+                        f"(ids {','.join(str(purchase.id) for purchase in expired_purchases.all())} "
+                        f"for user {user} expired and were deleted"
+                )
+            else:
+                ActivityLog.objects.create(
+                    log=f"{expired_purchases.count()} product cart items "
+                        f"(ids {','.join(str(purchase.id) for purchase in expired_purchases.all())} "
+                        f"expired and were deleted"
+                )
+            expired_purchases.delete()
 
     def save(self, *args, **kwargs):
         if self.product and self.cost and self.size:
