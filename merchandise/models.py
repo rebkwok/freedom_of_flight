@@ -114,7 +114,7 @@ class ProductStock(models.Model):
 
 class ProductPurchase(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="purchases")
-    user = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name="purchases")
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="purchases")
     cost = models.DecimalField(max_digits=10, decimal_places=2)
     size = models.CharField(max_length=50, null=True, blank=True)
     created_at = models.DateTimeField(default=timezone.now)
