@@ -153,7 +153,8 @@ class ProductPurchaseCreateUpdateForm(forms.ModelForm):
         self.helper = FormHelper()
         self.helper.layout = Layout(
             Hidden("product", product.id),
-            "user",
+            Hidden("user", self.instance.user.id) if self.instance.id else "user",
+            HTML(f"<h5 class='mt-2'>Purchaser: {full_name(self.instance.user)}</h5>") if self.instance.id else HTML(""),
             "option",
             HTML(f"<p>NOTE: Original Size/Cost option is no longer available</p>") if self.instance.id and matching_variant is None else HTML(
                 ""),

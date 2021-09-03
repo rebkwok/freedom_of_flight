@@ -31,7 +31,7 @@
         <td>Category</td>
         <td>Sizes/Options (stock)</td>
         <td>Available for purchase on site<br/><span class="helptext">Click to change</span></td>
-        <td>Purchases</td>
+        <td>Purchases<br/><span class="helptext">Click to view/add</span></td>
     </tr>
 </thead>
 <tbody>
@@ -42,8 +42,10 @@
         <td>{{ product.category }}
         <td>
             {% for variant in product.variants.all %}
+                <span {% if variant.out_of_stock %}class="text-danger font-weight-bold"{% endif %}>
                 {% if variant.size %}{{ variant.size }}{% else %}N/A{% endif %}
                  ({{ variant.stock.quantity }})
+                </span>
             {% if not forloop.last %}|{% endif %}
             {% endfor %}
         </td>
