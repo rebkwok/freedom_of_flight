@@ -18,29 +18,29 @@
 
 <h2>Purchases for collection</h2>
 
-<table class="table table-responsive tablesorter" id="sortTable">
+<table class="table table-responsive tablesorter table-sm" id="sortTable">
 <thead>
-    <tr><td colspan="7">
+    <tr><td colspan="6">
      <a class="btn btn-sm btn-success" href="{% url 'studioadmin:products'%}">View Products</a>
     </td></tr>
 
-    <tr>
-        <td>User</td>
-        <td>Size</td>
-        <td>Cost</td>
-        <td>Date Paid</td>
-        <td>Received<br/>{% if purchases %}<small class="helptext">Click to change</small>{% endif %}</td>
-        <td>Date Received</td>
+    <tr class="compress">
+        <th class="sort-col" style="min-width: 90px;">User <span class="fa fa-sort"></span></th>
+        <th>Size</th>
+        <th>Cost</th>
+        <th style="min-width: 90px;">Date Paid</th>
+        <th>Received<br/>{% if purchases %}<small class="helptext">Click to change</small>{% endif %}</th>
+        <th>Date Received</th>
     </tr>
 </thead>
 <tbody>
 {% if purchases %}
     {% for purchase in purchases %}
-    <tr>
+    <tr class="compress">
         <td><a href="{% url 'studioadmin:edit_purchase' purchase.product.id purchase.id %}">{{ purchase.user|full_name }}</a></td>
         <td>{{ purchase.size }}</td>
         <td>£{{ purchase.cost }}</td>
-        <td id="date-paid-{{ purchase.id }}">{{ purchase.date_paid|date:'d M Y' }}</td>
+        <td id="date-paid-{{ purchase.id }}"><small>{{ purchase.date_paid|date:'d-M-y' }}</small></td>
         <td>
             <span
               id="received-{{ purchase.id }}"
@@ -50,7 +50,7 @@
               {% include "studioadmin/includes/ajax_toggle_purchase_received_btn.html" %}
             </span>
         </td>
-        <td id="date-received-{{ purchase.id }}">{{ purchase.date_received|date:'d M Y' }}</td>
+        <td id="date-received-{{ purchase.id }}"><small>{{ purchase.date_received|date:'d-M-y' }}</small></td>
     </tr>
     {% endfor %}
 {% else %}

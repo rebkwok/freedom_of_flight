@@ -17,7 +17,6 @@
 
 
 <h2>Products</h2>
-
 <table class="table table-responsive tablesorter" id="sortTable">
 <thead>
     <tr><td colspan="5">
@@ -25,13 +24,16 @@
         href="{% url 'studioadmin:add_product' %}"
         title="add product"
     ><div class="btn btn-sm btn-success">Add new product</div></a>
+    <a class="ml-2" href="{% url 'studioadmin:purchases_for_collection' %}">
+        <div class="btn btn-sm btn-success">Collections</div></a>
+
     </td></tr>
     <tr>
-        <td>Name</td>
-        <td>Category</td>
-        <td>Sizes/Options (stock)</td>
-        <td>Available for purchase on site<br/><span class="helptext">Click to change</span></td>
-        <td>Purchases<br/><span class="helptext">Click to view/add</span></td>
+        <th>Name</th>
+        <th>Category</th>
+        <th>Options (stock)</th>
+        <th>Available on site<br/><span class="helptext">Click to change</span></th>
+        <th>Purchases<br/><span class="helptext">Click to view/add</span></th>
     </tr>
 </thead>
 <tbody>
@@ -46,7 +48,7 @@
                 {% if variant.size %}{{ variant.size }}{% else %}N/A{% endif %}
                  ({{ variant.stock.quantity }})
                 </span>
-            {% if not forloop.last %}|{% endif %}
+            {% if not forloop.last %}<br/>{% endif %}
             {% endfor %}
         </td>
     <td>

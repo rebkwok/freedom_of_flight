@@ -24,7 +24,7 @@
       <div class="row">
         {% if products %}
             {% for product in products %}
-                <div class="col-3">
+                <div class="col-6 col-sm-4 col-md-3 col-lg-2">
                 {% if product.thumbnail %}
                     <img src="{{ product.thumbnail.url }}" />
                 {% else %}
