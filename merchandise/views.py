@@ -25,6 +25,8 @@ class ProductListView(ListView):
     context_object_name = "products"
 
     def dispatch(self, request, *args, **kwargs):
+        # Cleanup purchases so user is looking at updated stock count
+        ProductPurchase.cleanup_expired_purchases(use_cache=True)
         self.selected_category = None
         selected_category_id = self.request.GET.get("category")
         if selected_category_id is not None:
@@ -68,6 +70,8 @@ def product_purchase_view(request, product_id):
             messages.success(request, f"{product.name} added to cart")
             return HttpResponseRedirect(reverse("merchandise:product", args=(product.id,)))
     else:
+        # Cleanup purchases so user is looking at updated stock count
+        ProductPurchase.cleanup_expired_purchases(use_cache=True)
         form = ProductPurchaseForm(product=product)
 
     context = {"product": product, "form": form}

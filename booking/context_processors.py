@@ -38,6 +38,6 @@ def booking(request):
         'checkout_method': settings.CHECKOUT_METHOD,
         'gift_vouchers_available': GiftVoucherConfig.objects.filter(active=True).exists(),
         'merchandise_available': Product.objects.filter(active=True).exists(),
-        'merchandise_cart_timeout_mins': os.environ.get("MERCHANDISE_CART_TIMEOUT_SECONDS", 15) * 60,
+        'merchandise_cart_timeout_mins': settings.MERCHANDISE_CART_TIMEOUT_MINUTES,
     }
 

@@ -29,6 +29,7 @@ env = environ.Env(
     CI=(bool, False),
     LOCAL=(bool, False),
     USE_CDN=(bool, False),
+    MERCHANDISE_CART_TIMEOUT_MINUTES=(int, 15),
 )
 
 
@@ -240,10 +241,18 @@ if env('CI') or env('LOCAL'):  # pragma: no cover
     LOGGING = {
         'version': 1,
         'disable_existing_loggers': False,
+        'formatters': {
+            'verbose': {
+                'format': '[%(levelname)s] - %(asctime)s - %(name)s - '
+                          '%(message)s',
+                'datefmt': '%Y-%m-%d %H:%M:%S',
+            }
+        },
         'handlers': {
             'console': {
                 'level': 'DEBUG',
                 'class': 'logging.StreamHandler',
+                'formatter': 'verbose'
             },
         },
         'loggers': {
@@ -253,6 +262,11 @@ if env('CI') or env('LOCAL'):  # pragma: no cover
                 'propagate': True,
             },
             'booking': {
+                'handlers': ['console'],
+                'level': 'INFO',
+                'propogate': True,
+            },
+            'merchandise': {
                 'handlers': ['console'],
                 'level': 'INFO',
                 'propogate': True,
@@ -325,6 +339,11 @@ else:  # pragma: no cover
                 'propagate': False,
             },
             'booking': {
+                'handlers': ['console', 'file_app', 'mail_admins'],
+                'level': 'INFO',
+                'propagate': False,
+            },
+            'merchandise': {
                 'handlers': ['console', 'file_app', 'mail_admins'],
                 'level': 'INFO',
                 'propagate': False,
@@ -458,3 +477,5 @@ STRIPE_PUBLISHABLE_KEY = env("STRIPE_PUBLISHABLE_KEY")
 STRIPE_SECRET_KEY = env("STRIPE_SECRET_KEY")
 STRIPE_CONNECT_CLIENT_ID = env("STRIPE_CONNECT_CLIENT_ID")
 STRIPE_ENDPOINT_SECRET = env("STRIPE_ENDPOINT_SECRET")
+
+MERCHANDISE_CART_TIMEOUT_MINUTES = env("MERCHANDISE_CART_TIMEOUT_MINUTES")

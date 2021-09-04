@@ -73,6 +73,10 @@ class ProductListView(LoginRequiredMixin, StaffUserMixin, ListView):
     context_object_name = 'products'
     paginate_by = 10
 
+    def dispatch(self, request, *args, **kwargs):
+        ProductPurchase.cleanup_expired_purchases(use_cache=True)
+        return super().dispatch(request, *args, **kwargs)
+
 
 class ProductMixin(LoginRequiredMixin, StaffUserMixin):
     model = Product

@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 from datetime import timedelta
-import os
+import logging
 
 from django.db import models
+from django.conf import settings
 from django.contrib.auth.models import User
+from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 from django.db.models.signals import post_delete
@@ -14,6 +16,9 @@ from imagekit.processors import ResizeToFill
 
 from activitylog.models import ActivityLog
 from payments.models import Invoice
+
+
+logger = logging.getLogger(__name__)
 
 
 class CategoryManager(models.Manager):
@@ -170,16 +175,23 @@ class ProductPurchase(models.Model):
         self.save()
 
     @classmethod
-    def cleanup_expired_purchases(cls, user=None):
-        timeout = os.environ.get("MERCHANDISE_CART_TIMEOUT_SECONDS", 15)
+    def cleanup_expired_purchases(cls, user=None, use_cache=False):
+        if use_cache:
+            # check cache to see if we cleaned up recently
+            if cache.get("expired_purchases_cleaned"):
+                logger.info("Expired purchases cleaned up within past 2 mins; no cleanup required")
+                return
+
+        # timeout defaults to 15 mins
+        timeout = settings.MERCHANDISE_CART_TIMEOUT_MINUTES
         if user:
-            # If we have a user, we're at the checkout, so get all unpaid purchases
+            # If we have a user, we're at the checkout, so get all unpaid purchases for
+            # this user only
             unpaid_purchases = cls.objects.filter(user=user, paid=False)
         else:
             # no user, doing a general cleanup.  Don't delete anything that was time-checked
-            # (done at final checkout stage)
-            # within the past 5 mins, in case we delete something that's in the process of
-            # being paid
+            # (done at final checkout stage) within the past 5 mins, in case we delete something
+            # that's in the process of being paid
             unpaid_purchases = cls.objects.filter(
                 paid=False, time_checked__lt=timezone.now() - timedelta(seconds=60 * 5)
             )
@@ -200,6 +212,11 @@ class ProductPurchase(models.Model):
                         f"expired and were deleted"
                 )
             expired_purchases.delete()
+
+        if use_cache:
+            logger.info("Expired purchases cleaned up")
+            # cache for 2 mins
+            cache.set("expired_purchases_cleaned", True, timeout=60*2)
 
     def save(self, *args, **kwargs):
         if self.product and self.cost and self.size:

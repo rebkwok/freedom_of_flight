@@ -1,5 +1,6 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
+from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 
@@ -189,3 +190,35 @@ def test_product_purchase_update_stock(user, product, product_variants):
     variant2.refresh_from_db()
     assert variant1.current_stock == 9
     assert variant2.current_stock == 10
+
+
+@pytest.mark.django_db
+def test_product_purchase_cleanup_with_cache(user, product, product_variants):
+    variant = product_variants[0]
+    purchase1 = baker.make(
+        ProductPurchase, user=user, product=product, size=variant.size,
+        cost=variant.cost, paid=False, created_at=timezone.now() - timedelta(minutes=16),
+        time_checked=timezone.now() - timedelta(minutes=10)
+    )
+    purchase2 = baker.make(
+        ProductPurchase, user=user, product=product, size=variant.size,
+        cost=variant.cost, paid=False, created_at=timezone.now() - timedelta(minutes=14),
+        time_checked=timezone.now() - timedelta(minutes=10)
+    )
+    assert cache.get("expired_purchases_cleaned") is None
+
+    # purchase 1 is deleted
+    ProductPurchase.cleanup_expired_purchases(use_cache=True)
+    assert ProductPurchase.objects.count() == 1
+    assert cache.get("expired_purchases_cleaned")
+
+    # make purchase 2 expired
+    purchase2.created_at = timezone.now() - timedelta(minutes=16)
+    purchase2.save()
+    # not deleted, because cache hasn't expired
+    ProductPurchase.cleanup_expired_purchases(use_cache=True)
+    assert ProductPurchase.objects.count() == 1
+
+    # it does get deleted if we don't use the cache
+    ProductPurchase.cleanup_expired_purchases(use_cache=False)
+    assert ProductPurchase.objects.exists() is False
