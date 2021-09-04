@@ -12,6 +12,7 @@ from django.utils.html import mark_safe, format_html
 
 from accounts.models import OnlineDisclaimer, DisclaimerContent, ArchivedDisclaimer, \
     CookiePolicy, DataPrivacyPolicy, SignedDataPrivacy, NonRegisteredDisclaimer, UserProfile, ChildUserProfile
+from common.utils import full_name
 
 
 class OnlineDisclaimerAdmin(admin.ModelAdmin):
@@ -24,6 +25,12 @@ class OnlineDisclaimerAdmin(admin.ModelAdmin):
         'date', 'date_updated', 'terms_accepted', 'version'
     )
     fields = readonly_fields
+    search_fields = ["user__first_name", "user__last_name", "user__username"]
+    list_display = ["version", "user", "name"]
+
+    def name(self, obj):
+        return full_name(obj.user)
+    name.admin_order_field = "user__first_name"
 
     def has_add_permission(self, request, obj=None):
         return False
@@ -53,6 +60,7 @@ class NonRegisteredDisclaimerAdmin(admin.ModelAdmin):
         'version'
     )
     fields = readonly_fields
+    search_fields = ["first_name", "last_name"]
 
     def has_add_permission(self, request, obj=None):
         return False
