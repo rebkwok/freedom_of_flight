@@ -93,7 +93,8 @@
                                         {% endif %}
                                     </div>
                                 </div>
-
+                            {% elif view_as_user|has_expired_disclaimer %}
+                                <span class="helptext float-right"><a href="{% url 'accounts:disclaimer_form' view_as_user.id %}">Update expired disclaimer</a> to book</span>
                             {% else %}
                                 <span class="helptext float-right"><a href="{% url 'accounts:disclaimer_form' view_as_user.id %}">Complete a disclaimer</a> to book</span>
                             {% endif %}
