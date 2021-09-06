@@ -60,7 +60,7 @@
 {% if purchases.exists %}
     {% for purchase in purchases.all %}
     <tr>
-        <td><a href="{% url 'studioadmin:edit_purchase' product.id purchase.id %}">{{ purchase.user|full_name }}</a></td>
+        <td><a href="{% url 'studioadmin:edit_purchase' purchase.product.id purchase.id %}">{{ purchase.user|full_name }}</a></td>
         <td>{{ purchase.size }}</td>
         <td>£{{ purchase.cost }}</td>
         <td>

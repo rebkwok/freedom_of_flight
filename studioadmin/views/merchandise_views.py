@@ -202,6 +202,10 @@ class AllPurchasesListView(LoginRequiredMixin, StaffUserMixin, ListView):
     context_object_name = 'purchases'
     paginate_by = 30
 
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        return queryset.order_by("-created_at")
+
 
 class PurchaseListView(AllPurchasesListView):
     template_name = 'studioadmin/product_purchases.html'
@@ -332,6 +336,8 @@ def ajax_toggle_purchase_received(request):
     )
 
 
+@login_required
+@staff_required
 def purchases_for_collection(request):
     purchases = ProductPurchase.objects.filter(paid=True, received=False).order_by("-date_paid")
     return TemplateResponse(

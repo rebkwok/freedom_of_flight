@@ -9,8 +9,8 @@ from django.test import TestCase
 from django.utils import timezone
 
 from merchandise.models import Product, ProductVariant, ProductStock, ProductPurchase, ProductCategory
+from merchandise.tests.utils import make_purchase
 from common.test_utils import TestUsersMixin
-from payments.models import Invoice
 
 
 class StaffLoginMixin:
@@ -326,6 +326,7 @@ class ProductPurchaseListViewTests(TestUsersMixin, StaffLoginMixin, TestCase):
         product_variant = baker.make(ProductVariant, product=cls.product, size='xs', cost=10)
         baker.make(ProductStock, product_variant=product_variant, quantity=10)
         cls.url = reverse('studioadmin:product_purchases', args=(cls.product.id,))
+        cls.all_purchases_url = reverse('studioadmin:all_product_purchases')
 
     def setUp(self):
         self.create_admin_users()
@@ -341,12 +342,22 @@ class ProductPurchaseListViewTests(TestUsersMixin, StaffLoginMixin, TestCase):
 
     def test_list_purchases_most_recently_created_first(self):
         self._login()
-        purchase1 = baker.make(
-            ProductPurchase, user=self.student_user, product=self.product, created_at=timezone.now() - timedelta(3),
+        purchase1 = make_purchase(
+            category_name="A", product_name=self.product.name,
+            user=self.student_user, created_at=timezone.now() - timedelta(3),
             size='xs', cost=10
         )
-        purchase2 = baker.make(
-            ProductPurchase, user=self.manager_user, product=self.product, created_at=timezone.now() - timedelta(2),
+        purchase2 = make_purchase(
+            category_name="A", product_name=self.product.name,
+            user=self.student_user,
+            created_at=timezone.now() - timedelta(2),
+            size='xs', cost=10
+        )
+        # different product, not shown
+        make_purchase(
+            category_name="B", product_name="test product B",
+            user=self.student_user,
+            created_at=timezone.now() - timedelta(1),
             size='xs', cost=10
         )
         resp = self.client.get(self.url)
@@ -362,6 +373,32 @@ class ProductPurchaseListViewTests(TestUsersMixin, StaffLoginMixin, TestCase):
         url = reverse('studioadmin:product_purchases', args=(9999,))
         resp = self.client.get(url)
         assert resp.status_code == 404
+
+    def test_list_all_purchases(self):
+        self._login()
+        purchase1 = make_purchase(
+            category_name="A", product_name=self.product.name,
+            user=self.student_user, created_at=timezone.now() - timedelta(3),
+            size='xs', cost=10
+        )
+        purchase2 = make_purchase(
+            category_name="A", product_name=self.product.name,
+            user=self.student_user,
+            created_at=timezone.now() - timedelta(2),
+            size='xs', cost=10
+        )
+        # different product, not shown
+        purchase3 = make_purchase(
+            category_name="B", product_name="test product B",
+            user=self.student_user,
+            created_at=timezone.now() - timedelta(1),
+            size='xs', cost=10
+        )
+
+        resp = self.client.get(self.all_purchases_url)
+        # ordered by reverse date created
+        assert [purchase.id for purchase in resp.context_data['purchases']] == \
+               [purchase3.id, purchase2.id, purchase1.id]
 
 
 class ProductPurchaseCreateUpdateViewTests(TestUsersMixin, StaffLoginMixin, TestCase):
@@ -507,3 +544,49 @@ class AjaxViewsTests(TestUsersMixin, StaffLoginMixin, TestCase):
         self.purchase.refresh_from_db()
         assert self.purchase.received is False
         assert self.purchase.date_received is None
+
+
+class PurchasesForCollectionViewTests(TestUsersMixin, StaffLoginMixin, TestCase):
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.product = baker.make(Product, name="test product", category__name="A")
+        product_variant = baker.make(ProductVariant, product=cls.product, size='xs', cost=10)
+        baker.make(ProductStock, product_variant=product_variant, quantity=10)
+        cls.url = reverse('studioadmin:purchases_for_collection')
+
+    def setUp(self):
+        self.create_admin_users()
+        self.create_users()
+
+    def test_staff_only(self):
+        self.user_access_test(["staff"], self.url)
+
+    def test_no_purchases(self):
+        self._login()
+        resp = self.client.get(self.url)
+        assert list(resp.context_data['purchases']) == []
+
+    def test_list_all_purchases_paid_and_not_received_yet(self):
+        self._login()
+        purchase1 = make_purchase(
+            product_name="test product B", category_name="B",
+            user=self.student_user, created_at=timezone.now() - timedelta(3),
+            size='xs', cost=10, paid=True
+        )
+        make_purchase(
+            product_name=self.product.name, category_name="A",
+            user=self.student_user,
+            created_at=timezone.now() - timedelta(2),
+            size='xs', cost=10, paid=True, received=True
+        )
+        make_purchase(
+            product_name=self.product.name, category_name="A",
+            user=self.student_user,
+            created_at=timezone.now() - timedelta(1),
+            size='xs', cost=10
+        )
+        resp = self.client.get(self.url)
+        # ordered by reverse date created
+        assert [purchase.id for purchase in resp.context_data['purchases']] == \
+               [purchase1.id]

@@ -82,7 +82,7 @@
     </td>
     <td class="text-center">
         <a href="{% url 'studioadmin:product_purchases' product.id %}">{{ product.purchases.count }}</a>
-        <a href="{% url 'studioadmin:add_purchase' product.id %}"><span class="fas fa-plus"></span></a>
+        <a href="{% url 'studioadmin:add_purchase' product.id %}"><span class="fas fa-plus-circle"></span></a>
     </td>
     </tr>
     {% endfor %}

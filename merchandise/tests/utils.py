@@ -12,8 +12,14 @@ def make_purchase(
     purchase_kwargs = {"size": size, "cost": cost, **purchase_kwargs}
 
     _quantity = quantity or 1
-    if ProductVariant.objects.filter(size=size, cost=cost).exists():
-        var = ProductVariant.objects.filter(size=size, cost=cost).first()
+    if ProductVariant.objects.filter(
+            product__name=product_name, product__category__name=category_name,
+            size=size, cost=cost
+    ).exists():
+        var = ProductVariant.objects.filter(
+            product__name=product_name, product__category__name=category_name,
+            size=size, cost=cost
+        ).first()
     else:
         cat, _ = ProductCategory.objects.get_or_create(name=category_name)
         var = baker.make(
