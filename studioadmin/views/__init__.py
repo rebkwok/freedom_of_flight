@@ -13,7 +13,7 @@ from .merchandise_views import (
     ProductCategoryListView, ProductCategoryCreateView, ProductCategoryUpdateView,
     ProductListView, ProductCreateView, ProductUpdateView, PurchaseListView,
     ajax_toggle_product_active, ajax_toggle_purchase_paid, ajax_toggle_purchase_received,
-    PurchaseCreateView, PurchaseUpdateView, purchases_for_collection
+    PurchaseCreateView, PurchaseUpdateView, purchases_for_collection, AllPurchasesListView
 )
 
 from .policy_views import (

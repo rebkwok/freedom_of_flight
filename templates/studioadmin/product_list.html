@@ -16,25 +16,45 @@
 {% block content %}
 
 
-<h2>Products</h2>
+<h2>Products <a class="ml-1" href="{% url 'studioadmin:purchases_for_collection' %}">
+            <div class="btn btn-sm btn-success">Pending collections</div></a></h2>
+
 <table class="table table-responsive tablesorter" id="sortTable">
 <thead>
-    <tr><td colspan="5">
-     <a
-        href="{% url 'studioadmin:add_product' %}"
-        title="add product"
-    ><div class="btn btn-sm btn-success">Add new product</div></a>
-    <a class="ml-2" href="{% url 'studioadmin:purchases_for_collection' %}">
-        <div class="btn btn-sm btn-success">Collections</div></a>
-
-    </td></tr>
+    {% if categories %}
     <tr>
         <th>Name</th>
         <th>Category</th>
         <th>Options (stock)</th>
         <th>Available on site<br/><span class="helptext">Click to change</span></th>
-        <th>Purchases<br/><span class="helptext">Click to view/add</span></th>
+        <th>Purchases</th>
     </tr>
+    <tr>
+    <td colspan="5">
+        <a
+            class="btn btn-xs text-90 btn-outline-success"
+            href="{% url 'studioadmin:add_product' %}"
+            title="add product"
+        >Add new product</a>
+        <a
+            class="ml-1 btn btn-xs text-90 btn-outline-success"
+            href="{% url 'studioadmin:add_product_category' %}"
+            title="add product"
+        >Add new category</a>
+    </td>
+    </tr>
+    {% else %}
+        <tr>
+          <td colspan="5">No product categories found
+          <a class="btn btn-sm btn-success"
+            href="{% url 'studioadmin:add_product_category' %}"
+            title="add category"
+            >Add one now
+          </a>
+          </td>
+        </tr>
+    {% endif %}
+
 </thead>
 <tbody>
 {% if products %}
@@ -60,10 +80,13 @@
           {% include "studioadmin/includes/ajax_toggle_product_active_btn.html" %}
         </span>
     </td>
-    <td class="text-center"><a href="{% url 'studioadmin:product_purchases' product.id %}">{{ product.purchases.count }}</a></td>
+    <td class="text-center">
+        <a href="{% url 'studioadmin:product_purchases' product.id %}">{{ product.purchases.count }}</a>
+        <a href="{% url 'studioadmin:add_purchase' product.id %}"><span class="fas fa-plus"></span></a>
+    </td>
     </tr>
     {% endfor %}
-{% else %}
+{% elif categories %}
   <tr><td colspan="5">No products found</td></tr>
 {% endif %}
 </tbody>

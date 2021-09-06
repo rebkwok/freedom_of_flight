@@ -27,7 +27,7 @@
 {% endif %}
 
 <div>
-    <a href="{% url 'studioadmin:product_purchases' product.id %}" class="btn btn-warning btn-sm">View all purchases</a>
+    <a href="{% url 'studioadmin:product_purchases' product.id %}" class="btn btn-outline-success btn-xs">View all purchases for {{ product.name }}</a>
 </div>
 
 {% if form.errors %}

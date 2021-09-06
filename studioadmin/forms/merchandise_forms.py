@@ -161,21 +161,21 @@ class ProductPurchaseCreateUpdateForm(forms.ModelForm):
             HTML(f"<p>Original Size: {self.instance.size}</p>") if self.instance.id and matching_variant is None else HTML(""),
             HTML(f"<p>Original Cost: £{self.instance.cost}</p>") if self.instance.id and matching_variant is None else HTML(""),
             Row(
-                Column("paid", css_class="col-2"),
+                Column("paid", css_class="col-4 col-sm-2"),
                 Column(
                     AppendedText(
                         'date_paid',
                         '<i id="id_date_paid" class="far fa-clock"></i>'
-                    ), css_class="col-6"
+                    ), css_class="col-8 col-sm-10"
                 )
             ),
             Row(
-                Column("received", css_class="col-2"),
+                Column("received", css_class="col-4 col-sm-2"),
                 Column(
                     AppendedText(
                         'date_received',
                         '<i id="id_date_paid" class="far fa-clock"></i>'
-                    ), css_class="col-6"
+                    ), css_class="col-8 col-sm-10"
                 )
             ),
             Submit('submit', 'Save')

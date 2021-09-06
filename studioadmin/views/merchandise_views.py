@@ -77,6 +77,11 @@ class ProductListView(LoginRequiredMixin, StaffUserMixin, ListView):
         ProductPurchase.cleanup_expired_purchases(use_cache=True)
         return super().dispatch(request, *args, **kwargs)
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["categories"] = ProductCategory.objects.all()
+        return context
+
 
 class ProductMixin(LoginRequiredMixin, StaffUserMixin):
     model = Product
@@ -191,7 +196,14 @@ class ProductUpdateView(ProductMixin, UpdateView):
         )
 
 
-class PurchaseListView(LoginRequiredMixin, StaffUserMixin, ListView):
+class AllPurchasesListView(LoginRequiredMixin, StaffUserMixin, ListView):
+    template_name = 'studioadmin/product_purchases.html'
+    model = ProductPurchase
+    context_object_name = 'purchases'
+    paginate_by = 30
+
+
+class PurchaseListView(AllPurchasesListView):
     template_name = 'studioadmin/product_purchases.html'
     model = ProductPurchase
     context_object_name = 'purchases'

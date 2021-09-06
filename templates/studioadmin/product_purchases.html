@@ -16,15 +16,35 @@
 {% block content %}
 
 
-<h2>Purchases for {{ product.name }}</h2>
+<h2>Purchases{% if product %} for {{ product.name }}{% endif %}</h2>
 
 <table class="table table-responsive tablesorter" id="sortTable">
 <thead>
     <tr><td colspan="7">
+     {% if product %}
      <a
+        class="btn btn-xs text-90 btn-outline-success"
         href="{% url 'studioadmin:add_purchase' product.id %}"
         title="add product"
-    ><div class="btn btn-sm btn-success">Add new purchase</div></a>
+    >Add new purchase for {{ product.name }}</a>
+    <a
+            class="btn btn-xs text-90 btn-outline-success"
+            href="{% url 'studioadmin:products' %}"
+            title="view products"
+    >View products</a>
+    {% else %}
+         <a class="btn btn-xs text-90 btn-success" href="{% url 'studioadmin:purchases_for_collection' %}">
+            Pending collections
+         </a><br/>
+         To add a new purchase, go to the
+         <a
+            class="btn btn-xs text-90 btn-outline-success"
+            href="{% url 'studioadmin:products' %}"
+            title="view products"
+        >Product list
+         </a>
+        </td>
+    {% endif %}
     </td></tr>
     <tr>
         <th>User</th>

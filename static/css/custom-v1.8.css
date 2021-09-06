@@ -63,7 +63,9 @@ body > .container-fluid {
     padding-right: 5px;
     padding-left: 5px;
   }
-
+  td {
+    font-size: smaller;
+  }
 }
 
 /* offset by footer*/
@@ -269,12 +271,12 @@ div#CookielawBanner {
 
 /* Button styles */
 .btn-xs {
-  width: 100px;
+  width: auto;
   font-size: 75%;
   padding-top: 3px;
   padding-bottom: 3px;
-  padding-left: 1px;
-  padding-right: 1px;
+  padding-left: 5px;
+  padding-right: 5px;
 }
 
 /* Button styles */
@@ -293,12 +295,12 @@ div#CookielawBanner {
 
 .btn-xs-wider {
   width: 130px;
-  font-size: 80%;
+  font-size: 75%;
 }
 
 .btn-xs-wide {
   width: 170px;
-  font-size: 80%;
+  font-size: 75%;
 }
 
 .btn-xs-narrow {
@@ -307,6 +309,10 @@ div#CookielawBanner {
 
 .btn-table-xs {
   height: 27px;
+}
+
+.text-90 {
+  font-size: 90%;
 }
 
 .purchase_option_badge_container .badge {
