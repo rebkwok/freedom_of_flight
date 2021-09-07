@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% load accounttags bookingtags static %}
+
+{% block content %}
+    <h2 class="mt-1">Merchandise</h2>
+        {%  if request.user.is_authenticated %}
+          <div class="mb-2">
+              <a class="btn btn-outline-primary btn-xs" href="{% url 'booking:shopping_basket' %}"><span>View cart <i class="fas fa-shopping-cart"></i></span></a>
+          </div>
+
+        {% endif %}
+      <h2>Products - {% if selected_category_id == "all" %}All{% else %}{{ selected_category }}{% endif %}</h2>
+     <div class="row mb-4 ml-1">
+         <div class="btn-group category-btn-group" role="group">
+          <a href="{% url 'merchandise:products' %}" {% if selected_category_id == "all" %}class="btn btn-dark"{% else %}class="btn btn-outline-secondary"{% endif %}>All</a>
+          {% for category in categories %}
+               <a href="{% url 'merchandise:products' %}?category={{ category.id }}" {% if selected_category_id == category.id %}class="btn btn-dark"{% else %}class="btn btn-outline-secondary"{% endif %}>
+                   {{ category }}</a>
+          {% endfor %}
+        </div>
+     </div>
+
+      <div class="row">
+        {% if products %}
+            {% for product in products %}
+                <div class="col-6 col-sm-4 col-md-3 col-lg-2">
+                {% if product.thumbnail %}
+                    <img src="{{ product.thumbnail.url }}" />
+                {% else %}
+                    <img class="placeholder" />
+                {% endif %}<br/>
+                <a href="{% url 'merchandise:product' product.id %}">{{ product.name }}</a><br/>
+                {% if product.min_cost == product.max_cost %}
+                    £{{ product.min_cost }}
+                {% else %}
+                    £{{ product.min_cost }}-£{{ product.max_cost }}
+                {% endif %}
+                </div>
+            {% endfor %}
+        {% else %}
+            <p>No products are available for purchase</p>
+        {% endif %}
+    </div>
+{% endblock content %}

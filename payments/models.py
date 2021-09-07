@@ -2,7 +2,6 @@ from os import environ
 
 from django.contrib.auth.models import User
 from django.contrib.sites.models import Site
-from django.contrib.postgres.fields import JSONField
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
@@ -64,10 +63,33 @@ class Invoice(models.Model):
                 "name": gift_voucher.name, "cost": f"£{gift_voucher.gift_voucher_config.cost}"
             } for gift_voucher in self.gift_vouchers.all()
         }
-        return {**blocks, **subscriptions, **gift_vouchers}
+
+        def _product_purchase_name_str(pp):
+            if pp.size:
+                return f"{pp.product} - {pp.size}"
+            return str(pp.product)
+
+        merchandise = {
+            f"product_purchase-{product_purchase.id}": {
+                "name": _product_purchase_name_str(product_purchase),
+                "cost": f"£{product_purchase.cost}"
+            } for product_purchase in self.product_purchases.all()
+        }
+        return {**blocks, **subscriptions, **gift_vouchers, **merchandise}
+
+    def _item_counts(self):
+        return {
+            "blocks": self.blocks.count(),
+            "subscriptions": self.subscriptions.count(),
+            "gift_vouchers": self.gift_vouchers.count(),
+            "merchandise": self.product_purchases.count()
+        }
 
     def item_count(self):
-        return sum([self.blocks.count(), self.subscriptions.count(), self.gift_vouchers.count()])
+        return sum(self._item_counts().values())
+
+    def item_types(self):
+        return [key for key, count in self._item_counts().items() if count > 0]
 
     def items_metadata(self):
         # This is used for the payment intent metadata, which is limited to 40 chars keys and string values
@@ -111,7 +133,7 @@ class StripePaymentIntent(models.Model):
     status = models.CharField(max_length=255)
     invoice = models.ForeignKey(Invoice, on_delete=models.SET_NULL, null=True, blank=True)
     seller = models.ForeignKey(Seller, on_delete=models.SET_NULL, null=True, blank=True)
-    metadata = JSONField()
+    metadata = models.JSONField()
     client_secret = models.CharField(max_length=255)
     currency = models.CharField(max_length=3)
 

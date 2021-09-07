@@ -27,6 +27,7 @@ urlpatterns = [
     path('accounts/', include('accounts.urls', namespace="accounts")),
     path('payments/ipn-paypal-notify/', include('paypal.standard.ipn.urls')),
     path('payments/', include('payments.urls')),
+    path("merchandise/", include("merchandise.urls")),
     path('', include('booking.urls')),  # contains the catchall, needs to come last
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

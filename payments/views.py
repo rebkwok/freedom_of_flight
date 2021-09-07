@@ -53,6 +53,7 @@ def paypal_return(request):
     if not failed:
         context = {
             "cart_items": invoice.items_dict().values(),
+            "item_types": invoice.item_types(),
             "total_charged": invoice.amount,
         }
         if "total_voucher_code" in request.session:
@@ -134,6 +135,7 @@ def stripe_payment_complete(request):
     if not failed:
         context = {
             "cart_items": invoice.items_dict().values(),
+            "item_types": invoice.item_types(),
             "total_charged": invoice.amount,
         }
         if "total_voucher_code" in request.session:

@@ -14,7 +14,7 @@ from activitylog.models import ActivityLog
 from booking.models import Track, EventType
 from common.utils import full_name
 
-from ..forms import EventTypeForm
+from ..forms.forms import EventTypeForm
 from .utils import staff_required, StaffUserMixin, is_instructor_or_staff
 
 

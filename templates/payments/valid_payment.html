@@ -36,6 +36,7 @@
                 </tbody>
                 </table>
 
+        {% if "blocks" in item_types or "subscriptions" in item_types %}
             <p>
                 <strong><span class="text-danger">Please note</span>: purchasing a credit block or subscription does not automatically book you into
                     any specific course or class.</strong></p>
@@ -43,6 +44,16 @@
             <p>You can now go to the <a href="{% url 'booking:schedule' %}">schedule</a> to
                 select and book your course/class.
             </p>
+        {% endif %}
+
+        {% if "merchandise" in item_types %}
+            <p>Merchandise will be available for collection at the studio.</p>
+        {% endif %}
+
+        {% if "gift_vouchers" in item_types %}
+            <p>Gift vouchers will be emailed to you shortly.</p>
+        {% endif %}
+
         </div>
     </div>
 </div>

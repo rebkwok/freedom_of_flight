@@ -19,8 +19,8 @@ from booking.models import Booking, Block, BlockConfig, Course, Event, WaitingLi
 from booking.utils import get_active_user_block, get_active_user_course_block, has_available_course_block
 from common.utils import full_name
 
-from ..forms import (
-    EmailUsersForm, SearchForm, AddEditBookingForm, AddEditBlockForm, AddEditSubscriptionForm,
+from ..forms.forms import (
+    EmailUsersForEventOrCourseForm, SearchForm, AddEditBookingForm, AddEditBlockForm, AddEditSubscriptionForm,
     CourseBookingAddChangeForm, EmailWaitingListUsersForm
 )
 from .utils import staff_required, is_instructor_or_staff, InstructorOrStaffUserMixin, generate_workbook_response
@@ -30,9 +30,9 @@ from .utils import staff_required, is_instructor_or_staff, InstructorOrStaffUser
 @staff_required
 def email_event_users_view(request, event_slug):
     event = get_object_or_404(Event, slug=event_slug)
-    form = EmailUsersForm(event=event)
+    form = EmailUsersForEventOrCourseForm(event=event)
     if request.method == "POST":
-        form = EmailUsersForm(request.POST, event=event)
+        form = EmailUsersForEventOrCourseForm(request.POST, event=event)
         if form.is_valid():
             process_form_and_send_email(request, form)
             return HttpResponseRedirect(reverse("studioadmin:events") + f"?track={event.event_type.track_id}")
@@ -58,9 +58,9 @@ def email_waiting_list_view(request, event_id):
 @staff_required
 def email_course_users_view(request, course_slug):
     course = get_object_or_404(Course, slug=course_slug)
-    form = EmailUsersForm(course=course)
+    form = EmailUsersForEventOrCourseForm(course=course)
     if request.method == "POST":
-        form = EmailUsersForm(request.POST, course=course)
+        form = EmailUsersForEventOrCourseForm(request.POST, course=course)
         if form.is_valid():
             process_form_and_send_email(request, form)
             return HttpResponseRedirect(reverse("studioadmin:courses") + f"?track={course.event_type.track_id}")
@@ -72,9 +72,9 @@ def email_course_users_view(request, course_slug):
 @staff_required
 def email_subscription_users_view(request, subscription_config_id):
     subscription_config = get_object_or_404(SubscriptionConfig, id=subscription_config_id)
-    form = EmailUsersForm(subscription_config=subscription_config)
+    form = EmailUsersForEventOrCourseForm(subscription_config=subscription_config)
     if request.method == "POST":
-        form = EmailUsersForm(request.POST, subscription_config=subscription_config)
+        form = EmailUsersForEventOrCourseForm(request.POST, subscription_config=subscription_config)
         if form.is_valid():
             process_form_and_send_email(request, form)
             return HttpResponseRedirect(reverse("studioadmin:subscription_configs"))

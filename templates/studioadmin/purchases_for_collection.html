@@ -1,0 +1,76 @@
+{% extends "studioadmin/base.html" %}
+{% load static %}
+{% load accounttags bookingtags studioadmintags %}
+
+{% block extra_head %}
+{% include 'common/includes/ajax_head.html' %}
+{% endblock %}
+
+{% block subnav-xs %}
+    {%  include "studioadmin/includes/navs/xs/merchandise_subnav.html" %}
+{% endblock %}
+{% block precontent %}
+    {%  include "studioadmin/includes/navs/merchandise_subnav.html" %}
+{% endblock %}
+
+{% block content %}
+
+
+<h2>Purchases for collection</h2>
+
+<table class="table table-responsive tablesorter table-sm" id="sortTable">
+<thead>
+    <tr><td colspan="6">
+     <a class="btn btn-xs text-90 btn-success" href="{% url 'studioadmin:products'%}">View Products</a>
+      <a class="btn btn-xs text-90 btn-success" href="{% url 'studioadmin:all_product_purchases'%}">View All Purchases</a>
+    </td></tr>
+
+    <tr class="compress">
+        <th class="sort-col" style="min-width: 90px;">User <span class="fa fa-sort"></span></th>
+        <th>Size</th>
+        <th>Cost</th>
+        <th style="min-width: 90px;">Date Paid</th>
+        <th>Received<br/>{% if purchases %}<small class="helptext">Click to change</small>{% endif %}</th>
+        <th>Date Received</th>
+    </tr>
+</thead>
+<tbody>
+{% if purchases %}
+    {% for purchase in purchases %}
+    <tr class="compress">
+        <td><a href="{% url 'studioadmin:edit_purchase' purchase.product.id purchase.id %}">{{ purchase.user|full_name }}</a></td>
+        <td>{{ purchase.size }}</td>
+        <td>£{{ purchase.cost }}</td>
+        <td id="date-paid-{{ purchase.id }}"><small>{{ purchase.date_paid|date:'d-M-y' }}</small></td>
+        <td>
+            <span
+              id="received-{{ purchase.id }}"
+              data-purchase_id={{ purchase.id }}
+              class="received-btn"
+              >
+              {% include "studioadmin/includes/ajax_toggle_purchase_received_btn.html" %}
+            </span>
+        </td>
+        <td id="date-received-{{ purchase.id }}"><small>{{ purchase.date_received|date:'d-M-y' }}</small></td>
+    </tr>
+    {% endfor %}
+{% else %}
+  <tr><td colspan="7">No purchases pending collection</td></tr>
+{% endif %}
+</tbody>
+</table>
+
+{% include 'common/includes/single_page_pagination.html' %}
+
+
+{% endblock content %}
+
+{% block extra_js %}
+{# Load from local if in dev mode (debug on) and not specifically set #}
+{% if use_cdn %}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.form/4.3.0/jquery.form.min.js" integrity="sha512-YUkaLm+KJ5lQXDBdqBqk7EVhJAdxRnVdT2vtCzwPHSweCzyMgYV/tgGF4/dCyqtCC2eCphz0lRQgatGVdfR0ww==" crossorigin="anonymous"></script>
+{% else %}
+    <script type='text/javascript' src="{% static 'js/jquery.form-4.3.0.min.js' %}"></script>
+{% endif %}
+<script type='text/javascript' src="{% static 'studioadmin/js/product_ajax-v1.js' %}"></script>
+{% endblock %}

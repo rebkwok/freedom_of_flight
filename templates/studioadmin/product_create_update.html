@@ -1,0 +1,55 @@
+{% extends "studioadmin/base.html" %}
+{% load static %}
+{% load bookingtags %}
+{% load crispy_forms_tags %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-multiselect/0.9.15/css/bootstrap-multiselect.css" integrity="sha512-EvvoSMXERW4Pe9LjDN9XDzHd66p8Z49gcrB7LCUplh0GcEHiV816gXGwIhir6PJiwl0ew8GFM2QaIg2TW02B9A==" crossorigin="anonymous" />
+{% endblock %}
+
+
+{% block subnav-xs %}
+    {%  include "studioadmin/includes/navs/xs/merchandise_subnav.html" %}
+{% endblock %}
+{% block precontent %}
+    {%  include "studioadmin/includes/navs/merchandise_subnav.html" %}
+{% endblock %}
+
+
+{% block content %}
+
+{{ form.media }}
+
+{% if creating %}
+    <h2 class="panel-title">Add new product</h2>
+{% else %}
+    <h2 class="panel-title">Edit Product</h2>
+{% endif %}
+
+<div>
+    <a href="{% url 'studioadmin:products' %}" class="btn btn-warning btn-sm">View Product List</a>
+    {% if not creating %}
+    <a
+        href="{% url 'studioadmin:add_product' %}"
+        title="add product"
+        class="btn btn-sm btn-success"
+    >Add another product</a>
+    {% endif %}
+</div>
+
+{% if form.errors or product_variant_formset.errors or product_variant_formset.non_form_errors %}
+    <div class="errorlist">
+        <p>Please correct the errors below:</p>
+        {% if product_variant_formset.non_form_errors %}
+            {{ product_variant_formset.non_form_errors }}
+        {% endif %}
+    </div>
+{% endif %}
+
+<form class="form dirty-check" method="post" action=""  enctype="multipart/form-data">
+    {% csrf_token %}
+    {% crispy form %}
+</form>
+
+
+{% endblock content %}

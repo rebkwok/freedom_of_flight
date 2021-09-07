@@ -682,7 +682,7 @@ class EmailWaitingListUsersForm(BaseEmailForm):
         self.helper = self.get_form_helper()
 
 
-class EmailUsersForm(BaseEmailForm):
+class EmailUsersForEventOrCourseForm(BaseEmailForm):
 
     def __init__(self, *args, **kwargs):
         event = kwargs.pop("event", None)

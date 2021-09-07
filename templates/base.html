@@ -32,7 +32,7 @@
   {% endif %}
 
   <!-- Custom styles for this template -->
-    <link href="{% static 'css/custom-v1.7.css' %}" rel="stylesheet">
+    <link href="{% static 'css/custom-v1.8.css' %}" rel="stylesheet">
 
     {% block extra_head %}{% endblock %}
 
@@ -63,7 +63,7 @@
                       <a class="dropdown-item" href="{% url 'booking:buy_gift_voucher' %}">Gift Vouchers</a>
                     {% endif %}
                     {% if merchandise_available %}
-                        <a class="dropdown-item" href="#"><em>Merchandise</em></a>
+                        <a class="dropdown-item" href="{% url 'merchandise:products' %}">Merchandise</a>
                     {% endif %}
                 </div>
               </li>
@@ -204,7 +204,7 @@
     {#    Always local #}
     <script src="{% static 'cookielaw/js/cookielaw.js' %}"></script>
     <script src="{% static 'js/custom-v1.1.js' %}"></script>
-    <script src="{% static 'js/datetimepickers-v1.1.js' %}"></script>
+    <script src="{% static 'js/datetimepickers-v1.2.js' %}"></script>
 
     {% block extra_js %}{% endblock %}
 

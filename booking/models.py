@@ -10,7 +10,6 @@ from django.db import models
 from django.conf import settings
 from django.contrib.auth.models import Group, User
 from django.core.exceptions import ValidationError
-from django.contrib.postgres.fields import JSONField
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.functional import cached_property
@@ -900,7 +899,7 @@ class SubscriptionConfig(models.Model):
     # order by next expiry date first (in case of None values, secondary ordering by start and purchase dates
     # subscriptions = user.subscriptions.filter(config__bookable_event_types__has_key(event.event_type.id)).order_by("expiry_date", "start_date", "purchase_date")
     # Then check usages, get the next subscription that is allowed.  Usually there'll only be one, but just in case
-    bookable_event_types = JSONField(null=True, blank=True, default=dict)
+    bookable_event_types = models.JSONField(null=True, blank=True, default=dict)
     include_no_shows_in_usage = models.BooleanField(
         default=False,
         help_text="For subscription with limits on bookings: count no-shows "

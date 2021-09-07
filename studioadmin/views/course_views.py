@@ -18,7 +18,7 @@ from booking.email_helpers import send_bcc_emails
 from booking.models import Booking, Course, Event, Track, EventType
 from common.utils import full_name
 
-from ..forms import CourseCreateForm, CourseUpdateForm
+from ..forms.forms import CourseCreateForm, CourseUpdateForm
 from .utils import get_current_courses, get_past_courses, get_not_yet_started_courses, \
     staff_required, StaffUserMixin, utc_adjusted_datetime
 

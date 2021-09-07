@@ -1,0 +1,108 @@
+{% extends "studioadmin/base.html" %}
+{% load static %}
+{% load bookingtags studioadmintags %}
+
+{% block extra_head %}
+{% include 'common/includes/ajax_head.html' %}
+{% endblock %}
+
+{% block subnav-xs %}
+    {%  include "studioadmin/includes/navs/xs/merchandise_subnav.html" %}
+{% endblock %}
+{% block precontent %}
+    {%  include "studioadmin/includes/navs/merchandise_subnav.html" %}
+{% endblock %}
+
+{% block content %}
+
+
+<h2>Products <a class="ml-1" href="{% url 'studioadmin:purchases_for_collection' %}">
+            <div class="btn btn-sm btn-success">Pending collections</div></a></h2>
+
+<table class="table table-responsive tablesorter" id="sortTable">
+<thead>
+    {% if categories %}
+    <tr>
+        <th>Name</th>
+        <th>Category</th>
+        <th>Options (stock)</th>
+        <th>Available on site<br/><span class="helptext">Click to change</span></th>
+        <th>Purchases</th>
+    </tr>
+    <tr>
+    <td colspan="5">
+        <a
+            class="btn btn-xs text-90 btn-outline-success"
+            href="{% url 'studioadmin:add_product' %}"
+            title="add product"
+        >Add new product</a>
+        <a
+            class="ml-1 btn btn-xs text-90 btn-outline-success"
+            href="{% url 'studioadmin:add_product_category' %}"
+            title="add product"
+        >Add new category</a>
+    </td>
+    </tr>
+    {% else %}
+        <tr>
+          <td colspan="5">No product categories found
+          <a class="btn btn-sm btn-success"
+            href="{% url 'studioadmin:add_product_category' %}"
+            title="add category"
+            >Add one now
+          </a>
+          </td>
+        </tr>
+    {% endif %}
+
+</thead>
+<tbody>
+{% if products %}
+    {% for product in products %}
+    <tr id="product-row-{{ product.id }}" {% if not product.active %}class="expired"{% endif %}>
+        <td><a href="{% url 'studioadmin:edit_product' product.id %}">{{ product.name }}</a></td>
+        <td>{{ product.category }}
+        <td>
+            {% for variant in product.variants.all %}
+                <span {% if variant.out_of_stock %}class="text-danger font-weight-bold"{% endif %}>
+                {% if variant.size %}{{ variant.size }}{% else %}N/A{% endif %}
+                 ({{ variant.stock.quantity }})
+                </span>
+            {% if not forloop.last %}<br/>{% endif %}
+            {% endfor %}
+        </td>
+    <td>
+        <span
+          id="active-{{ product.id }}"
+          data-product_id={{ product.id }}
+          class="active-btn"
+          >
+          {% include "studioadmin/includes/ajax_toggle_product_active_btn.html" %}
+        </span>
+    </td>
+    <td class="text-center">
+        <a href="{% url 'studioadmin:product_purchases' product.id %}">{{ product.purchases.count }}</a>
+        <a href="{% url 'studioadmin:add_purchase' product.id %}"><span class="fas fa-plus-circle"></span></a>
+    </td>
+    </tr>
+    {% endfor %}
+{% elif categories %}
+  <tr><td colspan="5">No products found</td></tr>
+{% endif %}
+</tbody>
+</table>
+
+{% include 'common/includes/single_page_pagination.html' %}
+
+
+{% endblock content %}
+
+{% block extra_js %}
+{# Load from local if in dev mode (debug on) and not specifically set #}
+{% if use_cdn %}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.form/4.3.0/jquery.form.min.js" integrity="sha512-YUkaLm+KJ5lQXDBdqBqk7EVhJAdxRnVdT2vtCzwPHSweCzyMgYV/tgGF4/dCyqtCC2eCphz0lRQgatGVdfR0ww==" crossorigin="anonymous"></script>
+{% else %}
+    <script type='text/javascript' src="{% static 'js/jquery.form-4.3.0.min.js' %}"></script>
+{% endif %}
+<script type='text/javascript' src="{% static 'studioadmin/js/product_ajax-v1.js' %}"></script>
+{% endblock %}

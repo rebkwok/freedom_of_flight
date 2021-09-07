@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% load crispy_forms_tags static %}
+
+{% block content %}
+    <h2 class="mt-1">Merchandise - {{ product.category }}</h2>
+
+    <div class="mb-2">
+        {%  if request.user.is_authenticated %}
+              <a class="btn btn-outline-primary btn-xs" href="{% url 'booking:shopping_basket' %}"><span>View cart <i class="fas fa-shopping-cart"></i></span></a>
+          {% endif %}
+        <a class="btn btn-primary btn-xs" href="{% url 'merchandise:products' %}">All products</a>
+      </div>
+
+
+        <h3>{{ product.name }}</h3>
+
+         {% if product.thumbnail %}
+            <img src="{{ product.thumbnail.url }}" />
+        {% else %}
+            <img class="placeholder" />
+        {% endif %}
+
+    <h4>Purchase options</h4>
+
+            <ul>
+            {% for variant in product.variants.all %}
+                {% with out_of_stock=variant.out_of_stock %}
+                <li {% if out_of_stock %}class="expired"{% endif %}>
+                    {% if variant.size %}{{ variant.size }} - {% endif %}£{{ variant.cost }}
+                    {% if out_of_stock %} - out of stock{% endif %}
+                </li>
+                {% endwith %}
+            {% endfor %}
+            </ul>
+
+        {% if user.is_authenticated %}
+            <form class="form dirty-check" method="post" action="">
+                {% csrf_token %}
+                {% crispy form %}
+            </form>
+        {% else %}
+            <a href="{% url 'account_login' %}?next={{request.get_full_path}}">Log in</a> or <a href="{% url 'account_signup' %}">register</a> to purchase
+        {% endif %}
+
+{% endblock content %}

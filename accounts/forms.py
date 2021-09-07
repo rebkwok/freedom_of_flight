@@ -92,7 +92,7 @@ class SignupForm(CoreAccountFormMixin, AccountFormMixin, forms.Form):
         # get the current version here to make sure we always display and save
         # with the same version, even if it changed while the form was being
         # completed
-        if "email" in self.fields:  # it's not there in form tests
+        if "email" in self.fields:  # pragma: no cover (it's not there in form tests)
             self.fields['email'].widget.attrs.update({'autofocus': 'autofocus', "class": "form-control"})
         if DataPrivacyPolicy.current():
             self.data_privacy_policy = DataPrivacyPolicy.current()
@@ -193,7 +193,6 @@ BASE_DISCLAIMER_FORM_WIDGETS = {
 class DisclaimerForm(forms.ModelForm):
 
     terms_accepted = forms.BooleanField(
-        validators=[account_validators.validate_confirm],
         required=True,
         widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         label='Please tick to accept terms.'

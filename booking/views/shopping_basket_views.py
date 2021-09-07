@@ -21,7 +21,8 @@ from common.utils import full_name
 from ..models import Block, BlockVoucher, TotalVoucher
 from ..utils import calculate_user_cart_total
 from .views_utils import data_privacy_required, get_unpaid_user_managed_blocks, \
-    get_unpaid_user_managed_subscriptions, get_unpaid_user_gift_vouchers
+    get_unpaid_user_managed_subscriptions, get_unpaid_user_gift_vouchers, \
+    get_unpaid_user_merchandise
 
 
 logger = logging.getLogger(__name__)
@@ -157,6 +158,8 @@ def shopping_basket(request):
 
     unpaid_gift_vouchers = get_unpaid_user_gift_vouchers(request.user)
 
+    unpaid_merchandise = get_unpaid_user_merchandise(request.user)
+
     if request.method == "POST":
         code = request.POST.get("code")
         # remove any extraneous whitespace
@@ -267,13 +270,14 @@ def shopping_basket(request):
     ]
 
     context.update({
-        "unpaid_items": unpaid_block_info or unpaid_subscription_info or unpaid_gift_voucher_info,
+        "unpaid_items": unpaid_block_info or unpaid_subscription_info or unpaid_gift_voucher_info or unpaid_merchandise,
         "unpaid_block_info": unpaid_block_info,
         "applied_voucher_codes_and_discount": applied_voucher_codes_and_discount,
         "unpaid_subscription_info": unpaid_subscription_info,
         "unpaid_gift_voucher_info": unpaid_gift_voucher_info,
-        "total_cost_without_total_voucher": calculate_user_cart_total(unpaid_blocks, unpaid_subscriptions, unpaid_gift_vouchers),
-        "total_cost": calculate_user_cart_total(unpaid_blocks, unpaid_subscriptions, unpaid_gift_vouchers, total_voucher)
+        "unpaid_merchandise": unpaid_merchandise,
+        "total_cost_without_total_voucher": calculate_user_cart_total(unpaid_blocks, unpaid_subscriptions, unpaid_gift_vouchers, unpaid_merchandise),
+        "total_cost": calculate_user_cart_total(unpaid_blocks, unpaid_subscriptions, unpaid_gift_vouchers, unpaid_merchandise, total_voucher)
     })
 
     return TemplateResponse(
@@ -317,6 +321,9 @@ def _check_items_and_get_updated_invoice(request):
     unpaid_blocks = get_unpaid_user_managed_blocks(request.user)
     unpaid_subscriptions = get_unpaid_user_managed_subscriptions(request.user)
     unpaid_gift_vouchers = get_unpaid_user_gift_vouchers(request.user)
+    unpaid_merchandise = get_unpaid_user_merchandise(request.user)
+    for pp in unpaid_merchandise:
+        pp.mark_checked()
     checked = {
         "total": total,
         "invoice": None,
@@ -324,7 +331,7 @@ def _check_items_and_get_updated_invoice(request):
         "redirect_url": None
     }
 
-    if not (unpaid_blocks or unpaid_subscriptions or unpaid_gift_vouchers):
+    if not (unpaid_blocks or unpaid_subscriptions or unpaid_gift_vouchers or unpaid_merchandise):
         messages.warning(request, "Your cart is empty")
         checked.update({"redirect": True, "redirect_url": reverse("booking:shopping_basket")})
         return checked
@@ -333,8 +340,11 @@ def _check_items_and_get_updated_invoice(request):
     total_voucher = _get_and_verify_total_vouchers(request)
 
     check_total = calculate_user_cart_total(
-        unpaid_blocks=unpaid_blocks, unpaid_subscriptions=unpaid_subscriptions,
-        unpaid_gift_vouchers=unpaid_gift_vouchers, total_voucher=total_voucher
+        unpaid_blocks=unpaid_blocks,
+        unpaid_subscriptions=unpaid_subscriptions,
+        unpaid_gift_vouchers=unpaid_gift_vouchers,
+        unpaid_merchandise=unpaid_merchandise,
+        total_voucher=total_voucher
     )
     if total != check_total:
         messages.error(request, "Some cart items changed; please check and try again")
@@ -349,11 +359,13 @@ def _check_items_and_get_updated_invoice(request):
     unpaid_block_ids = {block.id for block in unpaid_blocks}
     unpaid_subscription_ids = {subscription.id for subscription in unpaid_subscriptions}
     unpaid_gift_voucher_ids = {gift_voucher.id for gift_voucher in unpaid_gift_vouchers}
+    unpaid_merchandise_ids = {product_purchase.id for product_purchase in unpaid_merchandise}
     def _get_matching_invoice(invoices):
         for invoice in invoices:
             if {block.id for block in invoice.blocks.all()} == unpaid_block_ids \
                     and {subscription.id for subscription in invoice.subscriptions.all()} == unpaid_subscription_ids \
-                    and {gift_voucher.id for gift_voucher in invoice.gift_vouchers.all()} == unpaid_gift_voucher_ids:
+                    and {gift_voucher.id for gift_voucher in invoice.gift_vouchers.all()} == unpaid_gift_voucher_ids\
+                    and {product_purchase.id for product_purchase in invoice.product_purchases.all()} == unpaid_merchandise_ids:
                 return invoice
 
     # check for an existing unpaid invoice for this user
@@ -375,6 +387,9 @@ def _check_items_and_get_updated_invoice(request):
         for gift_voucher in unpaid_gift_vouchers:
             gift_voucher.invoice = invoice
             gift_voucher.save()
+        for product_purchase in unpaid_merchandise:
+            product_purchase.invoice = invoice
+            product_purchase.save()
     else:
         # If an invoice with the expected items is found, make sure its total is current and any total voucher
         # is updated
@@ -398,13 +413,18 @@ def _check_items_and_get_updated_invoice(request):
             gift_voucher.save()
             gift_voucher.activate()
             gift_voucher.send_voucher_email()
+        for product_purchase in unpaid_merchandise:
+            product_purchase.paid = True
+            product_purchase.save()
         invoice.paid = True
         invoice.save()
         msg = []
         if unpaid_blocks or unpaid_subscriptions:
             msg.append("Payment plan(s) now ready to use.")
-        elif unpaid_gift_vouchers:
+        if unpaid_gift_vouchers:
             msg.append("Your gift vouchers have been emailed to you.")
+        if unpaid_merchandise:
+            msg.append("Your merchandise purchase will be ready to collect shortly.")
 
         messages.success(request, f"Voucher applied successfully. {'; '.join(msg)}")
         checked.update({"redirect": True, "redirect_url": reverse("booking:schedule")})
@@ -510,10 +530,14 @@ def check_total(request):
     unpaid_blocks = get_unpaid_user_managed_blocks(request.user)
     unpaid_subscriptions = get_unpaid_user_managed_subscriptions(request.user)
     unpaid_gift_vouchers = get_unpaid_user_gift_vouchers(request.user)
+    unpaid_merchandise = get_unpaid_user_merchandise(request.user)
     total_voucher = _get_and_verify_total_vouchers(request)
     _verify_block_vouchers(unpaid_blocks)
     check_total = calculate_user_cart_total(
-        unpaid_blocks=unpaid_blocks, unpaid_subscriptions=unpaid_subscriptions,
-        unpaid_gift_vouchers=unpaid_gift_vouchers, total_voucher=total_voucher
+        unpaid_blocks=unpaid_blocks,
+        unpaid_subscriptions=unpaid_subscriptions,
+        unpaid_gift_vouchers=unpaid_gift_vouchers,
+        unpaid_merchandise=unpaid_merchandise,
+        total_voucher=total_voucher
     )
     return JsonResponse({"total": check_total})

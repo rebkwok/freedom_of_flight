@@ -17,11 +17,17 @@
         {% for gift_voucher in invoice.gift_vouchers.all %}
             <li>{{ gift_voucher.name }}*</li>
         {% endfor %}
+        {% for purchase in invoice.product_purchases.all %}
+            <li>{{ purchase.product.name }}{% if purchase.size %} - {{ purchase.product }}{% endif %}**</li>
+        {% endfor %}
     </ul>
 </p>
 
 {% if invoice.gift_vouchers.exists %}
     <p>*Gift voucher codes and a link to a printable voucher will be sent in separate email(s)</p>
+{% endif %}
+{% if invoice.product_purchases.exists %}
+    <p>**Merchandise is available to collect from the studio</p>
 {% endif %}
 
 {% endblock %}

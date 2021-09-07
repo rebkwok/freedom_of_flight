@@ -12,6 +12,7 @@ from model_bakery import baker
 
 from booking.models import Block, Subscription, GiftVoucher
 from common.test_utils import TestUsersMixin
+from merchandise.tests.utils import make_purchase
 from ..models import Invoice, Seller, StripePaymentIntent
 
 
@@ -58,6 +59,18 @@ class StripePaymentCompleteViewTests(TestUsersMixin, TestCase):
         assert len(mail.outbox) == 1
         assert mail.outbox[0].subject == "WARNING: Something went wrong with a payment!"
         assert "No invoice could be retrieved from succeeded payment intent mock-intent-id" in mail.outbox[0].body
+
+    @patch("payments.views.stripe.PaymentIntent")
+    def test_return_with_no_payload(self, mock_payment_intent):
+        mock_payment_intent.retrieve.return_value = get_mock_payment_intent()
+        resp = self.client.post(self.url, data={"message": "Error: unk"})
+        assert resp.status_code == 200
+        assert "Error Processing Payment" in resp.content.decode("utf-8")
+
+        # No invoice matching PI value, send failed emails
+        assert len(mail.outbox) == 1
+        assert mail.outbox[0].subject == "WARNING: Something went wrong with a payment!"
+        assert "Error: unk" in mail.outbox[0].body
 
     @patch("payments.views.stripe.PaymentIntent")
     def test_return_with_matching_invoice_and_block(self, mock_payment_intent):
@@ -161,7 +174,7 @@ class StripePaymentCompleteViewTests(TestUsersMixin, TestCase):
         assert "Gift Voucher" in mail.outbox[2].subject
 
     @patch("payments.views.stripe.PaymentIntent")
-    def test_return_with_matching_invoice_block_subscription_gift_voucher(self, mock_payment_intent):
+    def test_return_with_matching_invoice_block_subscription_gift_voucher_merch(self, mock_payment_intent):
         invoice = baker.make(
             Invoice, invoice_id="foo", amount=10, business_email="testreceiver@test.com",
             username=self.student_user.username, stripe_payment_intent_id="mock-intent-id"
@@ -173,6 +186,7 @@ class StripePaymentCompleteViewTests(TestUsersMixin, TestCase):
         )
         gift_voucher.voucher.purchaser_email = self.student_user.email
         gift_voucher.voucher.save()
+        product_purchase = make_purchase(user=self.student_user, invoice=invoice)
         metadata = {
             "invoice_id": "foo",
             "invoice_signature": invoice.signature(),
@@ -183,15 +197,10 @@ class StripePaymentCompleteViewTests(TestUsersMixin, TestCase):
 
         assert resp.status_code == 200
         assert "Payment Processed" in resp.content.decode("utf-8")
-        subscription.refresh_from_db()
-        block.refresh_from_db()
-        gift_voucher.refresh_from_db()
-        gift_voucher.voucher.refresh_from_db()
         invoice.refresh_from_db()
-
-        assert subscription.paid is True
-        assert block.paid is True
-        assert gift_voucher.paid is True
+        for item in [subscription, block, gift_voucher, product_purchase]:
+            item.refresh_from_db()
+            assert item.paid
         assert gift_voucher.voucher.activated is True
         assert invoice.paid is True
         assert invoice.transaction_id is None
@@ -378,6 +387,27 @@ class StripeWebhookTests(TestUsersMixin, TestCase):
         assert resp.status_code == 400
 
     @patch("payments.views.stripe.Webhook")
+    def test_webhook_exception_invalid_invoice_signature(self, mock_webhook):
+        # invalid invoice signature
+        metadata = {
+            "invoice_id": "bar",
+            **self.invoice.items_metadata(),
+        }
+        mock_webhook.construct_event.return_value = get_mock_webhook_event(metadata=metadata)
+        resp = self.client.post(self.url, data={}, HTTP_STRIPE_SIGNATURE="foo")
+        assert resp.status_code == 200
+
+        # invoice and block is still unpaid
+        assert self.block.paid is False
+        assert self.invoice.paid is False
+
+        assert len(mail.outbox) == 1
+        assert mail.outbox[0].to == [settings.SUPPORT_EMAIL]
+        assert "WARNING: Something went wrong with a payment!" in mail.outbox[0].subject
+        assert "Error: Error processing stripe payment intent mock-intent-id; could not find invoice" \
+               in mail.outbox[0].body
+
+    @patch("payments.views.stripe.Webhook")
     def test_webhook_exception_retrieving_invoice(self, mock_webhook):
         # invalid invoice signature
         metadata = {
@@ -397,6 +427,24 @@ class StripeWebhookTests(TestUsersMixin, TestCase):
         assert mail.outbox[0].to == [settings.SUPPORT_EMAIL]
         assert "WARNING: Something went wrong with a payment!" in mail.outbox[0].subject
         assert "Error: Could not verify invoice signature: payment intent mock-intent-id; invoice id foo" \
+               in mail.outbox[0].body
+
+    @patch("payments.views.stripe.Webhook")
+    def test_webhook_exception_no_invoice(self, mock_webhook):
+        # invalid invoice signature
+        metadata = self.invoice.items_metadata()
+        mock_webhook.construct_event.return_value = get_mock_webhook_event(metadata=metadata)
+        resp = self.client.post(self.url, data={}, HTTP_STRIPE_SIGNATURE="foo")
+        assert resp.status_code == 200
+
+        # invoice and block is still unpaid
+        assert self.block.paid is False
+        assert self.invoice.paid is False
+
+        assert len(mail.outbox) == 1
+        assert mail.outbox[0].to == [settings.SUPPORT_EMAIL]
+        assert "WARNING: Something went wrong with a payment!" in mail.outbox[0].subject
+        assert "Error: Error processing stripe payment intent mock-intent-id; no invoice id" \
                in mail.outbox[0].body
 
     @patch("payments.views.stripe.Webhook")

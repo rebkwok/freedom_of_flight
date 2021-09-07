@@ -17,7 +17,7 @@ from activitylog.models import ActivityLog
 from booking.email_helpers import send_bcc_emails
 from booking.models import Booking, Event, Track, EventType
 
-from ..forms import EventCreateUpdateForm
+from ..forms.forms import EventCreateUpdateForm
 from .utils import is_instructor_or_staff, staff_required, StaffUserMixin, InstructorOrStaffUserMixin
 
 

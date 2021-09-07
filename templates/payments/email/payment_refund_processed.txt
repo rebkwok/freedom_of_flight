@@ -11,4 +11,6 @@ User: {{ user.first_name}} {{ user.last_name}}
 Purchased:
 {% for block in invoice.blocks.all %}-{{ block }}{% endfor %}
 {% for subscription in invoice.subscription.all %}{{ subscription }}{% endfor %}
+{% for voucher in invoice.gift_vouchers.all %}{{ voucher }}{% endfor %}
+{% for product_purchase in invoice.product_purchases.all %}{{ product_purchase }}{% endfor %}
 {% endblock %}

@@ -17,7 +17,7 @@ from booking.models import Event, Track, EventType
 from common.utils import full_name
 from timetable.models import TimetableSession
 
-from ..forms import TimetableSessionCreateUpdateForm, UploadTimetableForm
+from ..forms.forms import TimetableSessionCreateUpdateForm, UploadTimetableForm
 from .utils import staff_required, StaffUserMixin, utc_adjusted_datetime
 from .event_views import EventCreateView, EventUpdateView
 

@@ -503,6 +503,14 @@ class BlockVoucherTests(TestCase):
         assert voucher.code is not None
         assert len(voucher.code) == 12
 
+    @patch("booking.models.BaseVoucher._generate_code")
+    def test_create_code_duplicates(self, mock_generate_code):
+        mock_generate_code.side_effect = ["foo", "foo", "bar"]
+        voucher = baker.make(BlockVoucher, code=None, discount=10)
+        assert voucher.code == "foo"
+        voucher1 = baker.make(BlockVoucher, code=None, discount=10)
+        assert voucher1.code == "bar"
+
     def test_uses(self):
         dropin_block_config = baker.make(BlockConfig)
         course_block_config = baker.make(BlockConfig, course=True)
@@ -561,6 +569,15 @@ class BlockTests(TestUsersMixin, TestCase):
         self.dropin_config.save()
         assert self.dropin_block.get_expiry_date() is None
 
+    def test_expired(self):
+        self.dropin_block.start_date = timezone.now() - timedelta(days=14)
+        self.dropin_block.save()
+        assert self.dropin_block.expired is False
+
+        self.dropin_block.start_date = timezone.now() - timedelta(days=80)
+        self.dropin_block.save()
+        assert self.dropin_block.expired is True
+
     def test_block_manual_expiry_date_set_to_end_of_day(self):
         """
         Test that manual expiry dates are set to end of day on save
@@ -617,6 +634,7 @@ class BlockTests(TestUsersMixin, TestCase):
         assert str(self.dropin_block) == f'{self.dropin_block.user.username} -- {self.dropin_block.block_config} -- purchased 01 Feb 2015'
 
     def test_cost_with_voucher(self):
+        assert self.dropin_block.cost_with_voucher == 10.00
         voucher = baker.make(BlockVoucher, code='123', discount=50)
         voucher.block_configs.add(self.dropin_block.block_config)
         self.dropin_block.voucher = voucher

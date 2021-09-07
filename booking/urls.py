@@ -12,7 +12,8 @@ from booking.views import (
     ajax_subscription_purchase,
     CourseListView,
     stripe_checkout, check_total,
-    GiftVoucherPurchaseView, GiftVoucherUpdateView, GiftVoucherDetailView, voucher_details, gift_voucher_delete
+    GiftVoucherPurchaseView, GiftVoucherUpdateView, GiftVoucherDetailView, voucher_details,
+    gift_voucher_delete,
 )
 
 

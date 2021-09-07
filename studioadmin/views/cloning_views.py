@@ -15,7 +15,7 @@ from booking.models import Event
 from common.utils import full_name
 from timetable.models import TimetableSession
 
-from ..forms import CloneEventWeeklyForm, CloneEventDailyIntervalsForm, CloneSingleEventForm, CloneTimetableSessionForm
+from ..forms.forms import CloneEventWeeklyForm, CloneEventDailyIntervalsForm, CloneSingleEventForm, CloneTimetableSessionForm
 from .utils import staff_required
 
 

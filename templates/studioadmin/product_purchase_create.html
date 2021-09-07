@@ -1,0 +1,45 @@
+{% extends "studioadmin/base.html" %}
+{% load static %}
+{% load bookingtags %}
+{% load crispy_forms_tags %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-multiselect/0.9.15/css/bootstrap-multiselect.css" integrity="sha512-EvvoSMXERW4Pe9LjDN9XDzHd66p8Z49gcrB7LCUplh0GcEHiV816gXGwIhir6PJiwl0ew8GFM2QaIg2TW02B9A==" crossorigin="anonymous" />
+{% endblock %}
+
+
+{% block subnav-xs %}
+    {%  include "studioadmin/includes/navs/xs/merchandise_subnav.html" %}
+{% endblock %}
+{% block precontent %}
+    {%  include "studioadmin/includes/navs/merchandise_subnav.html" %}
+{% endblock %}
+
+
+{% block content %}
+
+{{ form.media }}
+
+{% if creating %}
+    <h2 class="panel-title">Add new purchase for {{ product }}</h2>
+{% else %}
+    <h2 class="panel-title">Edit purchase for {{ product }}</h2>
+{% endif %}
+
+<div>
+    <a href="{% url 'studioadmin:product_purchases' product.id %}" class="btn btn-outline-success btn-xs">View all purchases for {{ product.name }}</a>
+</div>
+
+{% if form.errors %}
+    <div class="errorlist">
+        <p>Please correct the errors below:</p>
+    </div>
+    {% endif %}
+
+<form class="form dirty-check" method="post" action="">
+    {% csrf_token %}
+    {% crispy form %}
+</form>
+
+
+{% endblock content %}
