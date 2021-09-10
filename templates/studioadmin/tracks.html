@@ -16,6 +16,10 @@
         track - this will be the site landing page.
     </p>
 
+    <!-- Modals -->
+    <div class="modal fade" id="EditTrackModal" tabindex="-1" role="dialog" aria-labelledby="EditTrackModalLabel"></div>
+    <div class="modal fade" id="AddTrackModal" tabindex="-1" role="dialog" aria-labelledby="AddTrackModalLabel"></div>
+    <!-- /.modal -->
 {% if tracks %}
         <table class="table table-sm">
             <thead>
@@ -27,10 +31,7 @@
             </thead>
             <tbody>
 
-            <!-- Modals -->
-            <div class="modal fade" id="EditTrackModal" tabindex="-1" role="dialog" aria-labelledby="EditTrackModalLabel"></div>
-            <div class="modal fade" id="AddTrackModal" tabindex="-1" role="dialog" aria-labelledby="AddTrackModalLabel"></div>
-            <!-- /.modal -->
+
 
             {% for track in tracks %}
                 <tr {% if track.default %}class="table-success"{% endif %}>
@@ -69,6 +70,12 @@
 
 {% else %}
     <p>No tracks created yet</p>
+    <a
+        id="add-track-btn"
+        class="add-track"
+        href="#" data-form="{% url 'studioadmin:add_track' %}"
+        title="add track"
+    ><div class="btn btn-success">Add new track</div></a>
 {% endif %}
 
 

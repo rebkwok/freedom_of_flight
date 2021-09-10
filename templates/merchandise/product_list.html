@@ -25,12 +25,16 @@
         {% if products %}
             {% for product in products %}
                 <div class="col-6 col-sm-4 col-md-3 col-lg-2">
-                {% if product.thumbnail %}
-                    <img src="{{ product.thumbnail.url }}" />
-                {% else %}
-                    <img class="placeholder" />
-                {% endif %}<br/>
-                <a href="{% url 'merchandise:product' product.id %}">{{ product.name }}</a><br/>
+                <a href="{% url 'merchandise:product' product.id %}">
+                    <span class="product-link">
+                    {% if product.thumbnail %}
+                        <img src="{{ product.thumbnail.url }}" />
+                    {% else %}
+                        <img class="placeholder" />
+                    {% endif %}
+                    </span><br/>
+                    {{ product.name }}
+                </a><br/>
                 {% if product.min_cost == product.max_cost %}
                     £{{ product.min_cost }}
                 {% else %}

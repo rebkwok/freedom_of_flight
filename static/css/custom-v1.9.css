@@ -489,9 +489,37 @@ td.sort-col {
   position: absolute;
 }
 
+/*MERCH*/
 img.placeholder {
   width:150px;
   height:150px;
   object-fit:cover;
   background: url(/static/images/placeholder_thumbnail.png) no-repeat scroll 0 0;
 }
+
+.product-link {
+  position: relative;
+  display: inline-block;
+  background: rgba(0, 0, 255,0);
+}
+
+.product-link > img {
+  vertical-align: middle;
+}
+
+.product-link::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background: dodgerblue;
+  opacity: 0;
+  transition: .1s ease;
+}
+
+.product-link:hover::before {
+  opacity: 0.3;
+}
+
