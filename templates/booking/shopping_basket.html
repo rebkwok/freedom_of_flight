@@ -27,7 +27,7 @@
                     <tr><td colspan="2" class="table-secondary"><strong>Credit Blocks</strong></td></tr>
                 {% endif %}
                 {% for block_info in unpaid_block_info %}
-                    <tr id="cart-row-block-{{ block_info.block.id }}">
+                    <tr id="cart-row-block-{{ block_info.block.id }}" class="cart-row-block">
                         <td class="p-1">{{ block_info.block.block_config }} <span class="badge badge-info">{{ block_info.block.user|full_name }}</span></td>
                         <td class="p-1">
                             <div>Cost: {% if block_info.voucher_applied.discounted_cost is not None %}
@@ -46,6 +46,16 @@
                                 <a class="btn btn-sm btn-danger" href="#"><i class="fas fa-trash-alt"></i></a>
                             </span>
                             </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan="2" id="cart-row-block-warning-{{ block_info.block.id }}" class="cart-row-block-warning">
+                                {% if block_info.block.block_config.course %}
+                                    This credit block is valid for <strong class="text-danger">{{ block_info.block.block_config.size }}-CLASS COURSES OF {{ block_info.block.block_config.event_type.name|upper }} ({{ block_info.block.block_config.event_type.track|upper }}) ONLY</strong>.  You will not be able to use it to book drop-in classes, or other types of class/course.
+                                {% else %}
+                                    This credit block is valid for <strong class="text-danger">{{ block_info.block.block_config.event_type.name|upper }} ({{ block_info.block.block_config.event_type.track|upper }}) DROP IN BOOKINGS ONLY</strong>.  You will not be able to use it to book other types of class, or to book courses.
+                                {% endif %}
+                            </span>
                         </td>
                     </tr>
                 {% endfor %}
@@ -156,7 +166,16 @@
                       <form method="post" action="{% url 'booking:stripe_checkout' %}">
                           {% csrf_token %}
                           <input type="hidden" name="cart_total" value="{{ total_cost }}">
-                          <input class="btn btn-xs btn-xs-wide btn-warning mb-1" type="submit" value="{% if total_cost > 0 %}Checkout{% else %}Submit{% endif %}">
+                          <input
+                                  class="btn btn-xs btn-xs-wide btn-warning mb-1"
+                                  type="submit"
+                                  onclick="{% if unpaid_block_info %}
+                                      return confirm('All sales are final.  Please ensure that any credit blocks you are ' +
+                                      'purchasing are valid for the classes and/or course you want to book. ' +
+                                      '\n\n' +
+                                      'Do you want to continue?'){% endif %}"
+                                  value="{% if total_cost > 0 %}Checkout{% else %}Submit{% endif %}"
+                          />
                       </form>
                     {% endif %}
                       <div>Add additional items:<br/>
@@ -207,5 +226,5 @@
 
 
 {% block extra_js %}
-<script type='text/javascript' src="{% static 'booking/js/shopping_basket_ajax-v2.js' %}"></script>
+<script type='text/javascript' src="{% static 'booking/js/shopping_basket_ajax-v3.js' %}"></script>
 {% endblock %}
