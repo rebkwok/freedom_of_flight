@@ -37,7 +37,7 @@ class EventListView(DataPolicyAgreementRequiredMixin, ListView):
         cutoff_time = timezone.now() - timedelta(minutes=10)
         events = Event.objects.select_related("event_type").filter(
             event_type__track=track, start__gt=cutoff_time, show_on_site=True, cancelled=False
-        ).order_by('start__date', 'start__time')
+        ).order_by('start__date', 'start__time', "id")
         event_name = self.request.GET.get("event_name")
         if event_name:
             events = events.filter(name__iexact=event_name)
