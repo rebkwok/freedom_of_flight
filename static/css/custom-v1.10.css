@@ -440,6 +440,10 @@ tr.expired .btn-toggle {
   padding-bottom: 0;
 }
 
+tr.table-border-bold {
+  border-bottom: solid 2px darkgrey;
+}
+
 div.anchor {
   display: block;
   position: relative;

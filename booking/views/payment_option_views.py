@@ -47,8 +47,8 @@ def purchase_view(request):
 
 
 def block_config_context(request, course=None, event=None):
-    dropin_block_configs = BlockConfig.objects.filter(active=True, course=False)
-    course_block_configs = BlockConfig.objects.filter(active=True, course=True)
+    dropin_block_configs = BlockConfig.objects.filter(active=True, course=False).order_by("event_type__track", "event_type__name")
+    course_block_configs = BlockConfig.objects.filter(active=True, course=True).order_by("event_type__track", "event_type__name")
     context = {}
     if course is not None:
         course_block_configs = list(course_block_configs)
