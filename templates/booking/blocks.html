@@ -11,8 +11,13 @@
    {% include 'common/includes/view_as_user.html' %}
 
 
-    <h1>Credit Blocks</h1>
+    <h1>{% if not show_all %}Active {% endif %}Credit Blocks</h1>
 
+    {% if show_all %}
+        <a href="{% url 'booking:blocks' %}">Hide expired/full</a>
+    {% else %}
+        <a href="{% url 'booking:blocks' %}?include-expired=true">Show all (including expired/full)</a>
+    {% endif %}
     {% if blocks %}
         {% for block in blocks %}
         <div class="list-group mb-2">
@@ -20,8 +25,10 @@
                 <a href="{% url 'booking:block_detail' block.id %}" class="btn btn-sm btn-dark float-right pt-0 pb-0">View details</a>
             </div>
             <div class="ninety-pct list-group-item {% if not block.active_block %}list-group-item-secondary{% endif %} pb-0 pt-0">
-                Purchased: {{ block.purchase_date | date:"d-M-Y" }}<br/>{{ block|block_expiry_text }}<br/>
-                Uses: {{ block.bookings.count }}
+                <strong>Purchased:</strong> {{ block.purchase_date | date:"d-M-Y" }}<br/><strong>Expires: </strong>{{ block|block_expiry_text }}<br/>
+                <strong>Total:</strong> {{ block.block_config.size }}
+                <br>
+                <strong>Used:</strong> {{ block.bookings.count }}
             </div>
         </div>
         {% endfor %}

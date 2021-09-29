@@ -32,12 +32,19 @@ class BlockListView(DataPolicyAgreementRequiredMixin, LoginRequiredMixin, ListVi
 
     def get_queryset(self):
         view_as_user = get_view_as_user(self.request)
-        return view_as_user.blocks.filter(paid=True).order_by("expiry_date", "-purchase_date")
+        user_blocks = view_as_user.blocks.filter(paid=True).order_by("-purchase_date", "expiry_date")
+        if not self.request.GET.get("include-expired"):
+            user_blocks = [
+                block for block in user_blocks if block.active_block
+            ]
+        return user_blocks
 
     def get_context_data(self, **kwargs):
         # Call the base implementation first to get a context
         context = super().get_context_data(**kwargs)
         context["available_users_form"] = AvailableUsersForm(request=self.request, view_as_user=get_view_as_user(self.request))
+        if self.request.GET.get("include-expired"):
+            context["show_all"] = True
         return context
 
 

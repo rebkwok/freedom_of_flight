@@ -59,4 +59,4 @@ class BlockListViewTests(TestUsersMixin, TestCase):
         # post sets the session user id and redirects to the booking page again
         resp = self.client.post(self.url, data={"view_as_user": self.manager_user.id}, follow=True)
         assert self.client.session["user_id"] == self.manager_user.id
-        assert resp.context_data['blocks'].count() == 0
+        assert len(resp.context_data['blocks']) == 0

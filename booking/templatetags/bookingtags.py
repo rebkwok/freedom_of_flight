@@ -99,12 +99,12 @@ def on_waiting_list(user, event):
 @register.filter
 def block_expiry_text(block):
     if block.expiry_date:
-        return f"Expires {block.expiry_date.strftime('%d-%b-%y')}"
+        return f"{block.expiry_date.strftime('%d-%b-%y')}"
     elif block.block_config.duration:
         # Don't show the used/total for course blocks
-        return "Not started yet"
+        return f"not started yet (expires {block.block_config.duration} weeks after date of first booking)"
     else:
-        return "Never expires"
+        return "never"
 
 
 @register.filter
