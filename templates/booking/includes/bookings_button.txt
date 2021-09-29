@@ -27,7 +27,7 @@
             <div class="btn btn-xs btn-xs-narrow btn-info float-right" href="#"><i id="loader_{{ booking.event.id }}"></i> Payment Options</div>
         {% endif %}
     {% else %}
-        <div class="btn btn-xs btn-xs-narrow btn-success float-right" href="#"><i id="loader_{{ booking.event.id }}">
+        <div class="btn btn-xs btn-success float-right" href="#"><i id="loader_{{ booking.event.id }}">
             </i> {% if booking.status == "CANCELLED" or booking.no_show %}Rebook{% else %}Book{% endif %} Drop-in
         </div>
     {% endif %}

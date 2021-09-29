@@ -19,9 +19,8 @@
 {% elif not has_available_course_block %}
     <p><em>You need a payment plan to book this course</em></p>
     <p>
-    Go to the <a href={% url 'booking:purchase_options' %}>payment plans</a> page and select a
-    {% if course.has_started and course.allow_partial_booking %}
-    {{course.events_left.count}}{% else %}{{course.number_of_events}}{% endif %} {{ course.event_type.label }} course block.
+    Go to the <a href="{% url 'booking:course_purchase_options' course.slug %}">payment plans</a> page to see available
+    payment plans for this course.
     After completing your purchase, return to this page to book into the course.
 
     </p>

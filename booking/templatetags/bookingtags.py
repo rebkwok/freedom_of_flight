@@ -5,6 +5,8 @@ from django.utils import timezone
 from common.utils import full_name, start_of_day_in_utc
 from ..models import EventType, WaitingListUser
 from ..utils import has_available_course_block as has_available_course_block_util
+from ..utils import has_available_block, has_available_subscription
+
 from ..utils import (
     get_block_status, user_can_book_or_cancel, get_user_booking_info, user_subscription_info,
     booking_restricted_pre_event_start, show_warning
@@ -16,6 +18,14 @@ register = template.Library()
 @register.filter
 def has_available_course_block(user, course):
     return has_available_course_block_util(user, course)
+
+
+@register.filter
+def has_available_payment_method(user, event):
+    if event.course:
+        return has_available_course_block_util(user, event.course)
+    else:
+        return any([has_available_block(user, event), has_available_subscription(user, event)])
 
 
 def get_block_info(block, include_user=True):

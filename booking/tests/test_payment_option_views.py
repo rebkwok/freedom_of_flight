@@ -21,7 +21,7 @@ class BlockPurchaseViewTests(TestUsersMixin, TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.url = reverse("booking:purchase_options")
-        event_type = baker.make(EventType)
+        event_type = baker.make(EventType, track__name="test")
         cls.activeconfig = baker.make(BlockConfig, event_type=event_type, active=True)
         cls.inactiveconfig = baker.make(
             BlockConfig, event_type=event_type, active=False,
@@ -43,29 +43,27 @@ class BlockPurchaseViewTests(TestUsersMixin, TestCase):
         assert [cc.id for cc in resp.context["available_blocks"]["Course Credit Blocks"]] == [self.courseconfig.id]
         assert resp.context["user_active_blocks"] == []
 
-    def test_course_purchase_view_shows_target_configs_at_start(self):
-        course = baker.make(Course, event_type=self.courseconfig.event_type, number_of_events=3, show_on_site=True)
+    def test_course_purchase_view_shows_only_target_configs(self):
+        course = baker.make(
+            Course, event_type=self.courseconfig.event_type, number_of_events=3, show_on_site=True
+        )
         url = reverse("booking:course_purchase_options", args=(course.slug,))
         resp = self.client.get(url)
         # Course Credit Blocks shown first
-        assert list(resp.context["available_blocks"].keys()) == ["Course Credit Blocks", "Drop-in Credit Blocks"]
-        assert [bc.id for bc in resp.context["available_blocks"]["Drop-in Credit Blocks"]] == [self.activeconfig.id]
+        assert list(resp.context["available_blocks"].keys()) == ["Course Credit Blocks"]
         assert [cc.id for cc in resp.context["available_blocks"]["Course Credit Blocks"]] == [self.courseconfig.id]
         assert resp.context["user_active_blocks"] == []
         assert resp.context["related_item"] == course
-        assert resp.context["target_block_config_ids"] == [self.courseconfig.id]
 
-    def test_dropin_purchase_view_shows_target_configs_at_start(self):
+    def test_dropin_purchase_view_shows_only_target_configs(self):
         event = baker.make(Event, event_type=self.activeconfig.event_type)
         url = reverse("booking:event_purchase_options", args=(event.slug,))
         resp = self.client.get(url)
         # dropin blocks shown first
-        assert list(resp.context["available_blocks"].keys()) == ["Drop-in Credit Blocks", "Course Credit Blocks"]
+        assert list(resp.context["available_blocks"].keys()) == ["Drop-in Credit Blocks"]
         assert [bc.id for bc in resp.context["available_blocks"]["Drop-in Credit Blocks"]] == [self.activeconfig.id]
-        assert [cc.id for cc in resp.context["available_blocks"]["Course Credit Blocks"]] == [self.courseconfig.id]
         assert resp.context["user_active_blocks"] == []
         assert resp.context["related_item"] == event
-        assert resp.context["target_block_config_ids"] == [self.activeconfig.id]
 
     def test_user_active_blocks_in_context(self):
         block = baker.make(Block, user=self.student_user, block_config=self.activeconfig, paid=True)

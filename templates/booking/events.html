@@ -150,6 +150,10 @@
                                             </span>
                                         </span>
                                         {% elif user_info.can_book_or_cancel %}
+                                            <span class="float-right">
+                                            {% if event.course %}
+                                             <a class="helptext float-right" href="{% url "booking:course_events" event.course.slug %}">Course details</a><br/>
+                                            {% endif %}
                                             <span
                                                 id="book_{{ event.id }}"
                                                 data-event_id="{{ event.id }}"
@@ -162,6 +166,7 @@
                                                 class="ajax_events_btn">
                                                 {% include "booking/includes/events_button.txt" %}
                                                 </span>
+                                            </span>
                                         {% elif user_info.booking_restricted_pre_event_start %}
                                             <span class="float-right"><a class="btn btn-xs btn-secondary" disabled href="#"><span class="helptext">Unavailable {{ event.event_type.booking_restriction }} mins before start</span></a></span>
                                         {% endif %}

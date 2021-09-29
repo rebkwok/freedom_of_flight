@@ -88,8 +88,9 @@
                                             </div>
                                         {% else %}
                                             <span class="float-right helptext"><i class="text-dark fas fa-times-circle"></i> NOT BOOKED</span><br/>
-                                            <span class="float-right helptext">
-                                                Payment plan required ({{ course.events_left.count }} {{ course.event_type.label }} course block)</span>
+                                            <span class="float-right">
+                                                <a class="btn btn-xs btn-outline-dark float-right"
+                                                   href="{% url 'booking:course_purchase_options' course.slug %}">Payment options</a></span>
                                         {% endif %}
                                     </div>
                                 </div>

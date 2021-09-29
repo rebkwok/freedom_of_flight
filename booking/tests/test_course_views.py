@@ -90,7 +90,7 @@ class CourseListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         self.login(self.student_user)
         resp = self.client.get(self.url(self.adult_track))
         assert 'NOT BOOKED' in resp.rendered_content
-        assert 'Payment plan required' in resp.rendered_content
+        assert 'Payment options' in resp.rendered_content
 
     def test_courses_list_with_block_available(self):
         # make usable block

@@ -8,12 +8,28 @@
 
 {% block content %}
     <h2 class="mt-1">Payment Options: Credit Blocks, Subscriptions and Memberships</h2>
-        {%  if request.user.is_authenticated %}
           <div class="mb-2">
+        {%  if request.user.is_authenticated %}
               <a class="btn btn-outline-primary btn-xs" href="{% url 'booking:shopping_basket' %}"><span>View cart <i class="fas fa-shopping-cart"></i></span></a>
-          </div>
+            {% if related_item %}
+                <a class="btn btn-primary btn-xs" href="{% url 'booking:events' related_item.event_type.track.slug %}">View schedule</a>
+            {% else %}
+                <a class="btn btn-primary btn-xs" href="{% url 'booking:schedule' %}">View schedule</a>
+            {% endif %}
         {% endif %}
-      <h2>Credit Blocks</h2>
+
+          </div>
+
+    {% if related_item %}
+        <div class="message alert alert-primary">Showing valid options for <strong><a href="{% url 'booking:event' related_item.slug %}">{{ related_item }}</a></strong> ONLY; see all payment plan options <a href="{% url 'booking:purchase_options' %}">here</a></div>
+    {% else %}
+        <p><i class="text-primary fas fa-question-circle fa-lg"></i>
+            Not sure which payment plan you require? Go to the <a href="{% url 'booking:schedule' %}">schedule</a>, find the class you want to book, and select "Payment Options" to display only valid options for that class
+        </p>
+    {% endif %}
+
+    <h2>Credit Blocks</h2>
+
         {% if available_blocks %}
             <p class="text-danger">
                 NOTE: purchasing a block does not book you into any class/course.  Once you have purchased your block, please choose the
@@ -41,11 +57,10 @@
                     </tr>
                     {% endif %}
                     {% for available_block_config in blocklist %}
-                    <tr class="table-border-bold{% if available_block_config.id in target_block_config_ids %} table-success{% endif %}">
+                    <tr class="table-border-bold">
                         <td class="pl-2 pb-0">
                             <p>
-                                <strong>{{ available_block_config }} </strong> <span class="badge badge-pill badge-primary pt-1 mt-1 mb-1"><span class="helptext">{{ available_block_config.event_type.track }}</span></span>
-
+                                <strong>{{ available_block_config }} </strong>
                                 {% if available_block_config.description %}
                                 <span class="d-md-none">
                                     <span data-toggle="tooltip" data-html="true" title="<span class='helptext'>{{ available_block_config.description|linebreaksbr }}</span>">
@@ -132,8 +147,8 @@
             <p>No blocks are available for purchase</p>
         {% endif %}
 
-      <h2>Subscriptions/Memberships</h2>
         {% if subscription_configs %}
+        <h2>Subscriptions/Memberships</h2>
             <table class="table table-sm">
               <thead>
                 <th style="width: 80%"></th>
@@ -151,7 +166,7 @@
                     {% endif %}
                 </tr>
                     {% for subscription_config in subscription_configs %}
-                    <tr {% if subscription_config.config.id in target_subscription_config_ids %}class="table-success"{% endif %}>
+                    <tr>
                         <td class="pl-2 pb-2">
                             <p>
                                 <strong>{{ subscription_config.config.name|title }} </strong>
@@ -262,8 +277,6 @@
                     {% endfor %}
               </tbody>
          </table>
-        {% else %}
-            <p>No subscriptions are available for purchase</p>
         {% endif %}
 {% endblock content %}
 

@@ -29,6 +29,7 @@ def event_purchase_view(request, event_slug):
     event = get_object_or_404(Event, slug=event_slug)
     context = block_config_context(request, event=event)
     context.update(subscription_config_context(request, event.event_type))
+    context["related_item"] = event
     return render(request, "booking/purchase_options.html", context)
 
 
@@ -37,6 +38,7 @@ def course_purchase_view(request, course_slug):
     course = get_object_or_404(Course, slug=course_slug)
     context = block_config_context(request, course=course)
     context.update(subscription_config_context(request))
+    context["related_item"] = course
     return render(request, "booking/purchase_options.html", context)
 
 
@@ -47,24 +49,24 @@ def purchase_view(request):
 
 
 def block_config_context(request, course=None, event=None):
-    dropin_block_configs = BlockConfig.objects.filter(active=True, course=False).order_by("event_type__track", "event_type__name")
-    course_block_configs = BlockConfig.objects.filter(active=True, course=True).order_by("event_type__track", "event_type__name")
     context = {}
+    dropin_block_configs = None
+    course_block_configs = None
     if course is not None:
-        course_block_configs = list(course_block_configs)
-        course_block_configs.sort(
-            key=lambda x: x.event_type == course.event_type and x.size == course.number_of_events, reverse=True
+        course_block_configs = BlockConfig.objects.filter(
+            active=True, course=True, event_type=course.event_type, size=course.number_of_events
         )
-        context["related_item"] = course
-        context["target_block_config_ids"] = [
-            config.id for config in course_block_configs
-            if config.event_type == course.event_type and config.size == course.number_of_events
-        ]
     elif event is not None:
-        dropin_block_configs = list(dropin_block_configs)
-        dropin_block_configs.sort(key=lambda x: x.event_type == event.event_type, reverse=True)
-        context["related_item"] = event
-        context["target_block_config_ids"] = [config.id for config in dropin_block_configs if config.event_type == event.event_type]
+        dropin_block_configs = BlockConfig.objects.filter(
+            active=True, course=False, event_type=event.event_type
+        )
+    else:
+        dropin_block_configs = BlockConfig.objects.filter(active=True, course=False).order_by(
+            "event_type__track", "event_type__name"
+        )
+        course_block_configs = BlockConfig.objects.filter(active=True, course=True).order_by(
+            "event_type__track", "event_type__name"
+        )
 
     available_blocks_with_labels = {
         "Drop-in Credit Blocks": dropin_block_configs,
@@ -102,13 +104,9 @@ def subscription_config_context(request, event_type=None):
         config for config in SubscriptionConfig.objects.filter(active=True) if config.is_purchaseable()
     ]
     if event_type is not None:
-        subscription_configs.sort(
-            key=lambda x: str(event_type.id) in x.bookable_event_types, reverse=True
-        )
-
-        context["target_subscription_config_ids"] = [
-            config.id for config in subscription_configs if config.bookable_event_types and
-            str(event_type.id) in config.bookable_event_types
+        subscription_configs = [
+            subscription_config for subscription_config in subscription_configs if
+            event_type.id in subscription_config.bookable_event_types
         ]
 
     def _start_options_for_users(config):

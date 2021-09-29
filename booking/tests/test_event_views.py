@@ -333,12 +333,12 @@ class EventListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         # not booked, has disclaimer
         self.make_disclaimer(self.student_user)
         book_button = _element_from_response_by_id(f"book_{event.id}")
-        assert "Payment plan required" in book_button.text
+        assert "Payment Options" in book_button.text
 
         # cancelled, no block
         booking = baker.make(Booking, user=self.student_user, event=event, status="CANCELLED")
         book_button = _element_from_response_by_id(f"book_{event.id}")
-        assert "Payment plan required" in book_button.text
+        assert "Payment Options" in book_button.text
         booking.delete()
 
         # not booked with valid block
@@ -410,12 +410,12 @@ class EventListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         # not booked, has disclaimer
         self.make_disclaimer(self.student_user)
         book_button = _element_from_response_by_id(f"book_{event.id}")
-        assert "Payment plan required" in book_button.text
+        assert "Payment Options" in book_button.text
 
         # cancelled, no block
         booking = baker.make(Booking, user=self.student_user, event=event, status="CANCELLED")
         book_button = _element_from_response_by_id(f"book_{event.id}")
-        assert "Payment plan required" in book_button.text
+        assert "Payment Options" in book_button.text
         booking.delete()
 
         # not booked with valid block
@@ -424,13 +424,13 @@ class EventListViewTests(EventTestMixin, TestUsersMixin, TestCase):
             block_config__size=1, user=self.student_user, paid=True
         )
         book_button = _element_from_response_by_id(f"book_{event.id}")
-        for fragment in ["NOT BOOKED", "Payment plan available", "Course details"]:
+        for fragment in ["NOT BOOKED", "Payment plan available"]:
             assert fragment in book_button.text
 
         # cancelled, with block
         booking = baker.make(Booking, user=self.student_user, event=event, status="CANCELLED")
         book_button = _element_from_response_by_id(f"book_{event.id}")
-        for fragment in ["NOT BOOKED", "Payment plan available", "Course details"]:
+        for fragment in ["NOT BOOKED", "Payment plan available"]:
             assert fragment in book_button.text
 
         # no-show, with block
@@ -722,6 +722,6 @@ class CourseListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         block.delete()
         course_book_button = _element_from_response_by_id(f"book_course_{self.course.id}")
         assert "You need a payment plan to book this course" in course_book_button.text
-        assert "1 class course block" in course_book_button.text
+        assert "Go to the payment plans page" in course_book_button.text
 
 
