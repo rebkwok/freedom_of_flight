@@ -7,7 +7,6 @@ $(document).ready(function()  {
       var stripe_account = card_button.getAttribute("data-stripe_account")
       var client_secret = card_button.getAttribute("data-client_secret")
       var stripe_api_key = card_button.getAttribute("data-stripe_api_key")
-      var invoice_id = card_button.getAttribute("data-invoice_id")
       var total = card_button.getAttribute("data-total")
 
       var stripe = Stripe(stripe_api_key, {stripeAccount: stripe_account});
@@ -77,9 +76,9 @@ $(document).ready(function()  {
     });
 
     var pay = function(stripe_data) {
-      console.log(stripe_data.stripe);
-      console.log(stripe_data.card);
-      console.log(stripe_data.client_secret);
+      // console.log(stripe_data.stripe);
+      // console.log(stripe_data.card);
+      // console.log(stripe_data.client_secret);
       changeLoadingState(true);
 
       stripe = stripe_data.stripe

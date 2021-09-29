@@ -5,7 +5,7 @@ import logging
 from django.conf import settings
 from django.contrib.sites.models import Site
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_GET
+from django.views.decorators.http import require_GET, require_POST
 from django.views.generic import ListView
 from django.shortcuts import render, HttpResponse
 
@@ -97,11 +97,14 @@ def _process_completed_stripe_payment(payment_intent, invoice, seller=None):
         )
 
 
+@require_POST
 def stripe_payment_complete(request):
     payload = request.POST.get("payload")
     if payload is None:
         logger.error("No payload found %s", payload)
-        send_failed_payment_emails(payment_intent=None, error=str(request.POST))
+        send_failed_payment_emails(
+            payment_intent=None, error=f"POST: {str(request.POST)}"
+        )
         return render(request, 'payments/non_valid_payment.html')
 
     payload = json.loads(payload)
