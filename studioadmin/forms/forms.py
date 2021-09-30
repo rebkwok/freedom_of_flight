@@ -1251,12 +1251,12 @@ class AddEditBlockForm(forms.ModelForm):
         self.helper.layout = Layout(
             Hidden("user", self.user.id),
             "block_config",
-            HTML(f"<p>Purchase date: <b>{self.instance.purchase_date.strftime('%d-%b-%y')}</b></p>") if self.instance.id else "",
-            HTML(f"<p>Start date (set to date of first booking): <b>{self.instance.start_date.strftime('%d-%b-%y')}</b></p>") if self.instance.id and self.instance.start_date else "",
+            HTML(f"<p>Purchase date: <b>{self.instance.purchase_date.strftime('%d-%b-%y')}</b></p>") if self.instance.id else HTML(""),
+            HTML(f"<p>Start date (set to date of first booking): <b>{self.instance.start_date.strftime('%d-%b-%y')}</b></p>") if self.instance.id and self.instance.start_date else HTML(""),
             "paid",
             HTML("<p>By default, expiry date is calculated from date of first booking, as determined by the block duration. "
                  "If required, you can override it here with a manually set date.</p>"),
-            HTML(f"<p>Expiry date: <b>{self.instance.expiry_date.strftime('%d-%b-%y')}</b></p>") if self.instance.id and self.instance.expiry_date else "",
+            HTML(f"<p>Expiry date: <b>{self.instance.expiry_date.strftime('%d-%b-%y')}</b></p>") if self.instance.id and self.instance.expiry_date else HTML(""),
             "manual_expiry_date",
             Submit('submit', 'Save')
         )
