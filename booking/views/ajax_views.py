@@ -25,8 +25,9 @@ from ..utils import (
     get_user_booking_info, get_available_user_subscription, has_available_course_block,
 )
 from ..email_helpers import send_waiting_list_email, send_user_and_studio_emails
-from .views_utils import total_unpaid_item_count, get_unpaid_user_managed_items, get_unpaid_user_managed_subscriptions, \
-    get_unpaid_user_managed_blocks, get_unpaid_user_gift_vouchers, get_unpaid_user_merchandise
+from .views_utils import total_unpaid_item_count, get_unpaid_user_managed_subscriptions, \
+    get_unpaid_user_managed_blocks, get_unpaid_user_gift_vouchers, \
+    get_unpaid_user_merchandise, get_unpaid_gift_vouchers_from_session
 
 
 logger = logging.getLogger(__name__)
@@ -347,25 +348,38 @@ ITEM_TYPE_MODEL_MAPPING = {
     "product_purchase": ProductPurchase,
 }
 
-@login_required
+
 @require_http_methods(['POST'])
 def ajax_cart_item_delete(request):
     item_type = request.POST.get("item_type")
     item_id = request.POST.get("item_id")
     item = get_object_or_404(ITEM_TYPE_MODEL_MAPPING[item_type], pk=item_id)
-    item.delete()
-    unpaid_blocks = get_unpaid_user_managed_blocks(request.user)
-    unpaid_subscriptions = get_unpaid_user_managed_subscriptions(request.user)
-    unpaid_gift_vouchers = get_unpaid_user_gift_vouchers(request.user)
-    unpaid_merchandise = get_unpaid_user_merchandise(request.user)
-    total = calculate_user_cart_total(unpaid_blocks, unpaid_subscriptions, unpaid_gift_vouchers, unpaid_merchandise)
+    if request.user.is_authenticated:
+        item.delete()
+        unpaid_blocks = get_unpaid_user_managed_blocks(request.user)
+        unpaid_subscriptions = get_unpaid_user_managed_subscriptions(request.user)
+        unpaid_gift_vouchers = get_unpaid_user_gift_vouchers(request.user)
+        unpaid_merchandise = get_unpaid_user_merchandise(request.user)
+        total = calculate_user_cart_total(unpaid_blocks, unpaid_subscriptions, unpaid_gift_vouchers, unpaid_merchandise)
+        unpaid_item_count = total_unpaid_item_count(request.user)
+    else:
+        assert item_type == "gift_voucher"
+        gift_vouchers_on_session = request.session.get("purchases", {}).get("gift_vouchers", [])
+        if int(item_id) in gift_vouchers_on_session:
+            gift_vouchers_on_session.remove(int(item_id))
+            request.session["purchases"]["gift_vouchers"] = gift_vouchers_on_session
+            item.delete()
+        unpaid_gift_vouchers = get_unpaid_gift_vouchers_from_session(request)
+        unpaid_item_count = unpaid_gift_vouchers.count()
+        total = calculate_user_cart_total(unpaid_gift_vouchers=unpaid_gift_vouchers)
+
     payment_button_html = render(
         request, f"booking/includes/payment_button.txt", {"total_cost": total}
     )
     return JsonResponse(
         {
             "cart_total": total,
-            "cart_item_menu_count": total_unpaid_item_count(request.user),
+            "cart_item_menu_count": unpaid_item_count,
             "payment_button_html": payment_button_html.content.decode("utf-8")
         })
 

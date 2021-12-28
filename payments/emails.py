@@ -9,7 +9,10 @@ def _get_user_from_invoice(invoice):
     if invoice.username == "paypal_test":
         user, _ = User.objects.get_or_create(email=settings.SUPPORT_EMAIL)
     else:
-        user = User.objects.get(username=invoice.username)
+        try:
+            user = User.objects.get(username=invoice.username)
+        except User.DoesNotExist:
+            return None
     return user
 
 
@@ -38,7 +41,7 @@ def send_processed_payment_emails(invoice):
         f'{settings.ACCOUNT_EMAIL_SUBJECT_PREFIX} Your payment has been processed',
         get_template('payments/email/payment_processed_to_user.txt').render(ctx),
         settings.DEFAULT_FROM_EMAIL,
-        [user.email],
+        [user.email if user is not None else invoice.username],
         html_message=get_template('payments/email/payment_processed_to_user.html').render(ctx),
         fail_silently=False
     )

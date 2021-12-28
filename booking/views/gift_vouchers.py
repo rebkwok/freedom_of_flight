@@ -35,11 +35,23 @@ class GiftVoucherPurchaseView(GiftVoucherFormMixin, CreateView):
         return context
 
     def form_valid(self, form):
+        from copy import deepcopy
         messages.success(self.request, "Gift Voucher added to basket")
-        return super().form_valid(form)
+        gift_voucher = form.save()
+        resp = super().form_valid(form)
+        if not self.request.user.is_authenticated:
+            purchases = self.request.session.get("purchases", {})
+            gift_vouchers_on_session = set(purchases.get("gift_vouchers", []))
+            gift_vouchers_on_session.add(gift_voucher.id)
+            purchases["gift_vouchers"] = list(gift_vouchers_on_session)
+            self.request.session["purchases"] = purchases
+        return resp
 
     def get_success_url(self):
-        return reverse("booking:shopping_basket")
+        if self.request.user.is_authenticated:
+            return reverse("booking:shopping_basket")
+        else:
+            return reverse("booking:guest_shopping_basket")
 
 
 class GiftVoucherUpdateView(GiftVoucherFormMixin, GiftVoucherObjectMixin, UpdateView):
@@ -55,7 +67,10 @@ class GiftVoucherUpdateView(GiftVoucherFormMixin, GiftVoucherObjectMixin, Update
         if self.object.paid:
             return reverse("booking:gift_voucher_details", args=(self.kwargs["slug"],))
         else:
-            return reverse("booking:shopping_basket")
+            if self.request.user.is_authenticated:
+                return reverse("booking:shopping_basket")
+            else:
+                return reverse("booking:guest_shopping_basket")
 
 
 class GiftVoucherDetailView(GiftVoucherObjectMixin, UpdateView):
@@ -83,6 +98,11 @@ def voucher_details(request, voucher_code):
 
 def gift_voucher_delete(request, slug):
     gift_voucher = get_object_or_404(GiftVoucher, slug=slug)
+    gift_vouchers_on_session = request.session.get("purchases", {}).get("gift_vouchers", [])
+    if gift_voucher.id in gift_vouchers_on_session:
+        gift_vouchers_on_session.remove(gift_voucher.id)
+        request.session["purchases"]["gift_vouchers"] = gift_vouchers_on_session
+
     if gift_voucher.voucher.activated:
         return HttpResponseRedirect(reverse('booking:permission_denied'))
     voucher_code = gift_voucher.voucher.code

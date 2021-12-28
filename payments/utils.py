@@ -164,7 +164,14 @@ def get_invoice_from_payment_intent(payment_intent, raise_immediately=False):
             raise StripeProcessingError(f"Error processing stripe payment intent {payment_intent.id}; no invoice id")
         return None
     try:
-        return Invoice.objects.get(invoice_id=invoice_id)
+        invoice = Invoice.objects.get(invoice_id=invoice_id)
+        if not invoice.username:
+            # if there's no username on the invoice, it's from a guest checkout
+            # Add the username from the billing email
+            billing_email = payment_intent.charges.data[0]["billing_details"]["email"]
+            invoice.username = billing_email
+            invoice.save()
+        return invoice
     except Invoice.DoesNotExist:
         logger.error("Error processing stripe payment intent %s; could not find invoice", payment_intent.id)
         if raise_immediately:

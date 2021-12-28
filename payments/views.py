@@ -15,6 +15,7 @@ from paypal.standard.pdt.views import process_pdt
 import stripe
 
 from activitylog.models import ActivityLog
+from booking.models import GiftVoucher
 from .emails import send_processed_payment_emails, send_failed_payment_emails, send_processed_refund_emails
 from .exceptions import PayPalProcessingError, StripeProcessingError
 from .models import Invoice, Seller, StripePaymentIntent
@@ -144,6 +145,12 @@ def stripe_payment_complete(request):
         if "total_voucher_code" in request.session:
             context.update({"total_voucher_code": request.session["total_voucher_code"]})
             del request.session["total_voucher_code"]
+        if "gift_voucher_purchase" in request.session:
+            vouchers = GiftVoucher.objects.filter(id=request.session["gift_voucher_purchase"])
+            if vouchers:
+                if vouchers.first().invoice == invoice:
+                    del request.session["gift_voucher_purchase"]
+
         return render(request, 'payments/valid_payment.html', context)
     else:
         send_failed_payment_emails(payment_intent=payment_intent, error=error)

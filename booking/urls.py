@@ -13,7 +13,7 @@ from booking.views import (
     CourseListView,
     stripe_checkout, check_total,
     GiftVoucherPurchaseView, GiftVoucherUpdateView, GiftVoucherDetailView, voucher_details,
-    gift_voucher_delete,
+    gift_voucher_delete, guest_shopping_basket
 )
 
 
@@ -63,6 +63,7 @@ urlpatterns = [
     path("stripe-checkout/", stripe_checkout, name="stripe_checkout"),
     path('ajax-cart-item-delete/', ajax_cart_item_delete, name='ajax_cart_item_delete'),
     path('check-total/', check_total, name="check_total"),
+    path("guest-shopping-cart/", guest_shopping_basket, name="guest_shopping_basket"),
 
     # GIFT VOUCHERS
     path('gift-vouchers/', GiftVoucherPurchaseView.as_view(), name='buy_gift_voucher'),

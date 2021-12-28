@@ -25,17 +25,19 @@ class GiftVoucherPurchaseViewTests(EventTestMixin, TestUsersMixin, TestCase):
         self.make_data_privacy_agreement(self.student_user)
         self.login(self.student_user)
 
-    def test_login_required(self):
-        """
-        test that purchase form not shown if not logged in
-        """
+    def test_login_not_required(self):
         self.client.logout()
         resp = self.client.get(self.url)
         assert resp.status_code == 200
         # only active voucher configs shown
         assert [config.id for config in resp.context_data['gift_voucher_configs']] == [self.config_block.id, self.config_total.id]
-        assert "<form" not in resp.rendered_content
-        assert "Gift vouchers are available to purchase for the following" in resp.rendered_content
+        assert "<form" in resp.rendered_content
+        assert "Please check your email address is correct" in resp.rendered_content
+
+        self.login(self.student_user)
+        resp = self.client.get(self.url)
+        # email check warning only shown for not-logged in users
+        assert "Please check your email address is correct" not in resp.rendered_content
 
     def test_gift_voucher_purchase_options(self):
         resp = self.client.get(self.url)
