@@ -4,7 +4,7 @@ from django.utils import timezone
 
 from model_bakery.recipe import Recipe
 
-from booking.models import Event, Block
+from booking.models import Event, Block, GiftVoucher
 
 now = timezone.now()
 past = now - timedelta(30)
@@ -16,3 +16,9 @@ past_event = Recipe(Event, start=past, show_on_site=True)
 
 dropin_block = Recipe(Block)
 course_block = Recipe(Block, block_config__course=True)
+
+gift_voucher_10 = Recipe(
+    GiftVoucher,
+    gift_voucher_config__discount_amount=10,
+    total_voucher__discount_amount=10
+)

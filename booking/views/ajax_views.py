@@ -86,7 +86,7 @@ def ajax_toggle_booking(request, event_id):
     user_id = request.POST["user_id"]
     ref = request.POST.get("ref", "events")
 
-    if user_id == request.user.id:
+    if str(user_id) == str(request.user.id):
         user = request.user
     else:
         user = get_object_or_404(User, id=user_id)
@@ -124,11 +124,12 @@ def ajax_toggle_booking(request, event_id):
                 url = reverse("booking:event_purchase_options", args=(event.slug,))
             return JsonResponse({"redirect": True, "url": url})
 
+        # has available course block/subscription
         if event.course:
             if requested_action == "opened" or existing_booking and existing_booking.status == "CANCELLED":
                 # First time booking for a course event, or reopening a fully cancelled course- redirect to book course
                 # rebookings can be done from events page
-                url = reverse('booking:event_purchase_options', args=(event.course.slug,))
+                url = reverse('booking:course_events', args=(event.course.slug,))
                 return JsonResponse({"redirect": True, "url": url})
 
         # OPENING/REOPENING
@@ -280,7 +281,7 @@ def ajax_toggle_waiting_list(request, event_id):
 def ajax_course_booking(request, course_id):
     ref = request.POST.get("ref", "course")
     user_id = request.POST["user_id"]
-    if user_id == request.user.id:
+    if str(user_id) == str(request.user.id):
         user = request.user
     else:
         user = get_object_or_404(User, id=user_id)

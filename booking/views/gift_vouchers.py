@@ -35,7 +35,6 @@ class GiftVoucherPurchaseView(GiftVoucherFormMixin, CreateView):
         return context
 
     def form_valid(self, form):
-        from copy import deepcopy
         messages.success(self.request, "Gift Voucher added to basket")
         gift_voucher = form.save()
         resp = super().form_valid(form)

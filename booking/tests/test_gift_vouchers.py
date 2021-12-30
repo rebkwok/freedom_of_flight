@@ -64,6 +64,42 @@ class GiftVoucherPurchaseViewTests(EventTestMixin, TestUsersMixin, TestCase):
         assert gift_voucher.voucher.name == "Donald Duck"
         assert gift_voucher.voucher.message == "Happy Birthday"
 
+    def test_gift_voucher_purchase_mismatched_emails(self):
+        self.client.logout()
+        assert GiftVoucher.objects.exists() is False
+        data = {
+            "gift_voucher_config": self.config_block.id,
+            "user_email": self.student_user.email,
+            "user_email1": "foo@foo.com",
+            "recipient_name": "Donald Duck",
+            "message": "Happy Birthday"
+
+        }
+        resp = self.client.post(self.url, data)
+        form = resp.context_data["form"]
+        assert form.is_valid() is False
+        assert form.errors == {
+            "user_email1": ["Email addresses do not match"]
+        }
+
+    def test_gift_voucher_purchase_no_login(self):
+        self.client.logout()
+        assert "purchases" not in self.client.session
+        assert GiftVoucher.objects.exists() is False
+        data = {
+            "gift_voucher_config": self.config_block.id,
+            "user_email": "unknown@test.com",
+            "user_email1": "unknown@test.com",
+        }
+        resp = self.client.post(self.url, data)
+        assert GiftVoucher.objects.exists() is True
+        gift_voucher = GiftVoucher.objects.first()
+        assert gift_voucher.paid is False
+        assert gift_voucher.voucher.purchaser_email == "unknown@test.com"
+
+        assert resp.url == reverse("booking:guest_shopping_basket")
+        assert self.client.session["purchases"] == {"gift_vouchers": [gift_voucher.id]}
+
 
 class GiftVoucherPurchaseUpdateViewTests(EventTestMixin, TestUsersMixin, TestCase):
 
