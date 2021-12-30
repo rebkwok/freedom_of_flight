@@ -72,6 +72,18 @@ class SignUpFormTests(TestUsersMixin, TestCase):
         form = SignupForm(data=form_data)
         assert form.is_valid() is True
 
+    def test_must_choose_role(self):
+        form_data = {
+            **self.base_form_data,
+            'student': False, 'manager': False
+        }
+        form = SignupForm(data=form_data)
+        assert form.is_valid() is False
+        assert form.non_field_errors() == [
+            "You must select at least one role: student or manager (or both)"
+        ]
+
+
 # class NonRegisteredDisclaimerFormTests(TestUsersMixin, TestCase):
 #
 #     def setUp(self):

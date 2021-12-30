@@ -11,7 +11,7 @@ from django.utils import timezone
 
 from booking.models import Booking, Block, BlockConfig, Course, Event, WaitingListUser, Subscription
 from accounts.models import has_active_disclaimer
-from common.test_utils import EventTestMixin, TestUsersMixin, make_disclaimer_content
+from common.test_utils import EventTestMixin, TestUsersMixin, make_disclaimer_content, make_online_disclaimer
 
 
 class EmailUsersViewsTests(EventTestMixin, TestUsersMixin, TestCase):
@@ -198,6 +198,21 @@ class UserDetailViewTests(TestUsersMixin, TestCase):
 
         resp = self.client.get(self.url)
         assert resp.context_data["latest_disclaimer"] == active_disclaimer
+
+    def test_with_health_questionnaire(self):
+        make_online_disclaimer(
+            user=self.student_user,
+            health_questionnaire_responses={
+                "Say something": "Boo",
+                'What is your favourite colour?': ["purple"]  # not in new disclaimer choices
+            }
+        )
+        resp = self.client.get(self.url)
+        expected = (
+            "<strong>Say something</strong><br/>Boo<br/>"
+            "<strong>What is your favourite colour?</strong><br/>purple"
+        )
+        assert expected in resp.rendered_content
 
 
 class UserBookingListViewTests(TestUsersMixin, TestCase):
