@@ -162,6 +162,26 @@ class GiftVoucherPurchaseUpdateViewTests(EventTestMixin, TestUsersMixin, TestCas
         assert TotalVoucher.objects.exists() is False
         assert resp.url == reverse("booking:shopping_basket")
 
+    def test_gift_voucher_change_anon_user(self):
+        self.client.logout()
+        voucher = baker.make_recipe(
+            "booking.gift_voucher_10", paid=False, total_voucher__purchaser_email="anon@test.com"
+        )
+        data = {
+            "gift_voucher_config": voucher.gift_voucher_config.id,
+            "user_email": "anon@test.com",
+            "user_email1": "anon@test.com",
+            "recipient_name": "Donald Duck",
+            "message": "Happy Birthday"
+
+        }
+        url = reverse('booking:gift_voucher_update', args=(voucher.slug,))
+        resp = self.client.post(url, data)
+        voucher.refresh_from_db()
+        assert voucher.voucher.purchaser_email == "anon@test.com"
+        assert voucher.voucher.name == "Donald Duck"
+        assert resp.url == reverse("booking:guest_shopping_basket")
+
     def test_gift_voucher_update_paid_voucher(self):
         self.gift_voucher.paid = True
         self.gift_voucher.save()

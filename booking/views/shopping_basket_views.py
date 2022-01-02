@@ -33,6 +33,9 @@ logger = logging.getLogger(__name__)
 
 
 def guest_shopping_basket(request):
+    if request.user.is_authenticated:
+        return HttpResponseRedirect(reverse("booking:shopping_basket"))
+
     template_name = 'booking/shopping_basket.html'
     gift_vouchers = get_unpaid_gift_vouchers_from_session(request)
     unpaid_gift_voucher_info = [
@@ -44,7 +47,7 @@ def guest_shopping_basket(request):
     total = calculate_user_cart_total(unpaid_gift_vouchers=gift_vouchers)
 
     context = {
-        "unpaid_items": True,
+        "unpaid_items": bool(unpaid_gift_voucher_info),
         "unpaid_block_info": [],
         "applied_voucher_codes_and_discount": [],
         "unpaid_subscription_info": [],
@@ -364,7 +367,6 @@ def ajax_checkout(request):
     )
 
 
-@login_required
 @require_http_methods(['POST'])
 def stripe_checkout(request):
     """
@@ -395,7 +397,7 @@ def stripe_checkout(request):
             "amount": total_as_int,
             "currency": 'gbp',
             "stripe_account": stripe_account,
-            "description": f"{full_name(request.user)}-invoice#{invoice.invoice_id}",
+            "description": f"{full_name(request.user) if request.user.is_authenticated else ''}-invoice#{invoice.invoice_id}",
             "metadata": {
                 "invoice_id": invoice.invoice_id, "invoice_signature": invoice.signature(), **invoice.items_metadata()},
         }
