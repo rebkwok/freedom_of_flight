@@ -6,7 +6,7 @@ from .ajax_views import (
 from .block_views import BlockListView, BlockDetailView
 from .course_views import CourseListView
 from .gift_vouchers import GiftVoucherPurchaseView, GiftVoucherUpdateView, GiftVoucherDetailView, \
-    voucher_details, gift_voucher_delete
+    voucher_details
 from .payment_option_views import event_purchase_view, course_purchase_view, purchase_view
 from .subscription_views import SubscriptionListView, SubscriptionDetailView
 from .booking_views import BookingListView, BookingHistoryListView

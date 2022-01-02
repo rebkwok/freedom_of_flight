@@ -94,18 +94,3 @@ def voucher_details(request, voucher_code):
         return HttpResponseRedirect(reverse("booking:gift_voucher_details", args=(voucher.gift_voucher.first().slug,)))
     return TemplateResponse(request, template='booking/gift_voucher_detail.html', context=context)
 
-
-def gift_voucher_delete(request, slug):
-    gift_voucher = get_object_or_404(GiftVoucher, slug=slug)
-    gift_vouchers_on_session = request.session.get("purchases", {}).get("gift_vouchers", [])
-    if gift_voucher.id in gift_vouchers_on_session:
-        gift_vouchers_on_session.remove(gift_voucher.id)
-        request.session["purchases"]["gift_vouchers"] = gift_vouchers_on_session
-
-    if gift_voucher.voucher.activated:
-        return HttpResponseRedirect(reverse('booking:permission_denied'))
-    voucher_code = gift_voucher.voucher.code
-    gift_voucher.voucher.delete()
-    gift_voucher.delete()
-    ActivityLog.objects.create(log=f"Gift Voucher with code {voucher_code} deleted")
-    return HttpResponseRedirect(reverse('booking:buy_gift_voucher'))

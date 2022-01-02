@@ -235,31 +235,3 @@ class VoucherDetailViewTests(TestUsersMixin, TestCase):
         resp = self.client.get(reverse("booking:voucher_details", args=(self.gift_voucher.code,)))
         assert resp.status_code == 302
         assert resp.url == reverse('booking:gift_voucher_details', args=(self.gift_voucher.slug,))
-
-
-class GiftVoucherDeleteViewTests(TestUsersMixin, TestCase):
-
-    @classmethod
-    def setUpTestData(cls):
-        cls.config_total = baker.make(GiftVoucherConfig, discount_amount=10, active=True)
-
-    def setUp(self):
-        self.gift_voucher = baker.make(GiftVoucher, gift_voucher_config=self.config_total)
-        self.url = reverse("booking:gift_voucher_delete", args=(self.gift_voucher.slug,))
-
-    def test_delete(self):
-        assert GiftVoucher.objects.count() == 1
-        assert TotalVoucher.objects.count() == 1
-        self.client.get(self.url)
-        assert GiftVoucher.objects.exists() is False
-        assert TotalVoucher.objects.exists() is False
-
-    def test_delete_activated(self):
-        self.gift_voucher.activate()
-        assert GiftVoucher.objects.count() == 1
-        assert TotalVoucher.objects.count() == 1
-        resp = self.client.get(self.url)
-        assert GiftVoucher.objects.count() == 1
-        assert TotalVoucher.objects.count() == 1
-        assert resp.status_code == 302
-        assert resp.url == reverse("booking:permission_denied")
