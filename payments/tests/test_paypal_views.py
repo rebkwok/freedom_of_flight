@@ -168,6 +168,51 @@ class PaypalReturnViewTests(TestUsersMixin, TestCase):
         assert "Gift Voucher" in mail.outbox[2].subject
 
     @patch("payments.views.process_pdt")
+    def test_return_with_valid_pdt_with_matching_invoice_and_gift_voucher_anon_user(self, process_pdt):
+        invoice = baker.make(
+            Invoice, invoice_id="foo", amount=10,
+            business_email="testreceiver@test.com",
+            username=""
+        )
+        gift_voucher = baker.make(
+            GiftVoucher, gift_voucher_config__discount_amount=10, paid=False,
+            invoice=invoice
+        )
+        gift_voucher.voucher.purchaser_email = "anon@test.com"
+        gift_voucher.voucher.save()
+        pdt_obj = baker.make(
+            PayPalPDT, invoice="foo", custom=f"{invoice.id}_{invoice.signature()}",
+            txn_id="bar", mc_gross=10,
+            mc_currency="GBP", receiver_email="testreceiver@test.com",
+            payer_email="paypal-buyer@test.com"
+        )
+        process_pdt.return_value = (pdt_obj, False)
+
+        resp = self.client.get(self.url)
+        assert resp.status_code == 200
+        assert "Payment Processed" in resp.content.decode("utf-8")
+        gift_voucher.refresh_from_db()
+        gift_voucher.voucher.refresh_from_db()
+        invoice.refresh_from_db()
+        pdt_obj.refresh_from_db()
+
+        assert gift_voucher.paid is True
+        assert gift_voucher.voucher.activated is True
+        assert invoice.transaction_id == "bar"
+        assert pdt_obj.invoice == "foo"
+
+        # invoice username added from pdt
+        assert invoice.username == "paypal-buyer@test.com"
+        assert len(mail.outbox) == 3
+        assert mail.outbox[0].to == [settings.DEFAULT_STUDIO_EMAIL]
+        # payment email goes to invoice email
+        assert mail.outbox[1].to == ["paypal-buyer@test.com"]
+        assert "Your payment has been processed" in mail.outbox[1].subject
+        # gift voucher goes to purchaser emailon voucher
+        assert mail.outbox[2].to == ["anon@test.com"]
+        assert "Gift Voucher" in mail.outbox[2].subject
+
+    @patch("payments.views.process_pdt")
     def test_return_with_valid_pdt_with_matching_invoice_and_merch(self, process_pdt):
         invoice = baker.make(
             Invoice, invoice_id="foo", amount=10, business_email="testreceiver@test.com",

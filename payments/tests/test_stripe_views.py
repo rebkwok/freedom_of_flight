@@ -24,7 +24,8 @@ def get_mock_payment_intent(webhook_event_type=None, **params):
         "status": "succeeded",
         "metadata": {},
         "currency": "gbp",
-        "client_secret": "secret"
+        "client_secret": "secret",
+        "charges": Mock(data=[{"billing_details": {"email": "stripe-payer@test.com"}}])
     }
     options = {**defaults, **params}
     if webhook_event_type == "payment_intent.payment_failed":
@@ -171,6 +172,51 @@ class StripePaymentCompleteViewTests(TestUsersMixin, TestCase):
         assert mail.outbox[1].to == [self.student_user.email]
         assert "Your payment has been processed" in mail.outbox[1].subject
         assert mail.outbox[2].to == [self.student_user.email]
+        assert "Gift Voucher" in mail.outbox[2].subject
+
+    @patch("payments.views.stripe.PaymentIntent")
+    def test_return_with_matching_invoice_and_gift_voucher_anon_user(self, mock_payment_intent):
+        assert StripePaymentIntent.objects.exists() is False
+        invoice = baker.make(
+            Invoice, invoice_id="foo", amount=10, business_email="testreceiver@test.com",
+            username="", stripe_payment_intent_id="mock-intent-id"
+        )
+        gift_voucher = baker.make(
+            GiftVoucher, gift_voucher_config__discount_amount=10, paid=False,
+            invoice=invoice
+        )
+        gift_voucher.voucher.purchaser_email = "anon@test.com"
+        gift_voucher.voucher.save()
+        metadata = {
+            "invoice_id": "foo",
+            "invoice_signature": invoice.signature(),
+            **invoice.items_metadata(),
+        }
+        mock_payment_intent.retrieve.return_value = get_mock_payment_intent(metadata=metadata)
+
+        resp = self.client.post(self.url, data={"payload": json.dumps({"id": "mock-intent-id"})})
+        assert resp.status_code == 200
+        assert "Payment Processed" in resp.content.decode("utf-8")
+        gift_voucher.refresh_from_db()
+        gift_voucher.voucher.refresh_from_db()
+        invoice.refresh_from_db()
+
+        assert gift_voucher.paid is True
+        assert gift_voucher.voucher.activated is True
+        assert invoice.transaction_id is None
+
+        # invoice username added from payment intent
+        assert invoice.username == "stripe-payer@test.com"
+        payment_intent_obj = StripePaymentIntent.objects.latest("id")
+        assert payment_intent_obj.invoice == invoice
+
+        assert len(mail.outbox) == 3
+        assert mail.outbox[0].to == [settings.DEFAULT_STUDIO_EMAIL]
+        # payment email goes to invoice email
+        assert mail.outbox[1].to == ["stripe-payer@test.com"]
+        assert "Your payment has been processed" in mail.outbox[1].subject
+        # gift voucher goes to purchaser emailon voucher
+        assert mail.outbox[2].to == ["anon@test.com"]
         assert "Gift Voucher" in mail.outbox[2].subject
 
     @patch("payments.views.stripe.PaymentIntent")

@@ -124,6 +124,7 @@ def check_paypal_data(ipn_or_pdt, invoice):
 def get_invoice_from_ipn_or_pdt(ipn_or_pdt, paypal_obj_type, raise_immediately=False):
     # For PDTs, we don't raise the exception here so we don't expose it to the user; leave it for
     # the IPN signal to raise and emails will be sent to admins
+    invoice = None
     if not ipn_or_pdt.invoice:
         # sometimes paypal doesn't send back the invoice id - try to retrieve it from the custom field
         invoice = retrieve_invoice_from_paypal_data(ipn_or_pdt)
@@ -136,7 +137,13 @@ def get_invoice_from_ipn_or_pdt(ipn_or_pdt, paypal_obj_type, raise_immediately=F
         ipn_or_pdt.invoice = invoice.invoice_id
         ipn_or_pdt.save()
     try:
-        return Invoice.objects.get(invoice_id=ipn_or_pdt.invoice)
+        found_invoice = invoice or Invoice.objects.get(invoice_id=ipn_or_pdt.invoice)
+        if not found_invoice.username:
+            # if there's no username on the invoice, it's from a guest checkout
+            # Add the username from the payer email
+            found_invoice.username = ipn_or_pdt.payer_email
+            found_invoice.save()
+        return found_invoice
     except Invoice.DoesNotExist:
         logger.error("Error processing paypal %s %s; could not find invoice", paypal_obj_type, ipn_or_pdt.id)
         if raise_immediately:
