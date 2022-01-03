@@ -15,7 +15,7 @@ from paypal.standard.pdt.views import process_pdt
 import stripe
 
 from activitylog.models import ActivityLog
-from .emails import send_processed_payment_emails, send_failed_payment_emails, send_processed_refund_emails
+from .emails import send_failed_payment_emails, send_processed_refund_emails
 from .exceptions import PayPalProcessingError, StripeProcessingError
 from .models import Invoice, Seller, StripePaymentIntent
 from .utils import check_paypal_data, get_paypal_form, get_invoice_from_ipn_or_pdt, \
@@ -144,6 +144,7 @@ def stripe_payment_complete(request):
         if "total_voucher_code" in request.session:
             context.update({"total_voucher_code": request.session["total_voucher_code"]})
             del request.session["total_voucher_code"]
+
         return render(request, 'payments/valid_payment.html', context)
     else:
         send_failed_payment_emails(payment_intent=payment_intent, error=error)

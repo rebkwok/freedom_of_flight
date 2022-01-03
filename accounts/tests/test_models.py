@@ -4,16 +4,20 @@ import pytest
 from datetime import datetime, timedelta
 from decimal import Decimal
 
+from model_bakery import baker
+
+from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 from django.utils import timezone
 
 from accounts.models import CookiePolicy, DataPrivacyPolicy, DisclaimerContent, SignedDataPrivacy, \
-    NonRegisteredDisclaimer, ArchivedDisclaimer, has_active_data_privacy_agreement, \
+    UserProfile, ArchivedDisclaimer, has_active_data_privacy_agreement, \
     active_data_privacy_cache_key
 
 from common.test_utils import make_disclaimer_content, TestUsersMixin, make_online_disclaimer, make_nonregistered_disclaimer
+from payments.models import Seller
 
 
 class DisclaimerContentModelTests(TestCase):
@@ -299,3 +303,64 @@ class SignedDataPrivacyModelTests(TestUsersMixin, TestCase):
 
         SignedDataPrivacy.objects.get(user=self.student_user).delete()
         assert cache.get(active_data_privacy_cache_key(self.student_user))is None
+
+
+class UserModelTests(TestUsersMixin, TestCase):
+
+    def setUp(self):
+        self.create_users()
+        self.create_admin_users()
+
+    def test_user_age(self):
+        profile = self.student_user.userprofile
+        profile.date_of_birth = timezone.now() - timedelta(days=366*20)
+        profile.save()
+        assert self.student_user.age == 20
+
+        child_profile = self.child_user.childuserprofile
+        child_profile.date_of_birth = timezone.now() - timedelta(days=366 * 10)
+        child_profile.save()
+        assert self.child_user.age == 10
+
+    def test_is_seller(self):
+        assert not self.student_user.is_seller
+
+        assert Seller.objects.exists() is False
+        self.staff_user.userprofile.seller = True
+        self.staff_user.userprofile.save()
+        assert self.staff_user.is_seller
+
+        assert Seller.objects.count() == 1
+        seller = Seller.objects.first()
+        assert seller.user == self.staff_user
+
+        self.staff_user.userprofile.seller = False
+        self.staff_user.userprofile.save()
+        assert not self.staff_user.is_seller
+        assert Seller.objects.exists() is False
+
+    def test_manager_user(self):
+        assert self.student_user.manager_user is None
+        assert self.child_user.manager_user == self.manager_user
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "method",
+    [
+        "is_student", "is_manager", "is_seller"
+    ]
+)
+def test_create_userprofile(method):
+    user = baker.make(User)
+    assert hasattr(user, "userprofile") is False
+    assert getattr(user, method) is False
+    assert hasattr(user, "userprofile") is True
+
+
+@pytest.mark.django_db
+def test_create_seller():
+    assert Seller.objects.exists() is False
+    user = baker.make(User)
+    baker.make(UserProfile, user=user, seller=True)
+    assert Seller.objects.exists()

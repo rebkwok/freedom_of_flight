@@ -13,7 +13,7 @@ from booking.views import (
     CourseListView,
     stripe_checkout, check_total,
     GiftVoucherPurchaseView, GiftVoucherUpdateView, GiftVoucherDetailView, voucher_details,
-    gift_voucher_delete,
+    guest_shopping_basket
 )
 
 
@@ -63,13 +63,13 @@ urlpatterns = [
     path("stripe-checkout/", stripe_checkout, name="stripe_checkout"),
     path('ajax-cart-item-delete/', ajax_cart_item_delete, name='ajax_cart_item_delete'),
     path('check-total/', check_total, name="check_total"),
+    path("guest-shopping-cart/", guest_shopping_basket, name="guest_shopping_basket"),
 
     # GIFT VOUCHERS
     path('gift-vouchers/', GiftVoucherPurchaseView.as_view(), name='buy_gift_voucher'),
     path('gift-vouchers/<slug:slug>/update', GiftVoucherUpdateView.as_view(), name='gift_voucher_update'),
     path('gift-vouchers/<slug:slug>', GiftVoucherDetailView.as_view(), name='gift_voucher_details'),
     path('vouchers/<str:voucher_code>', voucher_details, name='voucher_details'),
-    path('gift-vouchers/<slug:slug>/delete', gift_voucher_delete, name='gift_voucher_delete'),
 
     # EVENTS LIST: needs to go last, catches everything else
     path('<slug:track>/', EventListView.as_view(), name='events'),

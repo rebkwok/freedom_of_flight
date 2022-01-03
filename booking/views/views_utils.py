@@ -37,6 +37,14 @@ def data_privacy_required(view_func):
     return wrap
 
 
+def redirect_to_voucher_cart(view_func):
+    def wrap(request, *args, **kwargs):
+        if not request.user.is_authenticated and request.session.get("purchases", {}).get("gift_vouchers"):
+            return HttpResponseRedirect(reverse('booking:guest_shopping_basket'))
+        return view_func(request, *args, **kwargs)
+    return wrap
+
+
 def _managed_user_plus_self(user):
     return {user, *user.managed_users}
 
@@ -90,3 +98,12 @@ def get_unpaid_user_managed_items(user):
 
 def total_unpaid_item_count(user):
     return sum([queryset.count() for queryset in get_unpaid_user_managed_items(user).values()])
+
+
+def get_unpaid_gift_vouchers_from_session(request):
+    gift_voucher_ids = request.session.get("purchases", {}).get("gift_vouchers", [])
+    gift_vouchers = GiftVoucher.objects.filter(id__in=gift_voucher_ids, paid=False)
+    if gift_vouchers.count() != len(gift_voucher_ids):
+        request.session.get("purchases", {})["gift_vouchers"] = list(
+            gift_vouchers.values_list("id", flat=True))
+    return gift_vouchers

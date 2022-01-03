@@ -5,9 +5,9 @@ from django.conf import settings
 from django.utils import timezone
 
 from merchandise.models import Product
-from .models import Block, Track, Event, GiftVoucherConfig
+from .models import Track, Event, GiftVoucherConfig
 from .utils import get_view_as_user
-from .views.views_utils import total_unpaid_item_count
+from .views.views_utils import total_unpaid_item_count, get_unpaid_gift_vouchers_from_session
 
 
 def booking(request):
@@ -25,7 +25,12 @@ def booking(request):
         view_as_user = get_view_as_user(request)
     else:
         available_users = []
-        cart_item_count = None
+        cart_item_count = 0
+        purchases = request.session.get("purchases")
+        if purchases:
+            gift_vouchers = get_unpaid_gift_vouchers_from_session(request)
+            cart_item_count += gift_vouchers.count()
+
         view_as_user = request.user
 
     return {

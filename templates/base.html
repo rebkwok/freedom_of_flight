@@ -78,12 +78,12 @@
 
       <span class="float-right">
         <ul class="nav navbar-nav mr-auto">
+        <li>
+          <a class="btn btn-primary btn-sm mt-1" href="{% url 'booking:shopping_basket' %}">
+            <span><i class="fas fa-shopping-cart"></i> <span class="badge badge-light" id="cart_item_menu_count">{{ cart_item_count }}</span></span>
+          </a>
+        </li>
           {% if request.user.is_authenticated %}
-           <li>
-              <a class="btn btn-primary btn-sm mt-1" href="{% url 'booking:shopping_basket' %}">
-                <span><i class="fas fa-shopping-cart"></i> <span class="badge badge-light" id="cart_item_menu_count">{{ cart_item_count }}</span></span>
-              </a>
-            </li>
             <li class="nav-item"><a class="nav-link" href="{% url 'account_logout' %}">Log Out
                   <span class="d-none d-lg-inline-block" data-toggle="tooltip" data-html="true" title='<span class="helptext">Logged in as {{ request.user|full_name }}</span>'>
                   <i class="fas fa-info-circle"></i>

@@ -25,17 +25,19 @@ class GiftVoucherPurchaseViewTests(EventTestMixin, TestUsersMixin, TestCase):
         self.make_data_privacy_agreement(self.student_user)
         self.login(self.student_user)
 
-    def test_login_required(self):
-        """
-        test that purchase form not shown if not logged in
-        """
+    def test_login_not_required(self):
         self.client.logout()
         resp = self.client.get(self.url)
         assert resp.status_code == 200
         # only active voucher configs shown
         assert [config.id for config in resp.context_data['gift_voucher_configs']] == [self.config_block.id, self.config_total.id]
-        assert "<form" not in resp.rendered_content
-        assert "Gift vouchers are available to purchase for the following" in resp.rendered_content
+        assert "<form" in resp.rendered_content
+        assert "Please check your email address is correct" in resp.rendered_content
+
+        self.login(self.student_user)
+        resp = self.client.get(self.url)
+        # email check warning only shown for not-logged in users
+        assert "Please check your email address is correct" not in resp.rendered_content
 
     def test_gift_voucher_purchase_options(self):
         resp = self.client.get(self.url)
@@ -61,6 +63,42 @@ class GiftVoucherPurchaseViewTests(EventTestMixin, TestUsersMixin, TestCase):
         assert gift_voucher.voucher.purchaser_email == self.student_user.email
         assert gift_voucher.voucher.name == "Donald Duck"
         assert gift_voucher.voucher.message == "Happy Birthday"
+
+    def test_gift_voucher_purchase_mismatched_emails(self):
+        self.client.logout()
+        assert GiftVoucher.objects.exists() is False
+        data = {
+            "gift_voucher_config": self.config_block.id,
+            "user_email": self.student_user.email,
+            "user_email1": "foo@foo.com",
+            "recipient_name": "Donald Duck",
+            "message": "Happy Birthday"
+
+        }
+        resp = self.client.post(self.url, data)
+        form = resp.context_data["form"]
+        assert form.is_valid() is False
+        assert form.errors == {
+            "user_email1": ["Email addresses do not match"]
+        }
+
+    def test_gift_voucher_purchase_no_login(self):
+        self.client.logout()
+        assert "purchases" not in self.client.session
+        assert GiftVoucher.objects.exists() is False
+        data = {
+            "gift_voucher_config": self.config_block.id,
+            "user_email": "unknown@test.com",
+            "user_email1": "unknown@test.com",
+        }
+        resp = self.client.post(self.url, data)
+        assert GiftVoucher.objects.exists() is True
+        gift_voucher = GiftVoucher.objects.first()
+        assert gift_voucher.paid is False
+        assert gift_voucher.voucher.purchaser_email == "unknown@test.com"
+
+        assert resp.url == reverse("booking:guest_shopping_basket")
+        assert self.client.session["purchases"] == {"gift_vouchers": [gift_voucher.id]}
 
 
 class GiftVoucherPurchaseUpdateViewTests(EventTestMixin, TestUsersMixin, TestCase):
@@ -123,6 +161,26 @@ class GiftVoucherPurchaseUpdateViewTests(EventTestMixin, TestUsersMixin, TestCas
         assert isinstance(self.gift_voucher.voucher, BlockVoucher)
         assert TotalVoucher.objects.exists() is False
         assert resp.url == reverse("booking:shopping_basket")
+
+    def test_gift_voucher_change_anon_user(self):
+        self.client.logout()
+        voucher = baker.make_recipe(
+            "booking.gift_voucher_10", paid=False, total_voucher__purchaser_email="anon@test.com"
+        )
+        data = {
+            "gift_voucher_config": voucher.gift_voucher_config.id,
+            "user_email": "anon@test.com",
+            "user_email1": "anon@test.com",
+            "recipient_name": "Donald Duck",
+            "message": "Happy Birthday"
+
+        }
+        url = reverse('booking:gift_voucher_update', args=(voucher.slug,))
+        resp = self.client.post(url, data)
+        voucher.refresh_from_db()
+        assert voucher.voucher.purchaser_email == "anon@test.com"
+        assert voucher.voucher.name == "Donald Duck"
+        assert resp.url == reverse("booking:guest_shopping_basket")
 
     def test_gift_voucher_update_paid_voucher(self):
         self.gift_voucher.paid = True
@@ -197,31 +255,3 @@ class VoucherDetailViewTests(TestUsersMixin, TestCase):
         resp = self.client.get(reverse("booking:voucher_details", args=(self.gift_voucher.code,)))
         assert resp.status_code == 302
         assert resp.url == reverse('booking:gift_voucher_details', args=(self.gift_voucher.slug,))
-
-
-class GiftVoucherDeleteViewTests(TestUsersMixin, TestCase):
-
-    @classmethod
-    def setUpTestData(cls):
-        cls.config_total = baker.make(GiftVoucherConfig, discount_amount=10, active=True)
-
-    def setUp(self):
-        self.gift_voucher = baker.make(GiftVoucher, gift_voucher_config=self.config_total)
-        self.url = reverse("booking:gift_voucher_delete", args=(self.gift_voucher.slug,))
-
-    def test_delete(self):
-        assert GiftVoucher.objects.count() == 1
-        assert TotalVoucher.objects.count() == 1
-        self.client.get(self.url)
-        assert GiftVoucher.objects.exists() is False
-        assert TotalVoucher.objects.exists() is False
-
-    def test_delete_activated(self):
-        self.gift_voucher.activate()
-        assert GiftVoucher.objects.count() == 1
-        assert TotalVoucher.objects.count() == 1
-        resp = self.client.get(self.url)
-        assert GiftVoucher.objects.count() == 1
-        assert TotalVoucher.objects.count() == 1
-        assert resp.status_code == 302
-        assert resp.url == reverse("booking:permission_denied")

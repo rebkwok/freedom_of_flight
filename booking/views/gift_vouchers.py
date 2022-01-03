@@ -36,10 +36,21 @@ class GiftVoucherPurchaseView(GiftVoucherFormMixin, CreateView):
 
     def form_valid(self, form):
         messages.success(self.request, "Gift Voucher added to basket")
-        return super().form_valid(form)
+        gift_voucher = form.save()
+        resp = super().form_valid(form)
+        if not self.request.user.is_authenticated:
+            purchases = self.request.session.get("purchases", {})
+            gift_vouchers_on_session = set(purchases.get("gift_vouchers", []))
+            gift_vouchers_on_session.add(gift_voucher.id)
+            purchases["gift_vouchers"] = list(gift_vouchers_on_session)
+            self.request.session["purchases"] = purchases
+        return resp
 
     def get_success_url(self):
-        return reverse("booking:shopping_basket")
+        if self.request.user.is_authenticated:
+            return reverse("booking:shopping_basket")
+        else:
+            return reverse("booking:guest_shopping_basket")
 
 
 class GiftVoucherUpdateView(GiftVoucherFormMixin, GiftVoucherObjectMixin, UpdateView):
@@ -55,7 +66,10 @@ class GiftVoucherUpdateView(GiftVoucherFormMixin, GiftVoucherObjectMixin, Update
         if self.object.paid:
             return reverse("booking:gift_voucher_details", args=(self.kwargs["slug"],))
         else:
-            return reverse("booking:shopping_basket")
+            if self.request.user.is_authenticated:
+                return reverse("booking:shopping_basket")
+            else:
+                return reverse("booking:guest_shopping_basket")
 
 
 class GiftVoucherDetailView(GiftVoucherObjectMixin, UpdateView):
@@ -80,13 +94,3 @@ def voucher_details(request, voucher_code):
         return HttpResponseRedirect(reverse("booking:gift_voucher_details", args=(voucher.gift_voucher.first().slug,)))
     return TemplateResponse(request, template='booking/gift_voucher_detail.html', context=context)
 
-
-def gift_voucher_delete(request, slug):
-    gift_voucher = get_object_or_404(GiftVoucher, slug=slug)
-    if gift_voucher.voucher.activated:
-        return HttpResponseRedirect(reverse('booking:permission_denied'))
-    voucher_code = gift_voucher.voucher.code
-    gift_voucher.voucher.delete()
-    gift_voucher.delete()
-    ActivityLog.objects.create(log=f"Gift Voucher with code {voucher_code} deleted")
-    return HttpResponseRedirect(reverse('booking:buy_gift_voucher'))

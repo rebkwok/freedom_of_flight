@@ -11,7 +11,7 @@ from django.utils import timezone
 
 from accounts.models import has_active_disclaimer
 
-from booking.models import Booking, Block, WaitingListUser, BlockConfig
+from booking.models import Booking, Block, WaitingListUser, BlockConfig, GiftVoucher
 from common.test_utils import TestUsersMixin, EventTestMixin
 
 
@@ -58,6 +58,32 @@ class BookingToggleAjaxViewTests(EventTestMixin, TestUsersMixin, TestCase):
         resp = self.client.post(self.url(self.aerial_events[0].id), data={"user_id": self.student_user.id})
         assert resp.status_code == 200
         redirect_url = reverse('booking:event_purchase_options', args=(self.aerial_events[0].slug,))
+        assert resp.json() == {"redirect": True, "url": redirect_url}
+
+    def test_create_course_booking_no_available_block(self):
+        """
+        Test creating a booking
+        """
+        assert Booking.objects.exists() is False
+        resp = self.client.post(self.url(self.course_event.id), data={"user_id": self.student_user.id})
+        assert resp.status_code == 200
+        redirect_url = reverse('booking:course_purchase_options', args=(self.course_event.course.slug,))
+        assert resp.json() == {"redirect": True, "url": redirect_url}
+
+    def test_create_course_booking_with_available_block(self):
+        """
+        Test creating a booking
+        """
+        assert Booking.objects.exists() is False
+        baker.make(
+            Block, user=self.student_user, block_config__event_type=self.aerial_event_type,
+            block_config__course=True, block_config__size=self.course.number_of_events,
+            paid=True
+        )
+
+        resp = self.client.post(self.url(self.course_event.id), data={"user_id": self.student_user.id})
+        assert resp.status_code == 200
+        redirect_url = reverse('booking:course_events', args=(self.course_event.course.slug,))
         assert resp.json() == {"redirect": True, "url": redirect_url}
 
     def test_create_booking(self):
@@ -536,6 +562,37 @@ class AjaxCartItemDeleteView(TestUsersMixin, TestCase):
         assert Block.objects.exists() is False
         assert resp["cart_total"] == 0
         assert resp["cart_item_menu_count"] == 0
+
+    def test_delete_gift_voucher(self):
+        gift_voucher = baker.make_recipe(
+            "booking.gift_voucher_10",
+            total_voucher__purchaser_email="anon@test.com",
+        )
+        url = reverse("booking:ajax_cart_item_delete")
+        resp = self.client.post(url, {"item_type": "gift_voucher", "item_id": gift_voucher.id}).json()
+        assert GiftVoucher.objects.exists() is False
+        assert resp["cart_total"] == 0
+        assert resp["cart_item_menu_count"] == 0
+
+    def test_delete_gift_voucher_anonymous_user(self):
+        self.client.logout()
+        gift_voucher = baker.make_recipe(
+            "booking.gift_voucher_10",
+            total_voucher__purchaser_email="anon@test.com",
+        )
+        session = self.client.session
+        session.update({"purchases": {"gift_vouchers": [gift_voucher.id]}})
+        session.save()
+
+        url = reverse("booking:ajax_cart_item_delete")
+        resp = self.client.post(url, {"item_type": "gift_voucher", "item_id": gift_voucher.id}).json()
+        assert GiftVoucher.objects.exists() is False
+        assert resp["cart_total"] == 0
+        assert resp["cart_item_menu_count"] == 0
+
+        # cart items in context have been updated also
+        resp = self.client.get(reverse("booking:guest_shopping_basket"))
+        assert resp.context_data["unpaid_gift_voucher_info"] == []
 
 
 class AjaxBlockPurchaseTests(TestUsersMixin, TestCase):

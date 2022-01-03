@@ -1,5 +1,6 @@
 from datetime import timedelta
 from model_bakery import baker
+import pytest
 
 from django.contrib.auth.models import Group, User
 from django.core.cache import cache
@@ -7,10 +8,55 @@ from django.urls import reverse
 from django.test import TestCase
 from django.utils import timezone
 
-from ..models import DataPrivacyPolicy, OnlineDisclaimer, has_active_data_privacy_agreement
+from ..models import DataPrivacyPolicy, OnlineDisclaimer, has_active_data_privacy_agreement, UserProfile
 from common.test_utils import (
     make_disclaimer_content, TestUsersMixin, make_online_disclaimer
 )
+
+
+def _signup_form_data():
+    return {
+        'first_name': 'Test',
+        'last_name': 'User',
+        'address': 'test',
+        'postcode': 'test',
+        'phone': '1234',
+        'date_of_birth': '01-Jan-1990',
+        "student": True,
+        "manager": False,
+        'data_privacy_confirmation': True,
+        "email": "testuser@test.com",
+        "email2": "testuser@test.com",
+        "password1": "foo123456",
+        "password2": "foo123456"
+    }
+
+@pytest.mark.django_db
+def test_signup(client):
+    # signup creates user and userprofile
+    url = reverse("account_signup")
+    assert User.objects.exists() is False
+    client.post(url, _signup_form_data())
+
+    assert User.objects.count() == 1
+    assert UserProfile.objects.count() == 1
+    new_user = User.objects.first()
+    assert new_user.username == "testuser@test.com"
+
+
+@pytest.mark.django_db
+def test_signup_with_data_privacy_policy(client):
+    # signup creates user and userprofile, and dataprivacy policy if there is one
+    baker.make(DataPrivacyPolicy, content="foo")
+    url = reverse("account_signup")
+    assert User.objects.exists() is False
+    client.post(url, _signup_form_data())
+
+    assert User.objects.count() == 1
+    assert UserProfile.objects.count() == 1
+    new_user = User.objects.first()
+    assert new_user.username == "testuser@test.com"
+    assert has_active_data_privacy_agreement(new_user)
 
 
 class ProfileUpdateViewTests(TestUsersMixin, TestCase):
@@ -92,6 +138,19 @@ class ProfileTests(TestUsersMixin, TestCase):
         assert "/accounts/disclaimer" in str(resp.content)
 
         self.make_disclaimer(self.student_user)
+        resp = self.client.get(self.url)
+        assert "Completed" in str(resp.content)
+        assert "Add new disclaimer" not in str(resp.content)
+        assert "/accounts/disclaimer" not in str(resp.content)
+
+    def test_profile_view_shows_managed_user_disclaimer_info(self):
+        self.login(self.manager_user)
+        # no disclaimer yet
+        resp = self.client.get(self.url)
+        assert "Add new disclaimer" in str(resp.content)
+        assert "/accounts/disclaimer" in str(resp.content)
+
+        self.make_disclaimer(self.child_user)
         resp = self.client.get(self.url)
         assert "Completed" in str(resp.content)
         assert "Add new disclaimer" not in str(resp.content)
@@ -313,6 +372,32 @@ class DisclaimerCreateViewTests(TestUsersMixin, TestCase):
         questionnaire_fields = form.fields['health_questionnaire_responses'].fields
         assert questionnaire_fields[0].initial == "Boo"
         assert questionnaire_fields[1].initial is None
+
+
+class DisclaimerContactUpdateViewTests(TestUsersMixin, TestCase):
+
+    def setUp(self):
+        self.create_users()
+
+    def test_update_contact_info(self):
+        self.login(self.student_user)
+        make_online_disclaimer(
+            user=self.student_user,
+            emergency_contact_name='test1',
+            emergency_contact_relationship="mother",
+            emergency_contact_phone="4547"
+        )
+        assert self.student_user.online_disclaimer.first().emergency_contact_name == "test1"
+        url = reverse('accounts:update_emergency_contact', args=(self.student_user.id,))
+        self.client.post(
+            url,
+            dict(
+                emergency_contact_name='test2',
+                emergency_contact_relationship="father",
+                emergency_contact_phone="6789"
+            )
+        )
+        assert self.student_user.online_disclaimer.first().emergency_contact_name == "test2"
 
 
 # class NonRegisteredDisclaimerCreateViewTests(TestUsersMixin, TestCase):
