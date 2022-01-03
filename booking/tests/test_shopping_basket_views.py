@@ -304,10 +304,13 @@ class ShoppingBasketViewTests(TestUsersMixin, TestCase):
     def test_voucher_validation(self):
         voucher_with_discount = baker.make(BlockVoucher, code="test", discount=50, activated=False)
         voucher_with_discount_amount = baker.make(BlockVoucher, code="test_amount", discount_amount=10, activated=False)
-        baker.make_recipe(
-            "booking.dropin_block", block_config=self.dropin_block_config, user=self.student_user,
-        )
+
         for voucher in [voucher_with_discount, voucher_with_discount_amount]:
+            Block.objects.all().delete()
+            baker.make_recipe(
+                "booking.dropin_block", block_config=self.dropin_block_config,
+                user=self.student_user,
+            )
             # invalid code
             resp = self.client.post(self.url, data={"add_voucher_code": "add_voucher_code", "code": "foo"})
             assert resp.context_data["voucher_add_error"] == ['"foo" is not a valid code']
@@ -347,18 +350,34 @@ class ShoppingBasketViewTests(TestUsersMixin, TestCase):
             voucher.expiry_date = None
             voucher.max_per_user = 1
             voucher.save()
-            baker.make(
+            block = baker.make(
                 Block, block_config=self.dropin_block_config, user=self.student_user, voucher=voucher, paid=True
             )
             resp = self.client.post(self.url, data={"add_voucher_code": "add_voucher_code", "code": voucher.code})
             assert resp.context_data["voucher_add_error"] == [
                 f"Student User has already used voucher code {voucher.code} the maximum number of times (1)"]
 
+            # voucher existing unpaid block voucher already applied
+            voucher.expiry_date = None
+            voucher.max_per_user = 3
+            voucher.save()
+
+            # voucher already applied, but block not yet paid.  With the 2 block already created in
+            # this test (one paid, one unpaid), this will make the total max per user, allowed
+            baker.make(
+                Block, block_config=self.dropin_block_config, user=self.student_user,
+                voucher=voucher, paid=False
+            )
+            resp = self.client.post(self.url,
+                                    data={"add_voucher_code": "add_voucher_code",
+                                          "code": voucher.code})
+            assert resp.context_data["voucher_add_error"] == []
+            # voucher applied to the two unpaid blocks
             assert resp.context_data["total_cost"] == 20
 
             # voucher max total uses expired
             voucher.max_per_user = None
-            voucher.max_vouchers = 2
+            voucher.max_vouchers = 3
             voucher.save()
             baker.make(Block, voucher=voucher, block_config=self.dropin_block_config, _quantity=2)
 
@@ -367,7 +386,8 @@ class ShoppingBasketViewTests(TestUsersMixin, TestCase):
             assert resp.context_data["voucher_add_error"] == [
                 f"Voucher code {voucher.code} has limited number of total uses and expired before it could be used for all applicable blocks"
             ]
-            assert resp.context_data["total_cost"] == 20
+            # 50% discount applied to 2 blocks only, total == 10 + 10 + 20
+            assert resp.context_data["total_cost"] == 40
 
     def test_total_voucher_validation(self):
         voucher_with_discount = baker.make(TotalVoucher, code="test", discount=50, activated=False)
@@ -650,6 +670,29 @@ class AjaxShoppingBasketCheckoutTests(TestUsersMixin, TestCase):
         assert resp["url"] == reverse("booking:shopping_basket")
         block.refresh_from_db()
         assert block.voucher is None
+
+    def test_rechecks_total_vouchers_valid(self):
+        # active voucher
+        voucher = baker.make(TotalVoucher, code="test_total", discount=50, max_per_user=10, activated=True)
+        block = baker.make_recipe(
+            "booking.dropin_block", block_config=self.dropin_block_config, user=self.student_user,
+        )
+        # Add voucher code to session
+        session = self.client.session
+        session.update({"total_voucher_code": "test_total"})
+        session.save()
+        # total includes valid voucher code
+        self.client.post(self.url, data={"cart_total": 10}).json()
+        block.refresh_from_db()
+        assert block.invoice.total_voucher_code == "test_total"
+
+        # make voucher invalid and post again
+        voucher.activated = False
+        voucher.save()
+        resp = self.client.post(self.url, data={"cart_total": 10}).json()
+        assert resp["redirect"] is True
+        assert resp["url"] == reverse("booking:shopping_basket")
+        assert "total_voucher_code" not in self.client.session
 
     def test_rechecks_partial_subscription_costs(self):
         subscription_config = baker.make(

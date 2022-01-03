@@ -26,16 +26,10 @@ def validate_voucher_max_total_uses(voucher, paid_only=True, user=None, exclude_
                 f'Voucher code {voucher.code} has limited number of total uses and expired before it could be used for all applicable blocks')
 
 
-def validate_total_voucher_max_total_uses(voucher, paid_only=True, user=None):
+def validate_total_voucher_max_total_uses(voucher):
     if voucher.max_vouchers is not None:
         used_voucher_invoices = Invoice.objects.filter(total_voucher_code=voucher.code)
-        if paid_only:
-            # exclude any associated with unpaid invoices
-            used_voucher_invoices = used_voucher_invoices.filter(paid=True)
-        else:
-            # We're counting unpaid invoices, but still we need to
-            # exclude unpaid invoices with voucher for this user
-            used_voucher_invoices = used_voucher_invoices.exclude(paid=False, username=user.username)
+        # exclude any uses associated with unpaid invoices
         if used_voucher_invoices.count() >= voucher.max_vouchers:
             raise VoucherValidationError(
                 f'Voucher code {voucher.code} has limited number of total uses and has expired')
@@ -54,7 +48,7 @@ def validate_voucher_properties(voucher):
         if isinstance(voucher, BlockVoucher):
             validate_voucher_max_total_uses(voucher, paid_only=True)
         else:
-            validate_total_voucher_max_total_uses(voucher, paid_only=True)
+            validate_total_voucher_max_total_uses(voucher)
 
 
 def validate_unpaid_voucher_max_total_uses(user, voucher, exclude_block_id=None):
@@ -127,12 +121,11 @@ def _verify_block_vouchers(unpaid_blocks):
         if block.voucher:
             try:
                 validate_voucher_properties(block.voucher)
-                validate_voucher_for_block_configs_in_cart(block.voucher, [block])
-                validate_voucher_for_user(block.voucher, block.user)
-                if block.voucher.check_block_config(block.block_config):
-                    validate_voucher_for_unpaid_block(block, block.voucher)
-                else:
+                # check the voucher is valid for this block_config (returns bool)
+                if not block.voucher.check_block_config(block.block_config):
                     raise VoucherValidationError("voucher on block not valid")
+                validate_voucher_for_user(block.voucher, block.user)
+                validate_voucher_for_unpaid_block(block, block.voucher)
             except VoucherValidationError:
                 block.voucher = None
                 block.save()

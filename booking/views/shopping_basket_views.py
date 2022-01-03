@@ -95,6 +95,11 @@ def shopping_basket(request):
             # report if not valid for use with any unpaid blocks
             voucher_errors = []
             voucher_type = "block"
+
+            def _add_voucher_error_to_list(error):
+                if str(error) not in voucher_errors:
+                    voucher_errors.append(str(error))
+
             try:
                 voucher = BlockVoucher.objects.get(code=code)
             except BlockVoucher.DoesNotExist:
@@ -102,7 +107,7 @@ def shopping_basket(request):
                     voucher = TotalVoucher.objects.get(code=code)
                     voucher_type = "total"
                 except TotalVoucher.DoesNotExist:
-                    voucher_errors.append(f'"{code}" is not a valid code')
+                    _add_voucher_error_to_list(f'"{code}" is not a valid code')
             if not voucher_errors:
                 try:
                     # check overall user validation, not specific to the block user
@@ -120,17 +125,17 @@ def shopping_basket(request):
                                             validate_voucher_for_unpaid_block(block, voucher)
                                             blocks_to_apply.append(block)
                                         except VoucherValidationError as user_voucher_error:
-                                            voucher_errors.append(str(user_voucher_error))
+                                            _add_voucher_error_to_list(user_voucher_error)
                                 # Passed all validation checks; apply it to blocks
                                 apply_voucher_to_unpaid_blocks(voucher, blocks_to_apply)
                             except VoucherValidationError as user_voucher_error:
-                                voucher_errors.append(str(user_voucher_error))
+                                _add_voucher_error_to_list(user_voucher_error)
                     else:
                         try:
                             validate_total_voucher_for_checkout_user(voucher, request.user)
                             request.session["total_voucher_code"] = voucher.code
                         except VoucherValidationError as user_voucher_error:
-                            voucher_errors.append(str(user_voucher_error))
+                            _add_voucher_error_to_list(user_voucher_error)
                 except VoucherValidationError as voucher_error:
                     voucher_errors.insert(0, str(voucher_error))
             context["voucher_add_error"] = voucher_errors
