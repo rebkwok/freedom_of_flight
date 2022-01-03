@@ -20,9 +20,11 @@
             </ul>
         </div>
         <div>
-            If you provide a recipient name and/or message, these will be displayed on the voucher.<br>
+            If you provide a recipient name and/or message, these will be displayed on the voucher.  Once your purchase
+            is complete, you will be emailed a link to a printable copy of your voucher, as well as a link to edit
+            the recipient name and message, if you wish.<br>
             {% if not request.user.is_authenticated %}
-            Please check your email address is correct; your voucher will be sent to this address.
+            Please check your email address is correct.  Your voucher will be emailed to this address.
             {% endif %}
         </div>
     {% else %}
