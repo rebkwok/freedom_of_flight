@@ -276,6 +276,15 @@ class DisclaimerCreateViewTests(TestUsersMixin, TestCase):
         assert resp.status_code == 302
         assert resp.url == reverse("accounts:profile")
 
+    def test_post_form_with_already_active_disclaimer(self):
+        cache.clear()
+        url = reverse('accounts:disclaimer_form', args=(self.student_user.id,))
+        self.login(self.student_user)
+        make_online_disclaimer(user=self.student_user, version=self.content.version)
+        resp = self.client.post(url, self.form_data)
+        assert resp.status_code == 302
+        assert resp.url == reverse("accounts:profile")
+
     def test_disclaimer_health_questionnaire_required_fields(self):
         make_disclaimer_content(
             form=[

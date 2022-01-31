@@ -1,7 +1,11 @@
+from socket import timeout
+from xml.dom import ValidationErr
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
+from django.core.cache import cache
 from django.core.mail import send_mail
 from django.contrib import messages
+from django.core.exceptions import ValidationError
 from django.forms.widgets import TextInput
 from django.shortcuts import render, HttpResponseRedirect, get_object_or_404
 from django.views.decorators.debug import sensitive_post_parameters
@@ -21,7 +25,8 @@ from common.utils import full_name
 from .forms import DisclaimerForm, DataPrivacyAgreementForm, NonRegisteredDisclaimerForm, \
     ProfileForm, DisclaimerContactUpdateForm, RegisterChildUserForm, ManagedProfileForm
 from .models import CookiePolicy, DataPrivacyPolicy, SignedDataPrivacy, UserProfile, OnlineDisclaimer, \
-    has_active_data_privacy_agreement, has_active_disclaimer, has_expired_disclaimer, ChildUserProfile, DisclaimerContent
+    has_active_data_privacy_agreement, has_active_disclaimer, has_expired_disclaimer,  \
+    ChildUserProfile, DisclaimerContent, active_disclaimer_cache_key
 from activitylog.models import ActivityLog
 
 
@@ -254,7 +259,15 @@ class DisclaimerCreateView(LoginRequiredMixin, DynamicDisclaimerFormMixin, Creat
     def form_valid(self, form):
         disclaimer = self.form_pre_commit(form)
         disclaimer.user = self.disclaimer_user
-        disclaimer.save()
+        try:
+            disclaimer.save()
+        except ValidationError as error:
+            if "Active disclaimer already exists" in str(error):
+                messages.info(self.request, f"{full_name(self.disclaimer_user)} has a completed disclaimer")
+                cache.set(active_disclaimer_cache_key(self.disclaimer_user), True, timeout=600)
+                return HttpResponseRedirect(reverse("accounts:profile"))
+            raise
+
         return super().form_valid(form)
 
     def get_success_url(self):
