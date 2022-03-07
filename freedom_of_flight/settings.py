@@ -65,6 +65,8 @@ ALLOWED_HOSTS = [
 if env('LOCAL'):  # pragma: no cover
     ALLOWED_HOSTS = ['*']
 
+# https://docs.djangoproject.com/en/4.0/ref/settings/#std:setting-CSRF_TRUSTED_ORIGINS
+CSRF_TRUSTED_ORIGINS = ['https://booking.freedomofflightaerial.com']
 
 # Application definition
 

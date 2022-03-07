@@ -1045,6 +1045,10 @@ class SubscriptionConfig(models.Model):
             return self.start_date if not next else None
         # replace expiry date with very end of day in local time
         if self.start_options == "start_date":
+            # TODO this is a workaround for Delorean, which currently can't deal with
+            # latest tzinfo
+            # https://github.com/myusuf3/delorean/issues/110
+            naive_now = timezone.now().replace(tzinfo=None)
             # find most recent matching start date from config
             if self.duration_units == "weeks":
                 # recurs on the same day of the week
@@ -1052,14 +1056,14 @@ class SubscriptionConfig(models.Model):
                 if timezone.now().weekday() == weekday:
                     if next:
                         calculated_start = getattr(
-                            Delorean(timezone.now(), timezone="utc"), f"{'next'}_{calendar.day_name[weekday].lower()}"
+                            Delorean(naive_now, timezone="utc"), f"{'next'}_{calendar.day_name[weekday].lower()}"
                         )()
                         calculated_start = start_of_day_in_utc(calculated_start.datetime)
                     else:
-                        calculated_start = start_of_day_in_utc(Delorean(timezone.now(), timezone="utc").datetime)
+                        calculated_start = start_of_day_in_utc(Delorean(timezone.now().replace(tzinfo=pytz.utc), timezone="utc").datetime)
                 else:
                     weekday_method = f"{'next' if next else 'last'}_{calendar.day_name[weekday].lower()}"
-                    calculated_start = getattr(Delorean(timezone.now(), timezone="utc"), weekday_method)()
+                    calculated_start = getattr(Delorean(naive_now, timezone="utc"), weekday_method)()
                     calculated_start = start_of_day_in_utc(calculated_start.datetime)
                 # get time in weeks between calculated weekday and start
                 time_diff = (calculated_start - self.start_date).days / 7
