@@ -14,10 +14,6 @@ jobs:
   test:
     runs-on: ubuntu-20.04
 
-    strategy:
-      matrix:
-        python-version: [3.7, 3.9]
-
     services:
       # Label used to access the service container
       postgres:
@@ -39,10 +35,10 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python 3.9
         uses: actions/setup-python@v2
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: 3.9
           cache: pip
           cache-dependency-path: requirements.txt
 
