@@ -51,10 +51,16 @@ def paypal_return(request):
             failed = True
             error = "No invoice on PDT on return from paypal"
     if not failed:
+        if invoice.blocks.exists():
+            redirect_track = invoice.blocks.first().block_config.event_type.track
+        else:
+            redirect_track = None
+
         context = {
             "cart_items": invoice.items_dict().values(),
             "item_types": invoice.item_types(),
             "total_charged": invoice.amount,
+            "redirect_track": redirect_track
         }
         if "total_voucher_code" in request.session:
             context.update({"total_voucher_code": request.session["total_voucher_code"]})
@@ -136,10 +142,16 @@ def stripe_payment_complete(request):
     payment_intent.metadata.pop("invoice_id", None)
     payment_intent.metadata.pop("invoice_signature", None)
     if not failed:
+        if invoice.blocks.exists():
+            redirect_track = invoice.blocks.first().block_config.event_type.track
+        else:
+            redirect_track = None
+
         context = {
             "cart_items": invoice.items_dict().values(),
             "item_types": invoice.item_types(),
             "total_charged": invoice.amount,
+            "redirect_track": redirect_track,
         }
         if "total_voucher_code" in request.session:
             context.update({"total_voucher_code": request.session["total_voucher_code"]})

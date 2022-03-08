@@ -10,7 +10,7 @@ from django.test import TestCase, override_settings
 import stripe
 from model_bakery import baker
 
-from booking.models import Block, Subscription, GiftVoucher
+from booking.models import Subscription, GiftVoucher
 from common.test_utils import TestUsersMixin
 from merchandise.tests.utils import make_purchase
 from ..models import Invoice, Seller, StripePaymentIntent
@@ -80,7 +80,7 @@ class StripePaymentCompleteViewTests(TestUsersMixin, TestCase):
             Invoice, invoice_id="foo", amount=10, business_email="testreceiver@test.com",
             username=self.student_user.username, stripe_payment_intent_id="mock-intent-id"
         )
-        block = baker.make(Block, paid=False, invoice=invoice, user=self.student_user)
+        block = baker.make_recipe('booking.dropin_block', paid=False, invoice=invoice, user=self.student_user)
         metadata = {
             "invoice_id": "foo",
             "invoice_signature": invoice.signature(),
@@ -225,7 +225,7 @@ class StripePaymentCompleteViewTests(TestUsersMixin, TestCase):
             Invoice, invoice_id="foo", amount=10, business_email="testreceiver@test.com",
             username=self.student_user.username, stripe_payment_intent_id="mock-intent-id"
         )
-        block = baker.make(Block, paid=False, invoice=invoice, user=self.student_user)
+        block = baker.make_recipe('booking.dropin_block', paid=False, invoice=invoice, user=self.student_user)
         subscription = baker.make(Subscription, paid=False, invoice=invoice, user=self.student_user)
         gift_voucher = baker.make(
             GiftVoucher, gift_voucher_config__discount_amount=10, paid=False, invoice=invoice
@@ -265,7 +265,7 @@ class StripePaymentCompleteViewTests(TestUsersMixin, TestCase):
             Invoice, invoice_id="", amount=10, business_email="testreceiver@test.com",
             username=self.student_user.username, stripe_payment_intent_id="mock-intent-id"
         )
-        baker.make(Block, paid=False, invoice=invoice, user=self.student_user)
+        baker.make_recipe('booking.dropin_block', paid=False, invoice=invoice, user=self.student_user)
         metadata = {
             "invoice_id": "unk",
             "invoice_signature": invoice.signature(),
@@ -286,8 +286,8 @@ class StripePaymentCompleteViewTests(TestUsersMixin, TestCase):
             Invoice, invoice_id="foo", amount=10, business_email="testreceiver@test.com",
             username=self.manager_user.username, stripe_payment_intent_id="mock-intent-id"
         )
-        block1 = baker.make(Block, paid=False, invoice=invoice, user=self.manager_user)
-        block2 = baker.make(Block, paid=False, invoice=invoice, user=self.child_user)
+        block1 = baker.make_recipe('booking.dropin_block', paid=False, invoice=invoice, user=self.manager_user)
+        block2 = baker.make_recipe('booking.dropin_block', paid=False, invoice=invoice, user=self.child_user)
 
         metadata = {
             "invoice_id": "foo",
@@ -313,7 +313,7 @@ class StripePaymentCompleteViewTests(TestUsersMixin, TestCase):
             Invoice, invoice_id="foo", username=self.student_user.username, amount=50,
             stripe_payment_intent_id="mock-intent-id"
         )
-        baker.make(Block, paid=False, invoice=invoice, user=self.student_user)
+        baker.make_recipe('booking.dropin_block', paid=False, invoice=invoice, user=self.student_user)
         metadata = {
             "invoice_id": "foo",
             "invoice_signature": invoice.signature(),
@@ -330,7 +330,7 @@ class StripePaymentCompleteViewTests(TestUsersMixin, TestCase):
             Invoice, invoice_id="foo", username=self.student_user.username, amount=50,
             stripe_payment_intent_id="mock-intent-id"
         )
-        baker.make(Block, paid=False, invoice=invoice, user=self.student_user)
+        baker.make_recipe('booking.dropin_block', paid=False, invoice=invoice, user=self.student_user)
         metadata = {
             "invoice_id": "foo",
             "invoice_signature": "foo",
@@ -348,7 +348,7 @@ class StripePaymentCompleteViewTests(TestUsersMixin, TestCase):
             username=self.student_user.username, stripe_payment_intent_id="mock-intent-id",
             paid=True
         )
-        baker.make(Block, invoice=invoice, user=self.student_user, paid=True)
+        baker.make_recipe('booking.dropin_block', invoice=invoice, user=self.student_user, paid=True)
         metadata = {
             "invoice_id": "foo",
             "invoice_signature": "foo",
@@ -374,7 +374,7 @@ class StripeWebhookTests(TestUsersMixin, TestCase):
             Invoice, invoice_id="foo", amount=10, business_email="testreceiver@test.com",
             username=self.student_user.username, stripe_payment_intent_id="mock-intent-id"
         )
-        self.block = baker.make(Block, paid=False, invoice=self.invoice, user=self.student_user)
+        self.block = baker.make_recipe('booking.dropin_block', paid=False, invoice=self.invoice, user=self.student_user)
 
     @patch("payments.views.stripe.Webhook")
     def test_webhook_with_matching_invoice_and_block(self, mock_webhook):
