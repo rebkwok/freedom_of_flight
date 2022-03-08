@@ -1,8 +1,5 @@
-import os
 from unittest.mock import patch
-from hashlib import sha512
 
-import pytest
 from django.conf import settings
 from django.core import mail
 from django.shortcuts import reverse
@@ -78,7 +75,9 @@ class PaypalReturnViewTests(TestUsersMixin, TestCase):
             Invoice, invoice_id="foo", amount=10, business_email="testreceiver@test.com",
             username=self.student_user.username
         )
-        block = baker.make(Block, paid=False, invoice=invoice, user=self.student_user)
+        block = baker.make_recipe(
+            'booking.dropin_block', paid=False, invoice=invoice, user=self.student_user
+        )
         pdt_obj = baker.make(
             PayPalPDT, invoice="foo", custom=f"{invoice.id}_{invoice.signature()}", txn_id="bar", mc_gross=10,
             mc_currency="GBP", receiver_email="testreceiver@test.com"
@@ -247,7 +246,9 @@ class PaypalReturnViewTests(TestUsersMixin, TestCase):
             Invoice, invoice_id="foo", amount=10, business_email="testreceiver@test.com",
             username=self.student_user.username
         )
-        block = baker.make(Block, paid=False, invoice=invoice, user=self.student_user)
+        block = baker.make_recipe(
+            'booking.dropin_block', paid=False, invoice=invoice, user=self.student_user
+        )
         subscription = baker.make(Subscription, paid=False, invoice=invoice, user=self.student_user)
         gift_voucher = baker.make(
             GiftVoucher, gift_voucher_config__discount_amount=10, paid=False, invoice=invoice
@@ -287,7 +288,9 @@ class PaypalReturnViewTests(TestUsersMixin, TestCase):
             Invoice, invoice_id="foo", amount=10, business_email="testreceiver@test.com",
             username=self.student_user.username
         )
-        block = baker.make(Block, paid=False, invoice=invoice, user=self.student_user)
+        block = baker.make_recipe(
+            'booking.dropin_block', paid=False, invoice=invoice, user=self.student_user,
+        )
         pdt_obj = baker.make(
             PayPalPDT, invoice="", custom=f"{invoice.id}_{invoice.signature()}", txn_id="bar", mc_gross=10, mc_currency="GBP",
             receiver_email="testreceiver@test.com"
@@ -311,7 +314,9 @@ class PaypalReturnViewTests(TestUsersMixin, TestCase):
             Invoice, invoice_id="", amount=10, business_email="testreceiver@test.com",
             username=self.student_user.username
         )
-        baker.make(Block, paid=False, invoice=invoice, user=self.student_user)
+        baker.make_recipe(
+            'booking.dropin_block', paid=False, invoice=invoice, user=self.student_user,
+        )
         pdt_obj = baker.make(
             PayPalPDT, invoice="foo",
             custom=f"unk_{invoice.signature()}", txn_id="bar", mc_gross=10,
@@ -335,7 +340,9 @@ class PaypalReturnViewTests(TestUsersMixin, TestCase):
             Invoice, invoice_id="", amount=10, business_email="testreceiver@test.com",
             username=self.student_user.username
         )
-        baker.make(Block, paid=False, invoice=invoice, user=self.student_user)
+        baker.make_recipe(
+            'booking.dropin_block', paid=False, invoice=invoice, user=self.student_user,
+       )
         pdt_obj = baker.make(
             PayPalPDT, invoice="foo",
             custom="unk", txn_id="bar", mc_gross=10,
@@ -359,8 +366,12 @@ class PaypalReturnViewTests(TestUsersMixin, TestCase):
             Invoice, invoice_id="foo", amount=10, business_email="testreceiver@test.com",
             username=self.manager_user.username
         )
-        block1 = baker.make(Block, paid=False, invoice=invoice, user=self.manager_user)
-        block2 = baker.make(Block, paid=False, invoice=invoice, user=self.child_user)
+        block1 = baker.make_recipe(
+            'booking.dropin_block', paid=False, invoice=invoice, user=self.manager_user,
+        )
+        block2 = baker.make_recipe(
+            'booking.dropin_block', paid=False, invoice=invoice, user=self.child_user,
+        )
         pdt_obj = baker.make(
             PayPalPDT, custom=f"{invoice.id}_{invoice.signature()}", txn_id="bar", mc_gross=10, mc_currency="GBP",
             receiver_email="testreceiver@test.com"
@@ -408,7 +419,9 @@ class PaypalReturnViewTests(TestUsersMixin, TestCase):
 
         for (invoice_values, pdt_values, valid) in tests:
             invoice = baker.make(Invoice, invoice_id="foo", username=self.student_user.username, **invoice_values)
-            baker.make(Block, paid=False, invoice=invoice, user=self.student_user)
+            baker.make_recipe(
+                'booking.dropin_block', paid=False, invoice=invoice, user=self.student_user
+            )
             pdt_obj = baker.make(PayPalPDT, custom=f"{invoice.id}_{invoice.signature()}", txn_id="bar", **pdt_values)
             process_pdt.return_value = (pdt_obj, not valid)
 
@@ -424,7 +437,9 @@ class PaypalReturnViewTests(TestUsersMixin, TestCase):
             Invoice, invoice_id="foo", amount=10, business_email="testreceiver@test.com",
             username=self.student_user.username
         )
-        block = baker.make(Block, paid=False, invoice=invoice, user=self.student_user)
+        block = baker.make_recipe(
+            'booking.dropin_block', paid=False, invoice=invoice, user=self.student_user
+        )
         pdt_obj = baker.make(
             PayPalPDT, custom=f"{invoice.id}_foo", txn_id="bar", mc_gross=10, mc_currency="GBP",
             receiver_email="testreceiver@test.com"
@@ -443,7 +458,9 @@ class PaypalReturnViewTests(TestUsersMixin, TestCase):
             Invoice, invoice_id="foo", amount=10, business_email="testreceiver@test.com",
             username=self.student_user.username, transaction_id="bar"
         )
-        baker.make(Block, invoice=invoice, user=self.student_user, paid=True)
+        baker.make_recipe(
+            'booking.dropin_block', invoice=invoice, user=self.student_user, paid=True
+        )
         pdt_obj = baker.make(
             PayPalPDT, custom=f"{invoice.id}_{invoice.signature()}", txn_id="bar", mc_gross=10, mc_currency="GBP",
             receiver_email="testreceiver@test.com"
