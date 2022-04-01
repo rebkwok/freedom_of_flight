@@ -21,7 +21,14 @@
           </div>
 
     {% if related_item %}
-        <div class="message alert alert-primary">Showing valid options for <strong><a href="{% url 'booking:event' related_item.slug %}">{{ related_item }}</a></strong> ONLY; see all payment plan options <a href="{% url 'booking:purchase_options' %}">here</a></div>
+        <div class="message alert alert-primary">Showing valid options for
+            <strong>
+                {% if related_item.events.exists %}
+                <a href="{% url 'booking:course_events' related_item.slug %}">
+                {% else %}
+                <a href="{% url 'booking:event' related_item.slug %}">
+                {% endif %}
+                {{ related_item }}</a></strong> ONLY; see all payment plan options <a href="{% url 'booking:purchase_options' %}">here</a></div>
     {% else %}
         <p><i class="text-primary fas fa-question-circle fa-lg"></i>
             Not sure which payment plan you require? Go to the <a href="{% url 'booking:schedule' %}">schedule</a>, find the class you want to book, and select "Payment Options" to display only valid options for that class
@@ -49,10 +56,11 @@
                         {%  if request.user.is_authenticated %}<td class="text-center">User</td>{% else %}<td></td>{% endif %}
                         <td></td>
                     </tr>
-                    {% if not blocklist.0.course %}
+                    {% if not blocklist.0.course and not related_item %}
                     <tr>
                         <td class="helptext text-danger" colspan="3">
-                            Drop-in credit blocks are NOT valid for classes that are part of a course.
+                            Most courses do NOT allow drop-in booking using a drop-in credit block. If you want to book
+                            a course class, please check the course details before purchasing.
                         </td>
                     </tr>
                     {% endif %}

@@ -171,6 +171,10 @@ class Course(models.Model):
         help_text="Users can book after a course has started (if they have purchased a credit "
                   "block valid for the remaining number of classes)"
     )
+    allow_drop_in = models.BooleanField(
+        default=False,
+        help_text="Users can book individual events with a drop-in credit block valid for this event type"
+    )
 
     @property
     def full(self):
@@ -189,9 +193,14 @@ class Course(models.Model):
         # Only count open bookings, which will inlcude no-shows but not fully cancelled ones
         # A booking should only be fully cancelled if the user has been manually cancelled out by an admin, and it
         # should apply to all bookings in the course.
-        return Booking.objects.select_related("event").filter(
-            event__course_id=self.id, status="OPEN"
-        ).order_by().distinct("user").count()
+
+        # Find the max count of open bookings against any single event
+        # There may be drop in bookings by different users
+        if not self.uncancelled_events.exists():
+            return 0
+        return max([
+            event.bookings.filter(status="OPEN").count() for event in self.uncancelled_events
+        ])
 
     @cached_property
     def start(self):
@@ -568,9 +577,15 @@ class Block(models.Model):
         if not self.active_block:
             return False
         if event.course:
-            # if the event is part of a course, it should be using a course block
-            return self.valid_for_course(course=event.course, event=event)
+            # if the event is part of a course, check if this block is valid for the course
+            valid_for_course = self.valid_for_course(course=event.course, event=event)
+            if valid_for_course:
+                return True
         if not self.block_config.course and self.block_config.event_type == event.event_type:
+            # We still get here for an event that's part of a course if this is a non-course block,
+            # in case of a course that allows drop-in booking for individual classes
+            if event.course and not event.course.allow_drop_in:
+                return False
             # event type matches and it's not a course block, check it's valid for this event (hasn't expired)
             return self._valid_and_active_for_event(event)
         return False

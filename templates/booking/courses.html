@@ -53,6 +53,7 @@
                         <li style="list-style: none;" class="ninety-pct"
                             {% if event.is_past %}class="expired"{% endif %}>
                             {{ event.start|date:"D d-M-y, H:i" }}-{{ event.end|date:"H:i" }}
+                            {% if event.id in user_info.booked_event_ids %}<i class="text-success fas fa-check-circle"></i>{% endif %}
                         </li>
                         {% endfor %}
                         </ul>
@@ -67,6 +68,8 @@
                                         {% if user_info.has_booked %}
                                             <span class="float-right"><i class="text-success fas fa-check-circle"></i> Booked</span><br/>
                                             <span class="float-right">{% include "booking/includes/block_info.html" %}</span>
+                                        {% elif user_info.has_booked_dropin %}
+                                            <span class="float-right"><i class="text-success fas fa-check-circle"></i> Booked drop-in</span><br/>
                                         {% elif course.full %}<span class="helptext float-right">Course is full</span>
                                         {% elif course.has_started and not course.allow_partial_booking %}<span class="helptext float-right">
                                             Course has started. Spaces may be available for the remaining {{ course.event_type.pluralized_label }}; {{ studio_email|obfuscate_mailto:"email" }} for further details.

@@ -125,7 +125,7 @@ def ajax_toggle_booking(request, event_id):
             return JsonResponse({"redirect": True, "url": url})
 
         # has available course block/subscription
-        if event.course:
+        if event.course and ref == "events":
             if requested_action == "opened" or existing_booking and existing_booking.status == "CANCELLED":
                 # First time booking for a course event, or reopening a fully cancelled course- redirect to book course
                 # rebookings can be done from events page
@@ -168,7 +168,8 @@ def ajax_toggle_booking(request, event_id):
         block_pre_cancel = booking.block
         block_pre_cancel_was_full = block_pre_cancel.full if block_pre_cancel else False
 
-        if event.course:
+        if event.course and booking.block.block_config.course:
+            # only course events booked with course blocks get set to no-show
             booking.no_show = True
         elif not event.event_type.allow_booking_cancellation:
             booking.no_show = True
@@ -226,6 +227,8 @@ def ajax_toggle_booking(request, event_id):
             messages.success(request, f"{event}: {alert_message['message']}")
             if ref == "bookings":
                 url = reverse("booking:bookings")
+            elif ref == "course_events":
+                url = reverse("booking:course_events", args=(event.course.slug,))
             else:
                 url = reverse("booking:events", args=(event.event_type.track.slug,))
             return JsonResponse({"redirect": True, "url": url + f"?page={page}"})

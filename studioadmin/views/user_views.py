@@ -277,16 +277,16 @@ def process_user_booking_updates(form, request, user):
 
             if 'status' in form.changed_data and action == 'updated':
                 if booking.status == 'CANCELLED':
-                    if booking.event.course:
-                        # bookings for course events don't get cancelled fully, just set to no_show
+                    if booking.event.course and booking.block and booking.block.block_config.course:
+                        # bookings for course events don't get cancelled fully, unless booked with a dropin block
                         booking.status = "OPEN"
                         booking.no_show = True
                         # reset the block if it was removed
                         booking.block = user.bookings.get(id=booking.id).block
                         messages.info(
                             request,
-                            "Cancelled course bookings are not refunded to user or credited back to blocks; "
-                            "booking has been set to no-show instead."
+                            "Cancelled course bookings made with course credit blocks are not refunded "
+                            "to user or credited back to blocks; booking has been set to no-show instead."
                         )
                     elif booking.block:  # pragma: no cover
                         # Form validation should prevent this, but make sure no block is assigned anyway

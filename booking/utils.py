@@ -25,7 +25,7 @@ def get_view_as_user(request):
 
 
 def has_available_block(user, event):
-    if event.course:
+    if event.course and not event.course.allow_drop_in:
         return any(True for block in user.blocks.all() if block.valid_for_course(event.course))
     else:
         return any(True for block in user.blocks.all() if block.valid_for_event(event))
@@ -41,16 +41,15 @@ def get_active_user_block(user, event):
     Expiry dates can be None if the block hasn't started yet, order by purchase date as well
     """
     if event.course:
-        blocks = user.blocks.filter(
-            block_config__course=True, block_config__event_type=event.course.event_type
-        ).order_by("expiry_date", "purchase_date")
-        # already sorted by expiry date, so we can just get the next valid one
-        return next((block for block in blocks if block.valid_for_course(event.course)), None)
-    else:
-        blocks = user.blocks.filter(
-            block_config__course=False, block_config__event_type=event.event_type
-        ).order_by("expiry_date", "purchase_date")
-        return next((block for block in blocks if block.valid_for_event(event)), None)
+        valid_course_block = get_active_user_course_block(user, event.course)
+        # If the course block is valid, or drop in isn't allowed, return it now
+        if valid_course_block is not None or not event.course.allow_drop_in:
+            return valid_course_block
+
+    blocks = user.blocks.filter(
+        block_config__course=False, block_config__event_type=event.event_type
+    ).order_by("expiry_date", "purchase_date")
+    return next((block for block in blocks if block.valid_for_event(event)), None)
 
 
 def get_active_user_course_block(user, course):
@@ -153,8 +152,8 @@ def user_can_book_or_cancel(event=None, user_booking=None, booking_restricted=No
     elif user_booking and user_booking.status == "OPEN" and not user_booking.no_show:
         # user has open booking, can always cancel, even if within booking retriction period
         return True
-    elif event.course and user_booking is not None:
-        # user has cancelled or no-show booking, but it's a course event
+    elif event.course and user_booking is not None and user_booking.no_show:
+        # user has no-show booking, but it's a course event
         return True
     else:
         # user hasn't booked, or has a cancelled or no-show booking - can cancel dependent on booking restrictions
@@ -232,7 +231,7 @@ def get_user_booking_info(user, event):
         "on_waiting_list": user.waitinglists.filter(event=event).exists(),
         "booking_restricted_pre_event_start": booking_restricted,
         "can_book_or_cancel": user_can_book_or_cancel(event, user_booking=user_booking, booking_restricted=booking_restricted),
-        "available_block": get_active_user_block(user, event),
+        "available_block": available_block,
         "available_subscription": available_subscription,
         "available_subscription_info": available_subscription_info,
         "show_warning": show_warning(
@@ -243,7 +242,6 @@ def get_user_booking_info(user, event):
         info.update(
             {
                 "has_available_course_block": has_available_course_block(user, event.course),
-                "available_block": get_active_user_course_block(user, event.course),
              }
         )
     else:
@@ -264,19 +262,30 @@ def get_user_booking_info(user, event):
 
 
 def get_user_course_booking_info(user, course):
-    has_booked = user.bookings.filter(event__course=course, status="OPEN").exists()
+    bookings = user.bookings.filter(event__course=course, status="OPEN")
+    has_booked = False
+    has_booked_dropin = False
+    if bookings:
+        booking = bookings.first()
+        if booking.block and booking.block.block_config.course:
+            has_booked = True
+        else:
+            has_booked_dropin = True
+    booked_events = bookings.values_list("event_id", flat=True)
     available_block = get_active_user_course_block(user, course)
 
     info = {
         "hide_block_info_divider": True,
         "has_available_block": available_block is not None,
         "has_booked": has_booked,
+        "has_booked_dropin": has_booked_dropin,
+        "booked_event_ids": booked_events,
         "open": has_booked,  # for block info
-        "available_block": available_block,
+        "available_course_block": available_block,
     }
     if has_booked:
         iter_used_blocks = (
             booking.block for booking in user.bookings.filter(event__course=course) if booking.block is not None
         )
-        info.update({"used_block": next(iter_used_blocks) if any(iter_used_blocks) else None})
+        info.update({"used_block": next(iter_used_blocks, None)})
     return info

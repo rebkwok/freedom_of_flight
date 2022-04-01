@@ -53,9 +53,14 @@ def block_config_context(request, course=None, event=None):
     dropin_block_configs = None
     course_block_configs = None
     if course is not None:
-        course_block_configs = BlockConfig.objects.filter(
-            active=True, course=True, event_type=course.event_type, size=course.number_of_events
-        )
+        if not course.full and not course.has_started:
+            course_block_configs = BlockConfig.objects.filter(
+                active=True, course=True, event_type=course.event_type, size=course.number_of_events
+            )
+        if course.allow_drop_in:
+            dropin_block_configs = BlockConfig.objects.filter(
+                active=True, course=False, event_type=course.event_type
+            )
     elif event is not None:
         dropin_block_configs = BlockConfig.objects.filter(
             active=True, course=False, event_type=event.event_type
