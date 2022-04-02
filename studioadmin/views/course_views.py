@@ -142,6 +142,14 @@ def ajax_toggle_course_partial_booking(request, course_id):
     return render(request, "studioadmin/includes/ajax_toggle_course_allow_partial_booking_btn.html", {"course": course})
 
 
+def ajax_toggle_course_dropin_booking(request, course_id):
+    course = Course.objects.get(id=course_id)
+    course.allow_drop_in = not course.allow_drop_in
+    course.save()
+
+    return render(request, "studioadmin/includes/ajax_toggle_course_allow_drop_in_booking_btn.html", {"course": course})
+
+
 @login_required
 @staff_required
 def cancel_course_view(request, slug):

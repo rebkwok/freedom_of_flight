@@ -27,7 +27,8 @@ from studioadmin.views import (
     email_subscription_users_view,
     UserSubscriptionsListView, SubscriptionAddView, SubscriptionEditView, ajax_subscription_delete,
     course_booking_add_view, course_block_change_view, export_users,
-    ajax_toggle_course_partial_booking, email_waiting_list_view, users_with_unused_blocks,
+    ajax_toggle_course_partial_booking, ajax_toggle_course_dropin_booking,
+    email_waiting_list_view, users_with_unused_blocks,
     StripeAuthorizeView, connect_stripe_view, StripeAuthorizeCallbackView, InvoiceListView,
     VoucherDetailView, VoucherUpdateView, VoucherCreateView, VoucherListView, GiftVoucherListView,
     GiftVoucherConfigListView, GiftVoucherConfigCreateView, GiftVoucherConfigUpdateView,
@@ -70,6 +71,10 @@ urlpatterns = [
     path(
         'ajax-toggle-course-allow-partial-booking/<int:course_id>/',
         ajax_toggle_course_partial_booking, name="ajax_toggle_course_allow_partial_booking"
+    ),
+    path(
+        'ajax-toggle-course-allow-dropin-booking/<int:course_id>/',
+        ajax_toggle_course_dropin_booking, name="ajax_toggle_course_allow_dropin_booking"
     ),
     path('course/create/', course_create_choice_view, name="choose_course_type_to_create"),
     path('course/<int:event_type_id>/create/', CourseCreateView.as_view(), name="create_course"),
