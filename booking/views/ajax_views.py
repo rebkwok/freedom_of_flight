@@ -117,7 +117,28 @@ def ajax_toggle_booking(request, event_id):
     host = f'http://{request.META.get("HTTP_HOST")}'
 
     if requested_action in ["opened", "reopened"]:
-        if not (has_available_block(user, event) or has_available_subscription(user, event)):
+        # OPENING/REOPENING
+        # make sure the event isn't full or cancelled
+        if event.spaces_left <= 0 or event.cancelled:
+            if not event.course:
+                redirect400 = True
+            elif existing_booking.status == "CANCELLED":
+                # Course no-shows are allowed to rebook, only fully cancelled ones count
+                # in the booking count
+                redirect400 = True
+            else:
+                redirect400 = False
+            if redirect400:
+                logger.error('Attempt to book %s class',
+                             'cancelled' if event.cancelled else 'full')
+                return HttpResponseBadRequest(
+                    "Sorry, this event {}".format(
+                        "has been cancelled" if event.cancelled else "is now full")
+                )
+        has_payment_method = has_available_block(user, event) or has_available_subscription(user, event)
+        no_show_course_booking = event.course and existing_booking and existing_booking.no_show
+        if not no_show_course_booking and not has_payment_method:
+            # rebooking, no block on booking (i.e. was fully cancelled) and no block available
             if event.course:
                 url = reverse("booking:course_purchase_options", args=(event.course.slug,))
             else:
@@ -126,19 +147,14 @@ def ajax_toggle_booking(request, event_id):
 
         # has available course block/subscription
         if event.course and ref == "events":
-            if requested_action == "opened" or existing_booking and existing_booking.status == "CANCELLED":
-                # First time booking for a course event, or reopening a fully cancelled course- redirect to book course
+            if requested_action == "opened" or (
+                    not event.course.allow_drop_in and existing_booking and existing_booking.status == "CANCELLED"
+            ):
+                # First time booking for a course event, or reopening a fully cancelled course booking - redirect to book course
+                # if drop in is allowed for the course, we can do a rebooking here
                 # rebookings can be done from events page
                 url = reverse('booking:course_events', args=(event.course.slug,))
                 return JsonResponse({"redirect": True, "url": url})
-
-        # OPENING/REOPENING
-        # make sure the event isn't full or cancelled
-        if not event.course and (event.spaces_left <= 0 or event.cancelled):
-            logger.error('Attempt to book %s class', 'cancelled' if event.cancelled else 'full')
-            return HttpResponseBadRequest(
-                "Sorry, this event {}".format("has been cancelled" if event.cancelled else "is now full")
-            )
 
         # Update/create the booking
         if existing_booking is None:
@@ -310,8 +326,10 @@ def ajax_course_booking(request, course_id):
     # Book all events
     for event in course.events_left:
         booking, _ = Booking.objects.get_or_create(user=user, event=event)
-        # Make sure block is assigned but don't change booking statuses if already created
+        # Make sure block is assigned and update booking statuses if already created
         booking.block = course_block
+        booking.status = "OPEN"
+        booking.no_show = False
         booking.save()
 
     ActivityLog.objects.create(

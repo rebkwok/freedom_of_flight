@@ -61,7 +61,7 @@ def get_active_user_course_block(user, course):
     # UNLESS the course has started and allows part booking - then we want to make sure we return a valid part
     # block before a full block
     if course.has_started and course.allow_partial_booking:
-        valid_blocks = sorted(list(valid_blocks), key=lambda block: block.block_config.size < course.number_of_events, reverse=True)
+        valid_blocks = sorted(list(valid_blocks), key=lambda block: block.block_config.size < course.uncancelled_events.count(), reverse=True)
         return valid_blocks[0] if valid_blocks else None
     return next(valid_blocks, None)
 
@@ -138,25 +138,36 @@ def booking_restricted_pre_event_start(event):
         event.start - timedelta(minutes=event.event_type.booking_restriction) < timezone.now()
     )
 
+# TODO: methods for the following
+# can_book
+# can_rebook
+# can_cancel
+# can_join_waiting_list
+# can_leave_waiting_list
+# can_do_any_action
+
 
 def user_can_book_or_cancel(event=None, user_booking=None, booking_restricted=None):
     if booking_restricted is None:
         booking_restricted = booking_restricted_pre_event_start(event)
     if event is None:
         event = user_booking.event
-
     if event.cancelled:
         return False
-    elif event.has_space and not booking_restricted:
-        return True
-    elif user_booking and user_booking.status == "OPEN" and not user_booking.no_show:
-        # user has open booking, can always cancel, even if within booking retriction period
-        return True
-    elif event.course and user_booking is not None and user_booking.no_show:
-        # user has no-show booking, but it's a course event
-        return True
+    elif event.full:
+        if user_booking:
+            if user_booking.status == "OPEN":
+                if not user_booking.no_show:
+                    # user has open booking, can always cancel, even if within booking retriction period
+                    return True
+                elif event.course:
+                    # user has no-show booking, but it's a course event
+                    return True
+            # user has a cancelled booking for a full event
+            return False
     else:
-        # user hasn't booked, or has a cancelled or no-show booking - can cancel dependent on booking restrictions
+        # event has space, user hasn't booked, or has a cancelled or no-show booking
+        # can book/cancel dependent on booking restrictions
         return not booking_restricted
 
 
@@ -180,8 +191,9 @@ def user_subscription_info(subscription, event=None, include_user=True):
 
 def show_warning(event, user_booking, has_available_payment_method=None):
     """Should we show the warning on booking/rebooking/cancelling?"""
-    if event.course:
-        # always show for course events with open bookings - credit never given
+    if event.course and not event.course.allow_drop_in:
+        # for course events that don't allow drop in
+        # always show if cacnelling an open bookings - credit never given
         if user_booking and user_booking.status == "OPEN" and not user_booking.no_show:
             return True
         return False
@@ -213,9 +225,21 @@ def show_warning(event, user_booking, has_available_payment_method=None):
 
 
 def get_user_booking_info(user, event):
-    if event.course:
-        # bookings for course events are only counted if they're not fully cancelled.  We don't show rebook buttons
-        # for fully cancelled course bookings, only for no-show ones
+    # display options for non-course event
+    """
+    Book - class not full, currently cancelled booking, has available block
+    Rebook - class not full, currently cancelled booking, has available block
+    Cancel - currently open booking
+    Payment options- class not full, no available block
+    Join waiting list - class full, not on waiting list
+    Leave waiting list - class full, on waiting list
+    """
+    if event.course and not event.course.allow_drop_in:
+        # Events for a full course booking (i.e. one booked with a course block) are never
+        # fully cancelled, only set to no-show.  If they are fully cancelled, it's because
+        # an admin has updated it, for the whole course, so we don't show rebook buttons.
+        # The exception is when a course allows drop-in; then we can allow users with
+        # fully cancelled bookings to rebook single classes.
         user_booking = user.bookings.filter(event=event, status="OPEN").first()
     else:
         user_booking = user.bookings.filter(event=event).first()
@@ -254,6 +278,7 @@ def get_user_booking_info(user, event):
         info.update({
             "open": user_booking.status == "OPEN" and not user_booking.no_show,
             "cancelled": user_booking.status == "CANCELLED" or user_booking.no_show,
+            "no_show": user_booking.no_show,
             "used_block": user_booking.block,
             "used_subscription": user_booking.subscription,
             "used_subscription_info": booking_subscription_info,
@@ -280,7 +305,7 @@ def get_user_course_booking_info(user, course):
         "has_booked": has_booked,
         "has_booked_dropin": has_booked_dropin,
         "booked_event_ids": booked_events,
-        "open": has_booked,  # for block info
+        "open": has_booked or has_booked_dropin,  # for block info
         "available_course_block": available_block,
     }
     if has_booked:

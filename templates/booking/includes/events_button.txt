@@ -11,31 +11,46 @@
         <script>vNotify.info({text:'{{ alert_message.message }}',title:'{{ event }}',position: 'topLeft', visibleDuration: 6000});</script>
     {% endif %}
 {% endif %}
-
 {% if user_info.open  %}
     <div class="btn btn-xs btn-xs-narrow btn-dark float-right" href="#"><i id="loader_{{ event.id }}"></i> Cancel</div>
-{% elif event.course and not course %}
-    {% if user_info.has_booked %}
-         <div class="btn btn-xs btn-xs-narrow btn-success float-right" href="#">Rebook</div>
-     {% elif event.course.allow_drop_in and not event.full %}
-        <span class="helptext float-right">Drop in available; see course details</span>
-     {% elif event.course.full %}
-        <span class="helptext float-right">Course is full</span>
-     {% elif user_info.has_available_course_block or user_info.used_block %}
-        <span class="helptext float-right">NOT BOOKED</span><br/>
-        <span class="helptext float-right">Payment plan available</span><br/>
-     {% endif %}
 {% elif user_info.can_book_or_cancel %}
-    {% if not user_info.has_available_block and not user_info.has_available_subscription %}
+    {% if course %}
+         {% if user_info.no_show %}
+            <div class="btn btn-xs btn-xs-narrow btn-success float-right" href="#">Rebook</div>
+         {% elif not user_info.has_available_course_block and user_info.has_available_block %}
+             {% if not course.has_started or course.allow_partial_booking %}
+                <span class="helptext float-right">NOTE: course booking is also available</span><br/>
+             {% endif %}
+             <div class="btn btn-xs btn-xs-narrow btn-success float-right" href="#"><i id="loader_{{ event.id }}"></i> Book Drop-in</div
+         {% elif not user_info.has_available_block and not user_info.has_available_subscription %}
+            <div class="btn btn-xs btn-outline-dark float-right" href="#">Payment Options</div>
+        {% endif %}
+    {% elif event.course  %}
+        {% if user_info.has_booked %}
+            {% if user_info.no_show or user_info.has_available_block %}
+                <div class="btn btn-xs btn-xs-narrow btn-success float-right" href="#">Rebook</div>
+            {% elif event.course.allow_drop_in %}
+                <span class="helptext float-right">Drop in available; see course details</span>
+            {% else %}
+                <div class="btn btn-xs btn-outline-dark float-right" href="#">Payment Options</div>
+            {% endif %}
+        {% elif user_info.has_available_course_block or user_info.used_block %}
+            <span class="helptext float-right">NOT BOOKED</span><br/>
+            <span class="helptext float-right">Payment plan available; see course details</span><br/>
+        {% elif event.course.allow_drop_in and user_info.has_available_block %}
+            {% if course.has_started %}
+                <span class="helptext float-right">Drop in available; see course details</span>
+            {% else %}
+                <span class="helptext float-right">Multiple payment options available;<br/>see course details</span>
+            {% endif %}
+        {% else %}
+            <div class="btn btn-xs btn-outline-dark float-right" href="#">Payment Options</div>
+        {% endif %}
+    {% elif not user_info.has_available_block and not user_info.has_available_subscription %}
          <div class="btn btn-xs btn-outline-dark float-right" href="#">Payment Options</div>
-     {% elif user_info.cancelled %}
+    {% elif user_info.cancelled %}
         <div class="btn btn-xs btn-xs-narrow btn-success float-right" href="#"><i id="loader_{{ event.id }}"></i> Rebook Drop-in</div>
-     {% elif course and user_info.has_available_block and not user_info.has_available_course_block %}
-         {% if not course.has_started or course.allow_partial_booking %}
-            <span class="helptext float-right">NOTE: course booking is also available</span><br/>
-         {% endif %}
-         <div class="btn btn-xs btn-xs-narrow btn-success float-right" href="#"><i id="loader_{{ event.id }}"></i> Book Drop-in</div
-     {% else %}
+    {% else %}
          <div class="btn btn-xs btn-xs-narrow btn-success float-right" href="#"><i id="loader_{{ event.id }}"></i> Book Drop-in</div
     {% endif %}
 {% endif %}

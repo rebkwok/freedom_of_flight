@@ -528,7 +528,7 @@ class UserBookingEditViewTests(TestUsersMixin, TestCase):
         assert self.booking.block == self.course_block
         assert self.booking.no_show is True
 
-    def test_cannot_cancel_course_event(self):
+    def test_can_only_cancel_course_event_if_booked_with_non_course_block(self):
         self.event.course = self.course
         self.event.save()
         self.booking.block = self.course_block
@@ -539,6 +539,16 @@ class UserBookingEditViewTests(TestUsersMixin, TestCase):
         assert self.booking.block == self.course_block
         assert self.booking.status == "OPEN"
         assert self.booking.no_show is True
+
+        self.booking.block = self.dropin_block
+        self.booking.no_show = False
+        self.booking.save()
+        self.client.post(self.url, {**self.form_data, "status": "CANCELLED"})
+        self.booking.refresh_from_db()
+        # set to cancelled, block removed
+        assert self.booking.block is None
+        assert self.booking.status == "CANCELLED"
+        assert self.booking.no_show is False
 
     def test_cannot_reopen_cancelled_booking_for_full_event(self):
         self.booking.status = "CANCELLED"

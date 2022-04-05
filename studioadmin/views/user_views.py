@@ -277,12 +277,13 @@ def process_user_booking_updates(form, request, user):
 
             if 'status' in form.changed_data and action == 'updated':
                 if booking.status == 'CANCELLED':
-                    if booking.event.course and booking.block and booking.block.block_config.course:
+                    pre_cancel_block = user.bookings.get(id=booking.id).block
+                    if booking.event.course and pre_cancel_block and pre_cancel_block.block_config.course:
                         # bookings for course events don't get cancelled fully, unless booked with a dropin block
                         booking.status = "OPEN"
                         booking.no_show = True
                         # reset the block if it was removed
-                        booking.block = user.bookings.get(id=booking.id).block
+                        booking.block = pre_cancel_block
                         messages.info(
                             request,
                             "Cancelled course bookings made with course credit blocks are not refunded "
