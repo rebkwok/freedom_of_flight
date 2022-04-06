@@ -184,6 +184,10 @@ class Course(models.Model):
         return self.booking_count() >= self.max_participants
 
     @property
+    def all_events_full(self):
+        return not any(not event.full for event in self.events_left)
+
+    @property
     def spaces_left(self):
         return self.max_participants - self.booking_count()
 
@@ -1458,6 +1462,10 @@ class Booking(models.Model):
         return self._old_booking().status == 'OPEN' and self.status == 'CANCELLED'
 
     def clean(self):
+        if self.status == "CANCELLED":
+            # Booking should never be both cancelled and no-show; reset no-show before clean
+            self.no_show = False
+
         if self._is_rebooking():
             if self.event.spaces_left == 0 and not self.event.course:
                 raise ValidationError(

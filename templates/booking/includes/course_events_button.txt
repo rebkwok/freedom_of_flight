@@ -23,7 +23,12 @@
             <a class="btn btn-success mb-2" href="#"><i id="loader_{{ course.id }}"></i> Book Course</a>
         {% endif %}
 {% elif course.full %}
-    <p>This course is now full.</p>
+    {% if course.allow_drop_in and not course.all_events_full %}
+        <p>There are no spaces left for the full course. Drop-in is available for some classes.</p>
+    {% else %}
+        <p>This course is now full.
+    {% endif %}
+    </p>
 {% elif not has_available_course_block %}
     {% if not has_available_block %}
         <p><em>You need a payment plan to book this course</em></p>

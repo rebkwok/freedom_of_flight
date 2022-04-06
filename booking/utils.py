@@ -163,8 +163,8 @@ def user_can_book_or_cancel(event=None, user_booking=None, booking_restricted=No
                 elif event.course:
                     # user has no-show booking, but it's a course event
                     return True
-            # user has a cancelled booking for a full event
-            return False
+        # user has a cancelled booking for a full event, or no booking
+        return False
     else:
         # event has space, user hasn't booked, or has a cancelled or no-show booking
         # can book/cancel dependent on booking restrictions
@@ -266,6 +266,7 @@ def get_user_booking_info(user, event):
         info.update(
             {
                 "has_available_course_block": has_available_course_block(user, event.course),
+                "has_booked_course_dropin": _user_course_bookings(user, event.course) == "dropin"
              }
         )
     else:
@@ -286,24 +287,33 @@ def get_user_booking_info(user, event):
     return info
 
 
-def get_user_course_booking_info(user, course):
-    bookings = user.bookings.filter(event__course=course, status="OPEN")
-    has_booked = False
-    has_booked_dropin = False
+def _user_course_bookings(user, course, bookings=None):
+    if bookings is None:
+        bookings = user.bookings.filter(event__course=course, status="OPEN")
     if bookings:
         booking = bookings.first()
         if booking.block and booking.block.block_config.course:
-            has_booked = True
+            return "course"
         else:
-            has_booked_dropin = True
+            return "dropin"
+
+
+def get_user_course_booking_info(user, course):
+    bookings = user.bookings.filter(event__course=course, status="OPEN")
+    booking_type = _user_course_bookings(user, course, bookings)
+    has_booked = booking_type == "course"
+    has_booked_dropin = booking_type == "dropin"
     booked_events = bookings.values_list("event_id", flat=True)
     available_block = get_active_user_course_block(user, course)
+    available_dropin_block = get_active_user_block(user, course.events.first())
 
     info = {
         "hide_block_info_divider": True,
         "has_available_block": available_block is not None,
+        "has_available_dropin_block": available_block is None and available_dropin_block is not None,
         "has_booked": has_booked,
         "has_booked_dropin": has_booked_dropin,
+        "has_booked_all": booked_events.count() == course.uncancelled_events.count(),
         "booked_event_ids": booked_events,
         "open": has_booked or has_booked_dropin,  # for block info
         "available_course_block": available_block,

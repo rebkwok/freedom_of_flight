@@ -70,10 +70,22 @@
                                             <span class="float-right">{% include "booking/includes/block_info.html" %}</span>
                                         {% elif user_info.has_booked_dropin %}
                                             <span class="float-right"><i class="text-success fas fa-check-circle"></i> Booked drop-in</span><br/>
-                                        {% elif course.full %}<span class="helptext float-right">Course is full</span>
-                                        {% elif course.has_started and not course.allow_partial_booking %}<span class="helptext float-right">
-                                            Course has started. Spaces may be available for the remaining {{ course.event_type.pluralized_label }}; {{ studio_email|obfuscate_mailto:"email" }} for further details.
-                                        </span>
+                                            {% if not user_info.has_booked_all and course.allow_drop_in and not course.all_events_full %}
+                                                <span class="float-right helptext">See course details for other class availability.</span>
+                                            {% endif %}
+                                        {% elif course.full %}
+                                            {% if course.allow_drop_in and not course.all_events_full %}
+                                                <span class="helptext float-right">Full course booking is not available.</span>
+                                                <span class="helptext float-right">Drop-in is available for some classes, see course details.</span>
+                                            {% else %}
+                                                <span class="helptext float-right">Course is full</span>
+                                            {% endif %}
+                                        {% elif course.has_started %}
+                                            {% if course.allow_drop_in and not course.all_events_full %}
+                                                <span class="helptext float-right">Course has started. Drop-in is available for some classes, see course details.</span>
+                                            {% elif not course.allow_partial_booking %}
+                                                <span class="helptext float-right">Course has started. Spaces may be available for the remaining {{ course.event_type.pluralized_label }}; {{ studio_email|obfuscate_mailto:"email" }} for further details.</span>
+                                            {% endif %}
                                         {% elif user_info.has_available_block %}
                                             <div
                                                 id="book_course_{{ course.id }}"
@@ -89,6 +101,8 @@
                                                 class="ajax_course_events_btn float-right">
                                                 {% include "booking/includes/course_list_button.html" %}
                                             </div>
+                                        {% elif user_info.has_available_dropin_block %}
+                                                <span class="helptext float-right">Course and drop-in booking is available, see course details.</span>
                                         {% else %}
                                             <span class="float-right helptext"><i class="text-dark fas fa-times-circle"></i> NOT BOOKED</span><br/>
                                             <span class="float-right">

@@ -19,7 +19,9 @@
             <div class="btn btn-xs btn-xs-narrow btn-success float-right" href="#">Rebook</div>
          {% elif not user_info.has_available_course_block and user_info.has_available_block %}
              {% if not course.has_started or course.allow_partial_booking %}
+                {% if not course.full %}
                 <span class="helptext float-right">NOTE: course booking is also available</span><br/>
+                {% endif %}
              {% endif %}
              <div class="btn btn-xs btn-xs-narrow btn-success float-right" href="#"><i id="loader_{{ event.id }}"></i> Book Drop-in</div
          {% elif not user_info.has_available_block and not user_info.has_available_subscription %}
@@ -38,7 +40,7 @@
             <span class="helptext float-right">NOT BOOKED</span><br/>
             <span class="helptext float-right">Payment plan available; see course details</span><br/>
         {% elif event.course.allow_drop_in and user_info.has_available_block %}
-            {% if course.has_started %}
+            {% if event.course.has_started or user_info.has_booked_course_dropin %}
                 <span class="helptext float-right">Drop in available; see course details</span>
             {% else %}
                 <span class="helptext float-right">Multiple payment options available;<br/>see course details</span>

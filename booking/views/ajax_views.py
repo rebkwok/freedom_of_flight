@@ -120,14 +120,17 @@ def ajax_toggle_booking(request, event_id):
         # OPENING/REOPENING
         # make sure the event isn't full or cancelled
         if event.spaces_left <= 0 or event.cancelled:
-            if not event.course:
-                redirect400 = True
-            elif existing_booking.status == "CANCELLED":
+            # redirect if:
+            # - non-course event
+            # - course event and user has no booking
+            # - course event and user has fully cancelled booking
+            # (course events with no-show bookings can rebook)
+            redirect400 = True
+            if event.course and existing_booking and existing_booking.no_show:
                 # Course no-shows are allowed to rebook, only fully cancelled ones count
                 # in the booking count
-                redirect400 = True
-            else:
                 redirect400 = False
+
             if redirect400:
                 logger.error('Attempt to book %s class',
                              'cancelled' if event.cancelled else 'full')
