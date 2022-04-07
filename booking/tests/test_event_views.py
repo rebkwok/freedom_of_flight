@@ -352,7 +352,7 @@ class EventListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         # cancelled, with block available
         booking = baker.make(Booking, user=self.student_user, event=event, status="CANCELLED")
         book_button = _element_from_response_by_id(f"book_{event.id}")
-        assert "Rebook Drop-in" in book_button.text
+        assert "Book Drop-in" in book_button.text
 
         # no-show, with block
         booking.status = "OPEN"
@@ -360,7 +360,7 @@ class EventListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         booking.no_show = True
         booking.save()
         book_button = _element_from_response_by_id(f"book_{event.id}")
-        assert "Rebook Drop-in" in book_button.text
+        assert "Book Drop-in" in book_button.text
         booking.delete()
 
         # event full
@@ -520,12 +520,11 @@ class EventListViewTests(EventTestMixin, TestUsersMixin, TestCase):
             assert fragment in book_button.text
 
         # cancelled, with block
-        booking = baker.make(Booking, user=self.student_user, event=event,
-                             status="CANCELLED")
+        booking = baker.make(Booking, user=self.student_user, event=event, status="CANCELLED")
         book_button = _element_from_response_by_id(f"book_{event.id}")
         # Rebooking allowed if course isn't full
         # For a drop-in allowed course, rebooking can be done from the events page
-        assert "Rebook" in book_button.text
+        assert "Book Drop-in" in book_button.text
 
         # Make course full
         for courseevent in self.course.events.all():
