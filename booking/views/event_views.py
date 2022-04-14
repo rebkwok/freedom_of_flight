@@ -9,9 +9,9 @@ from django.views.generic import ListView, DetailView
 
 
 from ..forms import AvailableUsersForm, EventNameFilterForm
-from ..models import Course, Event, Track
-from ..utils import get_view_as_user, has_available_block, has_available_course_block, \
-    get_user_booking_info, get_active_user_course_block
+from ..models import Course, Event, Track, has_available_block, has_available_course_block, \
+    get_active_user_course_block
+from ..utils import get_view_as_user, get_user_booking_info
 from .views_utils import DataPolicyAgreementRequiredMixin
 
 
@@ -132,6 +132,6 @@ class CourseEventsListView(EventListView):
             context["already_booked"] = view_as_user.bookings.filter(event__course=course, status="OPEN").count() == course.uncancelled_events.count()
             context["booked_for_events"] = view_as_user.bookings.filter(event__course=course, status="OPEN", no_show=False).exists()
             context["has_available_course_block"] = has_available_course_block(view_as_user, course)
-            context["has_available_block"] = has_available_block(view_as_user, course.events.first())
+            context["has_available_dropin_block"] = has_available_block(view_as_user, course.events.first(), dropin_only=True)
             context["available_course_block"] = get_active_user_course_block(view_as_user, course)
         return context

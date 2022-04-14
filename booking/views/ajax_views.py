@@ -138,7 +138,18 @@ def ajax_toggle_booking(request, event_id):
                     "Sorry, this event {}".format(
                         "has been cancelled" if event.cancelled else "is now full")
                 )
-        has_payment_method = has_available_block(user, event) or has_available_subscription(user, event)
+
+        # has available course block/subscription
+        if event.course and ref == "events" and has_available_course_block(user, event.course):
+            if requested_action == "opened" or existing_booking and existing_booking.status == "CANCELLED":
+                # First time booking for a course event, or reopening a fully cancelled course booking - redirect to book course
+                # rebookings for no-shows can be done from events page
+                url = reverse('booking:course_events', args=(event.course.slug,))
+                return JsonResponse({"redirect": True, "url": url})
+
+        # get drop-in and subscription payment methods only; course bookings are done from
+        # the course page (apart from no_show course bookings)
+        has_payment_method = has_available_block(user, event, dropin_only=True) or has_available_subscription(user, event)
         no_show_course_booking = event.course and existing_booking and existing_booking.no_show
         if not no_show_course_booking and not has_payment_method:
             # rebooking, no block on booking (i.e. was fully cancelled) and no block available
@@ -148,25 +159,21 @@ def ajax_toggle_booking(request, event_id):
                 url = reverse("booking:event_purchase_options", args=(event.slug,))
             return JsonResponse({"redirect": True, "url": url})
 
-        # has available course block/subscription
-        if event.course and ref == "events":
-            if requested_action == "opened" or (
-                    not event.course.allow_drop_in and existing_booking and existing_booking.status == "CANCELLED"
-            ):
-                # First time booking for a course event, or reopening a fully cancelled course booking - redirect to book course
-                # if drop in is allowed for the course, we can do a rebooking here
-                # rebookings can be done from events page
-                url = reverse('booking:course_events', args=(event.course.slug,))
-                return JsonResponse({"redirect": True, "url": url})
-
         # Update/create the booking
         if existing_booking is None:
             booking = Booking.objects.create(user=user, event=event)
         else:
             booking = existing_booking
+
+        existing_no_show_with_block = booking.block is not None and booking.no_show
         booking.status = 'OPEN'
         booking.no_show = False
-        booking.assign_next_available_subscription_or_block()
+        if not existing_no_show_with_block:
+            # if this was already a no-show, with a block assigned, we just keep that block
+            # Otherwise, assign next block; if it's new course event bookking, use a drop in block
+            # if both course/dropin are available
+            # full course bookings are only done from the course page
+            booking.assign_next_available_subscription_or_block(dropin_only=True)
         booking.save()
         if booking.block and booking.block.full:
             block_availability_changed = True

@@ -30,7 +30,7 @@
     {% endif %}
     </p>
 {% elif not has_available_course_block %}
-    {% if not has_available_block %}
+    {% if not has_available_dropin_block %}
         <p><em>You need a payment plan to book this course</em></p>
         <p>
         Go to the <a href="{% url 'booking:course_purchase_options' course.slug %}">payment plans</a> page to see available

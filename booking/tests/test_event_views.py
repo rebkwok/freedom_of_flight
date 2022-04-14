@@ -191,22 +191,32 @@ class EventListViewTests(EventTestMixin, TestUsersMixin, TestCase):
                 assert user_info["has_available_block"] is False
                 assert user_info["available_block"] is None
                 assert user_info["open"] is True
-                assert user_info["cancelled"] is False
                 assert user_info["used_block"] is not None
+                assert user_info["can_book"] is False
+                assert user_info["can_rebook"] is False
+                assert user_info["can_cancel"] is True
+                assert user_info["can_join_waiting_list"] is False
+                assert user_info["can_leave_waiting_list"] is False
             else:
                 assert user_info["has_booked"] is False
                 assert user_info["can_book_or_cancel"] is True
                 assert user_info["on_waiting_list"] is False
                 assert user_info["has_available_block"] is False
                 assert user_info["available_block"] is None
+                assert user_info["can_book"] is True
+                assert user_info["can_rebook"] is False
+                assert user_info["can_cancel"] is False
+                assert user_info["can_join_waiting_list"] is False
+                assert user_info["can_leave_waiting_list"] is False
                 assert "open" not in user_info
-                assert "cancelled" not in user_info
                 assert "used_block" not in user_info
 
             if Event.objects.get(id=event_id).course:
                 assert user_info["has_available_course_block"] is False
+                assert user_info["has_booked_course_dropin"] is False
             else:
                 assert "has_available_course_block" not in user_info
+                assert "has_booked_course_dropin" not in user_info
 
         # cancel button shown for the booked events
         assert 'Cancel' in resp.rendered_content
@@ -507,7 +517,7 @@ class EventListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         booking = baker.make(Booking, user=self.student_user, event=event,
                              status="CANCELLED")
         book_button = _element_from_response_by_id(f"book_{event.id}")
-        assert "Drop in available; see course details" in book_button.text
+        assert "Payment Options" in book_button.text
         booking.delete()
 
         # not booked with valid block
@@ -519,11 +529,30 @@ class EventListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         for fragment in ["NOT BOOKED", "Payment plan available"]:
             assert fragment in book_button.text
 
-        # cancelled, with block
+        # cancelled, with course block; shows course block as first option
         booking = baker.make(Booking, user=self.student_user, event=event, status="CANCELLED")
         book_button = _element_from_response_by_id(f"book_{event.id}")
         # Rebooking allowed if course isn't full
-        # For a drop-in allowed course, rebooking can be done from the events page
+        for fragment in ["NOT BOOKED", "Payment plan available"]:
+            assert fragment in book_button.text
+
+        # cancelled, with drop in block
+        block.block_config.course = False
+        block.block_config.save()
+
+        # For a drop-in allowed course, user has drop in block, but could also book with
+        # course block
+        book_button = _element_from_response_by_id(f"book_{event.id}")
+        assert "Multiple payment options available;see course details" in book_button.text
+
+        # But not if the course has started, so just show drop in is available
+        self.course.number_of_events = 2
+        self.course.save()
+        baker.make_recipe(
+            "booking.future_event", event_type=self.aerial_event_type, course=self.course,
+            start=timezone.now() - timedelta(days=1)
+        )
+        book_button = _element_from_response_by_id(f"book_{event.id}")
         assert "Book Drop-in" in book_button.text
 
         # Make course full
@@ -873,7 +902,7 @@ class CourseListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         assert "You need a payment plan to book this course" in course_book_button.text
         booking.delete()
 
-        # not booked with valid block
+        # not booked with valid course block
         course_block = baker.make_recipe(
             "booking.course_block", block_config__event_type=self.aerial_event_type,
             block_config__size=1, user=self.student_user, paid=True

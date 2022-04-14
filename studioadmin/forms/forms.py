@@ -25,7 +25,7 @@ from booking.models import (
     Booking, Block, Event, Course, EventType, COMMON_LABEL_PLURALS, BlockConfig, SubscriptionConfig,
     Subscription, WaitingListUser
 )
-from booking.utils import has_available_course_block
+from booking.models import has_available_course_block
 from common.utils import full_name
 from timetable.models import TimetableSession
 
@@ -1330,6 +1330,7 @@ class CourseBookingAddChangeForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         booking_user = kwargs.pop('booking_user')
+        # block None == adding a course booking afresh, not editing a block to add a course to it
         block = kwargs.pop('block', None)
         old_course = kwargs.pop('old_course', None)
         old_course_id = old_course.id if old_course else None
@@ -1346,15 +1347,19 @@ class CourseBookingAddChangeForm(forms.Form):
         if not course_choices:
             if block is None:
                 self.helper.layout = Layout(
-                    HTML(f"<p>Student has no available course credit blocks. Go to their"
-                         f" <a href={reverse('studioadmin:user_blocks', args=(booking_user.id,))}>blocks list</a> to "
-                         f"add one first. You will be able to assign a course to the new block from there.</p>")
+                    HTML(
+                        f"<p>No courses are available to book for this student.</p>"
+                        f"<p>Either the student has booked/part-booked for all available courses, or "
+                        f"student has no available course credit blocks for available course. Go to their"
+                        f" <a href={reverse('studioadmin:user_blocks', args=(booking_user.id,))}>blocks list</a> to "
+                        f"add one first. You will be able to assign a course to the new block from there.</p>"
+                        f"")
                 )
             else:
                 self.helper.layout = Layout(
-                    HTML(f"<p>No courses are available to book for this student and block.</p>")
-                )
-            self.fields['course'] = forms.ChoiceField(choices=[])
+                    HTML(
+                        f"<p>No courses are available to book for this student and block.</p>")
+                    )
         else:
             self.fields['course'] = forms.ChoiceField(
                 choices=course_choices,

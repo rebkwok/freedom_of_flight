@@ -140,7 +140,7 @@
                                     <span class="float-right"><a class="btn btn-xs btn-secondary" disabled href="#">{{ event.event_type.label|title }} has started</a></span>
                                     {% endif %}
                                 {% elif not course %}
-                                    {% if event.full and not user_info.can_book_or_cancel %}
+                                    {% if user_info.can_join_waiting_list or user_info.can_leave_waiting_list %}
                                         <span class="float-right">
                                         <span
                                             id="waiting_list_button_{{ event.id }}"
@@ -150,12 +150,12 @@
                                         {% include "booking/includes/waiting_list_button.html" %}
                                         </span>
                                         </span>
-                                {% elif event.course.has_started and not event.course.allow_partial_booking and not event.course.allow_drop_in and not user_info.has_booked %}
-                                    <span class="float-right">
-                                        <span class="helptext">Course has started<span/><br/>
-                                            <a class="btn btn-xs btn-outline-dark float-right" href="{% url 'booking:course_events' event.course.slug %}">More booking info</a>
+                                    {% elif event.course.has_started and not event.course.allow_partial_booking and not event.course.allow_drop_in and not user_info.has_booked %}
+                                        <span class="float-right">
+                                            <span class="helptext">Course has started<span/><br/>
+                                                <a class="btn btn-xs btn-outline-dark float-right" href="{% url 'booking:course_events' event.course.slug %}">More booking info</a>
+                                            </span>
                                         </span>
-                                    </span>
                                     {% elif user_info.can_book_or_cancel %}
                                         <span class="float-right">
                                         {% if event.course %}
@@ -178,7 +178,7 @@
                                         <span class="float-right"><a class="btn btn-xs btn-secondary" disabled href="#"><span class="helptext">Unavailable {{ event.event_type.booking_restriction }} mins before start</span></a></span>
                                     {% endif %}
                                 {% elif course and course.allow_drop_in %}
-                                    {% if event.full and not user_info.can_book_or_cancel %}
+                                    {% if user_info.can_join_waiting_list or user_info.can_leave_waiting_list %}
                                         <span class="float-right">
                                         <span
                                             id="waiting_list_button_{{ event.id }}"

@@ -1,14 +1,16 @@
 from datetime import timedelta
+from unittest.mock import patch
 
 from model_bakery import baker
 
 from django.test import TestCase
 from django.utils import timezone
 
-from booking.models import Booking, Block, BlockConfig, Course
+from booking.models import Booking, Block, BlockConfig, Course, \
+    has_available_course_block, get_active_user_course_block, \
+    has_available_block, get_active_user_block
 from common.test_utils import EventTestMixin, TestUsersMixin
-from booking.utils import has_available_course_block, get_active_user_course_block, \
-    has_available_block, user_can_book_or_cancel, get_active_user_block
+from booking.utils import user_can_book_or_cancel
 
 
 class UtilsTests(EventTestMixin, TestUsersMixin, TestCase):
@@ -137,15 +139,15 @@ class UtilsTests(EventTestMixin, TestUsersMixin, TestCase):
 
         # drop in allowed course can be booked with both course block and dropin block
         assert has_available_course_block(self.student_user, self.drop_in_allowed_course)
-        assert has_available_block(self.student_user, self.drop_in_allowed_course_event)
+        assert has_available_block(self.student_user, self.drop_in_allowed_course_event, dropin_only=False)
         assert get_active_user_course_block(self.student_user, self.drop_in_allowed_course) == full_course_block_oldest
         # event returns course block first, oldest first
-        assert get_active_user_block(self.student_user, self.drop_in_allowed_course_event) == full_course_block_oldest
+        assert get_active_user_block(self.student_user, self.drop_in_allowed_course_event, dropin_only=False) == full_course_block_oldest
         full_course_block_oldest.delete()
-        assert get_active_user_block(self.student_user, self.drop_in_allowed_course_event) == full_course_block_newest
+        assert get_active_user_block(self.student_user, self.drop_in_allowed_course_event, dropin_only=False) == full_course_block_newest
         full_course_block_newest.delete()
         # if there are no course blocks valid, the drop in block is returned
-        assert get_active_user_block(self.student_user, self.drop_in_allowed_course_event) == drop_in_block
+        assert get_active_user_block(self.student_user, self.drop_in_allowed_course_event, dropin_only=False) == drop_in_block
 
     def test_get_available_user_block(self):
         full_course_block = baker.make(
@@ -160,22 +162,26 @@ class UtilsTests(EventTestMixin, TestUsersMixin, TestCase):
             Block, block_config=self.dropin_config, user=self.student_user, paid=True
         )
 
-        assert get_active_user_block(self.student_user, self.course_event) == full_course_block
+        # by default only shows drop in
+        assert get_active_user_block(self.student_user, self.course_event) == None
+        assert get_active_user_block(self.student_user, self.course_event, dropin_only=False) == full_course_block
+        assert get_active_user_course_block(self.student_user, self.course_event.course) == full_course_block
+
         # in progress course doesn't allow partial booking or drop in booking
         assert self.in_progress_course.allow_partial_booking is False
         # returns the full course block, which is still valid for the course
-        assert get_active_user_block(self.student_user, self.in_progress_course_event) == full_course_block
+        assert get_active_user_block(self.student_user, self.in_progress_course_event, dropin_only=False) == full_course_block
         # but if partial booking is allowed, it returns the partial block first
         self.in_progress_course.allow_partial_booking = True
         self.in_progress_course.save()
-        assert get_active_user_block(self.student_user, self.in_progress_course_event) == part_course_block
+        assert get_active_user_block(self.student_user, self.in_progress_course_event, dropin_only=False) == part_course_block
 
-        assert get_active_user_block(self.student_user1, self.course_event) is None
-        assert get_active_user_block(self.student_user1, self.in_progress_course_event) is None
-        assert get_active_user_block(self.student_user1, self.drop_in_allowed_course_event) is None
+        assert get_active_user_block(self.student_user1, self.course_event, dropin_only=False) is None
+        assert get_active_user_block(self.student_user1, self.in_progress_course_event, dropin_only=False) is None
+        assert get_active_user_block(self.student_user1, self.drop_in_allowed_course_event, dropin_only=False) is None
 
         # drop-in and course block available, return course block first
-        assert get_active_user_block(self.student_user, self.drop_in_allowed_course_event) == full_course_block
+        assert get_active_user_block(self.student_user, self.drop_in_allowed_course_event, dropin_only=False) == full_course_block
 
         # remove the course blocks
         full_course_block.delete()
@@ -183,7 +189,7 @@ class UtilsTests(EventTestMixin, TestUsersMixin, TestCase):
         assert get_active_user_block(self.student_user, self.drop_in_allowed_course_event) == drop_in_block
 
         # in progress course allows partial booking but not drop in, but user now has no block
-        assert get_active_user_block(self.student_user, self.in_progress_course_event) is None
+        assert get_active_user_block(self.student_user, self.in_progress_course_event, dropin_only=False) is None
 
         self.in_progress_course.allow_drop_in = True
         self.in_progress_course.save()
@@ -237,35 +243,31 @@ class UtilsTests(EventTestMixin, TestUsersMixin, TestCase):
         user_booking.save()
         # can book unless restricted
         assert user_can_book_or_cancel(event=event, user_booking=user_booking) is True
-        assert user_can_book_or_cancel(
-            event=event, user_booking=user_booking, booking_restricted=True
-        ) is False
+        with patch("booking.models.timezone.now", return_value=event.start - timedelta(minutes=10)):
+            assert user_can_book_or_cancel(event=event, user_booking=user_booking) is False
 
         # cancelled
         user_booking.no_show = False
         user_booking.status = "CANCELLED"
         user_booking.save()
         assert user_can_book_or_cancel(event=event, user_booking=user_booking) is True
-        assert user_can_book_or_cancel(
-            event=event, user_booking=user_booking, booking_restricted=True
-        ) is False
+        with patch("booking.models.timezone.now", return_value=event.start - timedelta(minutes=10)):
+            assert user_can_book_or_cancel(event=event, user_booking=user_booking) is False
 
         # cancelled course booking
         course_booking = baker.make(Booking, event=self.course_event, status="CANCELLED")
         assert user_can_book_or_cancel(event=self.course_event, user_booking=course_booking) is True
-        assert user_can_book_or_cancel(
-            event=self.course_event, user_booking=course_booking, booking_restricted=True
-        ) is False
+
+        with patch("booking.models.timezone.now", return_value=self.course_event.start - timedelta(minutes=10)):
+            assert user_can_book_or_cancel(event=self.course_event, user_booking=course_booking) is False
 
         # no-show course booking
         course_booking.no_show = True
         course_booking.status = "OPEN"
         course_booking.save()
         assert user_can_book_or_cancel(event=self.course_event, user_booking=course_booking) is True
-        assert user_can_book_or_cancel(
-            event=self.course_event, user_booking=course_booking,
-            booking_restricted=True
-        ) is False
+        with patch("booking.models.timezone.now", return_value=self.course_event.start - timedelta(minutes=10)):
+            assert user_can_book_or_cancel(event=self.course_event, user_booking=course_booking) is False
 
         # full course event
         baker.make(Booking, event=self.course_event, _quantity=self.course_event.max_participants - 1)
