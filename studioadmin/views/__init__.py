@@ -44,7 +44,8 @@ from .user_views import (
     UserBlocksListView, BlockAddView, BlockEditView, ajax_block_delete,
     email_subscription_users_view, email_waiting_list_view,
     UserSubscriptionsListView, SubscriptionAddView, SubscriptionEditView, ajax_subscription_delete,
-    course_booking_add_view, course_block_change_view, export_users, users_with_unused_blocks
+    course_booking_add_view, course_block_change_view, export_users, users_with_unused_blocks,
+    block_status_list,
 )
 from .vouchers import (
     VoucherListView, VoucherCreateView, VoucherDetailView, VoucherUpdateView, GiftVoucherListView,

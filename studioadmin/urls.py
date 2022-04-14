@@ -36,7 +36,8 @@ from studioadmin.views import (
     ProductCategoryListView, ProductCategoryCreateView, ProductCategoryUpdateView,
     ProductListView, ProductCreateView, ProductUpdateView, PurchaseListView,
     ajax_toggle_product_active, ajax_toggle_purchase_paid, ajax_toggle_purchase_received,
-    PurchaseCreateView, PurchaseUpdateView, purchases_for_collection, AllPurchasesListView
+    PurchaseCreateView, PurchaseUpdateView, purchases_for_collection, AllPurchasesListView,
+    block_status_list
 )
 
 app_name = 'studioadmin'
@@ -145,6 +146,7 @@ urlpatterns = [
     path('users/email/emailform/', email_users_view, name="email_users_view"),
     path('users/export/', export_users, name="export_users"),
     path('users/unused-blocks/', users_with_unused_blocks, name="unused_blocks"),
+    path('users/block-status/', block_status_list, name="block_status_list"),
     path('users/', UserListView.as_view(), name="users"),
     path('user/<int:pk>/detail/', UserDetailView.as_view(), name="user_detail"),
     path('user/<int:user_id>/bookings/', UserBookingsListView.as_view(), name="user_bookings"),

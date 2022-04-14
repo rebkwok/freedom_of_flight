@@ -687,3 +687,10 @@ def course_block_change_view(request, block_id):
         form = CourseBookingAddChangeForm(booking_user=user, block=course_block, old_course=old_course)
     context = {"block": course_block, "form": form}
     return render(request, "studioadmin/includes/user-booking-course-change-modal.html", context)
+
+
+def block_status_list(request):
+    active_blocks = [block for block in Block.objects.all().order_by("purchase_date") if block.active_block]
+    return TemplateResponse(
+        request, "studioadmin/block_status_list.html", {"active_blocks": active_blocks}
+    )
