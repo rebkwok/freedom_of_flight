@@ -1,0 +1,50 @@
+{%  extends "studioadmin/base.html" %}
+
+{% load static studioadmintags accounttags email_obfuscator crispy_forms_tags %}
+
+{% block precontent %}
+{% endblock %}
+
+
+{% block content %}
+    <h2>Active Credit Block Status</h2>
+
+<div class="table-responsive">
+    <table class="table table-sm tablesorter" id="sortTable">
+        <thead>
+        <tr>
+            <th class="text-center">User</th>
+            <th class="text-center">Block type</th>
+            <th class="text-center">Purchase date</th>
+            <th class="text-center">Expiry</th>
+            <th class="text-center">Status (remaining/total)</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for block in active_blocks %}
+        <tr>
+            <td class="text-center">
+                <a href="{% url 'studioadmin:user_blocks' block.user.id %}">{{ block.user|full_name }}</a>
+            </td>
+            <td class="text-center">
+                {{ block.block_config }}
+            </td>
+            <td class="text-center">
+                {{ block.purchase_date|date:'d-M-y' }}
+            </td>
+            <td class="text-center">
+                {% if block.start_date %}{{ block.get_expiry_date|date:'d-M-y' }}{% else %}Not started{% endif %}
+            </td>
+            <td class="text-center">
+                <span class="badge badge-pill badge-success">{{ block.remaining_count }}</span> / {{ block.block_config.size }}
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+    <a class="btn btn-outline-dark mt-4" href="{% url 'studioadmin:users' %}">Back</a>
+
+</div>
+
+{% endblock %}

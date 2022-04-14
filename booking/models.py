@@ -554,6 +554,10 @@ class Block(models.Model):
         """
         return not self.expired and (not self.full and self.paid)
 
+    @property
+    def remaining_count(self):
+        return self.block_config.size - self.bookings.count()
+
     def _valid_and_active_for_event(self, event):
         # hasn't started yet OR event is within block date range
         # Note we've already checked it's active and the right type
