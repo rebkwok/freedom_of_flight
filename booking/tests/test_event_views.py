@@ -908,7 +908,7 @@ class CourseListViewTests(EventTestMixin, TestUsersMixin, TestCase):
             block_config__size=1, user=self.student_user, paid=True
         )
         book_button = _element_from_response_by_id(f"book_{event.id}")
-        assert book_button.text == "\n"
+        assert "Use the button above to book the course" in book_button.text
         course_book_button = _element_from_response_by_id(f"book_course_{self.course.id}")
         assert "Book Course" in course_book_button.text
 
@@ -918,7 +918,7 @@ class CourseListViewTests(EventTestMixin, TestUsersMixin, TestCase):
             block_config__size=1, user=self.student_user, paid=True
         )
         book_button = _element_from_response_by_id(f"book_{event.id}")
-        assert book_button.text == "\n"
+        assert "Use the button above to book the course" in book_button.text
         course_book_button = _element_from_response_by_id(
             f"book_course_{self.course.id}")
         assert "Book Course" in course_book_button.text

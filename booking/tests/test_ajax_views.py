@@ -75,11 +75,12 @@ class BookingToggleAjaxViewTests(EventTestMixin, TestUsersMixin, TestCase):
         Test creating a booking
         """
         assert Booking.objects.exists() is False
-        baker.make(
+        block = baker.make(
             Block, user=self.student_user, block_config__event_type=self.aerial_event_type,
             block_config__course=True, block_config__size=self.course.number_of_events,
             paid=True
         )
+        assert block.valid_for_course(self.course_event.course)
 
         resp = self.client.post(self.url(self.course_event.id), data={"user_id": self.student_user.id})
         assert resp.status_code == 200

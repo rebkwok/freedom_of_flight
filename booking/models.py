@@ -191,6 +191,10 @@ class Course(models.Model):
     def spaces_left(self):
         return self.max_participants - self.booking_count()
 
+    @property
+    def has_available_payment_plan(self):
+        return valid_course_block_configs(self) is not None
+
     def booking_count(self):
         # Find the distinct users from all booking on this course.  We don't just look at the first event, in case
         # a course's events have been updated after start
@@ -1530,6 +1534,34 @@ class Booking(models.Model):
 
 
 # Model-related utils
+def valid_course_block_configs(course):
+    if not course.has_started:
+        # not started course - course blocks matching size and event type are valid
+        return BlockConfig.objects.filter(
+            active=True, course=True, event_type=course.event_type,
+            size=course.number_of_events
+        )
+    elif course.allow_partial_booking:
+        # started course - course blocks match event type and number of
+        # remaining classes are valid
+        return BlockConfig.objects.filter(
+            active=True, course=True, event_type=course.event_type,
+            size=course.events_left.count()
+        )
+
+
+def valid_dropin_block_configs(event=None, event_type=None):
+    if event is None:
+        assert event_type is not None
+        return BlockConfig.objects.filter(
+            active=True, course=False, event_type=event_type
+        )
+    if event.course is None or event.course.allow_drop_in:
+        return BlockConfig.objects.filter(
+            active=True, course=False, event_type=event.event_type
+        )
+
+
 def has_available_block(user, event, dropin_only=False):
     if event.course and not event.course.allow_drop_in and not dropin_only:
         return any(True for block in user.blocks.all() if block.valid_for_course(event.course))
@@ -1572,7 +1604,11 @@ def get_active_user_course_block(user, course):
     # UNLESS the course has started and allows part booking - then we want to make sure we return a valid part
     # block before a full block
     if course.has_started and course.allow_partial_booking:
-        valid_blocks = sorted(list(valid_blocks), key=lambda block: block.block_config.size < course.uncancelled_events.count(), reverse=True)
+        valid_blocks = sorted(
+            list(valid_blocks),
+            key=lambda block: block.block_config.size < course.number_of_events,
+            reverse=True
+        )
         return valid_blocks[0] if valid_blocks else None
     return next(valid_blocks, None)
 

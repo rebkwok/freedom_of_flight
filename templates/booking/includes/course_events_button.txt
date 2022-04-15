@@ -16,9 +16,9 @@
     <p>{{ view_as_user.first_name }} {{ view_as_user.last_name }} is attending this course.</p>
 {% elif booked_for_events %}
     <p>{{ view_as_user.first_name }} {{ view_as_user.last_name }} has booked for classes on this course.</p>
-    {% if not course.full and not course.has_started and has_available_course_block %}
+    {% if not course.full and has_available_course_block %}
             <em>
-            You have a course credit block available; you can switch your current class bookings to a full course booking if you wish.
+            You have a course credit block available; you can switch your current class bookings to a course booking if you wish.
             </em><br/>
             <a class="btn btn-success mb-2" href="#"><i id="loader_{{ course.id }}"></i> Book Course</a>
         {% endif %}
@@ -43,6 +43,11 @@
         <p>You can also book the full course; go to the <a href="{% url 'booking:course_purchase_options' course.slug %}">payment plans</a>
         page to see available payment plans for this course.
         </p>
+        {% elif course.allow_partial_booking and course.has_available_payment_plan %}
+            <p>You can also book the rest of the course with a course credit block; go to the
+                <a href="{% url 'booking:course_purchase_options' course.slug %}">payment plans</a>
+                page to see available payment plans for this course.
+            </p>
         {% endif %}
     {% endif %}
 {% else %}
