@@ -11,6 +11,7 @@ from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.shortcuts import reverse
 from django.utils import timezone
+from django.utils.safestring import mark_safe
 
 from crispy_forms.bootstrap import InlineCheckboxes, AppendedText, PrependedText
 from crispy_forms.helper import FormHelper
@@ -1133,7 +1134,7 @@ class AddEditBookingForm(forms.ModelForm):
             initial=False, required=False,
             help_text="If user has a valid subscription/block for the selected event, assign it automatically.  "
                       "Subscriptions are used before blocks, if both exist.  Any entries in the subscription/block "
-                      "fields below will be ignored."
+                      "fields below will be ignored.  This will NOT assign single event bookings to course credit blocks."
         )
         if (self.instance.id and (self.instance.block or self.instance.subscription)) or course_event:
             self.fields['auto_assign_available_subscription_or_block'].widget = forms.HiddenInput()
@@ -1336,11 +1337,28 @@ class CourseBookingAddChangeForm(forms.Form):
         old_course_id = old_course.id if old_course else None
         super().__init__(*args, **kwargs)
         if block is None:
-            help_text = "Note that only ongoing/future courses that are fully configured and have " \
-                        "spaces are listed here. You can't make a new course booking for a full course."
+            help_text = mark_safe(
+                "Note that this list shows only ongoing/future courses:"
+                "<ul>"
+                "<li>that are fully configured</li>"
+                "<li>have spaces in all classes</li>"
+                "<li>that this user hasn't already booked for</li>"
+                "<li>that this user has a valid block for</li>"
+                "</ul>"
+                "You can't make a new course booking for a full course.<br/>"
+                "If the course you want to book isn't shown here, you may need to create "
+                "a block for the user first."
+            )
         else:
-            help_text = "Note that only ongoing/future courses that are fully configured, have spaces and are valid for this credit block " \
-            "are listed here. You can't reassign the block to a full course."
+            help_text = mark_safe(
+                "Note that this list shows only ongoing/future courses:"
+                "<ul>"
+                "<li>that are fully configured</li>"
+                "<li>have spaces in all classes</li>"
+                "<li>that are valid for this credit block</li>"
+                "</ul>"
+                "You can't reassign the block to a full course."
+            )
 
         self.helper = FormHelper()
         course_choices = get_course_choices_for_user(booking_user, block, old_course_id)
@@ -1350,7 +1368,7 @@ class CourseBookingAddChangeForm(forms.Form):
                     HTML(
                         f"<p>No courses are available to book for this student.</p>"
                         f"<p>Either the student has booked/part-booked for all available courses, or "
-                        f"student has no available course credit blocks for available course. Go to their"
+                        f"student has no available course credit blocks for available courses. Go to their"
                         f" <a href={reverse('studioadmin:user_blocks', args=(booking_user.id,))}>blocks list</a> to "
                         f"add one first. You will be able to assign a course to the new block from there.</p>"
                         f"")
