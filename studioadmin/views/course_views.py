@@ -311,6 +311,9 @@ class CourseUpdateView(LoginRequiredMixin, StaffUserMixin, CourseCreateUpdateMix
 
     def form_valid(self, form):
         course = form.save(commit=False)
+        uncancelled_event_ids_pre_save = list(
+            course.uncancelled_events.values_list("id", flat=True)
+        )
         if not form.hide_events:
             # First update the existing events with the choices in the existing event multiselect
             new_events = form.cleaned_data.get("events")
@@ -324,27 +327,33 @@ class CourseUpdateView(LoginRequiredMixin, StaffUserMixin, CourseCreateUpdateMix
             self._create_events(course, form)
         self._check_visibility_and_save(course)
 
-        # Make sure all users with uncancelled course bookings have a booking for all events
-        # (even if cancelled/no-show).
-        booked_users = set(Booking.objects.select_related("event")
-                           .filter(status="OPEN", event__course_id=course.id)
-                           .order_by().distinct("user").values_list("user", flat=True))
-        updated_users = set()
-        for event in course.events.all():
-            unbooked_users = booked_users - set(event.bookings.values_list("user", flat=True))
-            if unbooked_users:
-                for user_id in unbooked_users:
-                    user = User.objects.get(id=user_id)
-                    updated_users.add(user)
-                    other_booking = user.bookings.filter(event__course=course).first()
-                    Booking.objects.create(
-                        user=user, event=event, status="OPEN" if not event.cancelled else "CANCELLED", block=other_booking.block
-                    )
-        if updated_users:
-            messages.info(
-                self.request, f"Course events have been added; bookings have been added for the following users who were "
-                              f"already booked onto this course: {', '.join([full_name(updated_user) for updated_user in updated_users])}"
-            )
+        uncancelled_event_ids_post_save = list(
+            course.uncancelled_events.values_list("id", flat=True)
+        )
+        if uncancelled_event_ids_post_save != uncancelled_event_ids_pre_save:
+            # Make sure all users with uncancelled course bookings have a booking for all events
+            # (even if cancelled/no-show).
+            # BUT ONLY IF BOOKED WITH COURSE BLOCK
+            users_booked_with_course_block = set(Booking.objects.select_related("event")
+                               .filter(status="OPEN", event__course_id=course.id, block__block_config__course=True)
+                               .order_by().distinct("user").values_list("user", flat=True))
+            updated_users = set()
+            for event in course.events.all():
+                event_bookings_booked_with_course_block = set(event.bookings.filter(block__block_config__course=True).values_list("user", flat=True))
+                unbooked_users = users_booked_with_course_block - event_bookings_booked_with_course_block
+                if unbooked_users:
+                    for user_id in unbooked_users:
+                        user = User.objects.get(id=user_id)
+                        updated_users.add(user)
+                        other_booking = user.bookings.filter(event__course=course).first()
+                        Booking.objects.create(
+                            user=user, event=event, status="OPEN" if not event.cancelled else "CANCELLED", block=other_booking.block
+                        )
+            if updated_users:
+                messages.info(
+                    self.request, f"Course events have been added; bookings have been added for the following users who were "
+                                  f"already booked onto the full course: {', '.join([full_name(updated_user) for updated_user in updated_users])}"
+                )
 
         return HttpResponseRedirect(self.get_success_url(course.event_type.track.id))
 
