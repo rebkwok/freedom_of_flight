@@ -67,7 +67,20 @@ class CourseListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         booked = [course_id for course_id, user_info in user_course_booking_info.items() if user_info.get("open")]
         assert len(booked) == 1
         assert booked == [self.course.id]
+        # bookings have no block associated, so these are considered dropin
+        assert user_course_booking_info[self.course.id]["has_booked_dropin"]
+        assert user_course_booking_info[self.course.id]["has_booked"] is False
+        assert user_course_booking_info[self.course.id]["has_booked_all"] is True
+        assert '<i class="text-success fas fa-check-circle"></i> Booked' in resp.rendered_content
 
+        # assign course block
+        block = baker.make_recipe("booking.course_block", paid=True, user=self.student_user)
+        self.student_user.bookings.update(block=block)
+        resp = self.client.get(self.url(self.adult_track))
+        course_booking_info = resp.context_data['user_course_booking_info'][self.course.id]
+        assert course_booking_info["has_booked_dropin"] is False
+        assert course_booking_info["has_booked"] is True
+        assert course_booking_info["has_booked_all"] is True
         assert '<i class="text-success fas fa-check-circle"></i> Booked' in resp.rendered_content
 
     def test_courses_list_with_full_course(self):

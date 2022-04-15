@@ -354,7 +354,7 @@ class Event(models.Model):
         if self.course:
             # this event is not full; if the course is full or the course has started,
             # can only book single event if drop in is allowed
-            if self.course.full or self.course.has_started:
+            if self.course.full or (self.course.has_started and not self.course.allow_partial_booking):
                 if not self.course.allow_drop_in:
                     return False
         return True

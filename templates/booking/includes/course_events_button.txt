@@ -20,6 +20,9 @@
             <em>
             You have a course credit block available; you can switch your current class bookings to a course booking if you wish.
             </em><br/>
+            <em>
+            Payment plan available: Credit block - {{ available_course_block.block_config.name }}
+            </em><br/>
             <a class="btn btn-success mb-2" href="#"><i id="loader_{{ course.id }}"></i> Book Course</a>
         {% endif %}
 {% elif course.full %}

@@ -111,10 +111,6 @@ def can_rebook(user_booking, event):
     return status == "no_show" and event.course
 
 
-def _on_waiting_list(user, event):
-    return
-
-
 def _can_action_waiting_list(user, event, user_booking, action):
     # ignore waiting list for course events that don't allow drop-in
     # if event.course and not event.course.allow_drop_in:
@@ -230,7 +226,10 @@ def get_user_booking_info(user, event):
 
     # Used for displaying available block/subscription info in templates/includes/event_info_xs.html only
     available_subscription_info = user_subscription_info(available_subscription, event, include_user=False)
-    available_block = get_active_user_block(user, event, dropin_only=False)
+    if event.course and event.course.has_started and not event.course.allow_partial_booking:
+        available_block = get_active_user_block(user, event, dropin_only=True)
+    else:
+        available_block = get_active_user_block(user, event, dropin_only=False)
 
     info = {
         "has_available_block": available_block is not None,
@@ -251,9 +250,15 @@ def get_user_booking_info(user, event):
         "can_leave_waiting_list": user_can_leave_waiting_list
     }
     if event.course:
+        # if user has a course block, it's still not available if the course has started and
+        # doesn't allow partial booking
+        if event.course.has_started and not event.course.allow_partial_booking:
+            has_course_block = False
+        else:
+            has_course_block = has_available_course_block(user, event.course)
         info.update(
             {
-                "has_available_course_block": has_available_course_block(user, event.course),
+                "has_available_course_block": has_course_block,
                 "has_booked_course_dropin": _user_course_booking_type(user, event.course) == "dropin"
              }
         )
@@ -291,7 +296,13 @@ def get_user_course_booking_info(user, course):
     has_booked_dropin = booking_type == "dropin"
     open_booked_events = bookings.filter(no_show=False).values_list("event_id", flat=True)
     booked_events = bookings.values_list("event_id", flat=True)
-    available_course_block = get_active_user_course_block(user, course)
+
+    # if user has a course block, it's still not available if the course has started and
+    # doesn't allow partial booking
+    if course.has_started and not course.allow_partial_booking:
+        available_course_block = None
+    else:
+        available_course_block = get_active_user_course_block(user, course)
     available_dropin_block = get_active_user_block(user, course.events.first(), dropin_only=True)
 
     info = {
