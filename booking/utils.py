@@ -226,10 +226,17 @@ def get_user_booking_info(user, event):
 
     # Used for displaying available block/subscription info in templates/includes/event_info_xs.html only
     available_subscription_info = user_subscription_info(available_subscription, event, include_user=False)
-    if event.course and event.course.has_started and not event.course.allow_partial_booking:
-        available_block = get_active_user_block(user, event, dropin_only=True)
+    if event.course:
+        if event.course.has_started and not event.course.allow_partial_booking:
+            # available block can only be a dropin one
+            available_block = get_active_user_block(user, event, dropin_only=True)
+            available_dropin_block = available_block
+        else:
+            available_block = get_active_user_block(user, event, dropin_only=False)
+            available_dropin_block = get_active_user_block(user, event, dropin_only=True)
     else:
-        available_block = get_active_user_block(user, event, dropin_only=False)
+        available_block = get_active_user_block(user, event, dropin_only=True)
+        available_dropin_block = available_block
 
     info = {
         "has_available_block": available_block is not None,
@@ -239,6 +246,7 @@ def get_user_booking_info(user, event):
         "booking_restricted_pre_event_start": booking_restricted,
         "can_book_or_cancel": can_book_or_cancel,
         "available_block": available_block,
+        "has_available_dropin_block": available_dropin_block is not None,
         "available_subscription_info": available_subscription_info,
         "show_warning": show_warning(
             event, user_booking, available_block is not None or available_subscription is not None

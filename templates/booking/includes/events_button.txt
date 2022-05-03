@@ -28,7 +28,15 @@
                         <div class="btn btn-xs btn-xs-narrow btn-success float-right" href="#"><i id="loader_{{ event.id }}"></i> Book Drop-in</div
                      {% endif %}
                 {% elif not course.has_started %}
-                    <span class="helptext float-right">Use the button above to book the course</span>
+                    <span class="helptext float-right">Use the button above to book the course</span><br/>
+                    {% if course.allow_drop_in and user_info.has_booked_course_dropin %}
+                        <span class="helptext float-right">Drop-in booking is also available:</span><br/>
+                        {% if user_info.has_available_dropin_block %}
+                            <div class="btn btn-xs btn-xs-narrow btn-success float-right" href="#"><i id="loader_{{ event.id }}"></i> Book Drop-in</div
+                        {% else %}
+                            <div class="btn btn-xs btn-outline-dark float-right" href="#">Payment Options</div>
+                        {% endif %}
+                    {% endif %}
                 {% elif course.allow_partial_booking and course.has_available_payment_plan %}
                     <span class="helptext float-right">Use the button above to book the course</span>
                 {% elif course.allow_drop_in %}

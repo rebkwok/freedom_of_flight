@@ -16,7 +16,8 @@
     <p>{{ view_as_user.first_name }} {{ view_as_user.last_name }} is attending this course.</p>
 {% elif booked_for_events %}
     <p>{{ view_as_user.first_name }} {{ view_as_user.last_name }} has booked for classes on this course.</p>
-    {% if not course.full and has_available_course_block %}
+    {% if not course.full %}
+        {% if has_available_course_block %}
             <em>
             You have a course credit block available; you can switch your current class bookings to a course booking if you wish.
             </em><br/>
@@ -24,7 +25,13 @@
             Payment plan available: Credit block - {{ available_course_block.block_config.name }}
             </em><br/>
             <a class="btn btn-success mb-2" href="#"><i id="loader_{{ course.id }}"></i> Book Course</a>
+        {% elif not course.has_started %}
+            <p>Course booking is also available.<br/>
+            Go to the <a href="{% url 'booking:course_purchase_options' course.slug %}">payment plans</a> page to see available
+            payment plans for this course.  After completing your purchase, return to this page, and you will be able to
+            switch your current drop-in bookings to a full course booking. <p/>
         {% endif %}
+    {% endif %}
 {% elif course.full %}
     {% if course.allow_drop_in and not course.all_events_full %}
         <p>There are no spaces left for the full course. Drop-in is available for some classes.</p>
