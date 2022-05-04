@@ -38,7 +38,6 @@
                                 <th scope="col" class="text-center">Events in course</th>
                                 <th scope="col" class="text-center">Events configured</th>
                                 <th scope="col" class="text-center">Spaces</th>
-                                <th scope="col" class="text-center">Allow partial course booking</th>
                                 <th scope="col" class="text-center">Allow drop in</th>
                                 <th scope="col">Event Type</th>
                                 <th scope="col" class="text-center">Visible</th>
@@ -73,15 +72,6 @@
                                     <span class="badge badge-light pr-2 pl-2">
                                         {% if course.uncancelled_events.exists %}{{ course.spaces_left }}{% else %}{{ course.max_participants }}{% endif %}{% if course.max_participants %}/{{ course.max_participants }}{% endif %}
                                     </span>
-                                </td>
-                                <td class="text-center">
-                                    <span
-                                          id="allow-partial-booking-{{ course.id }}"
-                                          data-course_id="{{ course.id }}"
-                                          class="allow-partial-booking-btn"
-                                          >
-                                          {% include "studioadmin/includes/ajax_toggle_course_allow_partial_booking_btn.html" %}
-                                      </span>
                                 </td>
                                 <td class="text-center">
                                     <span

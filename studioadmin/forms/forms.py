@@ -15,7 +15,7 @@ from django.utils.safestring import mark_safe
 
 from crispy_forms.bootstrap import InlineCheckboxes, AppendedText, PrependedText
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Button, Layout, Submit, Row, Column, Field, Fieldset, Hidden, HTML
+from crispy_forms.layout import Button, Layout, Submit, Row, Column, Field, Fieldset, Hidden, HTML, Div
 from delorean import Delorean
 
 from .form_utils import Formset
@@ -219,7 +219,10 @@ class CourseUpdateForm(forms.ModelForm):
                 if name == "description":
                     field.widget.attrs.update({"rows": 10})
 
-        self.fields["allow_partial_booking"].label = "Allow booking after the course has started"
+        self.fields["allow_partial_booking"].label = "Allow booking after the course has started (Not recommended)"
+        self.fields["allow_partial_booking"].help_text = """
+            Users can book after a course has started (not recommended - use 'allow drop-in' instead)
+        """
         self.fields["allow_drop_in"].label = "Allow drop-in booking"
 
         self.hide_events = False
@@ -284,8 +287,8 @@ class CourseUpdateForm(forms.ModelForm):
             "number_of_events",
             "max_participants",
             "show_on_site",
-            "allow_partial_booking",
             "allow_drop_in",
+            Div("allow_partial_booking", css_class="text-secondary"),
             Hidden("cancelled", self.instance.cancelled) if hide_cancelled else "cancelled",
         )
 
