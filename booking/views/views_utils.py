@@ -1,12 +1,10 @@
-import os
 from datetime import timedelta
 
 from django.urls import reverse
 from django.shortcuts import HttpResponseRedirect
 from django.utils import timezone
 
-from accounts.models import DataPrivacyPolicy, has_active_disclaimer, has_active_data_privacy_agreement
-from activitylog.models import ActivityLog
+from accounts.models import DataPrivacyPolicy, has_active_data_privacy_agreement
 from booking.models import Block, Subscription, GiftVoucher
 from merchandise.models import ProductPurchase, ProductVariant
 

@@ -55,6 +55,20 @@ class BlockPurchaseViewTests(TestUsersMixin, TestCase):
         assert resp.context["user_active_blocks"] == []
         assert resp.context["related_item"] == course
 
+    def test_dropin_allowed_course_purchase_view_shows_only_target_configs(self):
+        course = baker.make(
+            Course, event_type=self.courseconfig.event_type, number_of_events=3, show_on_site=True,
+            allow_drop_in=True
+        )
+        url = reverse("booking:course_purchase_options", args=(course.slug,))
+        resp = self.client.get(url)
+        # Course Credit Blocks shown first
+        assert list(resp.context["available_blocks"].keys()) == ["Course Credit Blocks", "Drop-in Credit Blocks"]
+        assert [cc.id for cc in resp.context["available_blocks"]["Course Credit Blocks"]] == [self.courseconfig.id]
+        assert [bc.id for bc in resp.context["available_blocks"]["Drop-in Credit Blocks"]] == [self.activeconfig.id]
+        assert resp.context["user_active_blocks"] == []
+        assert resp.context["related_item"] == course
+
     def test_dropin_purchase_view_shows_only_target_configs(self):
         event = baker.make(Event, event_type=self.activeconfig.event_type)
         url = reverse("booking:event_purchase_options", args=(event.slug,))

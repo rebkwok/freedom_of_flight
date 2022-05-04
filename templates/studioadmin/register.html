@@ -106,15 +106,15 @@
             <tfoot>
             <tr>
                 <td colspan="6">
-                {% if not event.course %}
+                {% if not event.course or event.course.allow_drop_in %}
                     <a
                         id="add-more-btn"
                         class="bookingadd btn btn-xs btn-success {% if not can_add_more %}disabled{% endif %}"
                         href="#" data-form="{% url 'studioadmin:bookingregisteradd' event.id %}"
                         title="add booking"
-                    >Add booking</a>
+                    >Add {% if event.course %}drop-in {% endif %}booking</a>
                 {% else %}
-                    Can't add single {{ event.event_type.label }} bookings for a course. To add a new booking for this entire
+                    Can't add drop-in {{ event.event_type.label }} bookings for this course. To add a new booking for this entire
                     course, go to the <a href="{% url 'studioadmin:users' %}">Students</a> list.
                 {% endif %}
                 </td>

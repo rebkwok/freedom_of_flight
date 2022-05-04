@@ -75,11 +75,12 @@ class BookingToggleAjaxViewTests(EventTestMixin, TestUsersMixin, TestCase):
         Test creating a booking
         """
         assert Booking.objects.exists() is False
-        baker.make(
+        block = baker.make(
             Block, user=self.student_user, block_config__event_type=self.aerial_event_type,
             block_config__course=True, block_config__size=self.course.number_of_events,
             paid=True
         )
+        assert block.valid_for_course(self.course_event.course)
 
         resp = self.client.post(self.url(self.course_event.id), data={"user_id": self.student_user.id})
         assert resp.status_code == 200
@@ -158,6 +159,50 @@ class BookingToggleAjaxViewTests(EventTestMixin, TestUsersMixin, TestCase):
         assert event.bookings.count() == 0
         assert resp.status_code == 400
         assert resp.content.decode("utf-8") == "Sorry, this event has been cancelled"
+
+    def test_book_for_full_course_event(self):
+        for event in self.course.uncancelled_events:
+            baker.make(Booking, event=event, _quantity=self.course.max_participants)
+        assert self.course.full
+        bookings_count = self.course_event.bookings.count()
+
+        # user has available block
+        baker.make_recipe(
+            "booking.course_block",
+            block_config__event_type=self.course.event_type,
+            block_config__course=True,
+            user=self.student_user, paid=True
+        )
+        resp = self.client.post(self.url(self.course_event.id), data={"user_id": self.student_user.id})
+
+        # no new bookings made
+        assert self.course_event.bookings.count() == bookings_count
+        assert resp.status_code == 400
+        assert resp.content.decode("utf-8") == "Sorry, this event is now full"
+
+        # user has cancelled booking
+        booking = baker.make(Booking, event=self.course_event, status="CANCELLED", user=self.student_user)
+        assert self.course_event.bookings.count() == bookings_count + 1
+        assert self.course_event.spaces_left == 0
+        resp = self.client.post(self.url(self.course_event.id),
+                                data={"user_id": self.student_user.id})
+
+        # no new bookings made
+        assert self.course_event.bookings.count() == bookings_count + 1
+        assert resp.status_code == 400
+        assert resp.content.decode("utf-8") == "Sorry, this event is now full"
+
+        # user has no-show booking
+        booking.status = "OPEN"
+        booking.no_show = True
+        booking.save()
+        assert self.course_event.bookings.count() == bookings_count + 1
+
+        resp = self.client.post(self.url(self.course_event.id), data={"user_id": self.student_user.id})
+        assert resp.status_code == 200
+        booking.refresh_from_db()
+        assert booking.status == "OPEN"
+        assert booking.no_show is False
 
     def test_rebook_cancelled_booking(self):
         # user has available block
@@ -320,9 +365,13 @@ class BookingToggleAjaxViewTests(EventTestMixin, TestUsersMixin, TestCase):
             "booking.future_event", event_type=self.aerial_event_type, course=self.course,
             start=timezone.now() + timedelta(hours=48)
         )
-        # user has available block and booking
+        # user has available course block and booking
         block = baker.make(
-            Block, block_config__event_type=self.aerial_event_type, user=self.student_user, paid=True
+            Block,
+            block_config__event_type=self.aerial_event_type,
+            block_config__course=True,
+            user=self.student_user,
+            paid=True
         )
         booking = baker.make(Booking, user=self.student_user, event=course_event, block=block)
         # cancel booking, set to no-show
@@ -330,7 +379,31 @@ class BookingToggleAjaxViewTests(EventTestMixin, TestUsersMixin, TestCase):
         booking.refresh_from_db()
         assert booking.status == "OPEN"
         assert booking.block == block
-        assert booking.no_show == True
+        assert booking.no_show is True
+
+    def test_cancel_dropin_booking_from_course(self):
+        # always set to no show, keep block
+        self.course.allow_drop_in = True
+        self.course.save()
+        course_event = baker.make_recipe(
+            "booking.future_event", event_type=self.aerial_event_type, course=self.course,
+            start=timezone.now() + timedelta(hours=48)
+        )
+        # user has available dropin block and booking
+        block = baker.make(
+            Block,
+            block_config__event_type=self.aerial_event_type,
+            block_config__course=False,
+            user=self.student_user,
+            paid=True
+        )
+        booking = baker.make(Booking, user=self.student_user, event=course_event, block=block)
+        # cancel booking, it was made with a drop in block, so set to cancelled
+        self.client.post(self.url(course_event.id), data={"user_id": self.student_user.id})
+        booking.refresh_from_db()
+        assert booking.status == "CANCELLED"
+        assert booking.block is None
+        assert booking.no_show is False
 
 
 class BookingAjaxCourseBookingViewTests(EventTestMixin, TestUsersMixin, TestCase):

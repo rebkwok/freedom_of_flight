@@ -12,25 +12,64 @@
     {% endif %}
 {% endif %}
 
-{% if user_info.open  %}
+{% if user_info.can_cancel  %}
     <div class="btn btn-xs btn-xs-narrow btn-dark float-right" href="#"><i id="loader_{{ event.id }}"></i> Cancel</div>
-{% elif event.course %}
-    {% if user_info.has_booked %}
-         <div class="btn btn-xs btn-xs-narrow btn-success float-right" href="#">Rebook</div>
-     {% elif event.course.full %}
-        <span class="helptext float-right">Course is full</span>
-     {% elif user_info.has_available_course_block or user_info.used_block %}
-        <span class="helptext float-right">NOT BOOKED</span><br/>
-        <span class="helptext float-right">Payment plan available</span><br/>
-     {% else %}
-         <div class="btn btn-xs btn-outline-dark float-right" href="#">Payment Options</div><br/>
-     {% endif %}
-{% elif user_info.can_book_or_cancel %}
-    {% if not user_info.has_available_block and not user_info.has_available_subscription %}
-         <div class="btn btn-xs btn-outline-dark float-right" href="#">Payment Options</div>
-     {% elif user_info.cancelled %}
-        <div class="btn btn-xs btn-xs-narrow btn-success float-right" href="#"><i id="loader_{{ event.id }}"></i> Rebook Drop-in</div>
-     {% else %}
+{% elif user_info.can_book or user_info.can_rebook %}
+    {% if course %}
+        {% if user_info.can_rebook %}
+            <div class="btn btn-xs btn-xs-narrow btn-success float-right" href="#">Rebook</div>
+         {% elif user_info.can_book %}
+            {% if user_info.has_available_block %}
+                {% if not user_info.has_available_course_block %}
+                     {% if not course.has_started or course.allow_partial_booking %}
+                        <span class="helptext float-right">NOTE: course booking is also available</span><br/>
+                     {% endif %}
+                     {% if course.allow_drop_in %}
+                        <div class="btn btn-xs btn-xs-narrow btn-success float-right" href="#"><i id="loader_{{ event.id }}"></i> Book Drop-in</div
+                     {% endif %}
+                {% elif not course.has_started %}
+                    <span class="helptext float-right">Use the button above to book the course</span><br/>
+                    {% if course.allow_drop_in and user_info.has_booked_course_dropin %}
+                        <span class="helptext float-right">Drop-in booking is also available:</span><br/>
+                        {% if user_info.has_available_dropin_block %}
+                            <div class="btn btn-xs btn-xs-narrow btn-success float-right" href="#"><i id="loader_{{ event.id }}"></i> Book Drop-in</div
+                        {% else %}
+                            <div class="btn btn-xs btn-outline-dark float-right" href="#">Payment Options</div>
+                        {% endif %}
+                    {% endif %}
+                {% elif course.allow_partial_booking and course.has_available_payment_plan %}
+                    <span class="helptext float-right">Use the button above to book the course</span>
+                {% elif course.allow_drop_in %}
+                    <div class="btn btn-xs btn-outline-dark float-right" href="#">Payment Options</div>
+                {% endif %}
+            {% else %}
+                <div class="btn btn-xs btn-outline-dark float-right" href="#">Payment Options</div>
+            {% endif %}
+        {% endif %}
+    {% elif event.course %}
+        {% if user_info.can_rebook %}
+            <div class="btn btn-xs btn-xs-narrow btn-success float-right" href="#">Rebook</div>
+        {% elif user_info.can_book %}
+            {% if user_info.has_available_course_block %}
+                <span class="helptext float-right">NOT BOOKED</span><br/>
+                <span class="helptext float-right">Payment plan available; see course details</span><br/>
+            {% elif event.course.allow_drop_in %}
+                {% if user_info.has_available_block %}
+                    {% if not event.course.has_started or user_info.has_booked_course_dropin %}
+                        <span class="helptext float-right">Multiple payment options available;<br/>see course details</span>
+                    {% else %}
+                        <div class="btn btn-xs btn-xs-narrow btn-success float-right" href="#"><i id="loader_{{ event.id }}"></i> Book Drop-in</div
+                    {% endif %}
+                {% else %}
+                    <div class="btn btn-xs btn-outline-dark float-right" href="#">Payment Options</div>
+                {% endif %}
+            {% else %}
+                <div class="btn btn-xs btn-outline-dark float-right" href="#">Payment Options</div>
+            {% endif %}
+        {% endif %}
+    {% elif user_info.has_available_block %}
          <div class="btn btn-xs btn-xs-narrow btn-success float-right" href="#"><i id="loader_{{ event.id }}"></i> Book Drop-in</div
+    {% else %}
+        <div class="btn btn-xs btn-outline-dark float-right" href="#">Payment Options</div>
     {% endif %}
 {% endif %}

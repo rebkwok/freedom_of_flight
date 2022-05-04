@@ -17,6 +17,11 @@ class CourseListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         self.make_disclaimer(self.student_user)
         self.make_data_privacy_agreement(self.student_user)
         self.make_data_privacy_agreement(self.manager_user)
+        # ensure course has more than one event
+        baker.make_recipe(
+            "booking.future_event", event_type=self.course.event_type,
+            course=self.course,
+        )
 
     def url(self, track):
         return reverse('booking:courses', args=(track.slug,))
@@ -49,7 +54,8 @@ class CourseListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         """
         # make events for course
         baker.make_recipe(
-            "booking.future_event", course=self.course, event_type=self.aerial_event_type, _quantity=self.course.number_of_events - 1
+            "booking.future_event", course=self.course, event_type=self.aerial_event_type,
+            _quantity=self.course.number_of_events - self.course.uncancelled_events.count()
         )
 
         # create a booking for this user
@@ -61,7 +67,20 @@ class CourseListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         booked = [course_id for course_id, user_info in user_course_booking_info.items() if user_info.get("open")]
         assert len(booked) == 1
         assert booked == [self.course.id]
+        # bookings have no block associated, so these are considered dropin
+        assert user_course_booking_info[self.course.id]["has_booked_dropin"]
+        assert user_course_booking_info[self.course.id]["has_booked"] is False
+        assert user_course_booking_info[self.course.id]["has_booked_all"] is True
+        assert '<i class="text-success fas fa-check-circle"></i> Booked' in resp.rendered_content
 
+        # assign course block
+        block = baker.make_recipe("booking.course_block", paid=True, user=self.student_user)
+        self.student_user.bookings.update(block=block)
+        resp = self.client.get(self.url(self.adult_track))
+        course_booking_info = resp.context_data['user_course_booking_info'][self.course.id]
+        assert course_booking_info["has_booked_dropin"] is False
+        assert course_booking_info["has_booked"] is True
+        assert course_booking_info["has_booked_all"] is True
         assert '<i class="text-success fas fa-check-circle"></i> Booked' in resp.rendered_content
 
     def test_courses_list_with_full_course(self):
@@ -71,11 +90,36 @@ class CourseListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         self.login(self.student_user)
         resp = self.client.get(self.url(self.adult_track))
         assert 'Course is full' in resp.rendered_content
+        assert "Drop-in is available for some classes" not in resp.rendered_content
+
+    def test_courses_list_with_full_events_on_course(self):
+        self.login(self.student_user)
+        assert self.course.events.count() > 1
+        assert self.course.full is False
+
+        # only the first event on the course is full, which makes the course full, but
+        # still bookable if it allows drop-in
+        baker.make(Booking, event=self.course.events.first(), _quantity=self.course.max_participants)
+        assert self.course.events.count() > 1
+        assert self.course.full
+
+        resp = self.client.get(self.url(self.adult_track))
+        # course doesn't allow drop-in
+        assert 'Course is full' in resp.rendered_content
+        assert "Drop-in is available for some classes" not in resp.rendered_content
+
+        # course allows drop-in
+        self.course.allow_drop_in = True
+        self.course.save()
+        resp = self.client.get(self.url(self.adult_track))
+        assert 'Course is full' not in resp.rendered_content, resp.rendered_content
+        assert "Full course booking is not available." in resp.rendered_content
+        assert "Drop-in is available for some classes" in resp.rendered_content
 
     def test_courses_list_with_course_with_cancelled_events(self):
         self.login(self.student_user)
-        self.course_event.cancelled = True
-        self.course_event.save()
+        # make all events cancelled
+        self.course.events.update(cancelled=True)
         assert self.course.uncancelled_events.exists() is False
         resp = self.client.get(self.url(self.adult_track))
         assert [course.id for course in resp.context_data["courses"]] == [self.course.id]

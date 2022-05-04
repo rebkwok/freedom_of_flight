@@ -1,12 +1,12 @@
 import logging
 
-from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, get_object_or_404
 from django.utils import timezone
 
 
 from common.utils import start_of_day_in_utc
-from ..models import Block, BlockConfig, Course, Event, Subscription, SubscriptionConfig
+from ..models import Block, BlockConfig, Course, Event, Subscription, \
+    SubscriptionConfig, valid_course_block_configs, valid_dropin_block_configs
 from .views_utils import data_privacy_required
 
 
@@ -53,13 +53,13 @@ def block_config_context(request, course=None, event=None):
     dropin_block_configs = None
     course_block_configs = None
     if course is not None:
-        course_block_configs = BlockConfig.objects.filter(
-            active=True, course=True, event_type=course.event_type, size=course.number_of_events
-        )
+        if not course.full:
+            course_block_configs = valid_course_block_configs(course)
+        if course.allow_drop_in:
+            # check dropin blocks for courses by event_type, in case course has no events to check
+            dropin_block_configs = valid_dropin_block_configs(event_type=course.event_type)
     elif event is not None:
-        dropin_block_configs = BlockConfig.objects.filter(
-            active=True, course=False, event_type=event.event_type
-        )
+        dropin_block_configs = valid_dropin_block_configs(event=event)
     else:
         dropin_block_configs = BlockConfig.objects.filter(active=True, course=False).order_by(
             "event_type__track", "event_type__name"

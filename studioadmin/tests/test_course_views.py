@@ -139,7 +139,7 @@ class PastCourseAdminListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         assert course_with_no_events in active_course_response.context_data["track_courses"][0]["page_obj"].object_list
 
 
-class CourseAjaxMakeVisibleTests(TestUsersMixin, TestCase):
+class CourseAjaxToggleTests(TestUsersMixin, TestCase):
 
     def setUp(self):
         self.create_admin_users()
@@ -148,18 +148,39 @@ class CourseAjaxMakeVisibleTests(TestUsersMixin, TestCase):
             "booking.future_event", event_type=self.course.event_type, course=self.course,
             show_on_site=False, _quantity=2
         )
-        self.url = reverse("studioadmin:ajax_toggle_course_visible", args=(self.course.id,))
 
     def test_toggle_visible(self):
+        url = reverse("studioadmin:ajax_toggle_course_visible", args=(self.course.id,))
         self.login(self.staff_user)
         assert self.course.show_on_site is False
-        self.client.post(self.url)
+        self.client.post(url)
         self.course.refresh_from_db()
         assert self.course.show_on_site is True
         for event in self.events:
             event.refresh_from_db()
             assert event.show_on_site is True
 
+    def test_toggle_dropin_booking(self):
+        url = reverse("studioadmin:ajax_toggle_course_allow_dropin_booking", args=(self.course.id,))
+        self.login(self.staff_user)
+        assert self.course.allow_drop_in is False
+        self.client.post(url)
+        self.course.refresh_from_db()
+        assert self.course.allow_drop_in is True
+        self.client.post(url)
+        self.course.refresh_from_db()
+        assert self.course.allow_drop_in is False
+
+    def test_toggle_partial_booking(self):
+        url = reverse("studioadmin:ajax_toggle_course_allow_partial_booking", args=(self.course.id,))
+        self.login(self.staff_user)
+        assert self.course.allow_partial_booking is False
+        self.client.post(url)
+        self.course.refresh_from_db()
+        assert self.course.allow_partial_booking is True
+        self.client.post(url)
+        self.course.refresh_from_db()
+        assert self.course.allow_partial_booking is False
 
 class CancelCourseViewTests(EventTestMixin, TestUsersMixin, TestCase):
 
@@ -574,3 +595,25 @@ class CourseUpdateViewTests(EventTestMixin, TestUsersMixin, TestCase):
         assert events[0] in self.course.events.all()
         assert events[1] not in self.course.events.all()
         assert new_event in self.course.events.all()
+
+    def test_remove_events_on_booked_course(self):
+        events = baker.make_recipe(
+            "booking.future_event", event_type=self.course.event_type, _quantity=2
+        )
+        assert self.course.events.count() == 0
+        form_data = {**self.form_data(), "events": [event.id for event in events]}
+        self.client.post(self.url, data=form_data)
+        self.course.refresh_from_db()
+        assert self.course.events.count() == 2
+        assert self.course.is_configured()
+
+        baker.make(Booking, event=events[0])
+
+        # Events can't be updated once bookings have been made; the events are hidden on
+        # the form.  Posted events are ignored.
+        form_data = {**self.form_data(), "events": [events[1].id]}
+        resp = self.client.post(self.url, data=form_data)
+        assert resp.status_code == 302
+        self.course.refresh_from_db()
+        assert self.course.events.count() == 2
+        assert self.course.is_configured()

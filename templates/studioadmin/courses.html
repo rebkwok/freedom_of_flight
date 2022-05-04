@@ -38,7 +38,7 @@
                                 <th scope="col" class="text-center">Events in course</th>
                                 <th scope="col" class="text-center">Events configured</th>
                                 <th scope="col" class="text-center">Spaces</th>
-                                <th scope="col" class="text-center">Allow booking after start</th>
+                                <th scope="col" class="text-center">Allow drop in</th>
                                 <th scope="col">Event Type</th>
                                 <th scope="col" class="text-center">Visible</th>
                                 <th></th>
@@ -75,11 +75,11 @@
                                 </td>
                                 <td class="text-center">
                                     <span
-                                          id="allow-partial-booking-{{ course.id }}"
+                                          id="allow-dropin-booking-{{ course.id }}"
                                           data-course_id="{{ course.id }}"
-                                          class="allow-partial-booking-btn"
+                                          class="allow-dropin-booking-btn"
                                           >
-                                          {% include "studioadmin/includes/ajax_toggle_course_allow_partial_booking_btn.html" %}
+                                          {% include "studioadmin/includes/ajax_toggle_course_allow_drop_in_booking_btn.html" %}
                                       </span>
                                 </td>
                                 <td>{{ course.event_type.name|title }}</td>
@@ -137,6 +137,6 @@
 {% endblock content %}
 
 {% block extra_js %}
-<script type='text/javascript' src="{% static 'studioadmin/js/courses_ajax-v2.js' %}"></script>
+<script type='text/javascript' src="{% static 'studioadmin/js/courses_ajax-v3.js' %}"></script>
 {% endblock %}
 

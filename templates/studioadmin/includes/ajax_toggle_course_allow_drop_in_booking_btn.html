@@ -1,0 +1,3 @@
+<span class="btn btn-sm btn-toggle {% if course.allow_drop_in %}btn-success{% else %}btn-dark{% endif %}">
+  {{ course.allow_drop_in|yesno|title }}
+</span>

@@ -117,37 +117,63 @@ def ajax_toggle_booking(request, event_id):
     host = f'http://{request.META.get("HTTP_HOST")}'
 
     if requested_action in ["opened", "reopened"]:
-        if not (has_available_block(user, event) or has_available_subscription(user, event)):
+        # OPENING/REOPENING
+        # make sure the event isn't full or cancelled
+        if event.spaces_left <= 0 or event.cancelled:
+            # redirect if:
+            # - non-course event
+            # - course event and user has no booking
+            # - course event and user has fully cancelled booking
+            # (course events with no-show bookings can rebook)
+            redirect400 = True
+            if event.course and existing_booking and existing_booking.no_show:
+                # Course no-shows are allowed to rebook, only fully cancelled ones count
+                # in the booking count
+                redirect400 = False
+
+            if redirect400:
+                logger.error('Attempt to book %s class',
+                             'cancelled' if event.cancelled else 'full')
+                return HttpResponseBadRequest(
+                    "Sorry, this event {}".format(
+                        "has been cancelled" if event.cancelled else "is now full")
+                )
+
+        # has available course block/subscription
+        if event.course and ref == "events" and has_available_course_block(user, event.course):
+            if requested_action == "opened" or existing_booking and existing_booking.status == "CANCELLED":
+                # First time booking for a course event, or reopening a fully cancelled course booking - redirect to book course
+                # rebookings for no-shows can be done from events page
+                url = reverse('booking:course_events', args=(event.course.slug,))
+                return JsonResponse({"redirect": True, "url": url})
+
+        # get drop-in and subscription payment methods only; course bookings are done from
+        # the course page (apart from no_show course bookings)
+        has_payment_method = has_available_block(user, event, dropin_only=True) or has_available_subscription(user, event)
+        no_show_course_booking = event.course and existing_booking and existing_booking.no_show
+        if not no_show_course_booking and not has_payment_method:
+            # rebooking, no block on booking (i.e. was fully cancelled) and no block available
             if event.course:
                 url = reverse("booking:course_purchase_options", args=(event.course.slug,))
             else:
                 url = reverse("booking:event_purchase_options", args=(event.slug,))
             return JsonResponse({"redirect": True, "url": url})
 
-        # has available course block/subscription
-        if event.course:
-            if requested_action == "opened" or existing_booking and existing_booking.status == "CANCELLED":
-                # First time booking for a course event, or reopening a fully cancelled course- redirect to book course
-                # rebookings can be done from events page
-                url = reverse('booking:course_events', args=(event.course.slug,))
-                return JsonResponse({"redirect": True, "url": url})
-
-        # OPENING/REOPENING
-        # make sure the event isn't full or cancelled
-        if not event.course and (event.spaces_left <= 0 or event.cancelled):
-            logger.error('Attempt to book %s class', 'cancelled' if event.cancelled else 'full')
-            return HttpResponseBadRequest(
-                "Sorry, this event {}".format("has been cancelled" if event.cancelled else "is now full")
-            )
-
         # Update/create the booking
         if existing_booking is None:
             booking = Booking.objects.create(user=user, event=event)
         else:
             booking = existing_booking
+
+        existing_no_show_with_block = booking.block is not None and booking.no_show
         booking.status = 'OPEN'
         booking.no_show = False
-        booking.assign_next_available_subscription_or_block()
+        if not existing_no_show_with_block:
+            # if this was already a no-show, with a block assigned, we just keep that block
+            # Otherwise, assign next block; if it's new course event bookking, use a drop in block
+            # if both course/dropin are available
+            # full course bookings are only done from the course page
+            booking.assign_next_available_subscription_or_block(dropin_only=True)
         booking.save()
         if booking.block and booking.block.full:
             block_availability_changed = True
@@ -168,7 +194,8 @@ def ajax_toggle_booking(request, event_id):
         block_pre_cancel = booking.block
         block_pre_cancel_was_full = block_pre_cancel.full if block_pre_cancel else False
 
-        if event.course:
+        if event.course and booking.block.block_config.course:
+            # only course events booked with course blocks get set to no-show
             booking.no_show = True
         elif not event.event_type.allow_booking_cancellation:
             booking.no_show = True
@@ -226,6 +253,8 @@ def ajax_toggle_booking(request, event_id):
             messages.success(request, f"{event}: {alert_message['message']}")
             if ref == "bookings":
                 url = reverse("booking:bookings")
+            elif ref == "course_events":
+                url = reverse("booking:course_events", args=(event.course.slug,))
             else:
                 url = reverse("booking:events", args=(event.event_type.track.slug,))
             return JsonResponse({"redirect": True, "url": url + f"?page={page}"})
@@ -307,8 +336,10 @@ def ajax_course_booking(request, course_id):
     # Book all events
     for event in course.events_left:
         booking, _ = Booking.objects.get_or_create(user=user, event=event)
-        # Make sure block is assigned but don't change booking statuses if already created
+        # Make sure block is assigned and update booking statuses if already created
         booking.block = course_block
+        booking.status = "OPEN"
+        booking.no_show = False
         booking.save()
 
     ActivityLog.objects.create(

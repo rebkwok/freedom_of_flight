@@ -27,7 +27,7 @@ from common.utils import start_of_day_in_utc, end_of_day_in_utc, end_of_day_in_l
 from payments.models import Invoice
 
 from .email_helpers import send_user_and_studio_emails
-from .utils import has_available_block, has_available_subscription, get_active_user_block, get_available_user_subscription
+
 
 logger = logging.getLogger(__name__)
 
@@ -171,6 +171,10 @@ class Course(models.Model):
         help_text="Users can book after a course has started (if they have purchased a credit "
                   "block valid for the remaining number of classes)"
     )
+    allow_drop_in = models.BooleanField(
+        default=False,
+        help_text="Users can book individual events with a drop-in credit block valid for this event type"
+    )
 
     @property
     def full(self):
@@ -180,8 +184,16 @@ class Course(models.Model):
         return self.booking_count() >= self.max_participants
 
     @property
+    def all_events_full(self):
+        return not any(not event.full for event in self.events_left)
+
+    @property
     def spaces_left(self):
         return self.max_participants - self.booking_count()
+
+    @property
+    def has_available_payment_plan(self):
+        return valid_course_block_configs(self) is not None
 
     def booking_count(self):
         # Find the distinct users from all booking on this course.  We don't just look at the first event, in case
@@ -189,9 +201,14 @@ class Course(models.Model):
         # Only count open bookings, which will inlcude no-shows but not fully cancelled ones
         # A booking should only be fully cancelled if the user has been manually cancelled out by an admin, and it
         # should apply to all bookings in the course.
-        return Booking.objects.select_related("event").filter(
-            event__course_id=self.id, status="OPEN"
-        ).order_by().distinct("user").count()
+
+        # Find the max count of open bookings against any single event
+        # There may be drop in bookings by different users
+        if not self.uncancelled_events.exists():
+            return 0
+        return max([
+            event.bookings.filter(status="OPEN").count() for event in self.uncancelled_events
+        ])
 
     @cached_property
     def start(self):
@@ -316,6 +333,31 @@ class Event(models.Model):
                 events_in_order = self.course.uncancelled_events.order_by("start").values_list("id", flat=True)
                 return f"{list(events_in_order).index(self.id) + 1}/{events_in_order.count()}"
             return "-"
+
+    def booking_restricted_pre_start(self):
+        return self.event_type.booking_restriction > 0 and (
+                self.start - timedelta(
+            minutes=self.event_type.booking_restriction) < timezone.now()
+        )
+
+    def is_bookable(self, booking_restricted=None):
+        """The event can be booked by a user with a valid payment method"""
+        if self.cancelled:
+            return False
+        if self.full:
+            return False
+        # allow for passing in the value if it's already been calculated, to avoid
+        # repeated database calls
+        booking_restricted = booking_restricted or self.booking_restricted_pre_start()
+        if booking_restricted:
+            return False
+        if self.course:
+            # this event is not full; if the course is full or the course has started,
+            # can only book single event if drop in is allowed
+            if self.course.full or (self.course.has_started and not self.course.allow_partial_booking):
+                if not self.course.allow_drop_in:
+                    return False
+        return True
 
     @property
     def show_video_link(self):
@@ -568,9 +610,15 @@ class Block(models.Model):
         if not self.active_block:
             return False
         if event.course:
-            # if the event is part of a course, it should be using a course block
-            return self.valid_for_course(course=event.course, event=event)
+            # if the event is part of a course, check if this block is valid for the course
+            valid_for_course = self.valid_for_course(course=event.course, event=event)
+            if valid_for_course:
+                return True
         if not self.block_config.course and self.block_config.event_type == event.event_type:
+            # We still get here for an event that's part of a course if this is a non-course block,
+            # in case of a course that allows drop-in booking for individual classes
+            if event.course and not event.course.allow_drop_in:
+                return False
             # event type matches and it's not a course block, check it's valid for this event (hasn't expired)
             return self._valid_and_active_for_event(event)
         return False
@@ -1409,7 +1457,7 @@ class Booking(models.Model):
     def has_available_subscription(self):
         return has_available_subscription(self.user, self.event)
 
-    def assign_next_available_subscription_or_block(self):
+    def assign_next_available_subscription_or_block(self, dropin_only=True):
         """
         Checks for and assigns next available subscription or block.
         NOTE: Does not save booking now
@@ -1418,7 +1466,7 @@ class Booking(models.Model):
         if available_subscription:
             self.subscription = available_subscription
         else:
-            active_block = get_active_user_block(self.user, self.event)
+            active_block = get_active_user_block(self.user, self.event, dropin_only=dropin_only)
             if active_block:
                 self.block = active_block
 
@@ -1443,6 +1491,10 @@ class Booking(models.Model):
         return self._old_booking().status == 'OPEN' and self.status == 'CANCELLED'
 
     def clean(self):
+        if self.status == "CANCELLED":
+            # Booking should never be both cancelled and no-show; reset no-show before clean
+            self.no_show = False
+
         if self._is_rebooking():
             if self.event.spaces_left == 0 and not self.event.course:
                 raise ValidationError(
@@ -1479,6 +1531,106 @@ class Booking(models.Model):
         # if there is a subscription on the booking, make sure its start date is updated
         if self.subscription:
             self.subscription.set_start_date_from_bookings()
+
+
+# Model-related utils
+def valid_course_block_configs(course):
+    if not course.has_started:
+        # not started course - course blocks matching size and event type are valid
+        return BlockConfig.objects.filter(
+            active=True, course=True, event_type=course.event_type,
+            size=course.number_of_events
+        )
+    elif course.allow_partial_booking:
+        # started course - course blocks match event type and number of
+        # remaining classes are valid
+        return BlockConfig.objects.filter(
+            active=True, course=True, event_type=course.event_type,
+            size=course.events_left.count()
+        )
+
+
+def valid_dropin_block_configs(event=None, event_type=None):
+    if event is None:
+        assert event_type is not None
+        return BlockConfig.objects.filter(
+            active=True, course=False, event_type=event_type
+        )
+    if event.course is None or event.course.allow_drop_in:
+        return BlockConfig.objects.filter(
+            active=True, course=False, event_type=event.event_type
+        )
+
+
+def has_available_block(user, event, dropin_only=False):
+    if event.course and not event.course.allow_drop_in and not dropin_only:
+        return any(True for block in user.blocks.all() if block.valid_for_course(event.course))
+    else:
+        if dropin_only:
+            return any(
+                True for block in user.blocks.all()
+                if not block.block_config.course and block.valid_for_event(event)
+            )
+        return any(True for block in user.blocks.all() if block.valid_for_event(event))
+
+
+def has_available_course_block(user, course):
+    return any(True for block in user.blocks.all() if block.valid_for_course(course))
+
+
+def get_active_user_block(user, event, dropin_only=True):
+    """
+    return the active block for this booking with the soonest expiry date
+    Expiry dates can be None if the block hasn't started yet, order by purchase date as well
+    """
+    if event.course and not dropin_only:
+        valid_course_block = get_active_user_course_block(user, event.course)
+        # If the course block is valid, or drop in isn't allowed, return it now
+        if valid_course_block is not None or not event.course.allow_drop_in:
+            return valid_course_block
+
+    blocks = user.blocks.filter(
+        block_config__course=False, block_config__event_type=event.event_type
+    ).order_by("expiry_date", "purchase_date")
+    return next((block for block in blocks if block.valid_for_event(event)), None)
+
+
+def get_active_user_course_block(user, course):
+    blocks = user.blocks.filter(
+        block_config__course=True, block_config__event_type=course.event_type
+    ).order_by("expiry_date", "purchase_date")
+    valid_blocks = (block for block in blocks if block.valid_for_course(course))
+    # already sorted by expiry date, so we can just get the next valid one
+    # UNLESS the course has started and allows part booking - then we want to make sure we return a valid part
+    # block before a full block
+    if course.has_started and course.allow_partial_booking:
+        valid_blocks = sorted(
+            list(valid_blocks),
+            key=lambda block: block.block_config.size < course.number_of_events,
+            reverse=True
+        )
+        return valid_blocks[0] if valid_blocks else None
+    return next(valid_blocks, None)
+
+
+def iter_available_subscriptions(user, event):
+    for subscription in user.subscriptions.filter(
+            paid=True, config__bookable_event_types__has_key=str(event.event_type.id)
+            ).order_by("expiry_date", "start_date", "purchase_date"):
+        if subscription.valid_for_event(event):
+            yield subscription
+
+
+def has_available_subscription(user, event):
+    return any(iter_available_subscriptions(user, event))
+
+
+def get_available_user_subscription(user, event):
+    """
+    return the available subscription for this booking with the soonest expiry date
+    Expiry dates can be None if the subscriptions hasn't started yet, order by purchase date as well
+    """
+    return next(iter_available_subscriptions(user, event), None)
 
 
 @receiver(post_delete, sender=GiftVoucher)

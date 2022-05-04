@@ -69,6 +69,33 @@ var toggleAllowPartialBooking = function()  {
 };
 
 
+var toggleAllowDropinBooking = function()  {
+
+    //In this scope, "this" is the button just clicked on.
+    //The "this" in processResult is *not* the button just clicked
+    //on.
+    var $button_just_clicked_on = $(this);
+
+    //The value of the "data-course_id" attribute.
+    var course_id = $button_just_clicked_on.data('course_id');
+
+    var processResult = function(
+       result, status, jqXHR)  {
+      //console.log("sf result='" + result + "', status='" + status + "', jqXHR='" + jqXHR + "', user_id='" + user_id + "'");
+        $('#allow-dropin-booking-' + course_id).html(result);
+   };
+
+   $.ajax(
+       {
+          url: '/studioadmin/ajax-toggle-course-allow-dropin-booking/' + course_id + '/',
+          type: 'POST',
+          dataType: 'html',
+          success: processResult
+          //Should also have a "fail" call as well.
+       }
+    );
+};
+
 /**
    The Ajax "main" function. Attaches the listeners to the elements on
    page load, each of which only take effect every
@@ -99,6 +126,7 @@ $(document).ready(function()  {
    */
   $('.visible-btn').click(_.debounce(toggleVisible, MILLS_TO_IGNORE, true));
   $('.allow-partial-booking-btn').click(_.debounce(toggleAllowPartialBooking, MILLS_TO_IGNORE, true));
+$('.allow-dropin-booking-btn').click(_.debounce(toggleAllowDropinBooking, MILLS_TO_IGNORE, true));
   /*
     Warning: Placing the true parameter outside of the debounce call:
 

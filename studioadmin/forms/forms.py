@@ -11,10 +11,11 @@ from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.shortcuts import reverse
 from django.utils import timezone
+from django.utils.safestring import mark_safe
 
 from crispy_forms.bootstrap import InlineCheckboxes, AppendedText, PrependedText
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Button, Layout, Submit, Row, Column, Field, Fieldset, Hidden, HTML
+from crispy_forms.layout import Button, Layout, Submit, Row, Column, Field, Fieldset, Hidden, HTML, Div
 from delorean import Delorean
 
 from .form_utils import Formset
@@ -25,7 +26,7 @@ from booking.models import (
     Booking, Block, Event, Course, EventType, COMMON_LABEL_PLURALS, BlockConfig, SubscriptionConfig,
     Subscription, WaitingListUser
 )
-from booking.utils import has_available_course_block
+from booking.models import has_available_course_block
 from common.utils import full_name
 from timetable.models import TimetableSession
 
@@ -197,6 +198,7 @@ class CourseUpdateForm(forms.ModelForm):
             "max_participants",
             "show_on_site",
             "allow_partial_booking",
+            "allow_drop_in",
             "cancelled",
         )
 
@@ -205,7 +207,7 @@ class CourseUpdateForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.back_url = reverse("studioadmin:courses")
         for name, field in self.fields.items():
-            if name in ["show_on_site", "allow_partial_booking"]:
+            if name in ["show_on_site", "allow_partial_booking", "allow_drop_in"]:
                 field.widget.attrs = {"class": "form-check-inline"}
             elif name == "cancelled" and self.instance:
                 if self.instance.cancelled:
@@ -217,7 +219,11 @@ class CourseUpdateForm(forms.ModelForm):
                 if name == "description":
                     field.widget.attrs.update({"rows": 10})
 
-        self.fields["allow_partial_booking"].label = "Allow booking after the course has started"
+        self.fields["allow_partial_booking"].label = "Allow booking after the course has started (Not recommended)"
+        self.fields["allow_partial_booking"].help_text = """
+            Users can book after a course has started (not recommended - use 'allow drop-in' instead)
+        """
+        self.fields["allow_drop_in"].label = "Allow drop-in booking"
 
         self.hide_events = False
         self.bookings_exist = False
@@ -281,7 +287,8 @@ class CourseUpdateForm(forms.ModelForm):
             "number_of_events",
             "max_participants",
             "show_on_site",
-            "allow_partial_booking",
+            "allow_drop_in",
+            Div("allow_partial_booking", css_class="text-secondary"),
             Hidden("cancelled", self.instance.cancelled) if hide_cancelled else "cancelled",
         )
 
@@ -1130,7 +1137,7 @@ class AddEditBookingForm(forms.ModelForm):
             initial=False, required=False,
             help_text="If user has a valid subscription/block for the selected event, assign it automatically.  "
                       "Subscriptions are used before blocks, if both exist.  Any entries in the subscription/block "
-                      "fields below will be ignored."
+                      "fields below will be ignored.  This will NOT assign single event bookings to course credit blocks."
         )
         if (self.instance.id and (self.instance.block or self.instance.subscription)) or course_event:
             self.fields['auto_assign_available_subscription_or_block'].widget = forms.HiddenInput()
@@ -1327,31 +1334,53 @@ class CourseBookingAddChangeForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         booking_user = kwargs.pop('booking_user')
+        # block None == adding a course booking afresh, not editing a block to add a course to it
         block = kwargs.pop('block', None)
         old_course = kwargs.pop('old_course', None)
         old_course_id = old_course.id if old_course else None
         super().__init__(*args, **kwargs)
         if block is None:
-            help_text = "Note that only ongoing/future courses that are fully configured and have " \
-                        "spaces are listed here. You can't make a new course booking for a full course."
+            help_text = mark_safe(
+                "Note that this list shows only ongoing/future courses:"
+                "<ul>"
+                "<li>that are fully configured</li>"
+                "<li>have spaces in all classes</li>"
+                "<li>that this user hasn't already booked for</li>"
+                "<li>that this user has a valid block for</li>"
+                "</ul>"
+                "You can't make a new course booking for a full course.<br/>"
+                "If the course you want to book isn't shown here, you may need to create "
+                "a block for the user first."
+            )
         else:
-            help_text = "Note that only ongoing/future courses that are fully configured, have spaces and are valid for this credit block " \
-            "are listed here. You can't reassign the block to a full course."
+            help_text = mark_safe(
+                "Note that this list shows only ongoing/future courses:"
+                "<ul>"
+                "<li>that are fully configured</li>"
+                "<li>have spaces in all classes</li>"
+                "<li>that are valid for this credit block</li>"
+                "</ul>"
+                "You can't reassign the block to a full course."
+            )
 
         self.helper = FormHelper()
         course_choices = get_course_choices_for_user(booking_user, block, old_course_id)
         if not course_choices:
             if block is None:
                 self.helper.layout = Layout(
-                    HTML(f"<p>Student has no available course credit blocks. Go to their"
-                         f" <a href={reverse('studioadmin:user_blocks', args=(booking_user.id,))}>blocks list</a> to "
-                         f"add one first. You will be able to assign a course to the new block from there.</p>")
+                    HTML(
+                        f"<p>No courses are available to book for this student.</p>"
+                        f"<p>Either the student has booked/part-booked for all available courses, or "
+                        f"student has no available course credit blocks for available courses. Go to their"
+                        f" <a href={reverse('studioadmin:user_blocks', args=(booking_user.id,))}>blocks list</a> to "
+                        f"add one first. You will be able to assign a course to the new block from there.</p>"
+                        f"")
                 )
             else:
                 self.helper.layout = Layout(
-                    HTML(f"<p>No courses are available to book for this student and block.</p>")
-                )
-            self.fields['course'] = forms.ChoiceField(choices=[])
+                    HTML(
+                        f"<p>No courses are available to book for this student and block.</p>")
+                    )
         else:
             self.fields['course'] = forms.ChoiceField(
                 choices=course_choices,

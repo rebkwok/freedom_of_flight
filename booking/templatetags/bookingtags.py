@@ -4,12 +4,12 @@ from django.db.models import Q
 from django.utils import timezone
 from common.utils import full_name, start_of_day_in_utc
 from ..models import EventType, WaitingListUser
-from ..utils import has_available_course_block as has_available_course_block_util
-from ..utils import has_available_block, has_available_subscription
+from ..models import has_available_course_block as has_available_course_block_util
+from ..models import has_available_block, has_available_subscription
 
 from ..utils import (
     get_block_status, user_can_book_or_cancel, get_user_booking_info, user_subscription_info,
-    booking_restricted_pre_event_start, show_warning
+    show_warning
 )
 
 register = template.Library()
@@ -131,10 +131,6 @@ def can_book_or_cancel(booking):
 @register.filter
 def show_booking_warning(booking):
     return show_warning(event=booking.event, user_booking=booking)
-
-@register.filter
-def booking_restricted(event):
-    return booking_restricted_pre_event_start(event)
 
 
 @register.filter

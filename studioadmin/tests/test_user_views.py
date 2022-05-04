@@ -528,7 +528,7 @@ class UserBookingEditViewTests(TestUsersMixin, TestCase):
         assert self.booking.block == self.course_block
         assert self.booking.no_show is True
 
-    def test_cannot_cancel_course_event(self):
+    def test_can_only_cancel_course_event_if_booked_with_non_course_block(self):
         self.event.course = self.course
         self.event.save()
         self.booking.block = self.course_block
@@ -539,6 +539,16 @@ class UserBookingEditViewTests(TestUsersMixin, TestCase):
         assert self.booking.block == self.course_block
         assert self.booking.status == "OPEN"
         assert self.booking.no_show is True
+
+        self.booking.block = self.dropin_block
+        self.booking.no_show = False
+        self.booking.save()
+        self.client.post(self.url, {**self.form_data, "status": "CANCELLED"})
+        self.booking.refresh_from_db()
+        # set to cancelled, block removed
+        assert self.booking.block is None
+        assert self.booking.status == "CANCELLED"
+        assert self.booking.no_show is False
 
     def test_cannot_reopen_cancelled_booking_for_full_event(self):
         self.booking.status = "CANCELLED"
@@ -650,14 +660,14 @@ class UserCourseBookingAddViewTests(EventTestMixin, TestUsersMixin, TestCase):
     def test_add_course_booking_no_available_block(self):
         assert self.student_user.bookings.exists() is False
         resp = self.client.get(self.url)
-        assert resp.context["form"].fields["course"].choices == []
-        assert "Student has no available course credit blocks" in resp.content.decode("utf-8")
+        assert "course" not in resp.context["form"].fields
+        assert "No courses are available to book for this student." in resp.content.decode("utf-8")
 
         # unpaid block, still not allowed to book
         block = baker.make(Block, user=self.student_user, block_config=self.course_config, paid=False)
         resp = self.client.get(self.url)
-        assert resp.context["form"].fields["course"].choices == []
-        assert "Student has no available course credit blocks" in resp.content.decode("utf-8")
+        assert "course" not in resp.context["form"].fields
+        assert "No courses are available to book for this student." in resp.content.decode("utf-8")
 
         # paid block, allowed
         block.paid = True
@@ -706,7 +716,7 @@ class UserCourseBookingAddViewTests(EventTestMixin, TestUsersMixin, TestCase):
 
     def test_post_with_no_valid_options(self):
         resp = self.client.post(self.url, {"course": self.course.id})
-        assert resp.context["form"].errors == {"course": ["No valid course options"]}
+        assert "course" not in resp.context["form"]
 
     def test_add_booking_with_autoassigned_block(self):
         assert self.student_user.bookings.exists() is False
@@ -806,7 +816,9 @@ class UserBlockChangeCourseTests(EventTestMixin, TestUsersMixin, TestCase):
 
     def test_course_options(self):
         def _get_choices_ids(response):
-            return sorted(choice[0] for choice in response.context["form"].fields["course"].choices)
+            course_field = response.context["form"].fields.get("course")
+            choices = course_field.choices if course_field else []
+            return sorted(choice[0] for choice in choices)
         resp = self.client.get(self.url)
         # Both courses are configured and valid for the block
         choices = _get_choices_ids(resp)

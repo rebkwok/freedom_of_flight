@@ -14,9 +14,10 @@ from django.utils import timezone
 from braces.views import LoginRequiredMixin
 
 from activitylog.models import ActivityLog
-from booking.email_helpers import send_bcc_emails, send_user_and_studio_emails, send_waiting_list_email
-from booking.models import Booking, Block, BlockConfig, Course, Event, WaitingListUser, SubscriptionConfig, Subscription
-from booking.utils import get_active_user_block, get_active_user_course_block, has_available_course_block
+from booking.email_helpers import send_bcc_emails, send_user_and_studio_emails, \
+    send_waiting_list_email
+from booking.models import Booking, Block, BlockConfig, Course, Event, WaitingListUser, \
+    SubscriptionConfig, Subscription, get_active_user_course_block
 from common.utils import full_name
 
 from ..forms.forms import (
@@ -277,16 +278,17 @@ def process_user_booking_updates(form, request, user):
 
             if 'status' in form.changed_data and action == 'updated':
                 if booking.status == 'CANCELLED':
-                    if booking.event.course:
-                        # bookings for course events don't get cancelled fully, just set to no_show
+                    pre_cancel_block = user.bookings.get(id=booking.id).block
+                    if booking.event.course and pre_cancel_block and pre_cancel_block.block_config.course:
+                        # bookings for course events don't get cancelled fully, unless booked with a dropin block
                         booking.status = "OPEN"
                         booking.no_show = True
                         # reset the block if it was removed
-                        booking.block = user.bookings.get(id=booking.id).block
+                        booking.block = pre_cancel_block
                         messages.info(
                             request,
-                            "Cancelled course bookings are not refunded to user or credited back to blocks; "
-                            "booking has been set to no-show instead."
+                            "Cancelled course bookings made with course credit blocks are not refunded "
+                            "to user or credited back to blocks; booking has been set to no-show instead."
                         )
                     elif booking.block:  # pragma: no cover
                         # Form validation should prevent this, but make sure no block is assigned anyway
@@ -299,7 +301,7 @@ def process_user_booking_updates(form, request, user):
                 action = 'cancelled' if booking.no_show else 'reopened'
             if form.cleaned_data["auto_assign_available_subscription_or_block"] and action != "cancelled":
                 # auto-assign to next available subscription or block
-                booking.assign_next_available_subscription_or_block()
+                booking.assign_next_available_subscription_or_block(dropin_only=True)
 
             if action == "updated" and "block" in form.changed_data and not booking.block and booking.event.course:
                 # Don't remove blocks from course events
@@ -547,8 +549,8 @@ def course_booking_add_view(request, user_id):
     user = get_object_or_404(User, pk=user_id)
     if request.method == "POST":
         form = CourseBookingAddChangeForm(request.POST, booking_user=user)
-        if form.is_valid():
-            course = Course.objects.get(pk=form.cleaned_data["course"])
+        if form.is_valid() and "course" in form.cleaned_data:
+            course = Course.objects.get(pk=form.cleaned_data.get("course"))
             course_block = get_active_user_course_block(user, course)
             if course_block is None:
                 messages.error(

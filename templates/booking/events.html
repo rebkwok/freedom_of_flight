@@ -24,18 +24,22 @@
     </h2>
 
     <div class="row">
-
-
     {% if course %}
         <div class="col-12">
         {% if request.user.is_authenticated %}
-            {% if not course.full and course.has_started and not course.allow_partial_booking and not already_booked %}
-                <h3 class="text-danger">
-                    NOTE: This course has started.</h3>
-                <p><strong>If you would like to book for the remaining classes in the course,
-                    please contact {{ studio_email|obfuscate_mailto }}.</strong>
-                </p>
+            {% if not course.full and course.has_started and not already_booked and not course.allow_partial_booking %}
+                <h3 class="text-danger">NOTE: This course has started.</h3>
+                {% if course.allow_drop_in %}
+                    <p>You can book individual classes as drop in</p>
+                {% else  %}
+                    <p><strong>If you would like to book for the remaining classes in the course,
+                        please contact {{ studio_email|obfuscate_mailto }}.</strong>
+                    </p>
+                {% endif %}
             {% else %}
+                {% if course.has_started %}
+                    <h3> NOTE: This course has started.</h3>
+                {% endif %}
                 {% if view_as_user|has_disclaimer %}
                 <div
                     id="book_course_{{ course.id }}"
@@ -133,43 +137,72 @@
                                     <span class="float-right"><a class="btn btn-xs btn-secondary" disabled href="#">{{ event.event_type.label|title }} has started</a></span>
                                     {% endif %}
                                 {% elif not course %}
-                                        {% if event.full and not user_info.has_booked %}
-                                            <span class="float-right">
-                                            <span
-                                                id="waiting_list_button_{{ event.id }}"
-                                                data-event_id="{{ event.id }}"
-                                                data-user_id="{{ view_as_user.id }}"
-                                                class="ajax_events_waiting_list_btn">
-                                            {% include "booking/includes/waiting_list_button.html" %}
-                                            </span>
-                                            </span>
-                                        {% elif event.course.has_started and not event.course.allow_partial_booking and not user_info.has_booked %}
+                                    {% if user_info.can_join_waiting_list or user_info.can_leave_waiting_list %}
+                                        <span class="float-right">
+                                        <span
+                                            id="waiting_list_button_{{ event.id }}"
+                                            data-event_id="{{ event.id }}"
+                                            data-user_id="{{ view_as_user.id }}"
+                                            class="ajax_events_waiting_list_btn">
+                                        {% include "booking/includes/waiting_list_button.html" %}
+                                        </span>
+                                        </span>
+                                    {% elif event.course.has_started and not event.course.allow_partial_booking and not event.course.allow_drop_in and not user_info.has_booked %}
                                         <span class="float-right">
                                             <span class="helptext">Course has started<span/><br/>
-                                                <a class="btn btn-xs btn-outline-dark float-right" href="{% url 'booking:course_events' event.course.slug %}">More booking info</a>
+                                                <a class="float-right" href="{% url 'booking:course_events' event.course.slug %}">More booking info</a>
                                             </span>
                                         </span>
-                                        {% elif user_info.can_book_or_cancel %}
-                                            <span class="float-right">
-                                            {% if event.course %}
-                                             <a class="helptext float-right" href="{% url "booking:course_events" event.course.slug %}">Course details</a><br/>
-                                            {% endif %}
-                                            <span
-                                                id="book_{{ event.id }}"
-                                                data-event_id="{{ event.id }}"
-                                                data-event_str="{{ event.name }} ({{ event.start|date:'D d b H:i'|title }})"
-                                                data-user_id="{{ view_as_user.id }}"
-                                                data-ref="events"
-                                                data-page="{{ request.GET.page }}"
-                                                data-show_warning={{ user_info.show_warning|yesno:"1,0" }}
-                                                data-cancellation_allowed={{ event.event_type.allow_booking_cancellation|yesno:"1,0" }}
-                                                class="ajax_events_btn">
-                                                {% include "booking/includes/events_button.txt" %}
-                                                </span>
-                                            </span>
-                                        {% elif user_info.booking_restricted_pre_event_start %}
-                                            <span class="float-right"><a class="btn btn-xs btn-secondary" disabled href="#"><span class="helptext">Unavailable {{ event.event_type.booking_restriction }} mins before start</span></a></span>
+                                    {% elif user_info.can_book_or_cancel %}
+                                        <span class="float-right">
+                                        {% if event.course %}
+                                         <a class="helptext float-right" href="{% url "booking:course_events" event.course.slug %}">Course details</a><br/>
                                         {% endif %}
+                                        <span
+                                            id="book_{{ event.id }}"
+                                            data-event_id="{{ event.id }}"
+                                            data-event_str="{{ event.name }} ({{ event.start|date:'D d b H:i'|title }})"
+                                            data-user_id="{{ view_as_user.id }}"
+                                            data-ref="events"
+                                            data-page="{{ request.GET.page }}"
+                                            data-show_warning={{ user_info.show_warning|yesno:"1,0" }}
+                                            data-cancellation_allowed={{ event.event_type.allow_booking_cancellation|yesno:"1,0" }}
+                                            class="ajax_events_btn">
+                                            {% include "booking/includes/events_button.txt" %}
+                                            </span>
+                                        </span>
+                                    {% elif user_info.booking_restricted_pre_event_start %}
+                                        <span class="float-right"><a class="btn btn-xs btn-secondary" disabled href="#"><span class="helptext">Unavailable {{ event.event_type.booking_restriction }} mins before start</span></a></span>
+                                    {% endif %}
+                                {% elif course and course.allow_drop_in %}
+                                    {% if user_info.can_join_waiting_list or user_info.can_leave_waiting_list %}
+                                        <span class="float-right">
+                                        <span
+                                            id="waiting_list_button_{{ event.id }}"
+                                            data-event_id="{{ event.id }}"
+                                            data-user_id="{{ view_as_user.id }}"
+                                            class="ajax_events_waiting_list_btn">
+                                        {% include "booking/includes/waiting_list_button.html" %}
+                                        </span>
+                                        </span>
+                                    {% elif user_info.can_book_or_cancel %}
+                                        <span class="float-right">
+                                        <span
+                                            id="book_{{ event.id }}"
+                                            data-event_id="{{ event.id }}"
+                                            data-event_str="{{ event.name }} ({{ event.start|date:'D d b H:i'|title }})"
+                                            data-user_id="{{ view_as_user.id }}"
+                                            data-ref="{% if course %}course_events{% else %}events{% endif %}"
+                                            data-page="{{ request.GET.page }}"
+                                            data-show_warning={{ user_info.show_warning|yesno:"1,0" }}
+                                            data-cancellation_allowed={{ event.event_type.allow_booking_cancellation|yesno:"1,0" }}
+                                            class="ajax_events_btn">
+                                            {% include "booking/includes/events_button.txt" %}
+                                            </span>
+                                        </span>
+                                    {% elif user_info.booking_restricted_pre_event_start %}
+                                        <span class="float-right"><a class="btn btn-xs btn-secondary" disabled href="#"><span class="helptext">Unavailable {{ event.event_type.booking_restriction }} mins before start</span></a></span>
+                                    {% endif %}
                                 {% else %}
                                     <span class="float-right">
                                     {% if user_info.has_booked and not event.is_past %}
@@ -185,6 +218,8 @@
                                             class="ajax_events_btn">
                                             {% include "booking/includes/events_button.txt" %}
                                         </span>
+                                    {% elif user_info.has_available_course_block %}
+                                        <span class="helptext float-right">Use the button above to book the course</span>
                                     {% endif %}
                                     </span>
                                 {% endif %}
