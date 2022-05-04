@@ -26,9 +26,9 @@ def validate_voucher_max_total_uses(voucher, paid_only=True, user=None, exclude_
                 f'Voucher code {voucher.code} has limited number of total uses and expired before it could be used for all applicable blocks')
 
 
-def validate_total_voucher_max_total_uses(voucher):
+def validate_total_voucher_max_total(voucher):
     if voucher.max_vouchers is not None:
-        used_voucher_invoices = Invoice.objects.filter(total_voucher_code=voucher.code)
+        used_voucher_invoices = Invoice.objects.filter(total_voucher_code=voucher.code, paid=True)
         # exclude any uses associated with unpaid invoices
         if used_voucher_invoices.count() >= voucher.max_vouchers:
             raise VoucherValidationError(
@@ -44,11 +44,11 @@ def validate_voucher_properties(voucher):
     elif not voucher.has_started:
         raise VoucherValidationError(f'Voucher code is not valid until {voucher.start_date.strftime("%d %b %y")}')
     elif voucher.max_vouchers is not None:
-        # validate max vouchers for paid blocks only
+        # validate max vouchers by checking paid blocks/invoices only
         if isinstance(voucher, BlockVoucher):
             validate_voucher_max_total_uses(voucher, paid_only=True)
         else:
-            validate_total_voucher_max_total_uses(voucher)
+            validate_total_voucher_max_total(voucher)
 
 
 def validate_unpaid_voucher_max_total_uses(user, voucher, exclude_block_id=None):

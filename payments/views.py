@@ -154,8 +154,8 @@ def stripe_payment_complete(request):
             "redirect_track": redirect_track,
         }
         if "total_voucher_code" in request.session:
-            context.update({"total_voucher_code": request.session["total_voucher_code"]})
             del request.session["total_voucher_code"]
+        context.update({"total_voucher_code": invoice.total_voucher_code})
 
         return render(request, 'payments/valid_payment.html', context)
     else:
