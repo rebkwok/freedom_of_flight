@@ -57,13 +57,15 @@ class CourseAdminListView(LoginRequiredMixin, StaffUserMixin, ListView):
             tab = int(tab)
         except ValueError:  # value error if tab is not an integer, default to 0
             tab = 0
-        context['tab'] = str(tab)
 
         tracks = Track.objects.all()
         track_courses = []
+        check_tab = False
         for i, track in enumerate(tracks):
             track_queryset = [course for course in all_courses if course.event_type.track == track]
             if track_queryset:
+                if i == tab:
+                    check_tab = True
                 # Don't add the track tab if there are no events to display
                 track_paginator = Paginator(track_queryset, self.custom_paginate_by)
                 page = 1
@@ -84,6 +86,10 @@ class CourseAdminListView(LoginRequiredMixin, StaffUserMixin, ListView):
                     # we returned here from another view that was on a particular track, we want to set the
                     # tab to that track
                     context["active_tab"] = i
+        if track_courses and not check_tab:
+            # the tab doesn't have any courses, default to the first one with courses
+            tab = track_courses[0]["index"]
+        context['tab'] = str(tab)
 
         context['track_courses'] = track_courses
         return context
