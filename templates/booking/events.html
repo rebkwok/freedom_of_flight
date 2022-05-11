@@ -55,6 +55,20 @@
                     class="ajax_course_events_btn">
                     {% include "booking/includes/course_events_button.txt" %}
                 </div>
+                {% if can_unenroll %}
+                    {{ date_booked }}
+                    <form class="mb-2" action="{% url 'booking:unenroll_course' %}" method="post">
+                        {% csrf_token %}
+                        <input type="hidden" id="user_id" name="user_id" value="{{ view_as_user.id }}">
+                        <input type="hidden" id="course_id" name="course_id" value="{{ course.id }}">
+                        <input type="submit" class="btn btn-warning" value="Unenroll">
+                    </form>
+                    <p><em>
+                        <span class="text-primary">You can reschedule your course
+                        for 24hrs from the date of first booking (until {{ unenroll_end_date|date:"d M Y H:i"}}).</span><br/>
+                        Unenrolling will make your payment plan available for use on another eligible course
+                    </em></p>
+                    {% endif %}
                 {% endif %}
             {% endif %}
         {% endif %}

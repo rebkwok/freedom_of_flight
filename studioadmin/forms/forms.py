@@ -350,6 +350,13 @@ class CourseUpdateForm(forms.ModelForm):
                 return
         return events
 
+    # def clean_number_of_events(self):
+    #     number_of_events = self.cleaned_data["number_of_events"]
+    #     if number_of_events <= 0:
+    #         self.add_error("number_of_events", "Number of events must be > 0")
+    #     else:
+    #         return number_of_events
+
     def clean_create_events_dates(self):
         create_events_dates = self.cleaned_data["create_events_dates"]
         if create_events_dates:
@@ -370,6 +377,8 @@ class CourseUpdateForm(forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
+        if self.errors:
+            return
         if "events" in cleaned_data:
             events = cleaned_data["events"]
             create_events_dates = cleaned_data["create_events_dates"]
