@@ -1,10 +1,13 @@
 from datetime import timedelta
+from re import A
 from model_bakery import baker
+import pytest
 
 from django.urls import reverse
 from django.test import TestCase
 from django.utils import timezone
 
+from booking.utils import full_name
 from booking.models import Course, Block, Event, Booking
 from common.test_utils import TestUsersMixin, EventTestMixin
 
@@ -198,3 +201,84 @@ class CourseListViewTests(EventTestMixin, TestUsersMixin, TestCase):
 
         resp = self.client.get(self.url(self.adult_track))
         assert [course.id for course in resp.context_data["courses"]] == [self.course.id, course2.id, course1.id]
+
+
+class CourseUnenrollViewTests(EventTestMixin, TestUsersMixin, TestCase):
+
+    def setUp(self):
+        self.create_users()
+        self.create_test_setup()
+
+        self.course.number_of_events = 3
+        self.course.save()
+        events = baker.make_recipe(
+            "booking.future_event", event_type=self.course.event_type,
+            course=self.course, _quantity=3-self.course.events.count()
+        )
+        self.course_block = baker.make_recipe(
+            "booking.course_block", block_config__event_type=self.course.event_type,
+            block_config__size=3, paid=True, user=self.student_user
+        )
+        for event in self.course.events.all():
+            baker.make(
+                Booking, user=self.student_user, event=event, block=self.course_block,
+                status="OPEN"
+            )
+
+        self.url = reverse('booking:unenroll_course')
+
+    def test_unenroll(self):
+        booked_events = self.student_user.bookings.filter(status="OPEN").values_list("event_id", flat=True)
+        for event in self.course.events.all():
+            assert event.id in booked_events
+        assert not self.course_block.active_block
+
+        self.client.login(username=self.student_user.username, password="test")
+        self.client.post(
+            self.url, {"user_id": self.student_user.id, "course_id": self.course.id}
+        )
+
+        cancelled_booked_events = self.student_user.bookings.filter(status="CANCELLED").values_list("event_id", flat=True)
+        for event in self.course.events.all():
+            assert event.id in cancelled_booked_events
+        
+        self.course_block.refresh_from_db()
+        assert self.course_block.active_block
+    
+    def test_unenroll_child_user(self):
+        course_block = baker.make_recipe(
+            "booking.course_block", block_config__event_type=self.course.event_type,
+            block_config__size=3, paid=True, user=self.child_user
+        )
+        for event in self.course.events.all():
+            baker.make(
+                Booking, user=self.child_user, event=event, block=course_block,
+                status="OPEN"
+            )
+
+        assert not course_block.active_block
+
+        self.client.login(username=self.manager_user.username, password="test")
+        self.client.post(
+            self.url, {"user_id": self.child_user.id, "course_id": self.course.id}
+        )
+
+        cancelled_booked_events = self.child_user.bookings.filter(status="CANCELLED").values_list("event_id", flat=True)
+        for event in self.course.events.all():
+            assert event.id in cancelled_booked_events
+        
+        course_block.refresh_from_db()
+        assert course_block.active_block
+    
+    def test_unenroll_not_enrolled(self):
+        booked_events = self.student_user1.bookings.filter(status="OPEN").values_list("event_id", flat=True)
+        for event in self.course.events.all():
+            assert event.id not in booked_events
+
+        self.client.login(username=self.student_user1.username, password="test")
+        resp = self.client.post(
+            self.url, {"user_id": self.student_user1.id, "course_id": self.course.id},
+            follow=True
+        )
+        assert f"{full_name(self.student_user1)} is not booked on this course, cannot unenroll" in resp.rendered_content, resp.rendered_content
+        

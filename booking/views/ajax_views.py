@@ -335,7 +335,7 @@ def ajax_course_booking(request, course_id):
     course_block = get_active_user_course_block(user, course)
     # Book all events
     for event in course.events_left:
-        booking, _ = Booking.objects.get_or_create(user=user, event=event)
+        booking, new = Booking.objects.get_or_create(user=user, event=event)
         # Make sure block is assigned and update booking statuses if already created
         booking.block = course_block
         booking.status = "OPEN"

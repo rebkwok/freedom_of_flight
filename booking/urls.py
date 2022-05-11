@@ -10,7 +10,7 @@ from booking.views import (
     ajax_block_purchase, shopping_basket, ajax_checkout, BlockDetailView,
     SubscriptionListView, SubscriptionDetailView,
     ajax_subscription_purchase,
-    CourseListView,
+    CourseListView, unenroll,
     stripe_checkout, check_total,
     GiftVoucherPurchaseView, GiftVoucherUpdateView, GiftVoucherDetailView, voucher_details,
     guest_shopping_basket
@@ -35,6 +35,7 @@ urlpatterns = [
 
     # COURSES
     path('<slug:track>/courses/', CourseListView.as_view(), name='courses'),
+    path('course/unenroll', unenroll, name='unenroll_course'),
     path('course/<slug:course_slug>', CourseEventsListView.as_view(), name='course_events'),
     path('ajax-course-booking/<int:course_id>/', ajax_course_booking, name='ajax_course_booking'),
 

@@ -129,7 +129,15 @@ class CourseEventsListView(EventListView):
         if self.request.user.is_authenticated:
             view_as_user = get_view_as_user(self.request)
             # already booked == has an open (no-show or not) booking for all events in the course
-            context["already_booked"] = view_as_user.bookings.filter(event__course=course, status="OPEN").count() == course.uncancelled_events.count()
+            already_booked = view_as_user.bookings.filter(event__course=course, status="OPEN").count() == course.uncancelled_events.count()
+            context["already_booked"] = already_booked
+            if already_booked:
+                date_first_booked = view_as_user.bookings.filter(event__course=course).first().date_booked
+                unenrollment_time = date_first_booked + timedelta(hours=24)
+                within_unenrollment_time = timezone.now() < unenrollment_time
+                context["can_unenroll"] = not course.has_started and within_unenrollment_time
+                context["unenroll_end_date"] = min(unenrollment_time, course.start)
+
             context["booked_for_events"] = view_as_user.bookings.filter(event__course=course, status="OPEN", no_show=False).exists()
             context["has_available_course_block"] = has_available_course_block(view_as_user, course)
             context["has_available_dropin_block"] = has_available_block(view_as_user, course.events.first(), dropin_only=True)

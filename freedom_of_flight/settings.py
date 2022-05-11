@@ -222,7 +222,7 @@ STATIC_ROOT = root('collected-static')
 MEDIA_URL = '/media/'
 MEDIA_ROOT = root('media')
 
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.ConsoleBackend'
 EMAIL_USE_TLS = True
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_HOST_USER = 'freedomofflightbooking@gmail.com'

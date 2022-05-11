@@ -1,17 +1,19 @@
-from datetime import timedelta
-
-from django.core.paginator import Paginator
-from django.db.models import Count
-from django.shortcuts import get_object_or_404, HttpResponseRedirect, HttpResponse
+from django.contrib.auth.models import User
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import get_object_or_404, HttpResponseRedirect
 from django.urls import reverse
-from django.utils import timezone
-from django.views.generic import ListView, DetailView
+from django.views.decorators.http import require_http_methods
+
+from django.views.generic import ListView
 
 from studioadmin.views.utils import get_current_courses
 
+from activitylog.models import ActivityLog
+
 from ..forms import AvailableUsersForm
-from ..models import Course, Event, Track
-from ..utils import get_view_as_user, get_user_course_booking_info
+from ..models import Course, Track
+from ..utils import get_view_as_user, get_user_course_booking_info, full_name
 from .views_utils import DataPolicyAgreementRequiredMixin
 
 
@@ -49,3 +51,21 @@ class CourseListView(DataPolicyAgreementRequiredMixin, ListView):
             context["user_course_booking_info"] = user_course_booking_info
             context["available_users_form"] = AvailableUsersForm(request=self.request, view_as_user=view_as_user)
         return context
+
+
+@login_required
+@require_http_methods(["POST"])
+def unenroll(request):
+    course_user = get_object_or_404(User, pk=request.POST["user_id"])
+    course = get_object_or_404(Course, pk=request.POST["course_id"])
+
+    course_bookings = course_user.bookings.filter(event__course__id=course.id)
+    if not course_bookings:
+        messages.error(request, f"{full_name(course_user)} is not booked on this course, cannot unenroll")
+    else:
+        course_bookings.update(status="CANCELLED", no_show=False, block=None)
+        ActivityLog.objects.create(
+            log=f"User {full_name(course_user)} unenrolled from course {course} by user {request.user}"
+        )
+        messages.success(request, f"{full_name(course_user)} unenrolled from {course}")
+    return HttpResponseRedirect(reverse("booking:course_events", args=(course.slug,)))

@@ -4,7 +4,7 @@ from .ajax_views import (
 )
 
 from .block_views import BlockListView, BlockDetailView
-from .course_views import CourseListView
+from .course_views import CourseListView, unenroll
 from .gift_vouchers import GiftVoucherPurchaseView, GiftVoucherUpdateView, GiftVoucherDetailView, \
     voucher_details
 from .payment_option_views import event_purchase_view, course_purchase_view, purchase_view

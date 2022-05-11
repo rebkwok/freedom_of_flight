@@ -681,7 +681,7 @@ class EventDetailViewTests(EventTestMixin, TestUsersMixin, TestCase):
         assert f"{self.child_user.first_name} {self.child_user.last_name} has booked for this class" in resp.rendered_content
 
 
-class CourseListViewTests(EventTestMixin, TestUsersMixin, TestCase):
+class CourseEventsListViewTests(EventTestMixin, TestUsersMixin, TestCase):
 
     @classmethod
     def setUpTestData(cls):
@@ -720,6 +720,31 @@ class CourseListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         baker.make(Booking, event=self.course_event1, user=self.student_user)
         resp = self.client.get(self.url)
         assert resp.context_data["already_booked"] is True
+    
+    def test_course_list_with_booked_course_unenroll(self):
+        booking = baker.make(Booking, event=self.course_event, user=self.student_user)
+        baker.make(Booking, event=self.course_event1, user=self.student_user)
+        resp = self.client.get(self.url)
+        assert resp.context_data["already_booked"] is True
+        assert resp.context_data["can_unenroll"] is True
+
+        booking.date_booked = timezone.now() - timedelta(hours=25)
+        booking.save()
+        resp = self.client.get(self.url)
+        assert resp.context_data["already_booked"] is True
+        assert resp.context_data["can_unenroll"] is False
+
+        booking.date_booked = timezone.now()
+        booking.save()
+        resp = self.client.get(self.url)
+        assert resp.context_data["can_unenroll"] is True
+
+        self.course_event.start = timezone.now() - timedelta(hours=2)
+        self.course_event.save()
+        self.course.refresh_from_db()
+        assert self.course.has_started
+        resp = self.client.get(self.url)
+        assert resp.context_data["can_unenroll"] is False
 
     def test_course_list_with_booked_events_manager_user(self):
         """
