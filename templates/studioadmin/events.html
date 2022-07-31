@@ -28,7 +28,8 @@
                     <table class="table table-sm">
                         <thead>
                             <tr>
-                                <th scope="col">Name{% if not past %}<br/><span class="helptext">Click to edit</span>{% else %}<br/><span class="helptext">Click to view register</span>{% endif %}</th>
+                                <th scope="col">Name<br/><span class="helptext">Click to edit</th>
+                                <th scope="col" class="text-center">Register</th>
                                 <th scope="col" class="text-center">Course</th>
                                 <th scope="col" class="text-center">Time</th>
                                 <th scope="col" class="text-center">Spaces</th>
@@ -42,16 +43,15 @@
                         </thead>
                         <tbody>
                         {% for event_date, events in track_obj.events_by_date.items %}
-                            <tr class="table-secondary table-divider"><td colspan="10">{{ event_date|date:"D d M Y" }}</td></tr>
+                            <tr class="table-secondary table-divider"><td colspan="11">{{ event_date|date:"D d M Y" }}</td></tr>
                             {% for event in events %}
                             <tr {% if event.cancelled %}class="expired"{% endif %}>
                                 <td>
-                                    {% if not past %}
-                                        <a href="{% url 'studioadmin:update_event' event.slug %}">{{ event.name }}</a>
-                                    {% else %}
-                                        <a href="{% url 'studioadmin:register' event.id %}">{{ event.name }}</a></td>
-                                    {% endif %}
+                                    <a href="{% url 'studioadmin:update_event' event.slug %}">{{ event.name }}</a>
                                     {% if event.cancelled %} (CANCELLED){% endif %}
+                                </td>    
+                                <td class="text-center">
+                                    <a href="{% url 'studioadmin:register' event.id %}"><span class="fas fa-clipboard-list"></span></a></span>
                                 </td>
                                 <td class="text-center">
                                     {% if event.course %}

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from datetime import timedelta
+from datetime import timedelta, datetime
 
 from model_bakery import baker
 
@@ -432,9 +432,22 @@ class EventUpdateViewTests(EventTestMixin, TestUsersMixin, TestCase):
     def test_only_staff(self):
         self.user_access_test(["staff"], self.url)
 
-    def test_update_event(self):
+    def test_update_past_event(self):
         assert self.event.name != "test"
         resp = self.client.post(self.url, data=self.form_data())
+        self.event.refresh_from_db()
+        assert self.event.name == "test"
+
+        assert resp.status_code == 302
+        assert resp.url == reverse("studioadmin:past_events") + f"?track={self.aerial_event_type.track.id}"
+
+    def test_update_future_event(self):
+        assert self.event.name != "test"
+        self.event.start = (timezone.now() + timedelta(days=1)).replace(hour=18, minute=0, second=0, microsecond=0)
+        self.event.save()
+        data = self.form_data()
+        data["start"] = datetime.strftime(self.event.start, "%d-%b-%Y %H:%M")
+        resp = self.client.post(self.url, data=data)
         self.event.refresh_from_db()
         assert self.event.name == "test"
 

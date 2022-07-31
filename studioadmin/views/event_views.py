@@ -211,9 +211,6 @@ class EventCreateUpdateMixin:
         form.save()
         return HttpResponseRedirect(self.get_success_url(form.event_type.track_id))
 
-    def get_success_url(self, track_id):
-        return reverse('studioadmin:events') + f"?track={track_id}"
-
 
 class EventCreateView(LoginRequiredMixin, StaffUserMixin, EventCreateUpdateMixin, CreateView):
 
@@ -228,6 +225,9 @@ class EventCreateView(LoginRequiredMixin, StaffUserMixin, EventCreateUpdateMixin
         context["event_type"] = EventType.objects.get(id=self.kwargs["event_type_id"])
         return context
 
+    def get_success_url(self, track_id):
+        return reverse('studioadmin:events') + f"?track={track_id}"
+
 
 class EventUpdateView(LoginRequiredMixin, StaffUserMixin, EventCreateUpdateMixin, UpdateView):
 
@@ -235,3 +235,8 @@ class EventUpdateView(LoginRequiredMixin, StaffUserMixin, EventCreateUpdateMixin
         form_kwargs = super().get_form_kwargs()
         form_kwargs["event_type"] = self.get_object().event_type
         return form_kwargs
+    
+    def get_success_url(self, track_id):
+        if self.object.is_past:
+            return reverse('studioadmin:past_events') + f"?track={track_id}"
+        return reverse('studioadmin:events') + f"?track={track_id}"
