@@ -184,3 +184,8 @@ def can_purchase_subscription(user, subscription_config):
 @register.filter
 def at_least_one_user_can_purchase(available_users, block_or_subscription):
     return any(user for user in available_users if block_or_subscription.available_to_user(user))
+
+@register.filter
+def get_range(value, start=0):
+    # start: 0 or 1
+    return range(start, value + start)
