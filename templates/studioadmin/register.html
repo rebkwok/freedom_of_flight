@@ -5,6 +5,7 @@
 
 {% block extra_head %}
 {% include 'common/includes/ajax_head.html' %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-multiselect/0.9.15/css/bootstrap-multiselect.css" integrity="sha512-EvvoSMXERW4Pe9LjDN9XDzHd66p8Z49gcrB7LCUplh0GcEHiV816gXGwIhir6PJiwl0ew8GFM2QaIg2TW02B9A==" crossorigin="anonymous" />
 {% endblock %}
 
 {% block subnav-xs %}
@@ -113,7 +114,6 @@
                 {% if not event.course or event.course.allow_drop_in %}
                     {% if can_add_more %}
                         <form id="booking-add-form" method='post' class="form" role="form">
-                            Add a {% if event.course %}drop-in {% endif %}booking<br/>
                             {% csrf_token %}
                             {% crispy add_booking_form %}
                         </form>
@@ -150,4 +150,20 @@
     <script type='text/javascript' src="{% static 'js/jquery.form-4.3.0.min.js' %}"></script>
 {% endif %}
 <script type='text/javascript' src="{% static 'studioadmin/js/register_ajax-v3.js' %}"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-multiselect/0.9.15/js/bootstrap-multiselect.min.js" integrity="sha512-aFvi2oPv3NjnjQv1Y/hmKD7RNMendo4CZ2DwQqMWzoURKxcqAoktj0nNG4LU8m23+Ws9X5uVDD4OXLqpUVXD5Q==" crossorigin="anonymous"></script>
+<script type="text/javascript">
+    $(document).ready(function() {
+        $('#id_user').multiselect({
+            buttonClass: 'btn btn-sm btn-outline-dark',
+            buttonWidth: '75%',
+            numberDisplayed: 1,
+            nonSelectedText: 'Click to choose user',
+            enableFiltering: true,
+            enableCaseInsensitiveFiltering: true,
+        });
+    });
+
+</script>
+
 {% endblock %}

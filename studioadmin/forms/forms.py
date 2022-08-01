@@ -45,7 +45,7 @@ def get_user_choices(event):
         bookings = event.bookings.filter(status='OPEN')
         booked_user_ids = bookings.values_list('user_id', flat=True)
         users = User.objects.exclude(id__in=booked_user_ids).order_by('first_name')
-        return tuple([('', '-------')] + [(user.id, "{} {} ({})".format(user.first_name, user.last_name, user.username)) for user in users])
+        return tuple([('', 'Select student')] + [(user.id, "{} {} ({})".format(user.first_name, user.last_name, user.username)) for user in users])
 
     return callable
 
@@ -86,13 +86,13 @@ class AddRegisterBookingForm(forms.Form):
         self.fields['user'] = forms.ChoiceField(
             choices=get_user_choices(event),
             required=False,
-            label = ""
+            label = "Add a new booking",
         )
             
         self.helper = FormHelper()
-        self.helper.layout = Layout(
+        self.helper.layout = Layout(                
             "user",
-            Submit('submit', 'Save', css_class="btn btn-success pl-2 pr-2 pt-0 pb-0")
+            Submit('submit', 'Add booking', css_class="btn btn-success pl-2 pr-2 pt-0 pb-0")
         )
 
 
