@@ -166,7 +166,7 @@ class TestUsersMixin:
                 make_disclaimer_content(version=1)
             return make_online_disclaimer(user=user, version=DisclaimerContent.current_version())
 
-    def user_access_test(self, allowed, url, expected_redirect=None):
+    def user_access_test(self, allowed, url, expected_redirect=None, post_data=None):
         users = {
             "student": self.student_user,
             "staff": self.staff_user,
@@ -174,7 +174,10 @@ class TestUsersMixin:
         }
         for user_type, user in users.items():
             self.login(user)
-            resp = self.client.get(url)
+            if post_data is not None:
+                resp = self.client.post(url, data=post_data)
+            else:
+                resp = self.client.get(url)
             if user_type in allowed:
                 if expected_redirect is not None:
                     assert resp.status_code == 302

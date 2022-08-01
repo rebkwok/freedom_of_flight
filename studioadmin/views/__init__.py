@@ -33,7 +33,10 @@ from .site_config_views import (
     TrackCreateView, TrackListView, TrackUpdateView, EventTypeListView, toggle_track_default, help,
     choose_track_for_event_type, EventTypeCreateView, EventTypeUpdateView, event_type_delete_view,
 )
-from .register_views import RegisterListView, register_view, ajax_add_register_booking, ajax_toggle_attended, download_register
+from .register_views import (
+    RegisterListView, register_view, ajax_toggle_attended, 
+    ajax_update_booking_notes, download_register
+)
 from .timetable_views import (
     TimetableSessionListView, ajax_timetable_session_delete, TimetableSessionCreateView, TimetableSessionUpdateView,
     timetable_session_create_choice_view, upload_timetable_view

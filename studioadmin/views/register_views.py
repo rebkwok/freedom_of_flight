@@ -23,7 +23,7 @@ from booking.email_helpers import send_waiting_list_email
 from booking.models import Booking, Event, WaitingListUser
 from common.utils import full_name
 
-from ..forms.forms import AddRegisterBookingForm, RegisterFormSet
+from ..forms.forms import AddRegisterBookingForm
 from .event_views import BaseEventAdminListView
 from .utils import is_instructor_or_staff, InstructorOrStaffUserMixin, generate_workbook_response
 
@@ -45,48 +45,22 @@ def register_view(request, event_id):
     bookings = event.bookings.filter(status="OPEN").order_by('date_booked')
 
     if request.method == 'POST':
-        formset = RegisterFormSet(request.POST, queryset=bookings)
-        if formset.is_valid():
-            formset.save()
-            return HttpResponseRedirect(reverse("studioadmin:register", args=(event_id,)))
-    else:
-        register_formset = RegisterFormSet(queryset=bookings)
+        add_booking_form = AddRegisterBookingForm(request.POST, event=event)
+        if event.spaces_left > 0:
+            if add_booking_form.is_valid():
+                if add_booking_form.cleaned_data.get("user"):
+                    process_event_booking_updates(add_booking_form, event, request)       
+        else:
+            messages.error(request, 'Event is now full, booking could not be created.')
+        return HttpResponseRedirect(reverse("studioadmin:register", args=(event_id,)))
+    
+    form = AddRegisterBookingForm(event=event)
 
     return TemplateResponse(
         request, template, {
-            'event': event, 'bookings': bookings, "register_formset": register_formset,
-            'can_add_more': event.spaces_left > 0,
+            'event': event, 'bookings': bookings,
+            'can_add_more': event.spaces_left > 0, "add_booking_form": form
         }
-    )
-
-
-@login_required
-@is_instructor_or_staff
-def ajax_add_register_booking(request, event_id):
-    event = get_object_or_404(Event, pk=event_id)
-    if request.method == 'GET':
-        form = AddRegisterBookingForm(event=event)
-
-    else:
-        form = AddRegisterBookingForm(request.POST, event=event)
-        if event.spaces_left > 0:
-            if form.is_valid():
-                process_event_booking_updates(form, event, request)
-                return HttpResponse(
-                    render_to_string(
-                        'studioadmin/includes/register-booking-add-success.html'
-                    )
-                )
-        else:
-            form.add_error(
-                '__all__',
-                'Event is now full, booking could not be created. '
-                'Please close this window and refresh register page.'
-            )
-
-    context = {'form_event': event, 'form': form}
-    return TemplateResponse(
-        request, 'studioadmin/includes/register-booking-add-modal.html', context
     )
 
 
@@ -225,3 +199,17 @@ def download_register(request, event_id):
         return row
 
     return generate_workbook_response(filename, worksheet_name, header_info, bookings, booking_to_row)
+
+    
+@login_required
+@is_instructor_or_staff
+@require_http_methods(['POST'])
+def ajax_update_booking_notes(request, booking_id):
+    booking = get_object_or_404(Booking, pk=booking_id)
+    notes = request.POST.get('notes')
+    changed = False
+    if notes != booking.notes:
+        booking.notes = notes
+        booking.save()
+        changed = True
+    return JsonResponse({"changed": changed})

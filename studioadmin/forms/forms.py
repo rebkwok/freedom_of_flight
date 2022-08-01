@@ -41,9 +41,11 @@ def validate_future_date(value):
 def get_user_choices(event):
     # TODO also show if user has available block/courseblock
     def callable():
-        booked_user_ids = event.bookings.filter(status='OPEN', no_show=False).values_list('user_id', flat=True)
+        # get all open bookings including no-show
+        bookings = event.bookings.filter(status='OPEN')
+        booked_user_ids = bookings.values_list('user_id', flat=True)
         users = User.objects.exclude(id__in=booked_user_ids).order_by('first_name')
-        return tuple([(user.id, "{} {} ({})".format(user.first_name, user.last_name, user.username)) for user in users])
+        return tuple([('', '-------')] + [(user.id, "{} {} ({})".format(user.first_name, user.last_name, user.username)) for user in users])
 
     return callable
 
@@ -76,16 +78,6 @@ class BlockConfigModelChoiceField(forms.ModelChoiceField):
         return f"{obj.name}{' (not active)' if not obj.active else ''}"
 
 
-class RegisterBookingForm(forms.ModelForm):
-    class Meta:
-        model = Booking
-        fields = ("notes",)
-        labels = {"notes": ""}
-        widgets = {"notes": forms.TextInput(attrs={"class": "form-control"})}
-
-RegisterFormSet = forms.modelformset_factory(Booking, form=RegisterBookingForm, extra=0, can_delete=False)
-
-
 class AddRegisterBookingForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
@@ -93,10 +85,14 @@ class AddRegisterBookingForm(forms.Form):
         super(AddRegisterBookingForm, self).__init__(*args, **kwargs)
         self.fields['user'] = forms.ChoiceField(
             choices=get_user_choices(event),
-            required=True,
-            label="Student",
-            widget=forms.Select(
-                attrs={'id': 'id_new_user', 'class': 'form-control'})
+            required=False,
+            label = ""
+        )
+            
+        self.helper = FormHelper()
+        self.helper.layout = Layout(
+            "user",
+            Submit('submit', 'Save', css_class="btn btn-success pl-2 pr-2 pt-0 pb-0")
         )
 
 

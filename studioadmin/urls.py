@@ -3,7 +3,8 @@ from django.views.generic import RedirectView
 from studioadmin.views import (
     help,
     EventAdminListView, ajax_toggle_event_visible, RegisterListView, register_view,
-    ajax_add_register_booking, ajax_toggle_attended,
+    block_status_list, ajax_update_booking_notes,
+    ajax_toggle_attended, 
     ajax_remove_from_waiting_list, event_waiting_list_view, cancel_event_view,
     event_create_choice_view, EventCreateView, EventUpdateView, clone_event, PastEventAdminListView,
     CourseAdminListView, course_create_choice_view, CourseCreateView, CourseUpdateView, PastCourseAdminListView,
@@ -85,8 +86,8 @@ urlpatterns = [
     path('registers/', RegisterListView.as_view(), name='registers'),
     path('registers/<int:event_id>', register_view, name='register'),
     path('registers/<int:event_id>/download/', download_register, name='download_register'),
-    path('registers/<int:event_id>/ajax-add-booking/', ajax_add_register_booking, name='bookingregisteradd'),
     path('register/<int:booking_id>/ajax-toggle-attended/', ajax_toggle_attended, name='ajax_toggle_attended'),
+    path('register/<int:booking_id>/ajax-update-booking-notes/', ajax_update_booking_notes, name='ajax_update_booking_notes'),
 
     path('waiting-list/<int:event_id>/email-students/', email_waiting_list_view, name="email_waiting_list"),
     path('waiting-list/<int:event_id>/', event_waiting_list_view, name="event_waiting_list"),

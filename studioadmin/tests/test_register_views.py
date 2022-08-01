@@ -7,7 +7,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.test import TestCase
 
-from booking.models import Event, Booking, WaitingListUser
+from booking.models import Event, Booking, WaitingListUser, Course
 from common.test_utils import EventTestMixin, TestUsersMixin
 
 
@@ -55,16 +55,35 @@ class RegisterViewTests(TestUsersMixin, TestCase):
     def test_instructor_or_staff_allowed(self):
         self.user_access_test(["instructor", "staff"], self.url)
 
-    def test_shows_enabled_add_new_booking_button(self):
+    def test_shows_enabled_add_new_booking_form(self):
         self.login(self.staff_user)
         resp = self.client.get(self.url)
-        assert "bookingadd btn btn-xs btn-success" in resp.rendered_content
-        assert "bookingadd btn btn-xs btn-success disabled" not in resp.rendered_content
+        assert "booking-add-form" in resp.rendered_content
 
+        # make the event full, booking add form not shown
         for i in range(self.event.max_participants):
             baker.make(Booking, event=self.event)
         resp = self.client.get(self.url)
-        assert "bookingadd btn btn-xs btn-success disabled" in resp.rendered_content
+        assert "booking-add-form" not in resp.rendered_content
+        assert "Can't add any more bookings, class is full" in resp.rendered_content
+
+        # not-full course event
+        course = baker.make(Course, event_type=self.event.event_type, max_participants=self.event.max_participants + 1)
+        self.event.course = course
+        self.event.save()
+        assert not self.event.full
+        assert not course.allow_drop_in
+
+        resp = self.client.get(self.url)
+        assert "booking-add-form" not in resp.rendered_content
+        assert "Can't add drop-in bookings for this course" in resp.rendered_content
+
+        # course allows drop-in
+        course.allow_drop_in = True
+        course.save()
+        resp = self.client.get(self.url)
+        assert "booking-add-form" in resp.rendered_content
+
 
     def test_shows_open_and_no_show_bookings(self):
         baker.make(Booking, event=self.event, status="OPEN")
@@ -74,56 +93,23 @@ class RegisterViewTests(TestUsersMixin, TestCase):
         resp = self.client.get(self.url)
         assert len(resp.context_data["bookings"]) == 2
 
-
-class AddRegisterBookingTests(TestUsersMixin, TestCase):
-    def setUp(self):
-        self.create_users()
-        self.create_admin_users()
-        self.event = baker.make_recipe("booking.future_event")
-        self.url = reverse("studioadmin:bookingregisteradd", args=(self.event.id,))
-
-    def test_get(self):
+    def test_add_new_booking(self):
         self.login(self.staff_user)
-        resp = self.client.get(self.url, {'user': self.student_user.id})
-        assert resp.status_code == 200
-        assert resp.context_data["form_event"] == self.event
+        assert not self.event.bookings.exists()
+        self.client.post(self.url, {"user": self.student_user.id})
+        assert self.event.bookings.count() == 1
+        assert self.event.bookings.first().user == self.student_user
 
-    def test_add_booking(self):
+    def test_add_new_booking_event_full(self):
         self.login(self.staff_user)
-        self.client.post(self.url, {'user': self.student_user.id})
-        assert self.student_user.bookings.filter(event=self.event.id).exists()
-
-    def test_reopen_booking(self):
-        booking = baker.make(Booking, event=self.event, user=self.student_user, status="CANCELLED")
-        self.login(self.staff_user)
-        self.client.post(self.url, {'user': self.student_user.id})
-        booking.refresh_from_db()
-        assert booking.status == "OPEN"
-
-    def test_adds_to_user_block(self):
-        block = baker.make_recipe(
-            "booking.dropin_block", block_config__event_type=self.event.event_type,
-            user=self.student_user, paid=True
-        )
-        self.login(self.staff_user)
-        self.client.post(self.url, {'user': self.student_user.id})
-        booking = self.student_user.bookings.filter(event=self.event.id).first()
-        assert booking.status == "OPEN"
-        assert booking.block == block
-
-    def test_removes_user_from_waiting_list(self):
-        baker.make(WaitingListUser, user=self.student_user, event=self.event)
-        self.login(self.staff_user)
-        self.client.post(self.url, {'user': self.student_user.id})
-        assert self.student_user.bookings.filter(event=self.event.id).exists()
-        assert WaitingListUser.objects.filter(user=self.student_user).exists() is False
-
-    def test_add_event_full(self):
         for i in range(self.event.max_participants):
             baker.make(Booking, event=self.event)
-        self.login(self.staff_user)
-        self.client.post(self.url, {'user': self.student_user.id})
-        assert self.student_user.bookings.filter(event=self.event.id).exists() is False
+        assert self.event.full
+
+        resp = self.client.post(self.url, {"user": self.student_user.id}, follow=True)
+        assert self.event.bookings.count() == self.event.max_participants
+        assert not self.event.bookings.filter(user=self.student_user).exists()
+        assert "Event is now full, booking could not be created." in resp.rendered_content
 
 
 class AjaxToggleAttendedTests(EventTestMixin, TestUsersMixin, TestCase):
@@ -234,3 +220,23 @@ class AjaxToggleAttendedTests(EventTestMixin, TestUsersMixin, TestCase):
         assert len(mail.outbox) == 1
         assert mail.outbox[0].bcc == [self.student_user.email]
 
+
+class AjaxUpdateBookingNotesTests(TestUsersMixin, TestCase):
+
+    def setUp(self):
+        self.create_users()
+        self.create_admin_users()
+        self.event = baker.make_recipe("booking.future_event")
+        self.booking = baker.make(Booking, event=self.event)
+        self.url = reverse("studioadmin:ajax_update_booking_notes", args=(self.booking.id,))
+
+    def test_instructor_or_staff_allowed(self):
+        self.user_access_test(["instructor", "staff"], self.url, post_data={})
+
+    def test_update_notes(self):
+        self.login(self.staff_user)
+        assert not self.booking.notes
+        self.client.post(self.url, data={"notes": "new note"})
+        self.booking.refresh_from_db()
+        assert self.booking.notes == "new note"
+    

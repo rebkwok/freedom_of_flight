@@ -75,6 +75,36 @@ const processToggleAttended = function()  {
 };
 
 
+const processBookingNotes = function()  {
+
+  //In this scope, "this" is the button just clicked on.
+  //The "this" in processResult is *not* the button just clicked
+  //on.
+  const $field_just_updated = $(this);
+  //The value of the "data-booking_id" attribute.
+  const booking_id = $field_just_updated.data('booking_id');
+  const notes = $('#booking-notes-' + booking_id).val()
+
+  const processResult = function(
+      result, status, jqXHR)  {
+      if (result.changed) {
+       $('#booking-notes-' + booking_id).addClass("text-success");
+     }     
+
+  };
+
+  $.ajax(
+      {
+         url: '/studioadmin/register/' + booking_id + '/ajax-update-booking-notes/' ,
+         data: {'notes': notes},
+         type: "POST",
+         dataType: 'json',
+         success: processResult,
+         error: processFailure
+      }
+   );
+};
+
 
 /**
    The Ajax "main" function. Attaches the listeners to the elements on
@@ -105,8 +135,11 @@ $(document).ready(function()  {
     click would be processed twice.
    */
   $('.btn-attended').click(_.debounce(processToggleAttended, MILLS_TO_IGNORE, true));
-  $('.btn-noshow').click(_.debounce(processToggleAttended, MILLS_TO_IGNORE, true));  /*
-    Warning: Placing the true parameter outside of the debounce call:
+  $('.btn-noshow').click(_.debounce(processToggleAttended, MILLS_TO_IGNORE, true));  
+  $('.booking-notes').focusout(_.debounce(processBookingNotes, MILLS_TO_IGNORE, true));  
+
+  /*
+  Warning: Placing the true parameter outside of the debounce call:
 
     $('#color_search_text').keyup(_.debounce(processSearch,
         MILLS_TO_IGNORE_SEARCH), true);

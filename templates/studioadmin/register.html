@@ -1,6 +1,7 @@
 {% extends "studioadmin/base.html" %}
 {% load static %}
 {% load accounttags bookingtags %}
+{% load crispy_forms_tags %}
 
 {% block extra_head %}
 {% include 'common/includes/ajax_head.html' %}
@@ -36,17 +37,14 @@
                 <th scope="col" class="text-center">Block</th>
             </tr>
             </thead>
+            
             <!-- Modal -->
-            <div class="modal fade" id="RegisterBookingAddModal" tabindex="-1" role="dialog" aria-labelledby="RegisterBookingAddModalLabel"></div>
+            {% comment %} <div class="modal fade" id="RegisterBookingAddModal" tabindex="-1" role="dialog" aria-labelledby="RegisterBookingAddModalLabel"></div> {% endcomment %}
             <!-- /.modal -->
 
             <tbody>
-            {% if register_formset.forms %}
-                <form method="post">
-                {% csrf_token %}
-                {{ register_formset.management_form }}
-                {% for form in register_formset.forms %}
-                    {% with form.instance as booking %}
+            {% if bookings %}
+                {% for booking in bookings %}
                     <tr id='booking-row-{{ booking.id }}' class="compress{% if booking.no_show or booking.status == 'CANCELLED' %} expired{% endif %}">
                         {% if status_choice == 'CANCELLED' %}
                             <td></td>
@@ -73,7 +71,15 @@
                             </td>
                         {% endif %}
                         <td class="text-center"> {{ booking.user.first_name }} {{ booking.user.last_name }}</td>
-                        <td>{{ form.as_p }}</td>
+                        <td>
+                            <input 
+                                id="booking-notes-{{ booking.id }}"
+                                data-booking_id="{{ booking.id }}"
+                                type="text"
+                                class="booking-notes"
+                                value={% if booking.notes %}{{ booking.notes }}{% endif %}
+                            >
+                        </td>
                         <td class="text-center">
                             {% if booking.user|has_disclaimer or booking.user|has_expired_disclaimer %}
                                 <a href="{% url 'studioadmin:user_detail' booking.user.id %}" target="_blank"><span id="disclaimer" class="far fa-file-alt"></span></a>
@@ -95,26 +101,27 @@
                             </div>
                         </td>
                     </tr>
-                    {% endwith %}
                 {% endfor %}
-                <tr><td colspan="6"><input class="btn btn-xs btn-success" type="submit" value="Save"/></td>
             {% else %}
                 <tr><td colspan="6">No bookings for this {{ event.event_type.label }}</td></tr>
-            </form>
             {% endif %}
             </tbody>
             <tfoot>
+
             <tr>
                 <td colspan="6">
                 {% if not event.course or event.course.allow_drop_in %}
-                    <a
-                        id="add-more-btn"
-                        class="bookingadd btn btn-xs btn-success {% if not can_add_more %}disabled{% endif %}"
-                        href="#" data-form="{% url 'studioadmin:bookingregisteradd' event.id %}"
-                        title="add booking"
-                    >Add {% if event.course %}drop-in {% endif %}booking</a>
+                    {% if can_add_more %}
+                        <form id="booking-add-form" method='post' class="form" role="form">
+                            Add a {% if event.course %}drop-in {% endif %}booking<br/>
+                            {% csrf_token %}
+                            {% crispy add_booking_form %}
+                        </form>
+                    {% else %}
+                        Can't add any more bookings, {{ event.event_type.label }} is full.
+                    {% endif %}
                 {% else %}
-                    Can't add drop-in {{ event.event_type.label }} bookings for this course. To add a new booking for this entire
+                    Can't add drop-in bookings for this course. To add a new booking for this entire
                     course, go to the <a href="{% url 'studioadmin:users' %}">Students</a> list.
                 {% endif %}
                 </td>
@@ -142,5 +149,5 @@
 {% else %}
     <script type='text/javascript' src="{% static 'js/jquery.form-4.3.0.min.js' %}"></script>
 {% endif %}
-<script type='text/javascript' src="{% static 'studioadmin/js/register_ajax-v2.js' %}"></script>
+<script type='text/javascript' src="{% static 'studioadmin/js/register_ajax-v3.js' %}"></script>
 {% endblock %}
