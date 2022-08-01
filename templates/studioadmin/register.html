@@ -155,9 +155,11 @@
 <script type="text/javascript">
     $(document).ready(function() {
         $('#id_user').multiselect({
+            buttonContainer: '<div class="btn-group" />',
             buttonClass: 'btn btn-sm btn-outline-dark',
-            buttonWidth: '75%',
+            buttonWidth: '50%',
             numberDisplayed: 1,
+            maxHeight: 400,
             nonSelectedText: 'Click to choose user',
             enableFiltering: true,
             enableCaseInsensitiveFiltering: true,
