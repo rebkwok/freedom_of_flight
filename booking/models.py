@@ -445,6 +445,7 @@ class BaseVoucher(models.Model):
         verbose_name="Maximum uses per user",
         help_text="Maximum times this voucher can be used by a single user"
     )
+
     # for gift vouchers
     is_gift_voucher = models.BooleanField(default=False)
     activated = models.BooleanField(default=True)
@@ -489,12 +490,22 @@ class BaseVoucher(models.Model):
 
 class BlockVoucher(BaseVoucher):
     block_configs = models.ManyToManyField(BlockConfig)
+    item_count = models.PositiveIntegerField(
+        null=True, blank=True,
+        verbose_name="Number of items",
+        help_text="Required number of items that must be purchased at one time with "
+                  "this voucher. Set to 1 if the voucher applies to a single purchased "
+                  "block/course.  Set to more than 1 if it ONLY applies if the user purchases a "
+                  "set number of items (e.g. if you want a 10% discount when a user purchases "
+                  "2 blocks/courses at a time)",
+        default=1
+    )
 
     def check_block_config(self, block_config):
         return block_config in self.block_configs.all()
 
     def uses(self):
-        return self.blocks.filter(paid=True).count()
+        return self.blocks.filter(paid=True).count() / self.item_count
 
 
 class TotalVoucher(BaseVoucher):

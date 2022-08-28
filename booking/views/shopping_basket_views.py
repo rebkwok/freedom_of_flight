@@ -78,16 +78,22 @@ def shopping_basket(request):
         unpaid_blocks_by_user.setdefault(block.user, []).append(block)
 
     unpaid_subscriptions = get_unpaid_user_managed_subscriptions(request.user)
-
     unpaid_gift_vouchers = get_unpaid_user_gift_vouchers(request.user)
-
     unpaid_merchandise = get_unpaid_user_merchandise(request.user)
 
     if request.method == "POST":
         code = request.POST.get("code")
         # remove any extraneous whitespace
         code = code.replace(" ", "")
-        if "add_voucher_code" in request.POST:
+
+        if "refresh_voucher_code" in request.POST:
+            # reapply code
+            for block in unpaid_blocks:
+                if block.voucher and block.voucher.code == code:
+                    block.voucher = None
+                    block.save()
+
+        if "add_voucher_code" in request.POST or "refresh_voucher_code" in request.POST:
             # verify voucher is active and available to use (not specific to blocks)
             # report error if voucher not valid
             # find unpaid blocks that don't have a code yet
@@ -152,6 +158,9 @@ def shopping_basket(request):
                     if block.voucher and block.voucher.code == code:
                         block.voucher = None
                         block.save()
+    else:
+        _verify_block_vouchers(unpaid_blocks)
+
     voucher_applied_costs = {
         unpaid_block.id: get_valid_applied_voucher_info(unpaid_block) for unpaid_block in unpaid_blocks
     }

@@ -36,6 +36,7 @@ class BlockVoucherStudioadminForm(forms.ModelForm):
         model = BlockVoucher
         fields = (
             'code', 'discount', 'discount_amount', 'start_date', 'expiry_date',
+            'item_count',
             'max_per_user',
             'max_vouchers',
             'block_configs',
@@ -54,6 +55,7 @@ class BlockVoucherStudioadminForm(forms.ModelForm):
             'discount_amount': 'Discount amount (£)',
             'name': 'Recipient Name',
             'message': 'Message',
+            'item_count': "Require multiple item purchase",
             'max_per_user': 'Maximum uses per user',
             'max_vouchers': 'Maximum total uses',
             'block_configs': ''
@@ -95,6 +97,7 @@ class BlockVoucherStudioadminForm(forms.ModelForm):
             self.fields['total_voucher'].initial = isinstance(self.child_instance, TotalVoucher)
             if isinstance(self.child_instance, BlockVoucher):
                 self.fields['block_configs'].initial = self.child_instance.block_configs.values_list("id", flat=True)
+                self.fields['item_count'].initial = self.child_instance.item_count
             if self.child_instance.gift_voucher.exists():
                 is_gift_voucher = True
         self.fields['purchaser_email'].disabled = True
@@ -105,10 +108,15 @@ class BlockVoucherStudioadminForm(forms.ModelForm):
                 "Voucher details",
                 "code",
                 "activated",
-                HTML("<p>Enter either a discount % or fixed discount amount</p>"),
+                HTML(
+                    "<p>Enter either a discount % or fixed discount amount"
+                    "<br/><small class='text-muted'>(If the voucher requires purchase of multiple items, the discount will "
+                    "be applied to EACH item)</small></p>"
+                ),
                 Row(
                     Column(AppendedText("discount", "%")),
                     Column(PrependedText("discount_amount", "£")),
+                    Column("item_count"),
                 ),
             ),
             Fieldset(

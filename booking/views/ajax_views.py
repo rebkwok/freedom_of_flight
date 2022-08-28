@@ -386,8 +386,14 @@ def ajax_cart_item_delete(request):
     item_type = request.POST.get("item_type")
     item_id = request.POST.get("item_id")
     item = get_object_or_404(ITEM_TYPE_MODEL_MAPPING[item_type], pk=item_id)
+    refresh = False
     if request.user.is_authenticated:
+        if isinstance(item, Block) and item.voucher is not None and item.voucher.item_count > 1:
+            refresh = True
         item.delete()
+        if refresh:
+            url = reverse('booking:shopping_basket')
+            return JsonResponse({"redirect": True, "url": url})
         unpaid_blocks = get_unpaid_user_managed_blocks(request.user)
         unpaid_subscriptions = get_unpaid_user_managed_subscriptions(request.user)
         unpaid_gift_vouchers = get_unpaid_user_gift_vouchers(request.user)
