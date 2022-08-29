@@ -68,8 +68,9 @@ class VoucherCreateUpdateMixin:
 class VoucherUpdateView(LoginRequiredMixin, StaffUserMixin, VoucherCreateUpdateMixin, UpdateView):
 
     def form_valid(self, form):
+        has_changed = form.has_changed()
         voucher = form.save()
-        if form.has_changed():
+        if has_changed:
             discount = f"£{voucher.discount_amount}" if voucher.discount_amount else f"{voucher.discount} %"
             msg = f'Voucher with code <strong>{voucher.code}</strong> has been updated!'
             messages.success(self.request, mark_safe(msg))

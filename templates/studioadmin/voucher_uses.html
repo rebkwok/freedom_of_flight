@@ -37,7 +37,7 @@
                 <td class="text-center">{{ user.email }}</td>
                 <td class="text-center">{{ user.full_name }}</td>
                 <td class="text-center">{{ user.num_uses|floatformat }}
-                {% if voucher_item_count > 1 %} ({{ user.total_items_used }} items){% endif %}
+                {% if voucher_item_count > 1 %} (applied to {{ user.total_items_used }} blocks){% endif %}
                 </td>
             </tr>
             {% endfor %}

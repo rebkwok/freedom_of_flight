@@ -748,8 +748,8 @@ class ShoppingBasketViewTests(TestUsersMixin, TestCase):
         # apply second voucher, applied to second block only
         resp = self.client.post(self.url, data={"add_voucher_code": "add_voucher_code", "code": "foo"})
         assert list(resp.context_data["unpaid_block_info"]) == [
-            {"block": course_block, "original_cost": 40, "voucher_applied": {"code": "foo", "discounted_cost": 36}},
             {"block": dropin_block, "original_cost": 20, "voucher_applied": {"code": "test", "discounted_cost": 10}},
+            {"block": course_block, "original_cost": 40, "voucher_applied": {"code": "foo", "discounted_cost": 36}},
         ]
         assert list(resp.context_data["applied_voucher_codes_and_discount"]) == [("foo", 10, None), ("test", 50, None)]
         assert resp.context_data["total_cost"] == 46
