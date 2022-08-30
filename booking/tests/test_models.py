@@ -522,6 +522,16 @@ class BlockVoucherTests(TestCase):
         baker.make(Block, block_config=dropin_block_config, voucher=voucher, paid=False)
         assert voucher.uses() == 2
 
+    def test_uses_voucher_with_item_count(self):
+        dropin_block_config = baker.make(BlockConfig)
+        course_block_config = baker.make(BlockConfig, course=True)
+        voucher = baker.make(BlockVoucher, discount=10, item_count=2)
+        voucher.block_configs.add(dropin_block_config, course_block_config)
+
+        baker.make(Block, block_config=dropin_block_config, voucher=voucher, paid=True)
+        baker.make(Block, block_config=course_block_config, voucher=voucher, paid=True)
+        assert voucher.uses() == 1
+
 
 class TotalVoucherTests(TestCase):
 

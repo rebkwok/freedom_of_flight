@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
-import pytz
-from datetime import datetime
-
 from django import forms
 from django.core.exceptions import ValidationError
+from django.http import QueryDict
 from django.shortcuts import reverse
 
 from crispy_forms.bootstrap import InlineCheckboxes, AppendedText, PrependedText
@@ -36,6 +34,7 @@ class BlockVoucherStudioadminForm(forms.ModelForm):
         model = BlockVoucher
         fields = (
             'code', 'discount', 'discount_amount', 'start_date', 'expiry_date',
+            'item_count',
             'max_per_user',
             'max_vouchers',
             'block_configs',
@@ -54,6 +53,7 @@ class BlockVoucherStudioadminForm(forms.ModelForm):
             'discount_amount': 'Discount amount (£)',
             'name': 'Recipient Name',
             'message': 'Message',
+            'item_count': "Require multiple item purchase",
             'max_per_user': 'Maximum uses per user',
             'max_vouchers': 'Maximum total uses',
             'block_configs': ''
@@ -87,6 +87,7 @@ class BlockVoucherStudioadminForm(forms.ModelForm):
             help_text="Discount applied to total checkout value, irrespective of items/block purchases"
         )
         self.child_instance = None
+        used = False
         if self.instance.id:
             if TotalVoucher.objects.filter(id=self.instance.id).exists():
                 self.child_instance = TotalVoucher.objects.get(id=self.instance.id)
@@ -95,8 +96,15 @@ class BlockVoucherStudioadminForm(forms.ModelForm):
             self.fields['total_voucher'].initial = isinstance(self.child_instance, TotalVoucher)
             if isinstance(self.child_instance, BlockVoucher):
                 self.fields['block_configs'].initial = self.child_instance.block_configs.values_list("id", flat=True)
+                self.fields['item_count'].initial = self.child_instance.item_count
             if self.child_instance.gift_voucher.exists():
                 is_gift_voucher = True
+            if self.child_instance.uses() > 0:
+                used = True
+                for field in ["item_count", "discount", "discount_amount", "total_voucher"]:
+                    self.fields[field].disabled = True
+                if isinstance(self.child_instance, TotalVoucher):
+                    self.fields['block_configs'].disabled = True
         self.fields['purchaser_email'].disabled = True
 
         self.helper = FormHelper()
@@ -105,15 +113,26 @@ class BlockVoucherStudioadminForm(forms.ModelForm):
                 "Voucher details",
                 "code",
                 "activated",
-                HTML("<p>Enter either a discount % or fixed discount amount</p>"),
+                HTML(
+                    "<p>Enter either a discount % or fixed discount amount"
+                    "<br/><small class='text-muted'>(If the voucher requires purchase of multiple items, the discount will "
+                    "be applied to EACH item)</small></p>"
+                ),
+                HTML(
+                    "<p><strong>Note: voucher discounts and item number cannot be updated as the voucher has already been used</strong></p>"
+                ) if used else HTML(""),
                 Row(
                     Column(AppendedText("discount", "%")),
                     Column(PrependedText("discount_amount", "£")),
+                    Column("item_count"),
                 ),
             ),
             Fieldset(
                 "Valid Items",
                 HTML("<p>Select valid block types OR tick to create a voucher applied to checkout total</>"),
+                HTML(
+                    "<p><strong>Note: voucher type cannot be updated as the voucher has already been used</strong></p>"
+                ) if used else HTML(""),
                 Row(
                     Column("block_configs"),
                     Column("total_voucher"),
@@ -155,23 +174,24 @@ class BlockVoucherStudioadminForm(forms.ModelForm):
     def clean(self):
         super().clean()
 
-        block_configs = self.cleaned_data.get("block_configs")
         total_voucher = self.cleaned_data.get("total_voucher")
-
         if self.child_instance:
-            if (
-                    (isinstance(self.child_instance, BlockVoucher) and total_voucher) or
-                    (isinstance(self.child_instance, TotalVoucher) and not total_voucher)
-            ):
-                if self.child_instance.uses() > 0:
-                    data = dict(self.data)
-                    if isinstance(self.child_instance, TotalVoucher):
-                        data["block_configs"] = []
-                    else:
-                        data["block_configs"] = self.child_instance.block_configs.values_list("id", flat=True)
-                    self.data = data
+            if self.child_instance.uses() > 0:
+                # Is the voucher type being changed?
+                if (
+                        (isinstance(self.child_instance,
+                                    BlockVoucher) and total_voucher) or
+                        (isinstance(self.child_instance,
+                                    TotalVoucher) and not total_voucher)
+                ):
                     self.add_error('__all__', "Voucher has already been used, can't change voucher type")
+                    return
+                # Did block configs get added to a TotalVoucher?
+                if isinstance(self.child_instance, TotalVoucher) and self.cleaned_data.get("block_configs"):
+                    self.add_error('__all__', "Can't add block types to a total voucher")
+                    return
 
+        block_configs = self.cleaned_data.get("block_configs")
         # Don't allow change from total to block type voucher if it's already been used
         discount = self.cleaned_data.get("discount")
         discount_amount = self.cleaned_data.get("discount_amount")
@@ -203,8 +223,8 @@ class BlockVoucherStudioadminForm(forms.ModelForm):
             if times_used > max_uses:
                 self.add_error(
                     'max_vouchers',
-                    f'Voucher code has already been used {times_used} times in '
-                    f'total; set max uses to {times_used} or greater'
+                    f'Voucher code has already been used {int(times_used)} times in '
+                    f'total; set max uses to {int(times_used)} or greater'
                 )
 
     def full_clean(self):

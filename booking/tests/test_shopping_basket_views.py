@@ -297,9 +297,83 @@ class ShoppingBasketViewTests(TestUsersMixin, TestCase):
         voucher.activated = False
         voucher.save()
         resp = self.client.get(self.url)
-        assert resp.context_data["total_cost"] == 20  # discount applied
+        assert resp.context_data["total_cost"] == 20  # discount not applied
         block.refresh_from_db()
         assert block.voucher is None
+
+    def test_refresh_voucher(self):
+        voucher = baker.make(BlockVoucher, code="test", discount=50)
+        voucher.block_configs.add(self.dropin_block_config)
+        block = baker.make_recipe(
+            "booking.dropin_block", block_config=self.dropin_block_config, user=self.student_user, voucher=voucher
+        )
+        resp = self.client.get(self.url)
+        assert resp.context_data["total_cost"] == 10  # discount applied
+
+        voucher.activated = False
+        voucher.save()
+        resp = self.client.post(self.url, {"code": "test", "refresh_voucher_code": True})
+        assert resp.context_data["total_cost"] == 20  # discount not applied
+        block.refresh_from_db()
+        assert block.voucher is None
+
+    def test_voucher_application_multiple_items(self):
+        voucher = baker.make(BlockVoucher, code="test", discount=50, item_count=2)
+        voucher.block_configs.add(self.dropin_block_config)
+        # make 1 block; 2 are required for this voucher
+        block = baker.make_recipe(
+            "booking.dropin_block", block_config=self.dropin_block_config, user=self.student_user
+        )
+        resp = self.client.get(self.url)
+        assert resp.context_data["total_cost"] == 20
+
+        resp = self.client.post(self.url, data={"add_voucher_code": "add_voucher_code", "code": "test"})
+        assert list(resp.context_data["unpaid_block_info"]) == [
+            {"block": block, "original_cost": 20, "voucher_applied": {"code": None, "discounted_cost": None}}
+        ]
+        assert list(resp.context_data["applied_voucher_codes_and_discount"]) == []
+        assert resp.context_data["total_cost"] == 20
+
+        # make 2 more
+        block1, block2 = baker.make_recipe(
+            "booking.dropin_block", block_config=self.dropin_block_config, user=self.student_user,
+            _quantity=2
+        )
+
+        resp = self.client.post(self.url, data={"add_voucher_code": "add_voucher_code", "code": "test"})
+        assert list(resp.context_data["unpaid_block_info"]) == [
+            {
+                "block": block, "original_cost": 20, "voucher_applied": {"code": "test", "discounted_cost": 10}
+            },
+            {
+                "block": block1, "original_cost": 20, "voucher_applied": {"code": "test", "discounted_cost": 10}
+            },
+            {
+                "block": block2, "original_cost": 20, "voucher_applied": {"code": None, "discounted_cost": None}
+            },
+        ]
+        assert list(resp.context_data["applied_voucher_codes_and_discount"]) == [("test", 50, None)]
+        assert resp.context_data["total_cost"] == 40
+        for bl in [block, block1, block2]:
+            bl.refresh_from_db()
+        assert block.voucher == voucher
+        assert block1.voucher == voucher
+        assert block2.voucher is None
+
+        # Delete block 1 and get again; voucher is now applied to block 2
+        block1.delete()
+        resp = self.client.get(self.url)
+        assert resp.context_data["total_cost"] == 20
+        assert list(resp.context_data["unpaid_block_info"]) == [
+            {
+                "block": block, "original_cost": 20,
+                "voucher_applied": {"code": "test", "discounted_cost": 10}
+            },
+            {
+                "block": block2, "original_cost": 20,
+                "voucher_applied": {"code": "test", "discounted_cost": 10}
+            },
+        ]
 
     def test_voucher_validation(self):
         voucher_with_discount = baker.make(BlockVoucher, code="test", discount=50, activated=False)
@@ -325,7 +399,7 @@ class ShoppingBasketViewTests(TestUsersMixin, TestCase):
             voucher.activated = True
             voucher.save()
             resp = self.client.post(self.url, data={"add_voucher_code": "add_voucher_code", "code": voucher.code})
-            assert resp.context_data["voucher_add_error"] == [f"Code {voucher.code} is not valid for any blocks in your cart"]
+            assert resp.context_data["voucher_add_error"] == [f"Code '{voucher.code}' is not valid for any blocks in your cart"]
             assert resp.context_data["total_cost"] == 20
 
             # voucher not started
@@ -449,6 +523,166 @@ class ShoppingBasketViewTests(TestUsersMixin, TestCase):
                 f"Voucher code {voucher.code} has limited number of total uses and has expired"]
             assert resp.context_data["total_cost"] == 20
 
+    def test_voucher_validation_with_item_count(self):
+        voucher_with_discount = baker.make(
+            BlockVoucher, code="test", discount=50, activated=False, item_count=2
+        )
+        voucher_with_discount_amount = baker.make(
+            BlockVoucher, code="test_amount", discount_amount=10, activated=False,
+            item_count=2
+        )
+
+        for voucher in [voucher_with_discount, voucher_with_discount_amount]:
+            Block.objects.all().delete()
+            baker.make_recipe(
+                "booking.dropin_block", block_config=self.dropin_block_config,
+                user=self.student_user,
+            )
+
+            # not activated yet
+            resp = self.client.post(
+                self.url, data={"add_voucher_code": "add_voucher_code", "code": voucher.code}
+            )
+            assert resp.context_data["voucher_add_error"] == [ "Voucher has not been activated yet"]
+            assert resp.context_data["total_cost"] == 20
+
+            # voucher not valid for any blocks
+            voucher.activated = True
+            voucher.save()
+            resp = self.client.post(
+                self.url, data={"add_voucher_code": "add_voucher_code", "code": voucher.code}
+            )
+            assert resp.context_data["voucher_add_error"] == [
+                f"Code '{voucher.code}' is not valid for any blocks in your cart"]
+            assert resp.context_data["total_cost"] == 20
+
+            # voucher not started
+            voucher.block_configs.add(self.dropin_block_config)
+            voucher.start_date = timezone.now() + timedelta(2)
+            voucher.save()
+            resp = self.client.post(
+                self.url, data={"add_voucher_code": "add_voucher_code", "code": voucher.code}
+            )
+            assert resp.context_data["voucher_add_error"] == [
+                f"Voucher code is not valid until {voucher.start_date.strftime('%d %b %y')}"
+            ]
+            assert resp.context_data["total_cost"] == 20
+
+            # voucher expired
+            voucher.start_date = timezone.now() - timedelta(5)
+            voucher.expiry_date = timezone.now() - timedelta(2)
+            voucher.save()
+            resp = self.client.post(
+                self.url, data={"add_voucher_code": "add_voucher_code", "code": voucher.code}
+            )
+            assert resp.context_data["voucher_add_error"] == [f"Voucher has expired"]
+            assert resp.context_data["total_cost"] == 20
+
+            # voucher max uses per user
+            voucher.expiry_date = None
+            voucher.save()
+            resp = self.client.post(
+                self.url, data={"add_voucher_code": "add_voucher_code", "code": voucher.code}
+            )
+
+            # voucher has not expired, but this voucher has a required item_count, and there is
+            # only 1 unpaid block in the basket, so it's still not valid
+            assert resp.context_data["voucher_add_error"] == [
+                f"Code '{voucher.code}' can only be used for purchases of 2 valid blocks"
+            ]
+
+            # make another block for the cart so it's got a valid number of items
+            baker.make_recipe(
+                "booking.dropin_block", block_config=self.dropin_block_config,
+                user=self.student_user, paid=False
+            )
+            # max uses 1
+            voucher.max_per_user = 1
+            voucher.save()
+
+            # make 2 paid blocks with the voucher already applied
+            baker.make(
+                Block, block_config=self.dropin_block_config, user=self.student_user,
+                voucher=voucher, paid=True, _quantity=2
+            )
+            # Uses is counted as the number of time the voucher has been used; if it's required
+            # to be used for 2 blocks, 2 blocks counts as 1 voucher use
+            assert voucher.uses() == 1
+
+            resp = self.client.post(
+                self.url,
+                data={"add_voucher_code": "add_voucher_code", "code": voucher.code}
+            )
+            assert resp.context_data["voucher_add_error"] == [
+                f"Student User has already used voucher code {voucher.code} the maximum number of times (1)"]
+
+            # update max per user so we can use it 2 more times (for 4 more blocks in total)
+            voucher.max_per_user = 3
+            voucher.save()
+
+            # now it is valid
+            resp = self.client.post(
+                self.url,
+                data={"add_voucher_code": "add_voucher_code", "code": voucher.code}
+            )
+            # voucher applied to the two unpaid blocks; total == 10 + 10
+            assert resp.context_data["voucher_add_error"] == []
+            assert resp.context_data["total_cost"] == 20
+
+            # With 3 unpaid blocks, it's valid but only applied to the first 2
+            baker.make(
+                Block, block_config=self.dropin_block_config, user=self.student_user,
+                paid=False, _quantity=1
+            )
+            resp = self.client.post(
+                self.url,
+                data={"add_voucher_code": "add_voucher_code", "code": voucher.code}
+            )
+            # 50% discount applied to 2 blocks only, total == 10 + 10 + 20
+            assert resp.context_data["voucher_add_error"] == []
+            assert resp.context_data["total_cost"] == 40
+
+            # make a 4th, now it can be applied to all 4
+            baker.make(
+                Block, block_config=self.dropin_block_config, user=self.student_user,
+                paid=False, _quantity=1
+            )
+            resp = self.client.post(
+                self.url,
+                data={"add_voucher_code": "add_voucher_code", "code": voucher.code}
+            )
+            # voucher applied to the two unpaid blocks
+            # 50% discount applied to 4 blocks only, total == 10 + 10 + 10 + 10
+            assert resp.context_data["total_cost"] == 40
+
+            # voucher uses only applies to paid blocks, so the uses is still 1
+            # however the user has 2 uses (4 blocks) in their basket
+            assert voucher.uses() == 1
+
+            # voucher max total uses now expired
+            voucher.max_per_user = None
+            voucher.max_vouchers = 3
+            voucher.save()
+            # Make another 2 blocks, not for this user, that use the voucher
+            baker.make(
+                Block,
+                voucher=voucher,
+                block_config=self.dropin_block_config,
+                paid=True,
+               _quantity=2
+            )
+
+            # voucher used for only some block before it's used up
+            resp = self.client.post(
+                self.url,
+                data={"add_voucher_code": "add_voucher_code", "code": voucher.code}
+            )
+            assert resp.context_data["voucher_add_error"] == [
+                f"Voucher code {voucher.code} has limited number of total uses and expired before it could be used for all applicable blocks"
+            ]
+            # 50% discount can only be applied for 1 use (2 blocks) only, total == 10 + 10 + 20 + 20
+            assert resp.context_data["total_cost"] == 60
+
     def test_total_voucher_greater_than_checkout_amount(self):
         voucher = baker.make(TotalVoucher, code="test_amount", discount_amount=10, activated=True)
         baker.make_recipe(
@@ -514,8 +748,8 @@ class ShoppingBasketViewTests(TestUsersMixin, TestCase):
         # apply second voucher, applied to second block only
         resp = self.client.post(self.url, data={"add_voucher_code": "add_voucher_code", "code": "foo"})
         assert list(resp.context_data["unpaid_block_info"]) == [
-            {"block": course_block, "original_cost": 40, "voucher_applied": {"code": "foo", "discounted_cost": 36}},
             {"block": dropin_block, "original_cost": 20, "voucher_applied": {"code": "test", "discounted_cost": 10}},
+            {"block": course_block, "original_cost": 40, "voucher_applied": {"code": "foo", "discounted_cost": 36}},
         ]
         assert list(resp.context_data["applied_voucher_codes_and_discount"]) == [("foo", 10, None), ("test", 50, None)]
         assert resp.context_data["total_cost"] == 46

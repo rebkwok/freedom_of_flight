@@ -254,7 +254,7 @@ class BlockVoucherStudioadminFormTests(TestCase):
         assert TotalVoucher.objects.exists() is True
         assert TotalVoucher.objects.first().code == "test_code"
 
-    def test_form_save_change_voucher_type_already_used_block_voucher(self):
+    def test_form_already_used_block_voucher(self):
         block_type = baker.make(BlockConfig, active=True)
         block_voucher = baker.make(BlockVoucher, discount=10)
         block_voucher.block_configs.add(block_type)
@@ -263,38 +263,21 @@ class BlockVoucherStudioadminFormTests(TestCase):
         baker.make(Block, voucher=block_voucher, paid=True)
 
         base_voucher = BaseVoucher.objects.get(id=block_voucher.id)
-        data = {
-            'id': block_voucher.id,
-            'code': 'test_code',
-            'discount': 10,
-            'start_date': '01-Jan-2016',
-            'expiry_date': '31-Jan-2016',
-            'max_vouchers': 2,
-            'total_voucher': True
-        }
-        form = BlockVoucherStudioadminForm(instance=base_voucher, data=data)
-        assert form.is_valid() is False
-        assert form.non_field_errors() == ["Voucher has already been used, can't change voucher type"]
+        form = BlockVoucherStudioadminForm(instance=base_voucher)
+        for field in ["item_count", "discount", "discount_amount", "total_voucher"]:
+            assert form.fields[field].disabled is True
+        assert form.fields["block_configs"].disabled is False
 
-    def test_form_save_change_voucher_type_already_used_total_voucher(self):
-        block_type = baker.make(BlockConfig, active=True)
+    def test_form_already_used_total_voucher(self):
         total_voucher = baker.make(TotalVoucher, discount=10)
 
         #used voucher
         baker.make(Invoice, total_voucher_code=total_voucher.code, paid=True)
         base_voucher = BaseVoucher.objects.get(id=total_voucher.id)
-        data = {
-            'id': total_voucher.id,
-            'code': 'test_code',
-            'discount': 10,
-            'start_date': '01-Jan-2016',
-            'expiry_date': '31-Jan-2016',
-            'max_vouchers': 2,
-            'block_configs': [block_type.id]
-        }
-        form = BlockVoucherStudioadminForm(instance=base_voucher, data=data)
-        assert form.is_valid() is False
-        assert form.non_field_errors() == ["Voucher has already been used, can't change voucher type"]
+
+        form = BlockVoucherStudioadminForm(instance=base_voucher)
+        for field in ["item_count", "discount", "discount_amount", "total_voucher", "block_configs"]:
+            assert form.fields[field].disabled is True
 
     def test_update_gift_voucher(self):
         gift_voucher = baker.make(GiftVoucher, gift_voucher_config__discount_amount=10)

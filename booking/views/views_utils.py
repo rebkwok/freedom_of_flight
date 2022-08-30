@@ -48,8 +48,9 @@ def _managed_user_plus_self(user):
 
 
 def get_unpaid_user_managed_blocks(user):
-
-    return Block.objects.filter(user__in=_managed_user_plus_self(user), paid=False).order_by('user_id')
+    return Block.objects.filter(
+        user__in=_managed_user_plus_self(user), paid=False
+    ).order_by('user_id', "id")
 
 
 def get_unpaid_user_managed_subscriptions(user):

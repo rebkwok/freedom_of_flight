@@ -72,12 +72,16 @@ var processRemoveBlock = function()  {
     var processResult = function(
        result, status, jqXHR)  {
       //console.log("sf result='" + result + "', status='" + status + "', jqXHR='" + jqXHR + "'");
-    $('#cart-row-block-' + block_id).html("");
-    $('#cart-row-block-warning-' + block_id).html("");
-    $('#cart_item_menu_count').text(result.cart_item_menu_count);
-    $('#total').text(result.cart_total);
-    $('#checkout-btn').data('total', result.cart_total);
-    $('#payment-btn').html(result.payment_button_html);
+    if (result.redirect) {
+          window.location = result.url;
+      } else {
+        $('#cart-row-block-' + block_id).html("");
+        $('#cart-row-block-warning-' + block_id).html("");
+        $('#cart_item_menu_count').text(result.cart_item_menu_count);
+        $('#total').text(result.cart_total);
+        $('#checkout-btn').data('total', result.cart_total);
+        $('#payment-btn').html(result.payment_button_html);
+    }
    };
 
     var processFailure = function(

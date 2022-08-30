@@ -593,6 +593,19 @@ class AjaxCartItemDeleteView(TestUsersMixin, TestCase):
         assert resp["cart_total"] == 0
         assert resp["cart_item_menu_count"] == 0
 
+    def test_delete_block_with_item_count_voucher(self):
+        block = baker.make_recipe(
+            "booking.dropin_block",
+            user=self.student_user,
+            voucher__item_count=2,
+            voucher__discount=10
+        )
+        url = reverse("booking:ajax_cart_item_delete")
+        resp = self.client.post(url, {"item_type": "block", "item_id": block.id}).json()
+        assert Block.objects.exists() is False
+        assert resp["redirect"] is True
+        assert resp["url"] == reverse("booking:shopping_basket")
+
     def test_recalculate_total_cart_items(self):
         # calculate total for all manager users blocks
         # the block to delete

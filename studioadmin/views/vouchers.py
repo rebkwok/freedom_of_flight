@@ -68,8 +68,9 @@ class VoucherCreateUpdateMixin:
 class VoucherUpdateView(LoginRequiredMixin, StaffUserMixin, VoucherCreateUpdateMixin, UpdateView):
 
     def form_valid(self, form):
+        has_changed = form.has_changed()
         voucher = form.save()
-        if form.has_changed():
+        if has_changed:
             discount = f"£{voucher.discount_amount}" if voucher.discount_amount else f"{voucher.discount} %"
             msg = f'Voucher with code <strong>{voucher.code}</strong> has been updated!'
             messages.success(self.request, mark_safe(msg))
@@ -126,9 +127,14 @@ class VoucherDetailView(LoginRequiredMixin, StaffUserMixin, DetailView):
                 num_uses=Count("blocks")
             )
             voucher_users = [
-                {"full_name": full_name(user), "email": user.email, "num_uses": user.num_uses}
+                {
+                    "full_name": full_name(user), "email": user.email,
+                    "num_uses": user.num_uses / voucher.item_count,
+                    "total_items_used": user.num_uses
+                }
                 for user in block_voucher_users
             ]
+            context["voucher_item_count"] = voucher.item_count
         except BlockVoucher.DoesNotExist:
             voucher = TotalVoucher.objects.get(id=voucher.id)
             # A block voucher will always be associated with a user, but in future a total voucher could be

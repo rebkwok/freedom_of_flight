@@ -13,6 +13,97 @@ from common.test_utils import TestUsersMixin
 from payments.models import Invoice
 
 
+class BlockVoucherCreateUpdateViewTests(TestUsersMixin, TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.block_type = baker.make(BlockConfig, active=True)
+        cls.url = reverse('studioadmin:add_voucher')
+
+    def setUp(self):
+        self.create_admin_users()
+        self.create_users()
+        self.login(self.staff_user, password="test")
+
+    def test_access(self):
+        self.user_access_test(["staff"], self.url)
+
+    def test_create_block_voucher(self):
+        data = {
+            'code': 'test_code',
+            'discount': 10,
+            'item_count': 1,
+            'start_date': '01-Jan-2016',
+            'expiry_date': '31-Jan-2016',
+            'max_vouchers': 2,
+            'total_voucher': False,
+            'block_configs': [self.block_type.id]
+        }
+        assert BlockVoucher.objects.exists() is False
+        resp = self.client.post(self.url, data)
+        assert resp.url == reverse("studioadmin:vouchers")
+        assert BlockVoucher.objects.count() == 1
+        voucher = BlockVoucher.objects.first()
+        assert voucher.check_block_config(self.block_type)
+
+    def test_create_total_voucher(self):
+        data = {
+            'code': 'test_code',
+            'discount': 10,
+            'item_count': 1,
+            'start_date': '01-Jan-2016',
+            'expiry_date': '31-Jan-2016',
+            'max_vouchers': 2,
+            'total_voucher': True,
+        }
+        assert TotalVoucher.objects.exists() is False
+        self.client.post(self.url, data)
+
+        assert TotalVoucher.objects.count() == 1
+
+    def test_create_gift_voucher(self):
+        data = {
+            'code': 'test_code',
+            'discount': 10,
+            'item_count': 1,
+            'start_date': '01-Jan-2016',
+            'expiry_date': '31-Jan-2016',
+            'max_vouchers': 2,
+            'total_voucher': False,
+            'block_configs': [self.block_type.id],
+        }
+        assert BlockVoucher.objects.exists() is False
+        resp = self.client.post(reverse("studioadmin:add_gift_voucher"), data)
+        assert resp.url == reverse("studioadmin:gift_vouchers")
+        assert BlockVoucher.objects.count() == 1
+        voucher = BlockVoucher.objects.first()
+        assert voucher.is_gift_voucher
+
+    def test_update_voucher(self):
+        data = {
+            'code': 'test_code',
+            'discount': 10,
+            'item_count': 1,
+            'start_date': '01-Jan-2016',
+            'expiry_date': '31-Jan-2016',
+            'max_vouchers': 2,
+            'total_voucher': False,
+            'block_configs': [self.block_type.id]
+        }
+        self.client.post(self.url, data, follow=True)
+        voucher = BlockVoucher.objects.latest('id')
+
+        data.update(id=voucher.id)
+        data.update(code="test_new")
+        resp = self.client.post(
+            reverse("studioadmin:edit_voucher", args=(voucher.id,)),
+            data=data,
+            follow=True
+        )
+        assert "has been updated!" in resp.rendered_content
+        voucher.refresh_from_db()
+        assert voucher.code == "test_new"
+
+
 class BlockVoucherListViewTests(TestUsersMixin, TestCase):
 
     @classmethod

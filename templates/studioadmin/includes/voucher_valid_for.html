@@ -1,7 +1,12 @@
 {% if voucher_type == "block" %}
+    <ul>
     {% for bt in voucher.block_configs.all %}
-        - {{ bt }}<br/>
+        <li>{{ bt }}</li>
     {% endfor %}
+    {% if voucher.item_count > 1 %}
+        <li>({{ voucher.item_count }} item purchase)</li>
+    {% endif %}
+    </ul>
 {% else %}
     Total checkout amount
 {% endif %}
