@@ -1,6 +1,8 @@
 {% if event.full or booking.event.full %}
 <span class="badge badge-pill badge-dark">Full</span>
+{% elif event.spaces_left < 5 or booking.event.spaces_left < 5%}
+<span class="badge badge-pill badge-warning">Limited spaces</span>
 {% else %}
-<span class="badge badge-pill badge-warning">{{ event.spaces_left }}{{ booking.event.spaces_left }}</span>
+<span class="badge badge-pill badge-warning">Available</span>
 {% endif %}
 
