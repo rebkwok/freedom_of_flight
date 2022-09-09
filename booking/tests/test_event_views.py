@@ -543,7 +543,7 @@ class EventListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         # For a drop-in allowed course, user has drop in block, but could also book with
         # course block
         book_button = _element_from_response_by_id(f"book_{event.id}")
-        assert "Multiple payment options available;see course details" in book_button.text
+        assert "Drop-in and course options available;see course details to book" in book_button.text
 
         # But not if the course has started, so just show drop in is available
         self.course.number_of_events = 2
