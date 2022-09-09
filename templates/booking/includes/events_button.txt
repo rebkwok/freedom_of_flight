@@ -56,7 +56,7 @@
             {% elif event.course.allow_drop_in %}
                 {% if user_info.has_available_block %}
                     {% if not event.course.has_started or user_info.has_booked_course_dropin %}
-                        <span class="helptext float-right">Multiple payment options available;<br/>see course details</span>
+                        <span class="helptext float-right">Drop-in and course options available;<br/>see course details to book</span>
                     {% else %}
                         <div class="btn btn-xs btn-xs-narrow btn-success float-right" href="#"><i id="loader_{{ event.id }}"></i> Book Drop-in</div
                     {% endif %}
