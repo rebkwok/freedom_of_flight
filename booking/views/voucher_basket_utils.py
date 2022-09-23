@@ -13,12 +13,18 @@ class VoucherValidationError(Exception):
 
 def validate_voucher_max_total_uses(voucher, paid_only=True, user=None, exclude_block_id=None):
     if voucher.max_vouchers is not None:
+        # all blocks, paid and unpaid, that have used the voucher
         used_voucher_blocks = voucher.blocks.all()
+
+        # exclude this one, whether paid or not
         if exclude_block_id:
             used_voucher_blocks = used_voucher_blocks.exclude(id=exclude_block_id)
+        
+        # only consider paid ones
         if paid_only:
             used_voucher_blocks = used_voucher_blocks.filter(paid=True)
         else:
+            # Or, if considering unpaid, exclude unpaid for this user
             user_unpaid_voucher_blocks = used_voucher_blocks.filter(user=user, paid=False)
             used_voucher_blocks = used_voucher_blocks | user_unpaid_voucher_blocks
         if used_voucher_blocks.count() >= (voucher.max_vouchers * voucher.item_count):

@@ -11,6 +11,18 @@
 - LOG_FOLDER: path to folder containing the app's log files
 - PAYPAL_IDENTITY_TOKEN
 - INVOICE_KEY
+- STRIPE_PUBLISHABLE_KEY
+- STRIPE_CONNECT_CLIENT_ID
+- STRIPE_SECRET_KEY
+- STRIPE_ENDPOINT_SECRET
+
+## Stripe
+In stripe account, add auth callback uri to:
+<https://dashboard.stripe.com/settings/connect>
+
+And webhook to:
+<https://dashboard.stripe.com/webhooks>
+
 
 # Optional
 - DEBUG (default False)
