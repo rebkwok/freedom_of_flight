@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 from dateutil.relativedelta import relativedelta
 from datetime import timedelta, datetime
+from datetime import timezone as dt_timezone
+
 from unittest.mock import patch
 
 from django.contrib.auth.models import User
@@ -65,7 +67,7 @@ class EventTests(EventTestMixin, TestCase):
         assert self.event.get_absolute_url() == reverse('booking:event', kwargs={'slug': self.event.slug})
 
     def test_str(self):
-        self.event.start = datetime(2015, 1, 1, tzinfo=timezone.utc)
+        self.event.start = datetime(2015, 1, 1, tzinfo=dt_timezone.utc)
         self.event.save()
         assert str(self.event) == 'Test event - 01 Jan 2015, 00:00 (Adults)'
 
@@ -131,7 +133,7 @@ class BookingTests(EventTestMixin, TestUsersMixin, TestCase):
         self.create_events_and_course()
         self.event = self.aerial_events[0]
         self.event.max_participants = 3
-        self.event.start = datetime(2015, 1, 1, 18, 0, tzinfo=timezone.utc)
+        self.event.start = datetime(2015, 1, 1, 18, 0, tzinfo=dt_timezone.utc)
         self.name = 'Test event'
         self.event.save()
 
@@ -165,7 +167,7 @@ class BookingTests(EventTestMixin, TestUsersMixin, TestCase):
         Test that reopening a cancelled booking for an event with spaces sets
         the rebooking date
         """
-        mock_now = datetime(2015, 1, 1, tzinfo=timezone.utc)
+        mock_now = datetime(2015, 1, 1, tzinfo=dt_timezone.utc)
         mock_tz.now.return_value = mock_now
         booking = baker.make(Booking, event=self.event, user=self.student_user, status='CANCELLED')
 
@@ -180,14 +182,14 @@ class BookingTests(EventTestMixin, TestUsersMixin, TestCase):
         """
         Test that reopening a second time resets the rebooking date
         """
-        mock_now = datetime(2015, 3, 1, tzinfo=timezone.utc)
+        mock_now = datetime(2015, 3, 1, tzinfo=dt_timezone.utc)
         mock_tz.now.return_value = mock_now
 
         booking = baker.make(
             Booking, event=self.event, user=self.student_user, status='CANCELLED',
-            date_rebooked=datetime(2015, 1, 1, tzinfo=timezone.utc)
+            date_rebooked=datetime(2015, 1, 1, tzinfo=dt_timezone.utc)
         )
-        assert booking.date_rebooked == datetime(2015, 1, 1, tzinfo=timezone.utc)
+        assert booking.date_rebooked == datetime(2015, 1, 1, tzinfo=dt_timezone.utc)
         booking.status = 'OPEN'
         booking.save()
         booking.refresh_from_db()
@@ -442,38 +444,38 @@ class BlockVoucherTests(TestCase):
     @patch('booking.models.timezone')
     def test_voucher_start_dates(self, mock_tz):
         # dates are set to end of day
-        mock_now = datetime(2016, 1, 5, 16, 30, 30, 30, tzinfo=timezone.utc)
+        mock_now = datetime(2016, 1, 5, 16, 30, 30, 30, tzinfo=dt_timezone.utc)
         mock_tz.now.return_value = mock_now
         voucher = baker.make(BlockVoucher, start_date=mock_now, discount=10)
-        assert voucher.start_date == datetime(2016, 1, 5, 0, 0, 0, 0, tzinfo=timezone.utc)
+        assert voucher.start_date == datetime(2016, 1, 5, 0, 0, 0, 0, tzinfo=dt_timezone.utc)
 
-        voucher.expiry_date = datetime(2016, 1, 6, 18, 30, 30, 30, tzinfo=timezone.utc)
+        voucher.expiry_date = datetime(2016, 1, 6, 18, 30, 30, 30, tzinfo=dt_timezone.utc)
         voucher.save()
-        assert voucher.expiry_date == datetime(2016, 1, 6, 23, 59, 59, 999999, tzinfo=timezone.utc)
+        assert voucher.expiry_date == datetime(2016, 1, 6, 23, 59, 59, 999999, tzinfo=dt_timezone.utc)
 
     @patch('booking.models.timezone')
     def test_has_expired(self, mock_tz):
-        mock_tz.now.return_value = datetime(2016, 1, 5, 12, 30, tzinfo=timezone.utc)
+        mock_tz.now.return_value = datetime(2016, 1, 5, 12, 30, tzinfo=dt_timezone.utc)
 
         voucher = baker.make(
             BlockVoucher,
-            start_date=datetime(2016, 1, 1, tzinfo=timezone.utc),
-            expiry_date=datetime(2016, 1, 4, tzinfo=timezone.utc),
+            start_date=datetime(2016, 1, 1, tzinfo=dt_timezone.utc),
+            expiry_date=datetime(2016, 1, 4, tzinfo=dt_timezone.utc),
             discount=10
         )
         assert voucher.has_expired
 
-        mock_tz.now.return_value = datetime(2016, 1, 3, 12, 30, tzinfo=timezone.utc)
+        mock_tz.now.return_value = datetime(2016, 1, 3, 12, 30, tzinfo=dt_timezone.utc)
         assert voucher.has_expired is False
 
     @patch('booking.models.timezone')
     def test_has_started(self, mock_tz):
-        mock_tz.now.return_value = datetime(2016, 1, 5, 12, 30, tzinfo=timezone.utc)
+        mock_tz.now.return_value = datetime(2016, 1, 5, 12, 30, tzinfo=dt_timezone.utc)
 
-        voucher = baker.make(BlockVoucher, start_date=datetime(2016, 1, 1, tzinfo=timezone.utc), discount=10)
+        voucher = baker.make(BlockVoucher, start_date=datetime(2016, 1, 1, tzinfo=dt_timezone.utc), discount=10)
         assert voucher.has_started
 
-        voucher.start_date = datetime(2016, 1, 6, tzinfo=timezone.utc)
+        voucher.start_date = datetime(2016, 1, 6, tzinfo=dt_timezone.utc)
         voucher.save()
         assert voucher.has_started is False
 
@@ -567,13 +569,13 @@ class BlockTests(TestUsersMixin, TestCase):
         """
         # Times are in UTC, but converted from local (GMT/BST)
         # No daylight savings
-        self.dropin_block.start_date = datetime(2015, 3, 1, 15, 45, tzinfo=timezone.utc)
+        self.dropin_block.start_date = datetime(2015, 3, 1, 15, 45, tzinfo=dt_timezone.utc)
         # set to 2 weeks after start date, end of day GMT/BST
-        assert self.dropin_block.get_expiry_date() == datetime(2015, 3, 15, 23, 59, 59, 999999, tzinfo=timezone.utc)
+        assert self.dropin_block.get_expiry_date() == datetime(2015, 3, 15, 23, 59, 59, 999999, tzinfo=dt_timezone.utc)
 
         # with daylight savings
-        self.course_block.start_date = datetime(2015, 6, 1, 12, 42, tzinfo=timezone.utc)
-        assert self.course_block.get_expiry_date() == datetime(2015, 6, 15, 22, 59, 59, 999999, tzinfo=timezone.utc)
+        self.course_block.start_date = datetime(2015, 6, 1, 12, 42, tzinfo=dt_timezone.utc)
+        assert self.course_block.get_expiry_date() == datetime(2015, 6, 15, 22, 59, 59, 999999, tzinfo=dt_timezone.utc)
 
         self.dropin_config.duration = None
         self.dropin_config.save()
@@ -592,12 +594,12 @@ class BlockTests(TestUsersMixin, TestCase):
         """
         Test that manual expiry dates are set to end of day on save
         """
-        self.dropin_block.manual_expiry_date = datetime(2015, 3, 1, 15, 45, tzinfo=timezone.utc)
+        self.dropin_block.manual_expiry_date = datetime(2015, 3, 1, 15, 45, tzinfo=dt_timezone.utc)
         self.dropin_block.save()
         expected = datetime.combine(
-            datetime(2015, 3, 1, tzinfo=timezone.utc).date(), datetime.max.time()
+            datetime(2015, 3, 1, tzinfo=dt_timezone.utc).date(), datetime.max.time()
         )
-        expected = expected.replace(tzinfo=timezone.utc)
+        expected = expected.replace(tzinfo=dt_timezone.utc)
         assert self.dropin_block.get_expiry_date() == expected
 
     @patch('booking.models.timezone.now')
@@ -605,7 +607,7 @@ class BlockTests(TestUsersMixin, TestCase):
         """
         Test that a block's purchase date is set to current date on payment
         """
-        now = datetime(2015, 2, 1, tzinfo=timezone.utc)
+        now = datetime(2015, 2, 1, tzinfo=dt_timezone.utc)
         mock_now.return_value = now
 
         self.dropin_block.purchase_date = now - timedelta(12)
@@ -637,7 +639,7 @@ class BlockTests(TestUsersMixin, TestCase):
 
     @patch('booking.models.timezone.now')
     def test_str(self, mock_now):
-        mock_now.return_value = datetime(2015, 2, 1, tzinfo=timezone.utc) # this will be purchase date, used in str
+        mock_now.return_value = datetime(2015, 2, 1, tzinfo=dt_timezone.utc) # this will be purchase date, used in str
         self.dropin_block.paid = True
         self.dropin_block.save()
 
@@ -769,21 +771,21 @@ class SubscriptionConfigTests(TestUsersMixin, TestCase):
         assert subscription_config.age_restrictions == "Valid for age 12 and under only"
 
     def test_start_date_set_to_start_of_day(self):
-        start_date = datetime(2020, 1, 1, 13, 30, tzinfo=timezone.utc)
+        start_date = datetime(2020, 1, 1, 13, 30, tzinfo=dt_timezone.utc)
         subscription_config = baker.make(SubscriptionConfig, start_date=start_date)
         assert subscription_config.start_date.day == 1
         assert subscription_config.start_date.hour == 0
         assert subscription_config.start_date.minute == 0
 
         # DST; always set to UTC still
-        start_date = datetime(2020, 8, 1, 13, 30, tzinfo=timezone.utc)
+        start_date = datetime(2020, 8, 1, 13, 30, tzinfo=dt_timezone.utc)
         subscription_config = baker.make(SubscriptionConfig, start_date=start_date)
         assert subscription_config.start_date.day == 1
         assert subscription_config.start_date.hour == 0
         assert subscription_config.start_date.minute == 0
 
         # update DST start date to another date
-        start_date = datetime(2020, 8, 2, 14, 30, tzinfo=timezone.utc)
+        start_date = datetime(2020, 8, 2, 14, 30, tzinfo=dt_timezone.utc)
         subscription_config.start_date = start_date
         subscription_config.save()
         assert subscription_config.start_date.day == 2
@@ -791,7 +793,7 @@ class SubscriptionConfigTests(TestUsersMixin, TestCase):
         assert subscription_config.start_date.minute == 0
 
         # update DST start date with a 0, 0 start date
-        start_date = datetime(2020, 8, 3, 0, 0, tzinfo=timezone.utc)
+        start_date = datetime(2020, 8, 3, 0, 0, tzinfo=dt_timezone.utc)
         subscription_config.start_date = start_date
         subscription_config.save()
         assert subscription_config.start_date.day == 3
@@ -839,41 +841,41 @@ class SubscriptionConfigTests(TestUsersMixin, TestCase):
     def test_start_date_with_monthly_recurrence(self):
         # if day for recurrence is > 28 and recurrence is in months, set start date to 28th
         config = baker.make(
-            SubscriptionConfig, start_date=datetime(2020, 1, 31, 12, 0, tzinfo=timezone.utc), recurring=False
+            SubscriptionConfig, start_date=datetime(2020, 1, 31, 12, 0, tzinfo=dt_timezone.utc), recurring=False
         )
         assert config.start_date.day == 31
         config = baker.make(
-            SubscriptionConfig, start_date=datetime(2020, 1, 31, 12, 0, tzinfo=timezone.utc), recurring=True,
+            SubscriptionConfig, start_date=datetime(2020, 1, 31, 12, 0, tzinfo=dt_timezone.utc), recurring=True,
             duration=4, duration_units="weeks"
         )
         assert config.start_date.day == 31
         config = baker.make(
-            SubscriptionConfig, start_date=datetime(2020, 1, 31, 12, 0, tzinfo=timezone.utc), recurring=True,
+            SubscriptionConfig, start_date=datetime(2020, 1, 31, 12, 0, tzinfo=dt_timezone.utc), recurring=True,
             duration=2, duration_units="months"
         )
         assert config.start_date.day == 28
 
     @patch("booking.models.timezone.now")
     def test_is_purchaseable(self, mock_now):
-        mock_now.return_value = datetime(2020, 3, 10, 12, 0, tzinfo=timezone.utc)
+        mock_now.return_value = datetime(2020, 3, 10, 12, 0, tzinfo=dt_timezone.utc)
 
         # inactive
         config = baker.make(
-            SubscriptionConfig, start_date=datetime(2020, 2, 4, 0, 0, tzinfo=timezone.utc), recurring=True,
+            SubscriptionConfig, start_date=datetime(2020, 2, 4, 0, 0, tzinfo=dt_timezone.utc), recurring=True,
             active=False
         )
         assert config.is_purchaseable() is False
 
         # active and recurring
         config = baker.make(
-            SubscriptionConfig, start_date=datetime(2020, 2, 4, 0, 0, tzinfo=timezone.utc), recurring=True,
+            SubscriptionConfig, start_date=datetime(2020, 2, 4, 0, 0, tzinfo=dt_timezone.utc), recurring=True,
             active=True
         )
         assert config.is_purchaseable() is True
 
         # active one-off, not expired
         config = baker.make(
-            SubscriptionConfig, start_date=datetime(2020, 3, 20, 0, 0, tzinfo=timezone.utc), recurring=False,
+            SubscriptionConfig, start_date=datetime(2020, 3, 20, 0, 0, tzinfo=dt_timezone.utc), recurring=False,
             active=True, start_options="start_date", duration=1, duration_units="months"
         )
         assert config.is_purchaseable() is True
@@ -881,7 +883,7 @@ class SubscriptionConfigTests(TestUsersMixin, TestCase):
         # active one-off, expired
         # starts 3rd, duration 1 week, expires start of 10th. Today is the 10th, so now expired.
         config = baker.make(
-            SubscriptionConfig, start_date=datetime(2020, 3, 3, 0, 0, tzinfo=timezone.utc), recurring=False,
+            SubscriptionConfig, start_date=datetime(2020, 3, 3, 0, 0, tzinfo=dt_timezone.utc), recurring=False,
             active=True, start_options="start_date", duration=1, duration_units="weeks"
         )
         assert config.is_purchaseable() is False
@@ -894,110 +896,110 @@ class TestSubscriptionConfigStartDates:
         "now_value,config_kwargs,expected_current_start_date,expected_current_next_start_date",
         [
             (
-                datetime(2020, 7, 15, 12, 0, tzinfo=timezone.utc),  # Wed
+                datetime(2020, 7, 15, 12, 0, tzinfo=dt_timezone.utc),  # Wed
                 {
-                    "start_date": datetime(2020, 5, 3, 12, 0, tzinfo=timezone.utc),  # Sun
+                    "start_date": datetime(2020, 5, 3, 12, 0, tzinfo=dt_timezone.utc),  # Sun
                     "duration": 1,
                 },
-                datetime(2020, 7, 12, 0, 0, tzinfo=timezone.utc), datetime(2020, 7, 19, 0, 0, tzinfo=timezone.utc)
+                datetime(2020, 7, 12, 0, 0, tzinfo=dt_timezone.utc), datetime(2020, 7, 19, 0, 0, tzinfo=dt_timezone.utc)
             ),
             (
                 # start Sun 3 May; repeats every 3 weeks
                 # 3, 24 May, 14 Jun, 5 Jul, 26 Jul
-                datetime(2020, 7, 15, 12, 0, tzinfo=timezone.utc),  # Wed
+                datetime(2020, 7, 15, 12, 0, tzinfo=dt_timezone.utc),  # Wed
                 {
-                    "start_date": datetime(2020, 5, 3, 12, 0, tzinfo=timezone.utc),  # Sun
+                    "start_date": datetime(2020, 5, 3, 12, 0, tzinfo=dt_timezone.utc),  # Sun
                     "duration": 3,
                 },
-                datetime(2020, 7, 5, 0, 0, tzinfo=timezone.utc), datetime(2020, 7, 26, 0, 0, tzinfo=timezone.utc)
+                datetime(2020, 7, 5, 0, 0, tzinfo=dt_timezone.utc), datetime(2020, 7, 26, 0, 0, tzinfo=dt_timezone.utc)
             ),
             (
                 # start Sun 3 May; repeats every 4 weeks
                 # 3, 31 May, 28 Jun, 26 Jul
-                datetime(2020, 7, 15, 12, 0, tzinfo=timezone.utc),  # Wed
+                datetime(2020, 7, 15, 12, 0, tzinfo=dt_timezone.utc),  # Wed
                 {
-                    "start_date": datetime(2020, 5, 3, 12, 0, tzinfo=timezone.utc),  # Sun
+                    "start_date": datetime(2020, 5, 3, 12, 0, tzinfo=dt_timezone.utc),  # Sun
                     "duration": 4,
                 },
-                datetime(2020, 6, 28, 0, 0, tzinfo=timezone.utc), datetime(2020, 7, 26, 0, 0, tzinfo=timezone.utc)
+                datetime(2020, 6, 28, 0, 0, tzinfo=dt_timezone.utc), datetime(2020, 7, 26, 0, 0, tzinfo=dt_timezone.utc)
             ),
             (
                 # start Sun 3 May; repeats every 2 weeks
                 # 3, 17, 31 May, 14, 28 Jun, 12, 26 Jul
-                datetime(2020, 7, 15, 12, 0, tzinfo=timezone.utc),  # Wed
+                datetime(2020, 7, 15, 12, 0, tzinfo=dt_timezone.utc),  # Wed
                 {
-                    "start_date": datetime(2020, 5, 3, 12, 0, tzinfo=timezone.utc),  # Sun
+                    "start_date": datetime(2020, 5, 3, 12, 0, tzinfo=dt_timezone.utc),  # Sun
                     "duration": 2,
                 },
-                datetime(2020, 7, 12, 0, 0, tzinfo=timezone.utc), datetime(2020, 7, 26, 0, 0, tzinfo=timezone.utc)
+                datetime(2020, 7, 12, 0, 0, tzinfo=dt_timezone.utc), datetime(2020, 7, 26, 0, 0, tzinfo=dt_timezone.utc)
             ),
             (
                 # start Mon 1 Jun; repeats every 2 weeks
                 # 1, 15, 29 Jun, 13, 27 Jul
-                datetime(2020, 7, 15, 12, 0, tzinfo=timezone.utc),  # Wed
+                datetime(2020, 7, 15, 12, 0, tzinfo=dt_timezone.utc),  # Wed
                 {
-                    "start_date": datetime(2020, 6, 1, 12, 0, tzinfo=timezone.utc),  # Mon
+                    "start_date": datetime(2020, 6, 1, 12, 0, tzinfo=dt_timezone.utc),  # Mon
                     "duration": 2,
                 },
-                datetime(2020, 7, 13, 0, 0, tzinfo=timezone.utc), datetime(2020, 7, 27, 0, 0, tzinfo=timezone.utc)
+                datetime(2020, 7, 13, 0, 0, tzinfo=dt_timezone.utc), datetime(2020, 7, 27, 0, 0, tzinfo=dt_timezone.utc)
             ),
             (
                 # start Mon 1 June; repeats every 4 weeks
                 # 1, 29 Jun, 27 Jul
-                datetime(2020, 7, 15, 12, 0, tzinfo=timezone.utc),  # Wed
+                datetime(2020, 7, 15, 12, 0, tzinfo=dt_timezone.utc),  # Wed
                 {
-                    "start_date": datetime(2020, 6, 1, 12, 0, tzinfo=timezone.utc),  # Mon
+                    "start_date": datetime(2020, 6, 1, 12, 0, tzinfo=dt_timezone.utc),  # Mon
                     "duration": 4,
                 },
-                datetime(2020, 6, 29, 0, 0, tzinfo=timezone.utc), datetime(2020, 7, 27, 0, 0, tzinfo=timezone.utc)
+                datetime(2020, 6, 29, 0, 0, tzinfo=dt_timezone.utc), datetime(2020, 7, 27, 0, 0, tzinfo=dt_timezone.utc)
             ),
             (
                 # start Mon 1 June; repeats every 3 weeks
                 # 1, 22 Jun, 13 Jul, 3 Aug
-                datetime(2020, 7, 15, 12, 0, tzinfo=timezone.utc),  # Wed
+                datetime(2020, 7, 15, 12, 0, tzinfo=dt_timezone.utc),  # Wed
                 {
-                    "start_date": datetime(2020, 6, 1, 12, 0, tzinfo=timezone.utc),  # Mon
+                    "start_date": datetime(2020, 6, 1, 12, 0, tzinfo=dt_timezone.utc),  # Mon
                     "duration": 3,
                 },
-                datetime(2020, 7, 13, 0, 0, tzinfo=timezone.utc), datetime(2020, 8, 3, 0, 0, tzinfo=timezone.utc)
+                datetime(2020, 7, 13, 0, 0, tzinfo=dt_timezone.utc), datetime(2020, 8, 3, 0, 0, tzinfo=dt_timezone.utc)
             ),
             (
                 # start Mon 1 June; repeats every 1 week
-                datetime(2020, 7, 15, 12, 0, tzinfo=timezone.utc),  # Wed
+                datetime(2020, 7, 15, 12, 0, tzinfo=dt_timezone.utc),  # Wed
                 {
-                    "start_date": datetime(2020, 6, 1, 12, 0, tzinfo=timezone.utc),  # Mon
+                    "start_date": datetime(2020, 6, 1, 12, 0, tzinfo=dt_timezone.utc),  # Mon
                     "duration": 1,
                 },
-                datetime(2020, 7, 13, 0, 0, tzinfo=timezone.utc), datetime(2020, 7, 20, 0, 0, tzinfo=timezone.utc)
+                datetime(2020, 7, 13, 0, 0, tzinfo=dt_timezone.utc), datetime(2020, 7, 20, 0, 0, tzinfo=dt_timezone.utc)
             ),
             (
                 # today is same weekday as start weekday
-                datetime(2020, 6, 15, 12, 0, tzinfo=timezone.utc),  # Mon
+                datetime(2020, 6, 15, 12, 0, tzinfo=dt_timezone.utc),  # Mon
                 {
-                    "start_date": datetime(2020, 6, 1, 12, 0, tzinfo=timezone.utc),  # Mon
+                    "start_date": datetime(2020, 6, 1, 12, 0, tzinfo=dt_timezone.utc),  # Mon
                     "duration": 1,
                 },
-                datetime(2020, 6, 15, 0, 0, tzinfo=timezone.utc), datetime(2020, 6, 22, 0, 0, tzinfo=timezone.utc)
+                datetime(2020, 6, 15, 0, 0, tzinfo=dt_timezone.utc), datetime(2020, 6, 22, 0, 0, tzinfo=dt_timezone.utc)
             ),
             (
                 # one-off, returns config start date
-                datetime(2020, 7, 15, 12, 0, tzinfo=timezone.utc),  # Wed
+                datetime(2020, 7, 15, 12, 0, tzinfo=dt_timezone.utc),  # Wed
                 {
-                    "start_date": datetime(2020, 6, 1, 12, 0, tzinfo=timezone.utc),  # Mon
+                    "start_date": datetime(2020, 6, 1, 12, 0, tzinfo=dt_timezone.utc),  # Mon
                     "duration": 1,
                     "recurring": False,
                 },
-                datetime(2020, 6, 1, 0, 0, tzinfo=timezone.utc), None,
+                datetime(2020, 6, 1, 0, 0, tzinfo=dt_timezone.utc), None,
             ),
             (
                 # one-off, start date in future, returns config start date
-                datetime(2020, 5, 15, 12, 0, tzinfo=timezone.utc),
+                datetime(2020, 5, 15, 12, 0, tzinfo=dt_timezone.utc),
                 {
-                    "start_date": datetime(2020, 6, 1, 12, 0, tzinfo=timezone.utc),
+                    "start_date": datetime(2020, 6, 1, 12, 0, tzinfo=dt_timezone.utc),
                     "duration": 1,
                     "recurring": False,
                 },
-                datetime(2020, 6, 1, 0, 0, tzinfo=timezone.utc), None,
+                datetime(2020, 6, 1, 0, 0, tzinfo=dt_timezone.utc), None,
             ),
         ],
         ids = [
@@ -1032,95 +1034,95 @@ class TestSubscriptionConfigStartDates:
         "now_value,config_kwargs,expected_current_start_date,expected_current_next_start_date",
         [
             (
-                datetime(2020, 7, 15, 12, 0, tzinfo=timezone.utc),
+                datetime(2020, 7, 15, 12, 0, tzinfo=dt_timezone.utc),
                 {
-                    "start_date": datetime(2020, 1, 3, 12, 0, tzinfo=timezone.utc),
+                    "start_date": datetime(2020, 1, 3, 12, 0, tzinfo=dt_timezone.utc),
                     "duration": 1, "start_options": "signup_date",
                 },
                 None, None
             ),
             (
-                datetime(2020, 7, 15, 12, 0, tzinfo=timezone.utc),
+                datetime(2020, 7, 15, 12, 0, tzinfo=dt_timezone.utc),
                 {
-                    "start_date": datetime(2020, 1, 3, 12, 0, tzinfo=timezone.utc),
+                    "start_date": datetime(2020, 1, 3, 12, 0, tzinfo=dt_timezone.utc),
                     "duration": 1, "start_options": "first_booking_date",
                 },
                 None, None
             ),
             (
-                datetime(2020, 7, 15, 12, 0, tzinfo=timezone.utc),  # DST now
+                datetime(2020, 7, 15, 12, 0, tzinfo=dt_timezone.utc),  # DST now
                 {
-                    "start_date": datetime(2020, 1, 3, 12, 0, tzinfo=timezone.utc),
+                    "start_date": datetime(2020, 1, 3, 12, 0, tzinfo=dt_timezone.utc),
                     "duration": 1, "start_options": "start_date",
                 },
-                datetime(2020, 7, 3, 0, 0, tzinfo=timezone.utc), datetime(2020, 8, 3, 0, 0, tzinfo=timezone.utc)
+                datetime(2020, 7, 3, 0, 0, tzinfo=dt_timezone.utc), datetime(2020, 8, 3, 0, 0, tzinfo=dt_timezone.utc)
             ),
             (
-                datetime(2020, 2, 15, 12, 0, tzinfo=timezone.utc),  # not DST now
+                datetime(2020, 2, 15, 12, 0, tzinfo=dt_timezone.utc),  # not DST now
                 {
-                    "start_date": datetime(2020, 1, 3, 12, 0, tzinfo=timezone.utc),
+                    "start_date": datetime(2020, 1, 3, 12, 0, tzinfo=dt_timezone.utc),
                     "duration": 1, "start_options": "start_date",
                 },
-                datetime(2020, 2, 3, 0, 0, tzinfo=timezone.utc), datetime(2020, 3, 3, 0, 0, tzinfo=timezone.utc)
+                datetime(2020, 2, 3, 0, 0, tzinfo=dt_timezone.utc), datetime(2020, 3, 3, 0, 0, tzinfo=dt_timezone.utc)
             ),
             (
-                datetime(2019, 12, 15, 12, 0, tzinfo=timezone.utc),  # start date in future
+                datetime(2019, 12, 15, 12, 0, tzinfo=dt_timezone.utc),  # start date in future
                 {
-                    "start_date": datetime(2020, 1, 3, 12, 0, tzinfo=timezone.utc),
+                    "start_date": datetime(2020, 1, 3, 12, 0, tzinfo=dt_timezone.utc),
                     "duration": 1, "start_options": "start_date",
                 },
-                None, datetime(2020, 1, 3, 0, 0, tzinfo=timezone.utc)
+                None, datetime(2020, 1, 3, 0, 0, tzinfo=dt_timezone.utc)
             ),
             (
-                datetime(2020, 2, 3, 12, 0, tzinfo=timezone.utc),  # now day same as start day
+                datetime(2020, 2, 3, 12, 0, tzinfo=dt_timezone.utc),  # now day same as start day
                 {
-                    "start_date": datetime(2020, 1, 3, 12, 0, tzinfo=timezone.utc),
+                    "start_date": datetime(2020, 1, 3, 12, 0, tzinfo=dt_timezone.utc),
                     "duration": 1, "start_options": "start_date",
                 },
-                datetime(2020, 2, 3, 0, 0, tzinfo=timezone.utc), datetime(2020, 3, 3, 0, 0, tzinfo=timezone.utc)
+                datetime(2020, 2, 3, 0, 0, tzinfo=dt_timezone.utc), datetime(2020, 3, 3, 0, 0, tzinfo=dt_timezone.utc)
             ),
             (
-                datetime(2020, 2, 1, 12, 0, tzinfo=timezone.utc),  # now day before start day
+                datetime(2020, 2, 1, 12, 0, tzinfo=dt_timezone.utc),  # now day before start day
                 {
-                    "start_date": datetime(2020, 1, 3, 12, 0, tzinfo=timezone.utc),
+                    "start_date": datetime(2020, 1, 3, 12, 0, tzinfo=dt_timezone.utc),
                     "duration": 1, "start_options": "start_date",
                 },
-                datetime(2020, 1, 3, 0, 0, tzinfo=timezone.utc), datetime(2020, 2, 3, 0, 0, tzinfo=timezone.utc)
+                datetime(2020, 1, 3, 0, 0, tzinfo=dt_timezone.utc), datetime(2020, 2, 3, 0, 0, tzinfo=dt_timezone.utc)
             ),
             (
-                datetime(2020, 2, 1, 12, 0, tzinfo=timezone.utc),  # now before start, 2 month repeat
+                datetime(2020, 2, 1, 12, 0, tzinfo=dt_timezone.utc),  # now before start, 2 month repeat
                 {
-                    "start_date": datetime(2020, 1, 3, 12, 0, tzinfo=timezone.utc),
+                    "start_date": datetime(2020, 1, 3, 12, 0, tzinfo=dt_timezone.utc),
                     "duration": 2, "start_options": "start_date",
                 },
-                datetime(2020, 1, 3, 0, 0, tzinfo=timezone.utc), datetime(2020, 3, 3, 0, 0, tzinfo=timezone.utc)
+                datetime(2020, 1, 3, 0, 0, tzinfo=dt_timezone.utc), datetime(2020, 3, 3, 0, 0, tzinfo=dt_timezone.utc)
             ),
             (
                 # 2 month repeat Jan/Mar/May/Jul, now=June
-                datetime(2020, 6, 15, 12, 0, tzinfo=timezone.utc),
+                datetime(2020, 6, 15, 12, 0, tzinfo=dt_timezone.utc),
                 {
-                    "start_date": datetime(2020, 1, 3, 12, 0, tzinfo=timezone.utc),
+                    "start_date": datetime(2020, 1, 3, 12, 0, tzinfo=dt_timezone.utc),
                     "duration": 2, "start_options": "start_date",
                 },
-                datetime(2020, 5, 3, 0, 0, tzinfo=timezone.utc), datetime(2020, 7, 3, 0, 0, tzinfo=timezone.utc)
+                datetime(2020, 5, 3, 0, 0, tzinfo=dt_timezone.utc), datetime(2020, 7, 3, 0, 0, tzinfo=dt_timezone.utc)
             ),
             (
                 # repeats every 2 months from Jun - Jun/Aug/Oct/Dec, now=Nov
-                datetime(2020, 11, 15, 12, 0, tzinfo=timezone.utc),
+                datetime(2020, 11, 15, 12, 0, tzinfo=dt_timezone.utc),
                 {
-                    "start_date": datetime(2020, 6, 10, 12, 0, tzinfo=timezone.utc),
+                    "start_date": datetime(2020, 6, 10, 12, 0, tzinfo=dt_timezone.utc),
                     "duration": 2, "start_options": "start_date",
                 },
-                datetime(2020, 10, 10, 0, 0, tzinfo=timezone.utc), datetime(2020, 12, 10, 0, 0, tzinfo=timezone.utc)
+                datetime(2020, 10, 10, 0, 0, tzinfo=dt_timezone.utc), datetime(2020, 12, 10, 0, 0, tzinfo=dt_timezone.utc)
             ),
             (
                 # repeats every 2 months from Sep - Sep/Nov/Jan, now=Nov
-                datetime(2020, 11, 15, 12, 0, tzinfo=timezone.utc),
+                datetime(2020, 11, 15, 12, 0, tzinfo=dt_timezone.utc),
                 {
-                    "start_date": datetime(2020, 9, 10, 12, 0, tzinfo=timezone.utc),
+                    "start_date": datetime(2020, 9, 10, 12, 0, tzinfo=dt_timezone.utc),
                     "duration": 2, "start_options": "start_date",
                 },
-                datetime(2020, 11, 10, 0, 0, tzinfo=timezone.utc), datetime(2021, 1, 10, 0, 0, tzinfo=timezone.utc)
+                datetime(2020, 11, 10, 0, 0, tzinfo=dt_timezone.utc), datetime(2021, 1, 10, 0, 0, tzinfo=dt_timezone.utc)
             ),
         ],
         ids=[
@@ -1158,59 +1160,59 @@ class TestStartDatesOfferedToUser:
         "now_value,start,duration,duration_units,start_option,advance_purchase_allowed,recurring,expected_start_dates",
         [
             (
-                datetime(2020, 7, 15, tzinfo=timezone.utc), datetime(2020, 1, 3, 12, 0, tzinfo=timezone.utc),
+                datetime(2020, 7, 15, tzinfo=dt_timezone.utc), datetime(2020, 1, 3, 12, 0, tzinfo=dt_timezone.utc),
                 1, "months", "signup_date", True, True,
-                [datetime(2020, 7, 15, tzinfo=timezone.utc)]  # starts on purchase date (today)
+                [datetime(2020, 7, 15, tzinfo=dt_timezone.utc)]  # starts on purchase date (today)
             ),
             (
-                datetime(2020, 7, 15, tzinfo=timezone.utc), datetime(2020, 1, 3, 12, 0, tzinfo=timezone.utc),
+                datetime(2020, 7, 15, tzinfo=dt_timezone.utc), datetime(2020, 1, 3, 12, 0, tzinfo=dt_timezone.utc),
                 1, "months", "signup_date", False, True,
-                [datetime(2020, 7, 15, tzinfo=timezone.utc)]  # starts on purchase date (today)
+                [datetime(2020, 7, 15, tzinfo=dt_timezone.utc)]  # starts on purchase date (today)
             ),
             (
-                datetime(2020, 7, 15, tzinfo=timezone.utc), datetime(2020, 1, 3, 12, 0, tzinfo=timezone.utc),
+                datetime(2020, 7, 15, tzinfo=dt_timezone.utc), datetime(2020, 1, 3, 12, 0, tzinfo=dt_timezone.utc),
                 1, "months", "first_booking_date", True, True,
                 [None]  # not start date, starts when first used
             ),
             (
-                datetime(2020, 7, 15, tzinfo=timezone.utc), datetime(2020, 1, 3, 12, 0, tzinfo=timezone.utc),
+                datetime(2020, 7, 15, tzinfo=dt_timezone.utc), datetime(2020, 1, 3, 12, 0, tzinfo=dt_timezone.utc),
                 1, "months", "first_booking_date", False, True,
                 [None]  # not start date, starts when first used
             ),
             (
-                datetime(2020, 7, 15, tzinfo=timezone.utc), datetime(2020, 1, 3, 12, 0, tzinfo=timezone.utc),
+                datetime(2020, 7, 15, tzinfo=dt_timezone.utc), datetime(2020, 1, 3, 12, 0, tzinfo=dt_timezone.utc),
                 1, "months", "start_date", True, True,
-                [datetime(2020, 7, 3, tzinfo=timezone.utc), datetime(2020, 8, 3, tzinfo=timezone.utc)]
+                [datetime(2020, 7, 3, tzinfo=dt_timezone.utc), datetime(2020, 8, 3, tzinfo=dt_timezone.utc)]
             ),
             (
-                datetime(2020, 7, 15, tzinfo=timezone.utc), datetime(2020, 6, 19, 12, 0, tzinfo=timezone.utc),
+                datetime(2020, 7, 15, tzinfo=dt_timezone.utc), datetime(2020, 6, 19, 12, 0, tzinfo=dt_timezone.utc),
                 1, "months", "start_date", False, True,
-                [datetime(2020, 6, 19, tzinfo=timezone.utc)]
+                [datetime(2020, 6, 19, tzinfo=dt_timezone.utc)]
             ),
             (
-                datetime(2020, 7, 15, tzinfo=timezone.utc), datetime(2020, 6, 18, 12, 0, tzinfo=timezone.utc),
+                datetime(2020, 7, 15, tzinfo=dt_timezone.utc), datetime(2020, 6, 18, 12, 0, tzinfo=dt_timezone.utc),
                 1, "months", "start_date", False, True,
-                [datetime(2020, 6, 18, tzinfo=timezone.utc), datetime(2020, 7, 18, tzinfo=timezone.utc)]
+                [datetime(2020, 6, 18, tzinfo=dt_timezone.utc), datetime(2020, 7, 18, tzinfo=dt_timezone.utc)]
             ),
             (
-                datetime(2020, 7, 15, tzinfo=timezone.utc), datetime(2020, 7, 20, 12, 0, tzinfo=timezone.utc),
+                datetime(2020, 7, 15, tzinfo=dt_timezone.utc), datetime(2020, 7, 20, 12, 0, tzinfo=dt_timezone.utc),
                 1, "months", "start_date", True, True,
-                [datetime(2020, 7, 20, tzinfo=timezone.utc)]
+                [datetime(2020, 7, 20, tzinfo=dt_timezone.utc)]
             ),
             (
-                datetime(2020, 7, 15, tzinfo=timezone.utc), datetime(2020, 8, 15, 12, 0, tzinfo=timezone.utc),
+                datetime(2020, 7, 15, tzinfo=dt_timezone.utc), datetime(2020, 8, 15, 12, 0, tzinfo=dt_timezone.utc),
                 1, "months", "start_date", True, True,
-                [datetime(2020, 8, 15, tzinfo=timezone.utc)]
+                [datetime(2020, 8, 15, tzinfo=dt_timezone.utc)]
             ),
             (
-                datetime(2020, 7, 20, tzinfo=timezone.utc), datetime(2020, 7, 1, 0, 0, tzinfo=timezone.utc),
+                datetime(2020, 7, 20, tzinfo=dt_timezone.utc), datetime(2020, 7, 1, 0, 0, tzinfo=dt_timezone.utc),
                 2, "weeks", "start_date", True, True,
-                [datetime(2020, 7, 15, tzinfo=timezone.utc), datetime(2020, 7, 29, tzinfo=timezone.utc)]
+                [datetime(2020, 7, 15, tzinfo=dt_timezone.utc), datetime(2020, 7, 29, tzinfo=dt_timezone.utc)]
             ),
             (
-                datetime(2020, 7, 20, tzinfo=timezone.utc), datetime(2020, 7, 1, 0, 0, tzinfo=timezone.utc),
+                datetime(2020, 7, 20, tzinfo=dt_timezone.utc), datetime(2020, 7, 1, 0, 0, tzinfo=dt_timezone.utc),
                 2, "weeks", "start_date", True, False,
-                [datetime(2020, 7, 1, tzinfo=timezone.utc)]
+                [datetime(2020, 7, 1, tzinfo=dt_timezone.utc)]
             ),
         ],
         ids=[
@@ -1248,10 +1250,10 @@ class TestStartDatesOfferedToUser:
 
     def test_start_options_for_signup_config_with_existing_subscription(self, student_user, mocker):
         mock_now = mocker.patch("booking.models.timezone.now")
-        mock_now.return_value = datetime(2020, 7, 15, tzinfo=timezone.utc)
+        mock_now.return_value = datetime(2020, 7, 15, tzinfo=dt_timezone.utc)
         signup_config = baker.make(
             SubscriptionConfig,
-            start_date=datetime(2020, 1, 3, 12, 0, tzinfo=timezone.utc),
+            start_date=datetime(2020, 1, 3, 12, 0, tzinfo=dt_timezone.utc),
             duration=1,
             duration_units="months",
             start_options="signup_date",
@@ -1259,19 +1261,19 @@ class TestStartDatesOfferedToUser:
         )
         baker.make(
             Subscription, user=student_user, config=signup_config,
-            start_date=datetime(2020, 7, 1, tzinfo=timezone.utc)
+            start_date=datetime(2020, 7, 1, tzinfo=dt_timezone.utc)
         )
         # starts on purchase date, user already has unexpired subscription, show option for one month from last start
         start_options = signup_config.get_start_options_for_user(student_user)
-        assert start_options == [datetime(2020, 8, 1, tzinfo=timezone.utc)]
+        assert start_options == [datetime(2020, 8, 1, tzinfo=dt_timezone.utc)]
 
     def test_start_options_for_first_booking_config_with_existing_subscription(self, student_user, mocker):
         mock_now = mocker.patch("booking.models.timezone.now")
-        mock_now.return_value = datetime(2020, 7, 15, tzinfo=timezone.utc)
+        mock_now.return_value = datetime(2020, 7, 15, tzinfo=dt_timezone.utc)
 
         first_booking_date_config = baker.make(
             SubscriptionConfig,
-            start_date=datetime(2020, 1, 3, 12, 0, tzinfo=timezone.utc),
+            start_date=datetime(2020, 1, 3, 12, 0, tzinfo=dt_timezone.utc),
             duration=1,
             duration_units="months",
             start_options="first_booking_date",
@@ -1288,13 +1290,13 @@ class TestStartDatesOfferedToUser:
         assert first_booking_date_subscription.expiry_date is None
         # starts on first booking date, date, user already has unexpired used subscription, option with no start date
         baker.make(
-            Booking, event__start=datetime(2020, 8, 1, 12, 30, tzinfo=timezone.utc),
+            Booking, event__start=datetime(2020, 8, 1, 12, 30, tzinfo=dt_timezone.utc),
             subscription=first_booking_date_subscription, user=student_user
         )
         # booking has set subscription start and expiry
         first_booking_date_subscription.refresh_from_db()
-        assert first_booking_date_subscription.start_date == datetime(2020, 8, 1, 0, 0, tzinfo=timezone.utc)
-        assert first_booking_date_subscription.expiry_date == datetime(2020, 9, 1, 0, 0, tzinfo=timezone.utc)
+        assert first_booking_date_subscription.start_date == datetime(2020, 8, 1, 0, 0, tzinfo=dt_timezone.utc)
+        assert first_booking_date_subscription.expiry_date == datetime(2020, 9, 1, 0, 0, tzinfo=dt_timezone.utc)
         start_options = first_booking_date_config.get_start_options_for_user(student_user)
         assert start_options == [None]
 
@@ -1302,27 +1304,27 @@ class TestStartDatesOfferedToUser:
         "now_value,start,duration,duration_units,start_option,advance_purchase_allowed,recurring,subscription_starts,expected_start_dates",
         [
             (
-                datetime(2020, 7, 15, tzinfo=timezone.utc), datetime(2020, 1, 3, 12, 0, tzinfo=timezone.utc),
+                datetime(2020, 7, 15, tzinfo=dt_timezone.utc), datetime(2020, 1, 3, 12, 0, tzinfo=dt_timezone.utc),
                 1, "months", "start_date", True, True,
-                [datetime(2020, 7, 3, tzinfo=timezone.utc)],
-                [datetime(2020, 8, 3, tzinfo=timezone.utc)]
+                [datetime(2020, 7, 3, tzinfo=dt_timezone.utc)],
+                [datetime(2020, 8, 3, tzinfo=dt_timezone.utc)]
             ),
             (
-                datetime(2020, 7, 15, tzinfo=timezone.utc), datetime(2020, 1, 3, 12, 0, tzinfo=timezone.utc),
+                datetime(2020, 7, 15, tzinfo=dt_timezone.utc), datetime(2020, 1, 3, 12, 0, tzinfo=dt_timezone.utc),
                 1, "months", "start_date", True, True,
-                [datetime(2020, 7, 3, tzinfo=timezone.utc), datetime(2020, 8, 3, tzinfo=timezone.utc)],
+                [datetime(2020, 7, 3, tzinfo=dt_timezone.utc), datetime(2020, 8, 3, tzinfo=dt_timezone.utc)],
                 []
             ),
             (
-                datetime(2020, 7, 15, tzinfo=timezone.utc), datetime(2020, 1, 3, 12, 0, tzinfo=timezone.utc),
+                datetime(2020, 7, 15, tzinfo=dt_timezone.utc), datetime(2020, 1, 3, 12, 0, tzinfo=dt_timezone.utc),
                 1, "months", "start_date", True, True,
-                [datetime(2020, 6, 3, tzinfo=timezone.utc)],
-                [datetime(2020, 7, 3, tzinfo=timezone.utc), datetime(2020, 8, 3, tzinfo=timezone.utc)]
+                [datetime(2020, 6, 3, tzinfo=dt_timezone.utc)],
+                [datetime(2020, 7, 3, tzinfo=dt_timezone.utc), datetime(2020, 8, 3, tzinfo=dt_timezone.utc)]
             ),
             (
-                datetime(2020, 7, 15, tzinfo=timezone.utc), datetime(2020, 8, 1, 12, 0, tzinfo=timezone.utc),
+                datetime(2020, 7, 15, tzinfo=dt_timezone.utc), datetime(2020, 8, 1, 12, 0, tzinfo=dt_timezone.utc),
                 1, "months", "start_date", True, False,
-                [datetime(2020, 8, 1, tzinfo=timezone.utc)],
+                [datetime(2020, 8, 1, tzinfo=dt_timezone.utc)],
                 []
             ),
         ],
@@ -1359,12 +1361,12 @@ class TestStartDatesOfferedToUser:
 @pytest.mark.parametrize(
     "now_value,expected_cost",
     [
-        (datetime(2020, 9, 1, 10, 0, tzinfo=timezone.utc), 20),
-        (datetime(2020, 9, 5, 10, 0, tzinfo=timezone.utc), 20),
-        (datetime(2020, 9, 7, 10, 0, tzinfo=timezone.utc), 15),
-        (datetime(2020, 9, 20, 10, 0, tzinfo=timezone.utc), 10),
-        (datetime(2020, 9, 26, 10, 0, tzinfo=timezone.utc), 5),
-        (datetime(2020, 9, 28, 10, 0, tzinfo=timezone.utc), 5),
+        (datetime(2020, 9, 1, 10, 0, tzinfo=dt_timezone.utc), 20),
+        (datetime(2020, 9, 5, 10, 0, tzinfo=dt_timezone.utc), 20),
+        (datetime(2020, 9, 7, 10, 0, tzinfo=dt_timezone.utc), 15),
+        (datetime(2020, 9, 20, 10, 0, tzinfo=dt_timezone.utc), 10),
+        (datetime(2020, 9, 26, 10, 0, tzinfo=dt_timezone.utc), 5),
+        (datetime(2020, 9, 28, 10, 0, tzinfo=dt_timezone.utc), 5),
     ],
     ids=[
         "1. 4 weeks left",
@@ -1384,7 +1386,7 @@ def test_subscription_config_calculate_current_period_cost_as_of_today(mocker, n
         "partial_purchase_allowed": True,
         "cost": 20,
         "cost_per_week": 5,
-        "start_date": datetime(2020, 9, 1, 0, 0, tzinfo=timezone.utc),
+        "start_date": datetime(2020, 9, 1, 0, 0, tzinfo=dt_timezone.utc),
     }
     config = baker.make(
         SubscriptionConfig, **subscription_config_kwargs,
@@ -1400,7 +1402,7 @@ def test_subscription_config_calculate_current_period_cost_as_of_today(mocker, n
     config.partial_purchase_allowed = True
     # reset the cost per week - setting partial_purchase_allowed to False will have changed it to None again
     config.cost_per_week = 5
-    config.start_date = datetime(2020, 10, 1, 0, 0, tzinfo=timezone.utc)
+    config.start_date = datetime(2020, 10, 1, 0, 0, tzinfo=dt_timezone.utc)
     config.save()
     assert config.calculate_current_period_cost_as_of_today() == 20
 
@@ -1421,7 +1423,7 @@ class TestSubscription:
             ),
             (
                 {
-                    "start_date": datetime(2020, 2, 3, tzinfo=timezone.utc),
+                    "start_date": datetime(2020, 2, 3, tzinfo=dt_timezone.utc),
                     "config__duration": 1,
                     "config__duration_units": "months",
                     "paid": False
@@ -1430,7 +1432,7 @@ class TestSubscription:
             ),
             (
                     {
-                        "start_date": datetime(2020, 2, 3, tzinfo=timezone.utc),
+                        "start_date": datetime(2020, 2, 3, tzinfo=dt_timezone.utc),
                         "config__duration": 2,
                         "config__duration_units": "weeks",
                         "paid": True
@@ -1454,17 +1456,17 @@ class TestSubscription:
             ({"start_date": None}, None),
             (
                 {
-                    "start_date": datetime(2020, 3, 4, tzinfo=timezone.utc), "config__duration": 1,
+                    "start_date": datetime(2020, 3, 4, tzinfo=dt_timezone.utc), "config__duration": 1,
                     "config__duration_units": "months"
                 },
-                datetime(2020, 4, 4, tzinfo=timezone.utc)
+                datetime(2020, 4, 4, tzinfo=dt_timezone.utc)
             ),
             (
                 {
-                    "start_date": datetime(2020, 8, 1, tzinfo=timezone.utc), "config__duration": 3,
+                    "start_date": datetime(2020, 8, 1, tzinfo=dt_timezone.utc), "config__duration": 3,
                     "config__duration_units": "weeks"
                 },
-                datetime(2020, 8, 22, tzinfo=timezone.utc)
+                datetime(2020, 8, 22, tzinfo=dt_timezone.utc)
             ),
 
         ]
@@ -1479,24 +1481,24 @@ class TestSubscription:
 
     def test_expires_soon(self, student_user, mocker):
         mock_now = mocker.patch("booking.models.timezone.now")
-        mock_now.return_value = datetime(2020, 7, 27, 12, 0, tzinfo=timezone.utc)
+        mock_now.return_value = datetime(2020, 7, 27, 12, 0, tzinfo=dt_timezone.utc)
         subscription = baker.make(
             Subscription,
             user=student_user,
-            start_date=datetime(2020, 7, 1, tzinfo=timezone.utc),
+            start_date=datetime(2020, 7, 1, tzinfo=dt_timezone.utc),
             config__duration=1,
             config__duration_units="months",
         )
         assert subscription.expires_soon() is False
 
-        mock_now.return_value = datetime(2020, 7, 28, 12, 0, tzinfo=timezone.utc)
+        mock_now.return_value = datetime(2020, 7, 28, 12, 0, tzinfo=dt_timezone.utc)
         assert subscription.expires_soon() is True
 
     def test_purchase_date_updated_on_paid(self, student_user):
         subscription = baker.make(
             Subscription,
             user=student_user,
-            start_date=datetime(2020, 7, 1, tzinfo=timezone.utc),
+            start_date=datetime(2020, 7, 1, tzinfo=dt_timezone.utc),
         )
         initial_purchase_date = subscription.purchase_date
         subscription.paid = True
@@ -1506,12 +1508,12 @@ class TestSubscription:
     def test_start_date_updated_on_paid_for_signup_date_start_options(self, student_user, mocker):
         # Only updated if start date is past (since it could have been purchased for an advance date)
         mock_now = mocker.patch("booking.models.timezone.now")
-        mock_now.return_value = datetime(2020, 7, 27, 12, 0, tzinfo=timezone.utc)
+        mock_now.return_value = datetime(2020, 7, 27, 12, 0, tzinfo=dt_timezone.utc)
         # start date in future, not updated on paid
         subscription = baker.make(
             Subscription,
             user=student_user,
-            start_date=datetime(2020, 8, 1, tzinfo=timezone.utc),
+            start_date=datetime(2020, 8, 1, tzinfo=dt_timezone.utc),
             config__start_options="signup_date",
         )
         initial_start_date = subscription.start_date
@@ -1523,12 +1525,12 @@ class TestSubscription:
         subscription = baker.make(
             Subscription,
             user=student_user,
-            start_date=datetime(2020, 7, 1, tzinfo=timezone.utc),
+            start_date=datetime(2020, 7, 1, tzinfo=dt_timezone.utc),
             config__start_options="signup_date",
         )
         subscription.paid = True
         subscription.save()
-        assert subscription.start_date == datetime(2020, 7, 27, 0, 0, tzinfo=timezone.utc)
+        assert subscription.start_date == datetime(2020, 7, 27, 0, 0, tzinfo=dt_timezone.utc)
 
     def test_status(self, student_user):
         # Pending if not paid
@@ -1554,15 +1556,15 @@ class TestSubscription:
         assert subscription.start_date is None
 
         booking = baker.make(
-            Booking, event__start=datetime(2020, 3, 5, 13, 45, tzinfo=timezone.utc), subscription=subscription
+            Booking, event__start=datetime(2020, 3, 5, 13, 45, tzinfo=dt_timezone.utc), subscription=subscription
         )
         subscription.refresh_from_db()
-        assert subscription.start_date == datetime(2020, 3, 5, 0, 0, tzinfo=timezone.utc)
+        assert subscription.start_date == datetime(2020, 3, 5, 0, 0, tzinfo=dt_timezone.utc)
 
         booking.no_show = True
         booking.save()
         subscription.refresh_from_db()
-        assert subscription.start_date == datetime(2020, 3, 5, 0, 0, tzinfo=timezone.utc)
+        assert subscription.start_date == datetime(2020, 3, 5, 0, 0, tzinfo=dt_timezone.utc)
 
         booking.status = "CANCELLED"
         booking.save()
@@ -1579,15 +1581,15 @@ class TestSubscription:
             ({"allowed_number": None}, {}, {}, True, False),
             ({"allowed_number": None}, {}, {"paid": False}, False, False),
             (
-                {"allowed_number": None}, {}, {"start_date": datetime(2020, 10, 10, 0, 0, tzinfo=timezone.utc)},
+                {"allowed_number": None}, {}, {"start_date": datetime(2020, 10, 10, 0, 0, tzinfo=dt_timezone.utc)},
                 False, False
             ),
             (
-                {"allowed_number": None}, {}, {"start_date": datetime(2020, 8, 9, 0, 0, tzinfo=timezone.utc)},
+                {"allowed_number": None}, {}, {"start_date": datetime(2020, 8, 9, 0, 0, tzinfo=dt_timezone.utc)},
                 False, False
             ),
             (
-                {"allowed_number": "", "allowed_unit": "day"}, {}, {"start_date": datetime(2020, 8, 20, 0, 0, tzinfo=timezone.utc)},
+                {"allowed_number": "", "allowed_unit": "day"}, {}, {"start_date": datetime(2020, 8, 20, 0, 0, tzinfo=dt_timezone.utc)},
                 False, True
             ),
         ],
@@ -1607,7 +1609,7 @@ class TestSubscription:
             self, student_user, event_type, bookable_event_types, other_bookable_event_types, kwargs, is_course,
             expected
     ):
-        event = baker.make(Event, event_type=event_type, start=datetime(2020, 9, 10, 14, 0, tzinfo=timezone.utc))
+        event = baker.make(Event, event_type=event_type, start=datetime(2020, 9, 10, 14, 0, tzinfo=dt_timezone.utc))
         if is_course:
             course = baker.make(Course, event_type=event_type)
             event.course = course
@@ -1634,41 +1636,41 @@ class TestSubscription:
         "bookable_event_types,kwargs,existing_booking_dates,expected",
         [
             ({"allowed_number": 1, "allowed_unit": "day"}, {}, [], True),
-            ({"allowed_number": 1, "allowed_unit": "day"}, {}, [datetime(2020, 10, 3, 14, 0, tzinfo=timezone.utc)], True),
-            ({"allowed_number": 1, "allowed_unit": "day"}, {}, [datetime(2020, 9, 3, 10, 0, tzinfo=timezone.utc)], False),
-            ({"allowed_number": 2, "allowed_unit": "day"}, {}, [datetime(2020, 9, 3, 10, 0, tzinfo=timezone.utc)], True),
+            ({"allowed_number": 1, "allowed_unit": "day"}, {}, [datetime(2020, 10, 3, 14, 0, tzinfo=dt_timezone.utc)], True),
+            ({"allowed_number": 1, "allowed_unit": "day"}, {}, [datetime(2020, 9, 3, 10, 0, tzinfo=dt_timezone.utc)], False),
+            ({"allowed_number": 2, "allowed_unit": "day"}, {}, [datetime(2020, 9, 3, 10, 0, tzinfo=dt_timezone.utc)], True),
             (
                 {"allowed_number": 2, "allowed_unit": "week"}, {},
-                [datetime(2020, 9, 2, 14, 0, tzinfo=timezone.utc), datetime(2020, 9, 5, 14, 0, tzinfo=timezone.utc)],
+                [datetime(2020, 9, 2, 14, 0, tzinfo=dt_timezone.utc), datetime(2020, 9, 5, 14, 0, tzinfo=dt_timezone.utc)],
                 False
             ),
             (
-                {"allowed_number": 2, "allowed_unit": "week"}, {}, [datetime(2020, 9, 2, 14, 0, tzinfo=timezone.utc)],
+                {"allowed_number": 2, "allowed_unit": "week"}, {}, [datetime(2020, 9, 2, 14, 0, tzinfo=dt_timezone.utc)],
                 True
             ),
             (
-                {"allowed_number": 1, "allowed_unit": "week"}, {}, [datetime(2020, 9, 1, 14, 0, tzinfo=timezone.utc)],
+                {"allowed_number": 1, "allowed_unit": "week"}, {}, [datetime(2020, 9, 1, 14, 0, tzinfo=dt_timezone.utc)],
                 False
             ),
             (
-                {"allowed_number": 1, "allowed_unit": "week"}, {}, [datetime(2020, 9, 8, 14, 0, tzinfo=timezone.utc)],
+                {"allowed_number": 1, "allowed_unit": "week"}, {}, [datetime(2020, 9, 8, 14, 0, tzinfo=dt_timezone.utc)],
                 True
             ),
             (
-                {"allowed_number": 1, "allowed_unit": "month"}, {}, [datetime(2020, 9, 1, 14, 0, tzinfo=timezone.utc)],
+                {"allowed_number": 1, "allowed_unit": "month"}, {}, [datetime(2020, 9, 1, 14, 0, tzinfo=dt_timezone.utc)],
                 False
             ),
             (
-                {"allowed_number": 1, "allowed_unit": "month"}, {}, [datetime(2020, 10, 1, 14, 0, tzinfo=timezone.utc)],
+                {"allowed_number": 1, "allowed_unit": "month"}, {}, [datetime(2020, 10, 1, 14, 0, tzinfo=dt_timezone.utc)],
                 True
             ),
             (
                 {"allowed_number": 1, "allowed_unit": "month"},
                 {
-                    "config__start_date": datetime(2020, 8, 2, 0, 0, tzinfo=timezone.utc),
-                    "start_date": datetime(2020, 9, 2, 0, 0, tzinfo=timezone.utc)
+                    "config__start_date": datetime(2020, 8, 2, 0, 0, tzinfo=dt_timezone.utc),
+                    "start_date": datetime(2020, 9, 2, 0, 0, tzinfo=dt_timezone.utc)
                 },
-                [datetime(2020, 9, 2, 14, 0, tzinfo=timezone.utc)],
+                [datetime(2020, 9, 2, 14, 0, tzinfo=dt_timezone.utc)],
                 False
             ),
         ],
@@ -1690,7 +1692,7 @@ class TestSubscription:
         self, student_user, event_type, bookable_event_types, kwargs, existing_booking_dates, expected
     ):
         # event on Thurs
-        event = baker.make(Event, event_type=event_type, start=datetime(2020, 9, 3, 14, 0, tzinfo=timezone.utc))
+        event = baker.make(Event, event_type=event_type, start=datetime(2020, 9, 3, 14, 0, tzinfo=dt_timezone.utc))
         # Subscription starts on Tuesday, so week of the current event is beginning of previous Tues to next Tues
         # i.e. beg 1 Sep - beg 8 Sep
         subscription_kwargs = {
@@ -1698,8 +1700,8 @@ class TestSubscription:
             "config__bookable_event_types": {str(event_type.id): bookable_event_types},
             "config__duration": 1,
             "config__duration_units": "months",
-            "config__start_date": datetime(2020, 8, 1, 0, 0, tzinfo=timezone.utc),
-            "start_date": datetime(2020, 9, 1, 0, 0, tzinfo=timezone.utc),  # Tuesday
+            "config__start_date": datetime(2020, 8, 1, 0, 0, tzinfo=dt_timezone.utc),
+            "start_date": datetime(2020, 9, 1, 0, 0, tzinfo=dt_timezone.utc),  # Tuesday
             **kwargs  # override defaults with test params
         }
         subscription = baker.make(
@@ -1711,22 +1713,22 @@ class TestSubscription:
         # booking for different event type on same day has no effect
         baker.make(
             Booking, user=student_user, subscription=subscription, status="OPEN", no_show=False,
-            event__start=datetime(2020, 9, 3, 16, 0, tzinfo=timezone.utc)
+            event__start=datetime(2020, 9, 3, 16, 0, tzinfo=dt_timezone.utc)
         )
         # booking for same event type on same day not on subscription has no effect
         baker.make(
             Booking, user=student_user, event__event_type=event_type, status="OPEN", no_show=False,
-            event__start=datetime(2020, 9, 3, 17, 0, tzinfo=timezone.utc)
+            event__start=datetime(2020, 9, 3, 17, 0, tzinfo=dt_timezone.utc)
         )
         # booking for same event type/day/subscription no-show has no effect
         baker.make(
             Booking, user=student_user, event__event_type=event_type, status="OPEN", no_show=True,
-            event__start=datetime(2020, 9, 3, 18, 0, tzinfo=timezone.utc), subscription=subscription
+            event__start=datetime(2020, 9, 3, 18, 0, tzinfo=dt_timezone.utc), subscription=subscription
         )
         # booking for same event type/day/subscription cancelled has no effect
         baker.make(
             Booking, user=student_user, event__event_type=event_type, status="CANCELLED", no_show=False,
-            event__start=datetime(2020, 9, 3, 19, 0, tzinfo=timezone.utc), subscription=subscription
+            event__start=datetime(2020, 9, 3, 19, 0, tzinfo=dt_timezone.utc), subscription=subscription
         )
 
         for event_date in existing_booking_dates:
@@ -1739,13 +1741,13 @@ class TestSubscription:
 
     def test_valid_for_event_booking_restrictions_existing_booking(self, student_user, event_type):
         # existing booking for event we're checking don't count
-        event = baker.make(Event, event_type=event_type, start=datetime(2020, 9, 3, 14, 0, tzinfo=timezone.utc))
+        event = baker.make(Event, event_type=event_type, start=datetime(2020, 9, 3, 14, 0, tzinfo=dt_timezone.utc))
         subscription_kwargs = {
             "config__bookable_event_types": {str(event_type.id): {"allowed_number": 1, "allowed_unit": "day"}},
             "config__duration": 1,
             "config__duration_units": "months",
-            "config__start_date": datetime(2020, 8, 1, 0, 0, tzinfo=timezone.utc),
-            "start_date": datetime(2020, 9, 1, 0, 0, tzinfo=timezone.utc),
+            "config__start_date": datetime(2020, 8, 1, 0, 0, tzinfo=dt_timezone.utc),
+            "start_date": datetime(2020, 9, 1, 0, 0, tzinfo=dt_timezone.utc),
         }
         subscription = baker.make(
             Subscription, user=student_user, paid=True, **subscription_kwargs,
@@ -1758,14 +1760,14 @@ class TestSubscription:
         assert subscription.valid_for_event(event) is True
 
     def test_valid_for_event_booking_restrictions_include_no_shows(self, student_user, event_type):
-        event = baker.make(Event, event_type=event_type, start=datetime(2020, 9, 3, 14, 0, tzinfo=timezone.utc))
+        event = baker.make(Event, event_type=event_type, start=datetime(2020, 9, 3, 14, 0, tzinfo=dt_timezone.utc))
         subscription_kwargs = {
             "config__bookable_event_types": {str(event_type.id): {"allowed_number": 1, "allowed_unit": "day"}},
             "config__duration": 1,
             "config__duration_units": "months",
-            "config__start_date": datetime(2020, 8, 1, 0, 0, tzinfo=timezone.utc),
+            "config__start_date": datetime(2020, 8, 1, 0, 0, tzinfo=dt_timezone.utc),
             "config__include_no_shows_in_usage": False,
-            "start_date": datetime(2020, 9, 1, 0, 0, tzinfo=timezone.utc),
+            "start_date": datetime(2020, 9, 1, 0, 0, tzinfo=dt_timezone.utc),
         }
         subscription = baker.make(
             Subscription, user=student_user, paid=True, **subscription_kwargs,
@@ -1773,7 +1775,7 @@ class TestSubscription:
         # open booking for same event type, same day
         booking = baker.make(
             Booking, user=student_user, subscription=subscription, status="OPEN", no_show=False,
-            event__event_type=event_type, event__start=datetime(2020, 9, 3, 12, 0, tzinfo=timezone.utc)
+            event__event_type=event_type, event__start=datetime(2020, 9, 3, 12, 0, tzinfo=dt_timezone.utc)
         )
         assert subscription.valid_for_event(event) is False
 

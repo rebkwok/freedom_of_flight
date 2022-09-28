@@ -35,6 +35,8 @@ env = environ.Env(
 
 environ.Env.read_env(root('freedom_of_flight/.env'))  # reading .env file
 
+TESTING = any([test_str in arg for arg in sys.argv for test_str in ["test", "pytest"]])
+
 BASE_DIR = root()
 
 # Quick-start development settings - unsuitable for production
@@ -115,10 +117,19 @@ MIDDLEWARE = [
     'common.middleware.TimezoneMiddleware',
 ]
 
-CACHES = {
+if TESTING or env('LOCAL'):  # use local cache for tests
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'test-cache',
+        }
+    }
+else:
+    CACHES = {
     'default': {
-        'BACKEND': 'django.core.cache.backends.memcached.MemcachedCache',
-        'LOCATION': '127.0.0.1:11211',
+        'BACKEND': 'django.core.cache.backends.memcached.PyMemcacheCache',
+        'LOCATION': '127.0.0.1:112211',
+        'KEY_PREFIX': 'fof'
     }
 }
 
@@ -208,8 +219,6 @@ LANGUAGE_CODE = 'en-gb'
 TIME_ZONE = 'UTC'
 
 USE_I18N = True
-
-USE_L10N = True
 
 USE_TZ = True
 
@@ -389,18 +398,6 @@ if env('USE_MAILCATCHER'):  # pragma: no cover
     EMAIL_USE_TLS = False
 
 
-TESTING = any([test_str in arg for arg in sys.argv for test_str in ["test", "pytest"]])
-
-
-if TESTING:  # use local cache for tests
-    CACHES = {
-        'default': {
-            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-            'LOCATION': 'test-cache',
-        }
-    }
-
-
 # Session cookies
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 SESSION_COOKIE_AGE = 604800  # 1 week
@@ -449,6 +446,7 @@ INVOICE_KEY=env("INVOICE_KEY")
 # for dynamic disclaimer form
 CRISPY_TEMPLATE_PACK = 'bootstrap4'
 USE_CRISPY = True
+DYNAMIC_FORMS_CUSTOM_JS = ""
 
 # CKEDITOR
 CKEDITOR_UPLOAD_PATH = "uploads/"

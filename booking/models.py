@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import calendar
 from datetime import datetime, timedelta
+from datetime import timezone as dt_timezone
 from decimal import Decimal
 import logging
 import pytz
@@ -1142,7 +1143,7 @@ class SubscriptionConfig(models.Model):
                 # recurs monthly
                 now = timezone.now()
                 day_of_month = self.start_date.day
-                datetime_this_month = datetime(day=day_of_month, month=now.month, year=now.year, tzinfo=timezone.utc)
+                datetime_this_month = datetime(day=day_of_month, month=now.month, year=now.year, tzinfo=dt_timezone.utc)
                 if now.day >= day_of_month:
                     calculated_start = datetime_this_month + relativedelta(months=1) if next else datetime_this_month
                 else:

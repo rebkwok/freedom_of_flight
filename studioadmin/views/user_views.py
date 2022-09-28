@@ -1,4 +1,5 @@
 from datetime import datetime
+from datetime import timezone as dt_timezone
 
 from django.contrib.auth.models import User
 from django.contrib import messages
@@ -199,7 +200,7 @@ class UserBookingsListView(LoginRequiredMixin, InstructorOrStaffUserMixin, ListV
         return context
 
     def get_queryset(self):
-        start_of_today = datetime.combine(datetime.today(), datetime.min.time()).replace(tzinfo=timezone.utc)
+        start_of_today = datetime.combine(datetime.today(), datetime.min.time()).replace(tzinfo=dt_timezone.utc)
         return self.user.bookings.filter(event__start__gte=start_of_today).order_by("event__start")
 
 
@@ -389,8 +390,9 @@ class BlockMixin:
 
     def form_valid(self, form):
         block = form.save(commit=False)
-        if block.bookings.count() > block.block_config.size:
-            form.add_error("block_config", "Too many bookings already made against block; cannot change to this block type")
+        if block.id:
+            if block.bookings.count() > block.block_config.size:
+                form.add_error("block_config", "Too many bookings already made against block; cannot change to this block type")
 
         if form.is_valid():
             block.save()
@@ -479,7 +481,7 @@ class SubscriptionMixin:
         subscription_config_id, start_date = subscription_config_options.rsplit("_", 1)
         config = SubscriptionConfig.objects.get(id=subscription_config_id)
         try:
-            start_date = datetime.strptime(start_date, "%d-%b-%Y").replace(tzinfo=timezone.utc)
+            start_date = datetime.strptime(start_date, "%d-%b-%Y").replace(tzinfo=dt_timezone.utc)
         except ValueError:
             start_date = None
         subscription.config = config

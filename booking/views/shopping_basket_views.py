@@ -422,10 +422,27 @@ def stripe_checkout(request):
             invoice.save()
         else:
             try:
+                payment_intent_obj = StripePaymentIntent.objects.get(
+                    payment_intent_id=invoice.stripe_payment_intent_id
+                )
+            except StripePaymentIntent.DoesNotExist:
+                logger.info("Payment intent obj %s not found, retrieving from stripe", invoice.stripe_payment_intent_id)
+                payment_intent_obj = stripe.PaymentIntent.retrieve(
+                    invoice.stripe_payment_intent_id, stripe_account=stripe_account
+                )
+            
+            try:
+                # unset all metadata so we can reset it to the new values
+                # otherwise deleted items will not be removed
+                unset_metadata = {k: "" for k in payment_intent_obj.metadata}
+                stripe.PaymentIntent.modify(
+                    invoice.stripe_payment_intent_id, metadata=unset_metadata, stripe_account=stripe_account
+                )
+                # now update it with all the new payment intent data
                 payment_intent = stripe.PaymentIntent.modify(
                     invoice.stripe_payment_intent_id, **payment_intent_data,
                 )
-            except stripe.error.InvalidRequestError as error:
+            except (StripePaymentIntent.DoesNotExist, stripe.error.InvalidRequestError) as error:
                 payment_intent = stripe.PaymentIntent.retrieve(
                     invoice.stripe_payment_intent_id, stripe_account=stripe_account
                 )

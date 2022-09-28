@@ -1,4 +1,6 @@
 from datetime import datetime
+from datetime import timezone as dt_timezone
+
 import logging
 
 from django.contrib import messages
@@ -460,7 +462,7 @@ def ajax_subscription_purchase(request, subscription_config_id):
     subscription_start_date = request.POST["subscription_start_date"]
 
     if subscription_start_date:
-        start_date = datetime.strptime(subscription_start_date, "%d-%b-%y").replace(tzinfo=timezone.utc)
+        start_date = datetime.strptime(subscription_start_date, "%d-%b-%y").replace(tzinfo=dt_timezone.utc)
         start_date = start_of_day_in_utc(start_date)
     else:
         start_date = None

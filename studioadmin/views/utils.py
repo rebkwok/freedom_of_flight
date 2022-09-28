@@ -1,4 +1,6 @@
 from datetime import datetime
+from datetime import timezone as dt_timezone
+
 from functools import wraps
 from urllib.parse import urlencode
 
@@ -55,7 +57,7 @@ def _get_courses(queryset, include_course_function):
 
 
 def _start_for_sort(course):
-    return course.start if course.start is not None else datetime.min.replace(tzinfo=timezone.utc)
+    return course.start if course.start is not None else datetime.min.replace(tzinfo=dt_timezone.utc)
 
 
 def get_current_courses(queryset=None):

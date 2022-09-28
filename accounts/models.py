@@ -4,6 +4,7 @@ import pytz
 import uuid
 
 from datetime import timedelta, datetime, time
+from datetime import timezone as dt_timezone
 
 from math import floor
 
@@ -521,7 +522,7 @@ def user_age(self):
     else:
         date_of_birth = self.userprofile.date_of_birth
     if date_of_birth:
-        date_of_birth_datetime = datetime.combine(date_of_birth, time(0, 0), tzinfo=timezone.utc)
+        date_of_birth_datetime = datetime.combine(date_of_birth, time(0, 0), tzinfo=dt_timezone.utc)
         return relativedelta(timezone.now(), date_of_birth_datetime).years
 
 
