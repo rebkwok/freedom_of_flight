@@ -5,6 +5,7 @@ db.sqlite3
 staticfiles
 collected-static
 /venv
+/.venv*
 .vagrant/
 bin/
 build/

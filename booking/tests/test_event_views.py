@@ -723,19 +723,21 @@ class CourseEventsListViewTests(EventTestMixin, TestUsersMixin, TestCase):
     
     def test_course_list_with_booked_course_unenroll(self):
         booking = baker.make(Booking, event=self.course_event, user=self.student_user)
-        baker.make(Booking, event=self.course_event1, user=self.student_user)
+        booking1 = baker.make(Booking, event=self.course_event1, user=self.student_user)
         resp = self.client.get(self.url)
         assert resp.context_data["already_booked"] is True
         assert resp.context_data["can_unenroll"] is True
 
-        booking.date_booked = timezone.now() - timedelta(hours=26)
-        booking.save()
+        for bk in [booking, booking1]:
+            bk.date_booked = timezone.now() - timedelta(hours=26)
+            bk.save()
         resp = self.client.get(self.url)
         assert resp.context_data["already_booked"] is True
         assert resp.context_data["can_unenroll"] is False
 
-        booking.date_booked = timezone.now()
-        booking.save()
+        for bk in [booking, booking1]:
+            bk.date_booked = timezone.now()
+            bk.save()
         resp = self.client.get(self.url)
         assert resp.context_data["can_unenroll"] is True
 
