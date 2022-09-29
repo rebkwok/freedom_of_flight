@@ -24,7 +24,6 @@ pillow
 gunicorn
 shortuuid
 beautifulsoup4
-pymemcache
 pytest
 pytest-cov
 pytest-django
