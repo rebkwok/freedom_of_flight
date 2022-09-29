@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from datetime import timezone as dt_timezone
 
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
@@ -130,7 +131,7 @@ def test_product_purchase_check_stock(product_variants, user):
 @pytest.mark.freeze_time("2021-08-01")
 def test_product_purchase_set_date_created_at_on_save(user, product, product_variants):
     purchase = baker.make(ProductPurchase, user=user, product=product, size='s', cost=10)
-    assert purchase.created_at == datetime(2021, 8, 1, 0, 0, tzinfo=timezone.utc)
+    assert purchase.created_at == datetime(2021, 8, 1, 0, 0, tzinfo=dt_timezone.utc)
 
 
 @pytest.mark.django_db
@@ -141,7 +142,7 @@ def test_product_purchase_set_date_paid_on_save(user, product, product_variants)
     assert purchase.date_paid is None
     purchase.paid = True
     purchase.save()
-    assert purchase.date_paid == datetime(2021, 8, 1, 0, 0, tzinfo=timezone.utc)
+    assert purchase.date_paid == datetime(2021, 8, 1, 0, 0, tzinfo=dt_timezone.utc)
 
 
 @pytest.mark.django_db
@@ -152,7 +153,7 @@ def test_product_purchase_set_date_received_on_save(user, product, product_varia
     assert purchase.date_received is None
     purchase.received = True
     purchase.save()
-    assert purchase.date_received == datetime(2021, 8, 1, 0, 0, tzinfo=timezone.utc)
+    assert purchase.date_received == datetime(2021, 8, 1, 0, 0, tzinfo=dt_timezone.utc)
 
 
 @pytest.mark.django_db

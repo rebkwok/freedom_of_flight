@@ -1,4 +1,6 @@
 from datetime import datetime
+from datetime import timezone as dt_timezone
+
 import random
 
 from django.contrib.auth.models import User, Group
@@ -49,9 +51,9 @@ def make_nonregistered_disclaimer(**kwargs):
         "email": "test@test.com",
         "address": "test",
         "postcode": "test",
-        "date_of_birth": datetime(1990, 6, 7, tzinfo=timezone.utc),
+        "date_of_birth": datetime(1990, 6, 7, tzinfo=dt_timezone.utc),
         "phone": "123455",
-        "event_date": datetime(2020, 10, 1, tzinfo=timezone.utc),
+        "event_date": datetime(2020, 10, 1, tzinfo=dt_timezone.utc),
         "health_questionnaire_responses": {},
         "terms_accepted": True,
         "emergency_contact_name": "test",
@@ -69,7 +71,7 @@ def make_archived_disclaimer(**kwargs):
         "name": "Test User",
         "address": "test",
         "postcode": "test",
-        "date_of_birth": datetime(1990, 6, 7, tzinfo=timezone.utc),
+        "date_of_birth": datetime(1990, 6, 7, tzinfo=dt_timezone.utc),
         "date_archived": timezone.now(),
         "event_date": None,
         "phone": "123455",
@@ -101,12 +103,12 @@ class TestUsersMixin:
         self.instructor_user.groups.add(instructor_group)
         UserProfile.objects.create(
             user=self.staff_user, address="test", postcode="test",
-            date_of_birth=datetime(1990, 6, 7, tzinfo=timezone.utc), phone="123455",
+            date_of_birth=datetime(1990, 6, 7, tzinfo=dt_timezone.utc), phone="123455",
             student=False, manager=False
         )
         UserProfile.objects.create(
             user=self.instructor_user, address="test", postcode="test",
-            date_of_birth=datetime(1990, 6, 7, tzinfo=timezone.utc), phone="123455",
+            date_of_birth=datetime(1990, 6, 7, tzinfo=dt_timezone.utc), phone="123455",
             student=False, manager=False
         )
 
@@ -132,22 +134,22 @@ class TestUsersMixin:
 
         UserProfile.objects.create(
             user=self.student_user, address="test1", postcode="test1",
-            date_of_birth=datetime(1980, 6, 7, tzinfo=timezone.utc), phone="123456",
+            date_of_birth=datetime(1980, 6, 7, tzinfo=dt_timezone.utc), phone="123456",
             student=True, manager=False
         )
         UserProfile.objects.create(
             user=self.student_user1, address="test2", postcode="test12",
-            date_of_birth=datetime(1990, 6, 7, tzinfo=timezone.utc), phone="789",
+            date_of_birth=datetime(1990, 6, 7, tzinfo=dt_timezone.utc), phone="789",
             student=True, manager=False
         )
         parent_profile = UserProfile.objects.create(
             user=self.manager_user, address="test3", postcode="test123",
-            date_of_birth=datetime(1970, 6, 7, tzinfo=timezone.utc), phone="789",
+            date_of_birth=datetime(1970, 6, 7, tzinfo=dt_timezone.utc), phone="789",
             student=False, manager=True
         )
         ChildUserProfile.objects.create(
             user=self.child_user, address="test3", postcode="test123",
-            date_of_birth=datetime(2014, 6, 7, tzinfo=timezone.utc), phone="789",
+            date_of_birth=datetime(2014, 6, 7, tzinfo=dt_timezone.utc), phone="789",
             parent_user_profile=parent_profile
         )
 

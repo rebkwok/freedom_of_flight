@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 from datetime import datetime, date, time, timedelta
+from datetime import timezone as dt_timezone
+
 from model_bakery import baker
 from unittest.mock import patch
 
@@ -256,7 +258,7 @@ class TimetableUploadViewTests(EventTestMixin, TestUsersMixin, TestCase):
 
     @patch("studioadmin.forms.forms.timezone")
     def test_upload_timetable_for_correct_track(self, mock_tz):
-        mock_tz.now.return_value = datetime(2020, 7, 1, tzinfo=timezone.utc)
+        mock_tz.now.return_value = datetime(2020, 7, 1, tzinfo=dt_timezone.utc)
         baker.make(TimetableSession, event_type__track=self.adult_track, _quantity=2)
         kids_session1 = baker.make(
             TimetableSession, event_type__track=self.kids_track, day=1, time=time(10, 0),
@@ -296,12 +298,12 @@ class TimetableUploadViewTests(EventTestMixin, TestUsersMixin, TestCase):
 
     @patch("studioadmin.forms.forms.timezone")
     def test_upload_timetable_existing_events(self, mock_tz):
-        mock_tz.now.return_value = datetime(2020, 1, 1, tzinfo=timezone.utc)
+        mock_tz.now.return_value = datetime(2020, 1, 1, tzinfo=dt_timezone.utc)
         tsession = baker.make(
             TimetableSession, event_type=self.aerial_event_type, day=0, time=time(10, 0), name="test"
         )
         # an event that will clash with the upload
-        event = baker.make(Event, event_type=self.aerial_event_type, name="test", start=datetime(2020, 2, 3, 10, 0, tzinfo=timezone.utc))
+        event = baker.make(Event, event_type=self.aerial_event_type, name="test", start=datetime(2020, 2, 3, 10, 0, tzinfo=dt_timezone.utc))
         assert Event.objects.filter(event_type=self.aerial_event_type).count() == 4
         assert Event.objects.filter(event_type=self.aerial_event_type, name="test").count() == 1
         data = {
@@ -324,7 +326,7 @@ class TimetableUploadViewTests(EventTestMixin, TestUsersMixin, TestCase):
 
     @patch("studioadmin.forms.forms.timezone")
     def test_upload_timetable_subset_of_sessions(self, mock_tz):
-        mock_tz.now.return_value = datetime(2020, 1, 1, tzinfo=timezone.utc)
+        mock_tz.now.return_value = datetime(2020, 1, 1, tzinfo=dt_timezone.utc)
         tsession = baker.make(
             TimetableSession, event_type=self.aerial_event_type, day=0, time=time(10, 0), name="test"
         )

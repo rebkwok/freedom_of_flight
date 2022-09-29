@@ -1035,7 +1035,7 @@ class StudioadminDisclaimerContentForm(DisclaimerContentAdminForm):
             "version",
             Submit('save_draft', 'Save as draft', css_class="btn btn-primary"),
             Submit('publish', 'Publish', css_class="btn btn-success"),
-            Submit('reset', 'Reset to latest published version', css_class="btn btn-secondary") if not hide_reset_button else '',
+            Submit('reset', 'Reset to latest published version', css_class="btn btn-secondary") if not hide_reset_button else HTML(''),
             HTML(f'<a class="btn btn-outline-dark" href="{back_url}">Back</a>')
         )
 

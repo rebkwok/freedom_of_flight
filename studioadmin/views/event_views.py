@@ -1,4 +1,5 @@
 from datetime import datetime
+from datetime import timezone as dt_timezone
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
@@ -43,7 +44,7 @@ class BaseEventAdminListView(TrackEventPaginationMixin, ListView):
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        start_of_today = datetime.combine(timezone.now().date(), datetime.min.time(), tzinfo=timezone.utc)
+        start_of_today = datetime.combine(timezone.now().date(), datetime.min.time(), tzinfo=dt_timezone.utc)
         return queryset.filter(start__gte=start_of_today).order_by("start")
 
     def get_context_data(self, **kwargs):
@@ -106,7 +107,7 @@ class PastEventAdminListView(EventAdminListView):
     template_name = "studioadmin/events.html"
 
     def get_queryset(self):
-        start_of_today = datetime.combine(timezone.now().date(), datetime.min.time(), tzinfo=timezone.utc)
+        start_of_today = datetime.combine(timezone.now().date(), datetime.min.time(), tzinfo=dt_timezone.utc)
         return Event.objects.filter(start__lt=start_of_today).order_by("-start__date", "start__time")
 
     def get_context_data(self, **kwargs):

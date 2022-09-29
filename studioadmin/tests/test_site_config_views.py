@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 from datetime import datetime
+from datetime import timezone as dt_timezone
+
 from model_bakery import baker
 import json
 import pytest
@@ -526,7 +528,7 @@ class AddSubscriptionConfigViewTests(EventTestMixin, TestUsersMixin, TestCase):
         self.client.post(url, data)
         assert SubscriptionConfig.objects.filter(name="Test subscription").exists()
         config = SubscriptionConfig.objects.first()
-        assert config.start_date == datetime(2020, 3, 1, 0, 0, tzinfo=timezone.utc)
+        assert config.start_date == datetime(2020, 3, 1, 0, 0, tzinfo=dt_timezone.utc)
         assert config.bookable_event_types == {}
 
     def test_add_recurring_subscription_config(self):

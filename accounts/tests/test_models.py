@@ -2,6 +2,8 @@ import pytz
 import pytest
 
 from datetime import datetime, timedelta
+from datetime import timezone as dt_timezone
+
 from decimal import Decimal
 
 from model_bakery import baker
@@ -119,8 +121,8 @@ class UserDisclaimerModelTests(TestUsersMixin, TestCase):
     def test_nonregistered_disclaimer_str(self):
         # date in BST to check timezones
         disclaimer = make_nonregistered_disclaimer(first_name='Test', last_name='User',
-            event_date=datetime(2019, 1, 1, tzinfo=timezone.utc), version=self.content.version,
-            date=datetime(2020, 7, 1, 18, 0, tzinfo=timezone.utc)
+            event_date=datetime(2019, 1, 1, tzinfo=dt_timezone.utc), version=self.content.version,
+            date=datetime(2020, 7, 1, 18, 0, tzinfo=dt_timezone.utc)
         )
         assert str(disclaimer) == 'Test User - V5.0 - 01 Jul 2020, 19:00'
 
@@ -128,9 +130,9 @@ class UserDisclaimerModelTests(TestUsersMixin, TestCase):
         # date in BST to check timezones
         data = {
             "name": 'Test User',
-            "date": datetime(2019, 7, 1, 18, 0, tzinfo=timezone.utc),
-            "date_archived": datetime(2020, 1, 20, 18, 0, tzinfo=timezone.utc),
-            "date_of_birth": datetime(1990, 1, 20, tzinfo=timezone.utc),
+            "date": datetime(2019, 7, 1, 18, 0, tzinfo=dt_timezone.utc),
+            "date_archived": datetime(2020, 1, 20, 18, 0, tzinfo=dt_timezone.utc),
+            "date_of_birth": datetime(1990, 1, 20, tzinfo=dt_timezone.utc),
             "address": "test",
             "postcode": "test",
             "phone": "1234",
@@ -154,7 +156,7 @@ class UserDisclaimerModelTests(TestUsersMixin, TestCase):
     def test_cannot_create_new_active_disclaimer(self):
         # disclaimer is out of date, so inactive
         disclaimer = make_online_disclaimer(user=self.student_user,
-            date=datetime(2015, 2, 10, 19, 0, tzinfo=timezone.utc), version=self.content.version
+            date=datetime(2015, 2, 10, 19, 0, tzinfo=dt_timezone.utc), version=self.content.version
         )
         assert disclaimer.is_active is False
         # can make a new disclaimer
