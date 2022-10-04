@@ -167,11 +167,6 @@ class Course(models.Model):
     cancelled = models.BooleanField(default=False)
     max_participants = models.PositiveIntegerField(default=10, help_text="Overrides any value set on individual linked events")
     show_on_site = models.BooleanField(default=False, help_text="Overrides any value set on individual linked events")
-    allow_partial_booking = models.BooleanField(
-        default=False,
-        help_text="Users can book after a course has started (if they have purchased a credit "
-                  "block valid for the remaining number of classes)"
-    )
     allow_drop_in = models.BooleanField(
         default=False,
         help_text="Users can book individual events with a drop-in credit block valid for this event type"
@@ -355,7 +350,7 @@ class Event(models.Model):
         if self.course:
             # this event is not full; if the course is full or the course has started,
             # can only book single event if drop in is allowed
-            if self.course.full or (self.course.has_started and not self.course.allow_partial_booking):
+            if self.course.full or self.course.has_started:
                 if not self.course.allow_drop_in:
                     return False
         return True
@@ -645,9 +640,6 @@ class Block(models.Model):
             # check the number of events
             # It's always valid if it's for the full course
             valid_for_course = self.block_config.size == course.number_of_events
-            # If size doesn't match, it can also be valid if we allow partial booking and it's valid for the courses left
-            if not valid_for_course and course.has_started and course.allow_partial_booking:
-                valid_for_course = self.block_config.size == course.events_left.count()
 
         if valid_for_course:
             # it's valid for courses, event type matches, and it's the right size for the course
@@ -1553,13 +1545,6 @@ def valid_course_block_configs(course):
             active=True, course=True, event_type=course.event_type,
             size=course.number_of_events
         )
-    elif course.allow_partial_booking:
-        # started course - course blocks match event type and number of
-        # remaining classes are valid
-        return BlockConfig.objects.filter(
-            active=True, course=True, event_type=course.event_type,
-            size=course.events_left.count()
-        )
 
 
 def valid_dropin_block_configs(event=None, event_type=None):
@@ -1615,13 +1600,6 @@ def get_active_user_course_block(user, course):
     # already sorted by expiry date, so we can just get the next valid one
     # UNLESS the course has started and allows part booking - then we want to make sure we return a valid part
     # block before a full block
-    if course.has_started and course.allow_partial_booking:
-        valid_blocks = sorted(
-            list(valid_blocks),
-            key=lambda block: block.block_config.size < course.number_of_events,
-            reverse=True
-        )
-        return valid_blocks[0] if valid_blocks else None
     return next(valid_blocks, None)
 
 

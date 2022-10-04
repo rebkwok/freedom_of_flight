@@ -134,68 +134,8 @@ var processCourseBookingRequest = function()  {
     var user_id = $button_just_clicked_on.data('user_id');
     var ref = $button_just_clicked_on.data('ref');
     var page = $button_just_clicked_on.data('page');
-    var allow_partial_booking = $button_just_clicked_on.data('allow_partial_booking');
-    var part_booking_with_full_block = $button_just_clicked_on.data('part_booking_with_full_block');
-    var has_started = $button_just_clicked_on.data('has_started');
-    var has_available_block = $button_just_clicked_on.data('has_available_block');
-    var already_booked = $button_just_clicked_on.data('already_booked');
-
-    var ask_for_confirmation = function () {
-        console.log(allow_partial_booking);
-        if (has_started && !already_booked) {
-            if (!allow_partial_booking) {
-                return true
-            } else if (part_booking_with_full_block) {
-                return true
-            } else {
-                return false
-            }
-        } else {
-            return false
-        }
-    };
-
-    if (ask_for_confirmation()) {
-          $('#confirm-dialog').dialog({
-            height: "auto",
-            width: 500,
-            modal: true,
-            closeOnEscape: true,
-            dialogClass: "no-close",
-            title: "Warning!",
-            open: function() {
-                var contentText;
-                if (part_booking_with_full_block) {
-                   contentText = "This course has already started. Your only available block is valid for a full course. Alternative blocks may be purchasable " +
-                       "for booking only the remaining classes.  If you choose to book with this block, you will not receive any refund for past classes."
-                } else if (has_available_block) {
-                    contentText = "This course has already started. If you choose to book, you will not receive any refund for past classes."
-                } else {
-                    contentText = "This course has already started. If you choose to purchase a block and book this course, you will not receive any refund for past classes."
-                }
-                $(this).html(contentText + "<br>Please confirm you want to continue.");
-            },
-            buttons: [
-                {
-                    text: "OK",
-                    click: function () {
-                        doTheCourseAjax();
-                        $(this).dialog('close');
-                    },
-                    "class": "btn btn-success"
-                },
-                {
-                    text: "Cancel",
-                    click: function () {
-                        $(this).dialog('close');
-                    },
-                    "class": "btn btn-dark"
-                }
-            ]
-        })
-      } else {
-          doTheCourseAjax()
-    }
+    
+    doTheCourseAjax()
 
     function doTheCourseAjax () {
         var processResult = function(

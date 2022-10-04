@@ -866,25 +866,6 @@ class CourseEventsListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         self.course.save()
         baker.make_recipe("booking.past_event", course=self.course, event_type=self.aerial_event_type)
         assert self.course.has_started
-        assert self.course.allow_partial_booking is False
-
-        # Course started, partial booking not allowed
-        course_book_button = _element_from_response_by_id(f"book_course_{self.course.id}")
-        assert course_book_button is None
-        resp = self.client.get(self.url)
-        assert "NOTE: This course has started" in resp.rendered_content
-
-        self.course.allow_partial_booking = True
-        self.course.save()
-        # Course started, partial booking allowed, has partial block
-        course_book_button = _element_from_response_by_id(f"book_course_{self.course.id}")
-        assert "Book Course" in course_book_button.text
-
-        # Course started, partial booking allowed, no block
-        block.delete()
-        course_book_button = _element_from_response_by_id(f"book_course_{self.course.id}")
-        assert "You need a payment plan to book this course" in course_book_button.text
-        assert "Go to the payment plans page" in course_book_button.text
 
     def test_button_display_course_event_drop_in_allowed(self):
         # With a course event, check that the button displays as expected for:
@@ -1009,32 +990,3 @@ class CourseEventsListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         assert "Cancel" in book_button.text
         course_book_button = _element_from_response_by_id(f"book_course_{self.course.id}")
         assert "Student User is attending this course" in course_book_button.text
-
-        Booking.objects.all().delete()
-        self.course.number_of_events = 2
-        self.course.save()
-        baker.make_recipe("booking.past_event", course=self.course, event_type=self.aerial_event_type)
-        assert self.course.has_started
-        assert self.course.allow_partial_booking is False
-
-        # Course started, partial booking not allowed
-        course_book_button = _element_from_response_by_id(f"book_course_{self.course.id}")
-        assert course_book_button is None
-        resp = self.client.get(self.url)
-        assert "NOTE: This course has started" in resp.rendered_content
-        assert "You can book individual classes as drop in" in resp.rendered_content
-
-        self.course.allow_partial_booking = True
-        self.course.save()
-        # reset the courseblock so it's available
-        course_block.paid = True
-        course_block.save()
-        # Course started, partial booking allowed, has partial block
-        course_book_button = _element_from_response_by_id(f"book_course_{self.course.id}")
-        assert "Book Course" in course_book_button.text
-
-        # Course started, partial booking allowed, no block
-        course_block.delete()
-        dropin_block.delete()
-        course_book_button = _element_from_response_by_id(f"book_course_{self.course.id}")
-        assert "You need a payment plan to book this course" in course_book_button.text
