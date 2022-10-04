@@ -16,6 +16,7 @@ from django.utils import timezone
 
 from accounts.models import has_active_disclaimer
 from activitylog.models import ActivityLog
+from booking.views.event_views import button_options_course_events_list, button_options_events_list
 from merchandise.models import ProductPurchase
 
 from common.utils import full_name, start_of_day_in_utc
@@ -260,12 +261,17 @@ def ajax_toggle_booking(request, event_id):
             else:
                 url = reverse("booking:events", args=(event.event_type.track.slug,))
             return JsonResponse({"redirect": True, "url": url + f"?page={page}"})
+
     user_info = get_user_booking_info(user, event)
+    if ref == "course":
+        button_info = button_options_course_events_list(user, event)
+    else:
+        button_info = button_options_events_list(user, event)
     context = {
         "booking": booking,
         "event": event,
         "alert_message": alert_message,
-        "user_info": get_user_booking_info(user, event),
+        "button_info": button_info
     }
     if ref == "bookings":
         html = render_to_string(f"booking/includes/bookings_button.txt", context, request)

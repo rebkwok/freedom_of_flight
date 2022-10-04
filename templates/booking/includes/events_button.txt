@@ -12,64 +12,12 @@
     {% endif %}
 {% endif %}
 
-{% if user_info.can_cancel  %}
+
+{{ button_info.toggle_button.text }}
+{% if button_info.toggle_button.option == "cancel"  %}
     <div class="btn btn-xs btn-xs-narrow btn-dark float-right" href="#"><i id="loader_{{ event.id }}"></i> Cancel</div>
-{% elif user_info.can_book or user_info.can_rebook %}
-    {% if course %}
-        {% if user_info.can_rebook %}
-            <div class="btn btn-xs btn-xs-narrow btn-success float-right" href="#">Rebook</div>
-         {% elif user_info.can_book %}
-            {% if user_info.has_available_block %}
-                {% if not user_info.has_available_course_block %}
-                     {% if not course.has_started or course.allow_partial_booking %}
-                        <span class="helptext float-right">NOTE: course booking is also available</span><br/>
-                     {% endif %}
-                     {% if course.allow_drop_in %}
-                        <div class="btn btn-xs btn-xs-narrow btn-success float-right" href="#"><i id="loader_{{ event.id }}"></i> Book Drop-in</div
-                     {% endif %}
-                {% elif not course.has_started %}
-                    <span class="helptext float-right">Use the button above to book the course</span><br/>
-                    {% if course.allow_drop_in and user_info.has_booked_course_dropin %}
-                        <span class="helptext float-right">Drop-in booking is also available:</span><br/>
-                        {% if user_info.has_available_dropin_block %}
-                            <div class="btn btn-xs btn-xs-narrow btn-success float-right" href="#"><i id="loader_{{ event.id }}"></i> Book Drop-in</div
-                        {% else %}
-                            <div class="btn btn-xs btn-outline-dark float-right" href="#">Add single class to basket</div>
-                        {% endif %}
-                    {% endif %}
-                {% elif course.allow_partial_booking and course.has_available_payment_plan %}
-                    <span class="helptext float-right">Use the button above to book the course</span>
-                {% endif %}
-            {% elif course.allow_drop_in %}
-                <div class="btn btn-xs btn-outline-dark float-right" href="#">Add single class to basket</div>
-            {% else %}
-                <div class="btn btn-xs btn-outline-dark float-right" href="#">Add course to basket</div>
-            {% endif %}
-        {% endif %}
-    {% elif event.course %}
-        {% if user_info.can_rebook %}
-            <div class="btn btn-xs btn-xs-narrow btn-success float-right" href="#">Rebook</div>
-        {% elif user_info.can_book %}
-            {% if user_info.has_available_course_block %}
-                <span class="helptext float-right">NOT BOOKED</span><br/>
-                <span class="helptext float-right">Payment plan available; see course details</span><br/>
-            {% elif event.course.allow_drop_in %}
-                {% if user_info.has_available_block %}
-                    {% if not event.course.has_started or user_info.has_booked_course_dropin %}
-                        <span class="helptext float-right">Drop-in and course options available;<br/>see course details to book</span>
-                    {% else %}
-                        <div class="btn btn-xs btn-xs-narrow btn-success float-right" href="#"><i id="loader_{{ event.id }}"></i> Book Drop-in</div
-                    {% endif %}
-                {% else %}
-                    <div class="btn btn-xs btn-outline-dark float-right" href="#">Payment Options</div>
-                {% endif %}
-            {% else %}
-                <div class="btn btn-xs btn-outline-dark float-right" href="#">Payment Options</div>
-            {% endif %}
-        {% endif %}
-    {% elif user_info.has_available_block %}
-         <div class="btn btn-xs btn-xs-narrow btn-success float-right" href="#"><i id="loader_{{ event.id }}"></i> Book Drop-in</div
-    {% else %}
-        <div class="btn btn-xs btn-outline-dark float-right" href="#">Payment Options</div>
-    {% endif %}
+{% elif button_info.toggle_button.option == "book_dropin"  %}
+    <div class="btn btn-xs btn-xs-narrow btn-success float-right" href="#"><i id="loader_{{ event.id }}"></i> Book Drop-in</div>
+{% elif button_info.toggle_button.option == "rebook"  %}
+    <div class="btn btn-xs btn-xs-narrow btn-success float-right" href="#"><i id="loader_{{ event.id }}"></i> Rebook</div>
 {% endif %}

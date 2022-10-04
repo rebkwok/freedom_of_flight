@@ -10,7 +10,7 @@
             {% elif user_info.used_subscription  %}
                 Subscription used: {{ user_info.used_subscription_info }}
             {% endif %}
-        {% else %}
+        {% else %} 
             {% if user_info.has_available_subscription  %}
                 Subscription available: {{ user_info.available_subscription_info }}<br/>
             {% elif user_info.has_available_block  %}

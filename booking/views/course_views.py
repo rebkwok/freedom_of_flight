@@ -14,6 +14,7 @@ from activitylog.models import ActivityLog
 from ..forms import AvailableUsersForm
 from ..models import Course, Track
 from ..utils import get_view_as_user, get_user_course_booking_info, full_name
+from .button_utils import course_list_button_info
 from .views_utils import DataPolicyAgreementRequiredMixin
 
 
@@ -47,6 +48,11 @@ class CourseListView(DataPolicyAgreementRequiredMixin, ListView):
             view_as_user = get_view_as_user(self.request)
             user_course_booking_info = {
                 course.id: get_user_course_booking_info(view_as_user, course) for course in self.object_list
+            }
+
+            context["button_options"] = {
+                course.id: course_list_button_info(view_as_user, course, user_course_booking_info[course.id]) 
+                for course in self.object_list
             }
             context["user_course_booking_info"] = user_course_booking_info
             context["available_users_form"] = AvailableUsersForm(request=self.request, view_as_user=view_as_user)
