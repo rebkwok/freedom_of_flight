@@ -87,6 +87,12 @@ def has_subscription_availability_changed(booking, action, subscription_use_pre_
 @login_required
 @require_http_methods(['POST'])
 def ajax_toggle_booking(request, event_id):
+    """
+    This view should only be used for booking, rebooking or cancelling, where the
+    user has an available payment method
+    We keep all the logic around checking for cancelled/full events etc in case
+    events are updated concurrently.
+    """
     user_id = request.POST["user_id"]
     ref = request.POST.get("ref", "events")
 
@@ -533,3 +539,82 @@ def process_subscription_purchase(request, subscription, new, subscription_confi
             "cart_item_menu_count": total_unpaid_item_count(request.user),
         }
     )
+
+
+@login_required
+@require_http_methods(['POST'])
+def ajax_add_booking_to_basket(request):
+    """
+    Add a booking to basket
+    - find the matching single class block_config that's valid for this event
+    - create a block for the user (unpaid)
+    - create a booking for the user/event and assign the block
+    check:
+    although unpaid, the new booking counts in the event's full/spaces etc
+    clean up unpaid bookings/blocks every 15 mins
+    clean up on visiting shopping basket (fetching unpaid blocks) and schedule
+    add a stripe checkout flag when user proceeds to checkout (similar to merch)
+    shopping cart/checkout - display blocks with attached booking as booking (hide block info)
+    booking buttons need to also show "payment pending" instead of "booked" where bookings are
+    made but blocks not yet paid
+    """
+    user = get_object_or_404(User, pk=request.POST["user_id"])
+    event = get_object_or_404(Event, pk=request.POST["event_id"])
+    # we could get here from the events list or course events list 
+    ref = get_object_or_404(Event, pk=request.POST["ref"])
+    
+    ######################################
+    # check event isn't full or cancelled, return error
+    # check user isn't already (open) booked, return error
+    # get booking if one already exists (could have been previously cancelled)
+    
+    #######################################
+    alert_message = {
+        "message_type": "success",
+        "message": f"Booking for {event} added to cart for {full_name(user)}"
+    }
+    context = {
+        "alert_message": alert_message
+    }
+    # js needs to set "add to cart" button to empty
+    # update booking button (depending on value of ref)
+    # use button_info to update text fields
+    if ref == "events":
+        button_info = button_options_events_list(user, event)
+        context["button_info"] = button_info
+        button_html = render(request, f"booking/includes/events_button.txt", context)
+    elif ref == "course":
+        context["booked"] = True
+        button_info = button_options_course_events_list(user, event)
+        button_html = render(request, f"booking/includes/course_events_button.txt", context)
+
+    return JsonResponse(
+        {
+            "button_html": button_html.content.decode("utf-8"),
+            "cart_item_menu_count": total_unpaid_item_count(request.user),
+        }
+    )
+
+
+
+@login_required
+@require_http_methods(['POST'])
+def ajax_add_course_booking_to_basket(request):
+    """
+    Add a course to basket
+    - find the matching course block_config that's valid for this course
+    - create a course block for the user (unpaid)
+    - create bookings for the user/course and assign the block
+    check:
+    although unpaid, the new booking counts in the course's full/spaces etc
+    clean up unpaid course bookings/blocks every 15 mins
+    clean up on visiting shopping basket (fetching unpaid blocks) and schedule
+    add a stripe checkout flag when user proceeds to checkout (similar to merch)
+    shopping cart/checkout - display blocks with attached course booking as course (hide block info)
+    """
+    user = get_object_or_404(User, pk=request.POST["user_id"])
+    course = get_object_or_404(Event, pk=request.POST["course_id"])
+    # See ajax_course_booking
+    # check course isn't full or cancelled, return error
+    # check user isn't already booked, return error
+    # get booking if one already exists (could have been previously cancelled)
