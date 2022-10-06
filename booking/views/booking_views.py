@@ -3,15 +3,16 @@ from datetime import timedelta
 from django.core.paginator import Paginator
 from django.db.models import Count
 from django.utils import timezone
-from django.shortcuts import get_object_or_404, HttpResponseRedirect
+from django.shortcuts import HttpResponseRedirect
 from django.views.generic import ListView
 from django.urls import reverse
 
 from braces.views import LoginRequiredMixin
 
 from ..forms import AvailableUsersForm
-from ..models import Booking, Event, WaitingListUser
+from ..models import Booking
 from ..utils import get_view_as_user
+from .button_utils import booking_list_button
 from .views_utils import DataPolicyAgreementRequiredMixin
 
 
@@ -37,6 +38,11 @@ class BookingListView(DataPolicyAgreementRequiredMixin, LoginRequiredMixin, List
             .exclude(event__course__isnull=False, status="CANCELLED")\
             .order_by('event__start__date', 'event__start__time')
 
+    def _get_button_options(self, page_bookings):
+        return {
+            booking.id: booking_list_button(booking) for booking in page_bookings
+        }
+
     def get_context_data(self, **kwargs):
         # Call the base implementation first to get a context
         context = super().get_context_data(**kwargs)
@@ -50,13 +56,7 @@ class BookingListView(DataPolicyAgreementRequiredMixin, LoginRequiredMixin, List
         for booking_info in booking_ids_by_date:
             bookings_by_date.setdefault(booking_info["event__start__date"], []).append(all_bookings.get(id=booking_info["id"]))
         
-        # TODO 
-        # button and text per booking
-        # button - cancel/rebook/none
-        # text - you have cancelled, link to classes page for booking
-        context["button_info"] = {
-            booking.id: booking_list_button(booking) for booking in page_bookings
-        }
+        context["button_options"] = self._get_button_options(page_bookings)
 
         context["page_obj"] = page_bookings
         context["bookings_by_date"] = bookings_by_date
@@ -77,6 +77,12 @@ class BookingHistoryListView(BookingListView):
         return view_as_user.bookings.filter(event__start__lte=cutoff_time)\
             .exclude(event__course__isnull=False, status="CANCELLED")\
             .order_by('-event__start__date', 'event__start__time')
+
+    def _get_button_options(self, page_bookings):
+        return {
+            booking.id: booking_list_button(booking, history=True) 
+            for booking in page_bookings
+        }
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data()

@@ -427,3 +427,44 @@ def course_list_button_info(user, course, user_info):
         options["text"] = "Drop-in booking is also available, see course details."
     return options
 
+
+def booking_list_button(booking, history=False):
+    options = {"button": "", "text": "", "styling": ""}
+    if booking.event.cancelled:
+        options["text"] = f"{booking.event.event_type.label.upper()} CANCELLED"
+        options["styling"] = "cancelled"
+    elif booking.status == "CANCELLED" or booking.no_show:
+        options["text"] = "You have cancelled this booking."
+        options["styling"] = "cancelled"
+
+    if history:
+        options["text"] = options["text"] or "Booked"
+        return options
+
+    if user_can_book_or_cancel(booking.event, booking):
+        if can_cancel(booking):
+            options["button"] = "toggle_button"
+            options["toggle_option"] = "cancel"
+        elif can_rebook(booking, booking.event):
+            # this is course no-shows only
+            options["button"] = "toggle_button"
+            options["toggle_option"] = "rebook"
+        elif can_book(booking, booking.event):
+            if has_available_block(booking.user, booking.event):
+                options["button"] = "toggle_button"
+                options["toggle_option"] = "book"
+            else:
+                track_url = reverse("booking:events", args=(booking.event.event_type.track.slug,))
+                extra_text = f"Go to <a href='{track_url}'>schedule</a> for booking options"
+                if options["text"]:
+                    options["text"] += f"</br>{extra_text}"
+                else:
+                    options["text"] = extra_text
+    elif booking.event.full:
+        if booking.status == "CANCELLED" or booking.no_show:
+            options["button"] = "waiting_list"
+    elif booking.event.booking_restricted_pre_start():
+        options["text"] = "Booking unavailable"
+    
+    options["text"] = mark_safe(options["text"])
+    return options

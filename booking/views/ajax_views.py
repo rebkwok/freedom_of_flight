@@ -16,6 +16,7 @@ from django.utils import timezone
 
 from accounts.models import has_active_disclaimer
 from activitylog.models import ActivityLog
+from booking.views.button_utils import booking_list_button
 from booking.views.event_views import button_options_course_events_list, button_options_events_list
 from merchandise.models import ProductPurchase
 
@@ -265,8 +266,10 @@ def ajax_toggle_booking(request, event_id):
     user_info = get_user_booking_info(user, event)
     if ref == "course":
         button_info = button_options_course_events_list(user, event)
-    else:
+    elif ref == "events":
         button_info = button_options_events_list(user, event)
+    elif ref == "bookings":
+        button_info = booking_list_button(booking)
     context = {
         "booking": booking,
         "event": event,
