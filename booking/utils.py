@@ -8,6 +8,7 @@ from booking.models import get_active_user_block, get_active_user_course_block, 
 
 
 from common.utils import full_name
+from studioadmin.views.user_views import users_with_unused_blocks
 
 
 def get_view_as_user(request):
@@ -263,27 +264,16 @@ def get_user_course_booking_info(user, course):
     bookings = user.bookings.filter(event__course=course, status="OPEN")
     booking_type = user_course_booking_type(user, course, bookings)
     has_booked = booking_type == "course"
-    has_booked_dropin = booking_type == "dropin"
     open_booked_events = bookings.filter(no_show=False).values_list("event_id", flat=True)
     booked_events = bookings.values_list("event_id", flat=True)
 
-    # if user has a course block, it's still not available if the course has started 
-    if course.has_started:
-        available_course_block = None
-    else:
-        available_course_block = get_active_user_course_block(user, course)
-    available_dropin_block = get_active_user_block(user, course.events.first(), dropin_only=True)
-
     info = {
         "hide_block_info_divider": True,
-        "has_available_course_block": available_course_block is not None,
-        "has_available_dropin_block": available_course_block is None and available_dropin_block is not None,
         "has_booked": has_booked,
-        "has_booked_dropin": has_booked_dropin,
+        "has_booked_dropin": booking_type == "dropin",
         "has_booked_all": booked_events.count() == course.uncancelled_events.count(),
         "booked_event_ids": open_booked_events,
-        "open": has_booked or has_booked_dropin,  # for block info
-        "available_course_block": available_course_block,
+        "open": open_booked_events.exists(),  # for block info
     }
     if has_booked:
         iter_used_blocks = (

@@ -49,6 +49,15 @@ class BookingListView(DataPolicyAgreementRequiredMixin, LoginRequiredMixin, List
         bookings_by_date = {}
         for booking_info in booking_ids_by_date:
             bookings_by_date.setdefault(booking_info["event__start__date"], []).append(all_bookings.get(id=booking_info["id"]))
+        
+        # TODO 
+        # button and text per booking
+        # button - cancel/rebook/none
+        # text - you have cancelled, link to classes page for booking
+        context["button_info"] = {
+            booking.id: booking_list_button(booking) for booking in page_bookings
+        }
+
         context["page_obj"] = page_bookings
         context["bookings_by_date"] = bookings_by_date
         context["available_users_form"] = AvailableUsersForm(request=self.request, view_as_user=get_view_as_user(self.request))
