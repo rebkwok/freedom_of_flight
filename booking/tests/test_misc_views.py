@@ -38,9 +38,3 @@ class MiscViewTests(TestUsersMixin, TestCase):
         url = reverse("booking:terms_and_conditions")
         resp = self.client.get(url)
         assert resp.status_code == 200
-
-    def test_covid19_policy(self):
-        self.client.logout()
-        url = reverse("booking:covid19_policy")
-        resp = self.client.get(url)
-        assert resp.status_code == 200

@@ -3,7 +3,7 @@ from django.views.generic import RedirectView
 from booking.views import (
     ajax_cart_item_delete, ajax_course_booking, ajax_toggle_booking, ajax_toggle_waiting_list,
     CourseEventsListView, BookingListView, BlockListView, BookingHistoryListView,
-    disclaimer_required, home, terms_and_conditions, covid19_policy,
+    disclaimer_required, home, terms_and_conditions,
     EventListView, EventDetailView,
     permission_denied, event_purchase_view,
     course_purchase_view, purchase_view,
@@ -26,7 +26,6 @@ urlpatterns = [
     path('disclaimer-required/<int:user_id>/', disclaimer_required, name='disclaimer_required'),
     path('not-available/', permission_denied, name='permission_denied'),
     path('terms-and-conditions/', terms_and_conditions, name="terms_and_conditions"),
-    path('covid19-policy/', covid19_policy, name="covid19_policy"),
 
     # EVENTS
     path('event/<slug>', EventDetailView.as_view(), name='event'),
