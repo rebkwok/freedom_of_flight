@@ -6,7 +6,7 @@ from django.utils.safestring import mark_safe
 
 from common.utils import full_name
 
-from ..models import has_available_block, has_available_course_block, get_active_user_course_block
+from ..models import has_available_block, has_available_course_block, get_active_user_course_block, has_available_subscription
 from ..utils import can_book, can_cancel, can_rebook, user_can_book_or_cancel, user_course_booking_type
 
 
@@ -34,6 +34,7 @@ class UserEventInfo:
         self.can_book = False
         self.can_rebook = False
         self.has_available_drop_in_block = False
+        self.has_available_subscription = False
         self.booking_type = None
         # course things
         self.has_available_course_block = False
@@ -60,6 +61,7 @@ class UserEventInfo:
             self.has_available_course_block = has_available_course_block(self.user, self.event.course)
             self.has_booked_dropin = user_course_booking_type(self.user, self.event.course) == "dropin"
         self.has_available_block = self.has_available_drop_in_block or self.has_available_course_block
+        self.has_available_subscription = has_available_subscription(self.user, self.event)
 
         if include_course_data and self.has_available_course_block:
             self.available_course_block = get_active_user_course_block(self.user, self.course)
@@ -179,7 +181,7 @@ def button_options_events_list(user, event):
             if not event.course.has_started:
                 options["buttons"].append("add_course_to_basket")
             return options
-        elif user_event_info.has_available_drop_in_block:
+        elif user_event_info.has_available_drop_in_block or user_event_info.has_available_subscription:
             options["buttons"] = ["toggle_booking"]
             options["toggle_button"] = {
                 "option": "book_dropin",
