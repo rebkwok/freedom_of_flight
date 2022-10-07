@@ -1,5 +1,3 @@
-from socket import timeout
-from xml.dom import ValidationErr
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
@@ -16,7 +14,7 @@ from django.utils.decorators import method_decorator
 from django.urls import reverse
 from django.template.loader import get_template
 
-from allauth.account.views import EmailView, LoginView, SignupView
+from allauth.account.views import LoginView
 
 from braces.views import LoginRequiredMixin
 from shortuuid import ShortUUID
@@ -346,9 +344,13 @@ class SignedDataPrivacyCreateView(LoginRequiredMixin, FormView):
 
     def form_valid(self, form):
         user = self.request.user
-        SignedDataPrivacy.objects.create(
+        # get or create in case of form resubmission
+        dp, new = SignedDataPrivacy.objects.get_or_create(
             user=user, version=form.data_privacy_policy.version
         )
+        if not new:
+            # save it to ensure cache update
+            dp.save()
         next_url = form.next_url or reverse('booking:schedule')
         return self.get_success_url(next_url)
 
