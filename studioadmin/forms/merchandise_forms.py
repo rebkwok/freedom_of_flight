@@ -37,6 +37,12 @@ class ProductVariantForm(forms.Form):
     cost = forms.DecimalField(decimal_places=2, max_digits=10)
     quantity_in_stock = forms.IntegerField()
 
+    def clean_quantity_in_stock(self):
+        quantity = self.cleaned_data["quantity_in_stock"]
+        if quantity < 0:
+            raise ValidationError("Quantity in stock must be >= 0")
+        return quantity
+
 
 class BaseProductVariantFormset(forms.BaseFormSet):
 

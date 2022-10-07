@@ -261,7 +261,7 @@ div#CookielawBanner {
     font-weight: normal;
 }
 
-.errorlist {
+.errorlist, .control-group.error {
     list-style: none;
     color: red;
     font-style: italic;
