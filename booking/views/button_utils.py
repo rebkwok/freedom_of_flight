@@ -103,17 +103,18 @@ def button_options_events_list(user, event):
     # Can event be booked?
     user_event_info = UserEventInfo(user, event)
     options = _default_button_options(user_event_info)
-
     if not user_event_info.open:
         # event is cancelled or past
         return options
 
+    user_event_info.update()
     # events list page
     # waiting list buttons
     # only if event is full and user isn't already booked
     if event.full:
-        if not user_event_info.has_open_booking:
+        if not (user_event_info.has_open_booking or user_event_info.can_rebook):
             options["buttons"] = ["waiting_list"]
+            options["text"] = f"{event.event_type.label.title()} is full"
             return options
 
     # an event from a course which has started and doesn't allow any booking options
@@ -123,8 +124,6 @@ def button_options_events_list(user, event):
         any([event.course.allow_drop_in, user_event_info.has_open_booking])
     ):
         return {**options, "buttons": ["course_details"], "text": "Course has started"}
-
-    user_event_info.update()
 
     if user_event_info.can_book_or_cancel:
         if user_event_info.can_cancel:
@@ -216,10 +215,11 @@ def button_options_course_events_list(user, event):
     # course events list page
     # waiting list buttons
     # if event allows drop in, we can show waiting list and book buttons
-    if event.full and not user_event_info.has_open_booking:
-        return {**options, "buttons": ["waiting_list"], "text": ""}
-
     user_event_info.update()
+    if event.full:
+        if not (user_event_info.has_open_booking or user_event_info.can_rebook):
+            return {**options, "buttons": ["waiting_list"], "text": ""}
+
     if user_event_info.can_book_or_cancel:
         if user_event_info.can_cancel:
             options["buttons"] = ["toggle_booking"]
@@ -311,7 +311,7 @@ def button_options_book_course_button(user, course):
         "pre_button_text": "",
         "post_button_text": ""
     }
-    
+
     # already booked for full course
     if user_event_info.course_booked:
         options["pre_button_text"] = f"{full_name(user)} is attending this course."
@@ -327,10 +327,6 @@ def button_options_book_course_button(user, course):
         return options
     
     user_event_info.update(include_course_data=True)
-
-    # user_has_available_course_block = has_available_course_block(user, course)
-    # user_has_available_dropin_block = has_available_block(user, course.events.first(), dropin_only=True)
-
     # already booked for events, but not all (i.e. drop in)
     if user_event_info.booked_for_course_events:
         options["pre_button_text"] = f"{full_name(user)} has booked for classes on this course."
@@ -382,7 +378,6 @@ def button_options_book_course_button(user, course):
             
     options["pre_button_text"] = mark_safe(options["pre_button_text"])
     options["post_button_text"] = mark_safe(options["post_button_text"])
-    
     return options
 
 
@@ -390,13 +385,13 @@ def button_options_book_course_button(user, course):
 def course_list_button_info(user, course, user_info):
     options = {"button": "", "text": ""}
 
-    if user_info["has_booked"]:
+    if user_info["has_booked_all"]:
         return {
             "button": "", 
             "text": mark_safe('<i class="text-success fas fa-check-circle"></i> Booked')
         }
     if user_info["has_booked_dropin"]:
-        if not user_info["has_booked_all"] and course.allow_drop_in and not course.all_events_full:
+        if course.allow_drop_in and not course.all_events_full:
             return {
                 "button": "", 
                 "text": mark_safe(

@@ -232,7 +232,8 @@ def get_user_booking_info(user, event):
     info = {
         "available_block": available_block,
         "available_subscription_info": available_subscription_info,
-        "show_warning": show_warning(event, user_booking)
+        "show_warning": show_warning(event, user_booking),
+        "on_waiting_list": can_leave_waiting_list(user, event, user_booking)
     }
 
     if user_booking:
@@ -269,7 +270,7 @@ def get_user_course_booking_info(user, course):
 
     info = {
         "hide_block_info_divider": True,
-        "has_booked": has_booked,
+        "has_booked_course": has_booked,
         "has_booked_dropin": booking_type == "dropin",
         "has_booked_all": booked_events.count() == course.uncancelled_events.count(),
         "booked_event_ids": open_booked_events,

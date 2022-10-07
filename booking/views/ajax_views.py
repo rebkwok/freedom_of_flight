@@ -204,7 +204,7 @@ def ajax_toggle_booking(request, event_id):
         block_pre_cancel = booking.block
         block_pre_cancel_was_full = block_pre_cancel.full if block_pre_cancel else False
 
-        if event.course and booking.block.block_config.course:
+        if event.course and booking.block and booking.block.block_config.course:
             # only course events booked with course blocks get set to no-show
             booking.no_show = True
         elif not event.event_type.allow_booking_cancellation:

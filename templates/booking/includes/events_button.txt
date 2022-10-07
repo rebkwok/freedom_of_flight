@@ -13,7 +13,7 @@
 {% endif %}
 
 
-{{ button_info.toggle_button.text }}
+<span id="toggle_button_text_{{ event.id }}">{{ button_info.toggle_button.text }}</span>
 {% if button_info.toggle_button.option == "cancel"  %}
     <div class="btn btn-xs btn-xs-narrow btn-dark float-right" href="#"><i id="loader_{{ event.id }}"></i> Cancel</div>
 {% elif button_info.toggle_button.option == "book_dropin"  %}

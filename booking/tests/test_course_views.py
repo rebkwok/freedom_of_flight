@@ -72,7 +72,7 @@ class CourseListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         assert booked == [self.course.id]
         # bookings have no block associated, so these are considered dropin
         assert user_course_booking_info[self.course.id]["has_booked_dropin"]
-        assert user_course_booking_info[self.course.id]["has_booked"] is False
+        assert user_course_booking_info[self.course.id]["has_booked_course"] is False
         assert user_course_booking_info[self.course.id]["has_booked_all"] is True
         assert '<i class="text-success fas fa-check-circle"></i> Booked' in resp.rendered_content
 
@@ -82,7 +82,7 @@ class CourseListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         resp = self.client.get(self.url(self.adult_track))
         course_booking_info = resp.context_data['user_course_booking_info'][self.course.id]
         assert course_booking_info["has_booked_dropin"] is False
-        assert course_booking_info["has_booked"] is True
+        assert course_booking_info["has_booked_course"] is True
         assert course_booking_info["has_booked_all"] is True
         assert '<i class="text-success fas fa-check-circle"></i> Booked' in resp.rendered_content
 
@@ -115,8 +115,7 @@ class CourseListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         self.course.allow_drop_in = True
         self.course.save()
         resp = self.client.get(self.url(self.adult_track))
-        assert 'Course is full' not in resp.rendered_content, resp.rendered_content
-        assert "Full course booking is not available." in resp.rendered_content
+        assert "Course is full" in resp.rendered_content
         assert "Drop-in is available for some classes" in resp.rendered_content
 
     def test_courses_list_with_course_with_cancelled_events(self):
@@ -136,8 +135,7 @@ class CourseListViewTests(EventTestMixin, TestUsersMixin, TestCase):
     def test_courses_list_with_no_block_available(self):
         self.login(self.student_user)
         resp = self.client.get(self.url(self.adult_track))
-        assert 'NOT BOOKED' in resp.rendered_content
-        assert 'Payment options' in resp.rendered_content
+        assert "Add course to basket" in resp.rendered_content
 
     def test_courses_list_with_block_available(self):
         # make usable block
