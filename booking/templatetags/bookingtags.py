@@ -140,7 +140,9 @@ def lookup_dict(dictionary, key):
 
 @register.simple_tag
 def booking_user_info(booking):
-    return get_user_booking_info(booking.user, booking.event)
+    user_info = get_user_booking_info(booking.user, booking.event)
+    user_info["hide_block_info_divider"] = True
+    return user_info
 
 @register.filter
 def format_subscription_config_start_options(subscription_config_dict):

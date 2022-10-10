@@ -27,7 +27,8 @@ class UserEventInfo:
         self.has_open_booking =  self.user_bookings.filter(status="OPEN", no_show=False).exists()
         self.open = not (self.event.cancelled or self.event.is_past) 
         self.booking_restricted = event.booking_restricted_pre_start()
-
+        self.booking_in_basket = self.has_open_booking and self.user_booking.is_in_basket()
+        
         # other attributes to be updated later
         self.can_book_or_cancel = False
         self.can_cancel = False
@@ -88,7 +89,7 @@ def _default_button_options(user_event_info):
         text = "is past" if event.course else "has started"
         return {"buttons": [], "text": f"{event.event_type.label.title()} {text}"}, None
         
-    return {"buttons": [], "text": "", "open": user_event_info.open}
+    return {"buttons": [], "text": "", "open": user_event_info.open, "in_basket": user_event_info.booking_in_basket}
 
 
 # EVENTS LIST: Book/cancel/payment options/waiting list for individual classes
@@ -109,6 +110,11 @@ def button_options_events_list(user, event):
 
     user_event_info.update()
     # events list page
+
+    if user_event_info.booking_in_basket:
+        options["text"] = "in basket"
+        return options
+
     # waiting list buttons
     # only if event is full and user isn't already booked
     if event.full:
@@ -128,20 +134,12 @@ def button_options_events_list(user, event):
     if user_event_info.can_book_or_cancel:
         if user_event_info.can_cancel:
             options["buttons"] = ["toggle_booking"]
-            options["toggle_button"] = {
-                "option": "cancel",
-                "enabled": True, # True/False
-                "text": "",  # Additional text to display with the button
-            }
+            options["toggle_option"] = "cancel"
             return options
         
         if user_event_info.can_rebook:
             options["buttons"] = ["toggle_booking"]
-            options["toggle_button"] = {
-                "option": "rebook",
-                "enabled": True, # True/False
-                "text": "",  # Additional text to display with the button
-            }
+            options["toggle_option"] = "rebook"
             return options
 
         assert user_event_info.can_book
@@ -164,11 +162,7 @@ def button_options_events_list(user, event):
                         return {**options, "buttons": [], "text": text}
                     else:
                         options["buttons"] = ["toggle_booking"]
-                        options["toggle_button"] = {
-                            "option": "book_dropin",
-                            "enabled": True, # True/False
-                            "text": "",  # Additional text to display with the button
-                        }
+                        options["toggle_option"] = "book_dropin"
                         return options
                 else:
                     options["buttons"] = ["payment_options", "add_to_basket"]
@@ -182,11 +176,7 @@ def button_options_events_list(user, event):
             return options
         elif user_event_info.has_available_drop_in_block or user_event_info.has_available_subscription:
             options["buttons"] = ["toggle_booking"]
-            options["toggle_button"] = {
-                "option": "book_dropin",
-                "enabled": True, # True/False
-                "text": "",  # Additional text to display with the button
-            }
+            options["toggle_option"] = "book_dropin"
             return options
         else:
             options["buttons"] = ["payment_options", "add_to_basket"]
@@ -212,6 +202,10 @@ def button_options_course_events_list(user, event):
         # event is cancelled or past
         return options
 
+    if user_event_info.booking_in_basket:
+        options["text"] = "in basket"
+        return options
+        
     # course events list page
     # waiting list buttons
     # if event allows drop in, we can show waiting list and book buttons
@@ -223,20 +217,12 @@ def button_options_course_events_list(user, event):
     if user_event_info.can_book_or_cancel:
         if user_event_info.can_cancel:
             options["buttons"] = ["toggle_booking"]
-            options["toggle_button"] = {
-                "option": "cancel",
-                "enabled": True, # True/False
-                "text": "",  # Additional text to display with the button
-            }
+            options["toggle_option"] = "cancel"
             return options
         
         if user_event_info.can_rebook:
             options["buttons"] = ["toggle_booking"]
-            options["toggle_button"] = {
-                "option": "rebook",
-                "enabled": True, # True/False
-                "text": "",  # Additional text to display with the button
-            }
+            options["toggle_option"] = "rebook",
             return options
 
         if user_event_info.has_available_block:
@@ -248,11 +234,7 @@ def button_options_course_events_list(user, event):
                     options["buttons"] = ["add_course_to_basket"]
                 if event.course.allow_drop_in:
                     options["buttons"].append("toggle_booking")
-                    options["toggle_button"] = {
-                        "option": "book_dropin",
-                        "enabled": True, # True/False
-                        "text": "",  # Additional text to display with the button
-                    }
+                    options["toggle_option"] = "book_dropin"
                 return options
             # user definitely has a course block and MAY have a drop in block too
             if not event.course.has_started:
@@ -264,11 +246,7 @@ def button_options_course_events_list(user, event):
                     # if they've already booked drop in, either show dropin option, or add note about drop-in booking
                     if user_event_info.has_available_drop_in_block:
                         options["buttons"] = ["toggle_booking"]
-                        options["toggle_button"] = {
-                            "option": "book_dropin",
-                            "enabled": True, # True/False
-                            "text": "",  # Additional text to display with the button
-                        }
+                        options["toggle_option"] = "book_dropin"
                         return options
                     else:
                         options["buttons"] = ["add_to_basket"]
@@ -278,11 +256,7 @@ def button_options_course_events_list(user, event):
                 if event.course.allow_drop_in:
                     if user_event_info.has_available_drop_in_block:
                         options["buttons"] = ["toggle_booking"]
-                        options["toggle_button"] = {
-                            "option": "book_dropin",
-                            "enabled": True, # True/False
-                            "text": "",  # Additional text to display with the button
-                        }
+                        options["toggle_option"] = "book_dropin"
                         return options
                     else:
                         options["buttons"] = ["add_to_basket"]
@@ -440,15 +414,15 @@ def booking_list_button(booking, history=False):
 
     if user_can_book_or_cancel(booking.event, booking):
         if can_cancel(booking):
-            options["button"] = "toggle_button"
+            options["button"] = "toggle_booking"
             options["toggle_option"] = "cancel"
         elif can_rebook(booking, booking.event):
             # this is course no-shows only
-            options["button"] = "toggle_button"
+            options["button"] = "toggle_booking"
             options["toggle_option"] = "rebook"
         elif can_book(booking, booking.event):
             if has_available_block(booking.user, booking.event):
-                options["button"] = "toggle_button"
+                options["button"] = "toggle_booking"
                 options["toggle_option"] = "book"
             else:
                 track_url = reverse("booking:events", args=(booking.event.event_type.track.slug,))

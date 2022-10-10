@@ -10,7 +10,7 @@
  */
 var MILLS_TO_IGNORE = 500;
 
-var processBookingToggleRequest = function()  {
+var processBookingAddToBasket = function()  {
 
     //In this scope, "this" is the button just clicked on.
     //The "this" in processResult is *not* the button just clicked
@@ -19,10 +19,8 @@ var processBookingToggleRequest = function()  {
 
     //The value of the "data-event_id" attribute.
     var event_id = $button_just_clicked_on.data('event_id');
-    var event_str = $button_just_clicked_on.data('event_str');
     var user_id = $button_just_clicked_on.data('user_id');
     var ref = $button_just_clicked_on.data('ref');
-    var page = $button_just_clicked_on.data('page');
     var show_warning = $button_just_clicked_on.data('show_warning');
     var cancellation_allowed = $button_just_clicked_on.data('cancellation_allowed');
 
@@ -76,20 +74,18 @@ var processBookingToggleRequest = function()  {
           }
           else {
             $("#loader_" + event_id).removeClass("fa fa-spinner fa-spin").hide();
-            $('#book_' + event_id).html(result.html);
-            $('#block_info_' + event_id).html(result.block_info_html);
+            $('#book_' + event_id).html(result.button_html);
+
             $('#availability_' + event_id).html(result.event_availability_html);
             $('#availability_xs_' + event_id).html(result.event_availability_html);
             $('#event_info_xs_' + event_id).html(result.event_info_xs_html);
-              if (result.just_cancelled) {
-                $('#booked_tick_' + event_id).hide();
-                $('#cancelled-text-' + event_id).text("You have cancelled this booking")  ;
-                $('#list-item-' + event_id).addClass("list-group-item-secondary text-secondary");
-              } else {
-                $('#booked_tick_' + event_id).show();
-                $('#cancelled-text-' + event_id).text("");
-                $('#list-item-' + event_id).removeClass("list-group-item-secondary text-secondary");
-              }
+            $('#button_text_' + event_id).html(result.button_text);
+
+            $('#cancelled-text-' + event_id).text("");
+            $('#list-item-' + event_id).removeClass("list-group-item-secondary text-secondary");
+            $('#add_to_basket_' + event_id).text("in basket");
+            $('#add_course_to_basket_' + course_id).hide();
+            $('#payment_options_' + event_id).hide();
           }
        };
 
@@ -103,109 +99,19 @@ var processBookingToggleRequest = function()  {
 
        $.ajax(
            {
-              url: '/ajax-toggle-booking/' + event_id + '/',
+              url: '/ajax-add-booking-to-basket/',
               dataType: 'json',
               type: 'POST',
-              data: {csrfmiddlewaretoken: window.CSRF_TOKEN, "user_id": user_id, "ref": ref, 'page': page},
+              data: {csrfmiddlewaretoken: window.CSRF_TOKEN, "event_id": event_id, "user_id": user_id, "ref": ref},
               beforeSend: function() {$("#loader_" + event_id).addClass("fa fa-spinner fa-spin").show()},
               success: processResult,
               //Should also have a "fail" call as well.
               complete: function() {$("#loader_" + event_id).removeClass("fa fa-spinner fa-spin").hide();},
               error: processFailure
            }
-       ).done(
-           function( ) {
-                $('[data-toggle="tooltip"]').tooltip();
-            }
        );
     }
 
-};
-
-var processCourseBookingRequest = function()  {
-
-    //In this scope, "this" is the button just clicked on.
-    //The "this" in processResult is *not* the button just clicked
-    //on.
-    var $button_just_clicked_on = $(this);
-
-    //The value of the "data-event_id" attribute.
-    var course_id = $button_just_clicked_on.data('course_id');
-    var user_id = $button_just_clicked_on.data('user_id');
-    var ref = $button_just_clicked_on.data('ref');
-    var page = $button_just_clicked_on.data('page');
-    
-    doTheCourseAjax()
-
-    function doTheCourseAjax () {
-        var processResult = function(
-           result, status, jqXHR)  {
-          //console.log("sf result='" + result + "', status='" + status + "', jqXHR='" + jqXHR + "'");
-          if (result.redirect) {
-            window.location = result.url;
-          }
-          else {
-            $("#loader_" + course_id).removeClass("fa fa-spinner fa-spin").hide();
-            $('#book_course_' + course_id).html(result.html);
-          }
-       };
-
-        var processFailure = function(
-           result, status, jqXHR)  {
-          //console.log("sf result='" + result + "', status='" + status + "', jqXHR='" + jqXHR + "'");
-          if (result.responseText) {
-            vNotify.error({text:result.responseText,title:'Error',position: 'bottomRight'});
-          }
-       };
-
-       $.ajax(
-           {
-                url: '/ajax-course-booking/' + course_id + "/",
-                dataType: 'json',
-                type: 'POST',
-                data: {csrfmiddlewaretoken: window.CSRF_TOKEN, "user_id": user_id, "ref": ref, 'page': page},
-                beforeSend: function() {$("#loader_" + course_id).addClass("fa fa-spinner fa-spin").show();},
-                success: processResult,
-                //Should also have a "fail" call as well.
-                complete: function() {$("#loader_" + course_id).removeClass("fa fa-spinner fa-spin").hide();},
-                error: processFailure
-           }
-       );
-
-    }
-};
-
-
-/**
-   Executes a toggle click. Triggered by clicks on the waiting list button.
- */
-var toggleWaitingList = function()  {
-
-    //In this scope, "this" is the button just clicked on.
-    //The "this" in processResult is *not* the button just clicked
-    //on.
-    var $button_just_clicked_on = $(this);
-
-    //The value of the "data-event_id" attribute.
-    var event_id = $button_just_clicked_on.data('event_id');
-    var user_id = $button_just_clicked_on.data('user_id');
-
-    var processResult = function(
-       result, status, jqXHR)  {
-      //console.log("sf result='" + result + "', status='" + status + "', jqXHR='" + jqXHR + "', user_id='" + user_id + "'");
-        $('#waiting_list_button_' + event_id).html(result);
-   };
-
-   $.ajax(
-       {
-          url: '/ajax-toggle-waiting-list/' + event_id + '/',
-          type: 'POST',
-          data: {csrfmiddlewaretoken: window.CSRF_TOKEN, "user_id": user_id},
-          dataType: 'html',
-          success: processResult
-          //Should also have a "fail" call as well.
-       }
-    );
 };
 
 
@@ -237,13 +143,7 @@ $(document).ready(function()  {
     would attach a *second* listener to every button, meaning each
     click would be processed twice.
    */
-  $('.ajax_events_btn').click(_.debounce(processBookingToggleRequest, MILLS_TO_IGNORE, true));
-  $('.ajax_course_events_btn').click(_.debounce(processCourseBookingRequest, MILLS_TO_IGNORE, true));
-  $('.ajax_events_waiting_list_btn').click(_.debounce(toggleWaitingList, MILLS_TO_IGNORE, true));
-
-  $( ".event_info_popover" ).on('click', 'a', function( event ) {
-    console.log("Clicked the popover");
-});
+  $('.ajax_add_to_basket_btn').click(_.debounce(processBookingAddToBasket, MILLS_TO_IGNORE, true));
 
   /*
     Warning: Placing the true parameter outside of the debounce call:

@@ -1,5 +1,6 @@
 from datetime import timedelta
 
+from django.db.models import Count
 from django.urls import reverse
 from django.shortcuts import HttpResponseRedirect
 from django.utils import timezone
@@ -48,9 +49,11 @@ def _managed_user_plus_self(user):
 
 
 def get_unpaid_user_managed_blocks(user):
+    # order by bookings count then user id
+    # this puts all direct purchases (single blocks with associated bookings) first
     return Block.objects.filter(
         user__in=_managed_user_plus_self(user), paid=False
-    ).order_by('user_id', "id")
+    ).annotate(count=Count('bookings__id')).order_by("-count", 'user_id', "id")
 
 
 def get_unpaid_user_managed_subscriptions(user):

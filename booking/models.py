@@ -518,6 +518,7 @@ class Block(models.Model):
     user = models.ForeignKey(User, related_name='blocks', on_delete=models.CASCADE)
     block_config = models.ForeignKey(BlockConfig, on_delete=models.CASCADE)
     purchase_date = models.DateTimeField(default=timezone.now)
+    created_date = models.DateTimeField(default=timezone.now)
     start_date = models.DateTimeField(null=True, blank=True)
     paid = models.BooleanField(default=False, help_text='Payment has been made by user')
 
@@ -536,7 +537,7 @@ class Block(models.Model):
             ]
 
     def __str__(self):
-        return f"{self.user.username} -- {self.block_config} -- purchased {self.purchase_date.strftime('%d %b %Y')}"
+        return f"{self.user.username} -- {self.block_config} -- created {self.created_date.strftime('%d %b %Y')}"
 
     @property
     def cost_with_voucher(self):
@@ -1460,6 +1461,9 @@ class Booking(models.Model):
     @property
     def has_available_subscription(self):
         return has_available_subscription(self.user, self.event)
+
+    def is_in_basket(self):
+        return self.block is not None and not self.block.paid
 
     def assign_next_available_subscription_or_block(self, dropin_only=True):
         """

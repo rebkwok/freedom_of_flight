@@ -39,7 +39,6 @@ class EventListViewTests(EventTestMixin, TestUsersMixin, TestCase):
             add_course = None
         return {
             "button_text": soup.find(id=f"button_text_{event.id}"),
-            "toggle_button_text": soup.find(id=f"toggle_button_text_{event.id}"),
             "toggle_booking": soup.find(id=f"book_{event.id}"),
             "add_event": soup.find(id=f"add_to_basket_{event.id}"),
             "add_course": add_course,
@@ -338,7 +337,6 @@ class EventListViewTests(EventTestMixin, TestUsersMixin, TestCase):
             assert buttons[button] is None
         assert "Book Drop-in" in buttons["toggle_booking"].text
         assert buttons["button_text"].text == ""
-        assert buttons["toggle_button_text"].text == ""
 
         # not booked with valid block, booking restricted
         # set the start date to <15 mins ahead (the default booking restriction time)
@@ -358,8 +356,7 @@ class EventListViewTests(EventTestMixin, TestUsersMixin, TestCase):
             assert buttons[button] is None
         assert "Book Drop-in" in buttons["toggle_booking"].text
         assert buttons["button_text"].text == ""
-        assert buttons["toggle_button_text"].text == ""
-
+        
         # no-show, with block
         booking.status = "OPEN"
         booking.block = block
@@ -370,7 +367,6 @@ class EventListViewTests(EventTestMixin, TestUsersMixin, TestCase):
             assert buttons[button] is None
         assert "Book Drop-in" in buttons["toggle_booking"].text
         assert buttons["button_text"].text == ""
-        assert buttons["toggle_button_text"].text == ""
         booking.delete()
 
         # event full
@@ -398,8 +394,7 @@ class EventListViewTests(EventTestMixin, TestUsersMixin, TestCase):
             assert buttons[button] is None
         assert "Cancel" in buttons["toggle_booking"].text
         assert buttons["button_text"].text == ""
-        assert buttons["toggle_button_text"].text == ""
-
+        
     def test_button_display_course_event(self):
         # With a course event, check that the button displays as expected for:
         # - no disclaimer
@@ -485,7 +480,6 @@ class EventListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         for button in ["add_event", "add_course", "payment_options", "waiting_list"]:
             assert buttons[button] is None
         assert "Rebook" in buttons["toggle_booking"].text
-        assert buttons["toggle_button_text"].text == ""
         assert buttons["button_text"].text == ""
         booking.delete()
 
@@ -513,7 +507,6 @@ class EventListViewTests(EventTestMixin, TestUsersMixin, TestCase):
             assert buttons[button] is None
         assert "Cancel" in buttons["toggle_booking"].text
         assert buttons["button_text"].text == ""
-        assert buttons["toggle_button_text"].text == ""
 
     def test_button_display_course_event_drop_in_allowed(self):
         # With a course event that allows drop-in, check that the button displays as expected for:
@@ -612,7 +605,6 @@ class EventListViewTests(EventTestMixin, TestUsersMixin, TestCase):
             assert buttons[button] is None
         assert buttons["button_text"].text  == ""
         assert "Book Drop-in" in buttons["toggle_booking"].text
-        assert buttons["toggle_button_text"].text == ""
 
         # Make course full
         for courseevent in self.course.events.all():
@@ -646,8 +638,7 @@ class EventListViewTests(EventTestMixin, TestUsersMixin, TestCase):
             assert buttons[button] is None
         assert buttons["button_text"].text  == ""
         assert "Rebook" in buttons["toggle_booking"].text
-        assert buttons["toggle_button_text"].text == ""
-
+        
         # event full, has open booking
         # delete the first open booking so we can make one for this user
         event.bookings.filter(status="OPEN").first().delete()
@@ -660,7 +651,6 @@ class EventListViewTests(EventTestMixin, TestUsersMixin, TestCase):
             assert buttons[button] is None
         assert buttons["button_text"].text  == ""
         assert "Cancel" in buttons["toggle_booking"].text
-        assert buttons["toggle_button_text"].text == ""
 
         # get rid of the other bookings
         Booking.objects.exclude(id=booking.id).delete()
@@ -802,34 +792,32 @@ class CourseEventsListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         baker.make(Booking, event=self.course_event, user=self.student_user)
         baker.make(Booking, event=self.course_event1, user=self.student_user)
         resp = self.client.get(self.url)
-        assert resp.context_data["already_booked"] is True
+        assert resp.context_data["book_course_button_options"]["pre_button_text"] == "Student User is attending this course."
     
     def test_course_list_with_booked_course_unenroll(self):
         booking = baker.make(Booking, event=self.course_event, user=self.student_user)
         booking1 = baker.make(Booking, event=self.course_event1, user=self.student_user)
         resp = self.client.get(self.url)
-        assert resp.context_data["already_booked"] is True
-        assert resp.context_data["can_unenroll"] is True
+        resp.context_data["book_course_button_options"]["button"] == "unenroll"
 
         for bk in [booking, booking1]:
             bk.date_booked = timezone.now() - timedelta(hours=26)
             bk.save()
         resp = self.client.get(self.url)
-        assert resp.context_data["already_booked"] is True
-        assert resp.context_data["can_unenroll"] is False
+        resp.context_data["book_course_button_options"]["button"] == ""
 
         for bk in [booking, booking1]:
             bk.date_booked = timezone.now()
             bk.save()
         resp = self.client.get(self.url)
-        assert resp.context_data["can_unenroll"] is True
+        resp.context_data["book_course_button_options"]["button"] == "unenroll"
 
         self.course_event.start = timezone.now() - timedelta(hours=2)
         self.course_event.save()
         self.course.refresh_from_db()
         assert self.course.has_started
         resp = self.client.get(self.url)
-        assert resp.context_data["can_unenroll"] is False
+        resp.context_data["book_course_button_options"]["button"] == ""
 
     def test_course_list_with_booked_events_manager_user(self):
         """
@@ -842,26 +830,28 @@ class CourseEventsListViewTests(EventTestMixin, TestUsersMixin, TestCase):
 
         resp = self.client.get(self.url)
         self.make_disclaimer(self.child_user)
-        assert "You need a payment plan to book this course" in resp.rendered_content
         # check there are no booked events yet
-        assert resp.context_data["already_booked"] is False
+        resp.context_data["book_course_button_options"]["button"] == ""
 
         # create a booking for the managed user
         baker.make(Booking, event=self.course_event, user=self.child_user)
         baker.make(Booking, event=self.course_event1, user=self.child_user)
         resp = self.client.get(self.url)
-        assert "You need a payment plan to book this course" not in resp.rendered_content
-        assert resp.context_data["already_booked"] is True
+        resp.context_data["book_course_button_options"]["button"] == ""
 
     def _get_book_course_button(self, course):
         response = self.client.get(self.url)
         soup = BeautifulSoup(response.rendered_content, features="html.parser")
-        return {
+        buttons = {
             "pre_text": soup.find(id="course_button_pre_text"),
             "post_text": soup.find(id="course_button_post_text"),
             "book_button": soup.find(id=f"book_course_{course.id}"),
             "unenroll": soup.find(id="unenroll"),
         }
+        for button_key in buttons:
+            if buttons[button_key]:
+                buttons[button_key] = buttons[button_key].text.replace("\n", "")
+        return buttons
 
     def test_button_display_course_event(self):
         # With a course event, check that the button displays as expected for:
@@ -890,17 +880,17 @@ class CourseEventsListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         # not booked, has disclaimer. No booking button; events will show add to basket buttons        self.make_disclaimer(self.student_user)
         button = self._get_book_course_button(self.course)
         assert button["book_button"] is None
-        assert button["unenroll"] is None
-        assert button["pre_text"].text.replace('\n', '') == ""
-        assert button["post_text"].text.replace('\n', '') == ""
+        assert not button["unenroll"]
+        assert button["pre_text"] == ""
+        assert button["post_text"] == ""
 
         # cancelled, no block.
         booking = baker.make(Booking, user=self.student_user, event=event, status="CANCELLED")
         button = self._get_book_course_button(self.course)
         assert button["book_button"] is None
-        assert button["unenroll"] is None
-        assert button["pre_text"].text.replace('\n', '') == ""
-        assert button["post_text"].text.replace('\n', '') == ""
+        assert not button["unenroll"]
+        assert button["pre_text"] == ""
+        assert button["post_text"] == ""
         booking.delete()
 
         # not booked with valid block
@@ -909,18 +899,18 @@ class CourseEventsListViewTests(EventTestMixin, TestUsersMixin, TestCase):
             block_config__size=1, user=self.student_user, paid=True
         )
         button = self._get_book_course_button(self.course)
-        assert "Book Course" in button["book_button"].text
-        assert button["unenroll"] is None
-        assert "Payment plan available" in button["pre_text"].text
-        assert button["post_text"].text.replace('\n', '') == ""
+        assert "Book Course" in button["book_button"]
+        assert not button["unenroll"]
+        assert "Payment plan available" in button["pre_text"]
+        assert button["post_text"] == ""
 
         # cancelled, with block
         booking = baker.make(Booking, user=self.student_user, event=event, status="CANCELLED")
         button = self._get_book_course_button(self.course)
-        assert "Book Course" in button["book_button"].text
-        assert button["unenroll"] is None
-        assert "Payment plan available" in button["pre_text"].text
-        assert button["post_text"].text.replace('\n', '') == ""
+        assert "Book Course" in button["book_button"]
+        assert not button["unenroll"]
+        assert "Payment plan available" in button["pre_text"]
+        assert button["post_text"] == ""
 
         # no-show, with block; considered already booked
         booking.status = "OPEN"
@@ -928,44 +918,44 @@ class CourseEventsListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         booking.save()
         button = self._get_book_course_button(self.course)
         assert button["book_button"] is None
-        assert button["unenroll"] is not None
-        assert "Student User is attending this course" in button["pre_text"].text
-        assert "You can reschedule your course" in button["post_text"].text
+        assert button["unenroll"] == ""  # unenroll is a form, no text == ""
+        assert "Student User is attending this course" in button["pre_text"]
+        assert "You can reschedule your course" in button["post_text"]
         booking.delete()
 
         # event full
         baker.make(Booking, event=event, _quantity=event.max_participants)
         button = self._get_book_course_button(self.course)
         assert button["book_button"] is None
-        assert button["unenroll"] is None
-        assert "This course is full" in button["pre_text"].text
-        assert button["post_text"].text.replace('\n', '') == ""
+        assert not button["unenroll"]
+        assert "This course is full" in button["pre_text"]
+        assert button["post_text"] == ""
 
         # event full, on waiting list
         baker.make(WaitingListUser, event=event, user=self.student_user)
         button = self._get_book_course_button(self.course)
         assert button["book_button"] is None
-        assert button["unenroll"] is None
-        assert "This course is full" in button["pre_text"].text
-        assert button["post_text"].text.replace('\n', '') == ""
+        assert not button["unenroll"]
+        assert "This course is full" in button["pre_text"]
+        assert button["post_text"] == ""
 
         # event full, has booking
         Booking.objects.all().delete()
         booking = baker.make(Booking, user=self.student_user, event=event, block=block)
         button = self._get_book_course_button(self.course)
         assert button["book_button"] is None
-        assert button["unenroll"] is not None
-        assert "Student User is attending this course" in button["pre_text"].text
-        assert "You can reschedule your course" in button["post_text"].text
+        assert button["unenroll"] == ""  # unenroll is a form, no text
+        assert "Student User is attending this course" in button["pre_text"]
+        assert "You can reschedule your course" in button["post_text"]
 
         # has booking made < 24 hrs ago
         booking.date_booked = timezone.now() - timedelta(hours=25)
         booking.save()
         button = self._get_book_course_button(self.course)
         assert button["book_button"] is None
-        assert button["unenroll"] is None
-        assert "Student User is attending this course" in button["pre_text"].text
-        assert button["post_text"].text.replace('\n', '') == ""
+        assert not button["unenroll"]
+        assert "Student User is attending this course" in button["pre_text"]
+        assert button["post_text"] == ""
 
         Booking.objects.all().delete()
         self.course.number_of_events = 2
@@ -974,10 +964,9 @@ class CourseEventsListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         assert self.course.has_started
         button = self._get_book_course_button(self.course)
         assert button["book_button"] is None
-        assert button["unenroll"] is None
-        assert "This course has started" in button["pre_text"].text
-        assert button["post_text"].text.replace('\n', '') == ""
-
+        assert not button["unenroll"]
+        assert "This course has started" in button["pre_text"]
+        assert button["post_text"] == ""
 
     def test_button_display_course_event_drop_in_allowed(self):
         # With a course event, check that the button displays as expected for:
@@ -990,11 +979,6 @@ class CourseEventsListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         # - course full and cancelled/no-show
         # - event cancelled
         # - on waiting list
-        def _element_from_response_by_id(element_id):
-            response = self.client.get(self.url)
-            soup = BeautifulSoup(response.rendered_content, features="html.parser")
-            return soup.find(id=element_id)
-
         Event.objects.all().delete()
         self.course.number_of_events = 1
         self.course.allow_drop_in = True
@@ -1009,17 +993,19 @@ class CourseEventsListViewTests(EventTestMixin, TestUsersMixin, TestCase):
 
         # not booked, has disclaimer. Booking button for individual events is shown
         self.make_disclaimer(self.student_user)
-        book_button = _element_from_response_by_id(f"book_{event.id}")
-        assert "Payment Options" in book_button.text
-        course_book_button = _element_from_response_by_id(f"book_course_{self.course.id}")
-        assert "You need a payment plan to book this course" in course_book_button.text
+        button = self._get_book_course_button(self.course)
+        assert button["book_button"] is None
+        assert not button["unenroll"]
+        assert "You can book the full course or drop in" in button["pre_text"]
+        assert "To book drop in, either add classes" in button["post_text"]
 
         # cancelled, no block.  Booking button for individual events is shown
         booking = baker.make(Booking, user=self.student_user, event=event, status="CANCELLED")
-        book_button = _element_from_response_by_id(f"book_{event.id}")
-        assert "Payment Options" in book_button.text
-        course_book_button = _element_from_response_by_id(f"book_course_{self.course.id}")
-        assert "You need a payment plan to book this course" in course_book_button.text
+        button = self._get_book_course_button(self.course)
+        assert button["book_button"] is None
+        assert not button["unenroll"]
+        assert "You can book the full course or drop in" in button["pre_text"]
+        assert "To book drop in, either add classes" in button["post_text"]
         booking.delete()
 
         # not booked with valid course block
@@ -1027,78 +1013,78 @@ class CourseEventsListViewTests(EventTestMixin, TestUsersMixin, TestCase):
             "booking.course_block", block_config__event_type=self.aerial_event_type,
             block_config__size=1, user=self.student_user, paid=True
         )
-        book_button = _element_from_response_by_id(f"book_{event.id}")
-        assert "Use the button above to book the course" in book_button.text
-        course_book_button = _element_from_response_by_id(f"book_course_{self.course.id}")
-        assert "Book Course" in course_book_button.text
+        button = self._get_book_course_button(self.course)
+        assert "Book Course" in button["book_button"]
+        assert not button["unenroll"]
+        assert "You can book the full course or drop in" in button["pre_text"]
+        assert "To book drop in, either add classes" in button["post_text"]
 
         # not booked with valid drop in block and course block, shows same as course block only
         dropin_block = baker.make_recipe(
             "booking.dropin_block", block_config__event_type=self.aerial_event_type,
             block_config__size=1, user=self.student_user, paid=True
         )
-        book_button = _element_from_response_by_id(f"book_{event.id}")
-        assert "Use the button above to book the course" in book_button.text
-        course_book_button = _element_from_response_by_id(
-            f"book_course_{self.course.id}")
-        assert "Book Course" in course_book_button.text
+        button = self._get_book_course_button(self.course)
+        assert "Book Course" in button["book_button"]
+        assert not button["unenroll"]
+        assert "You can book the full course or drop in" in button["pre_text"]
+        assert "You have an available drop-in payment plan" in button["post_text"]
 
         # not booked with valid dropin block only
         course_block.paid = False
         course_block.save()
-        book_button = _element_from_response_by_id(f"book_{event.id}")
-        assert "Book Drop-in" in book_button.text
-        course_book_button = _element_from_response_by_id(f"book_course_{self.course.id}")
-        assert "You can book individual classes on this course as drop in" in course_book_button.text
-        assert "You can also book the full course; go to the payment plans" in course_book_button.text
-
+        button = self._get_book_course_button(self.course)
+        assert button["book_button"] is None
+        assert not button["unenroll"]
+        assert "You can book the full course or drop in" in button["pre_text"]
+        assert "You have an available drop-in payment plan" in button["post_text"]
+        
         # cancelled, with dropin block
         booking = baker.make(Booking, user=self.student_user, event=event, status="CANCELLED")
-        book_button = _element_from_response_by_id(f"book_{event.id}")
-        assert "Book Drop-in" in book_button.text
-        course_book_button = _element_from_response_by_id(f"book_course_{self.course.id}")
-        assert "You can book individual classes on this course as drop in" in course_book_button.text
+        button = self._get_book_course_button(self.course)
+        assert button["book_button"] is None
+        assert not button["unenroll"]
+        assert "You can book the full course or drop in" in button["pre_text"]
+        assert "You have an available drop-in payment plan" in button["post_text"]
 
-        # no-show, with block
+        # no-show, with course block
+        booking.block = course_block
         booking.status = "OPEN"
         booking.no_show = True
         booking.save()
-        book_button = _element_from_response_by_id(f"book_{event.id}")
-        assert "Rebook" in book_button.text
-        course_book_button = _element_from_response_by_id(f"book_course_{self.course.id}")
-        assert "Student User is attending this course" in course_book_button.text
+        button = self._get_book_course_button(self.course)
+        assert button["book_button"] is None
+        assert button["unenroll"] == ""  # unenroll is a form, no text
+        assert "Student User is attending this course" in button["pre_text"]
+        assert "You can reschedule" in button["post_text"]
         booking.delete()
 
-        # event full; dropin allowed, shows waiting list
+        # event full; dropin allowed
         baker.make(Booking, event=event, _quantity=event.max_participants)
-        waiting_list_button = _element_from_response_by_id(f"waiting_list_button_{event.id}")
-        assert "Join waiting list" in waiting_list_button.text
-        course_book_button = _element_from_response_by_id(f"book_course_{self.course.id}")
-        assert "This course is now full" in course_book_button.text
-
-        # event full, on waiting list
-        baker.make(WaitingListUser, event=event, user=self.student_user)
-        waiting_list_button = _element_from_response_by_id(f"waiting_list_button_{event.id}")
-        assert "Leave waiting list" in waiting_list_button.text
-        course_book_button = _element_from_response_by_id(f"book_course_{self.course.id}")
-        assert "This course is now full" in course_book_button.text
+        button = self._get_book_course_button(self.course)
+        assert button["book_button"] is None
+        assert not button["unenroll"]
+        assert "This course is full" in button["pre_text"]
+        assert button["post_text"] == ""
 
         # event full, has booking on course block
         course_block.paid = True
         course_block.save()
         Booking.objects.all().delete()
         baker.make(Booking, user=self.student_user, event=event, block=course_block)
-        book_button = _element_from_response_by_id(f"book_{event.id}")
-        assert "Cancel" in book_button.text
-        course_book_button = _element_from_response_by_id(f"book_course_{self.course.id}")
-        assert "Student User is attending this course" in course_book_button.text
+        button = self._get_book_course_button(self.course)
+        assert button["book_button"] is None
+        assert button["unenroll"] == ""  # unenroll is a form, no text
+        assert "Student User is attending this course" in button["pre_text"]
+        assert "You can reschedule" in button["post_text"]
 
         # event full, has booking on dropin block
         course_block.paid = False
         course_block.save()
         Booking.objects.all().delete()
         baker.make(Booking, user=self.student_user, event=event, block=dropin_block)
-        book_button = _element_from_response_by_id(f"book_{event.id}")
-        assert "Cancel" in book_button.text
-        course_book_button = _element_from_response_by_id(f"book_course_{self.course.id}")
-        assert "Student User is attending this course" in course_book_button.text
+        button = self._get_book_course_button(self.course)
+        assert button["book_button"] is None
+        assert button["unenroll"] == ""  # unenroll is a form, no text
+        assert "Student User is attending this course" in button["pre_text"]
+        assert "You can reschedule" in button["post_text"]

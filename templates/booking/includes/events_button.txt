@@ -13,11 +13,10 @@
 {% endif %}
 
 
-<span id="toggle_button_text_{{ event.id }}">{{ button_info.toggle_button.text }}</span>
-{% if button_info.toggle_button.option == "cancel"  %}
+{% if button_info.toggle_option == "cancel"  %}
     <div class="btn btn-xs btn-xs-narrow btn-dark float-right" href="#"><i id="loader_{{ event.id }}"></i> Cancel</div>
-{% elif button_info.toggle_button.option == "book_dropin"  %}
+{% elif button_info.toggle_option == "book_dropin"  %}
     <div class="btn btn-xs btn-xs-narrow btn-success float-right" href="#"><i id="loader_{{ event.id }}"></i> Book Drop-in</div>
-{% elif button_info.toggle_button.option == "rebook"  %}
+{% elif button_info.toggle_option == "rebook"  %}
     <div class="btn btn-xs btn-xs-narrow btn-success float-right" href="#"><i id="loader_{{ event.id }}"></i> Rebook</div>
 {% endif %}

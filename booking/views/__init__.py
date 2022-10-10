@@ -1,6 +1,7 @@
 from .ajax_views import (
     ajax_course_booking, ajax_toggle_booking, ajax_toggle_waiting_list,
-    ajax_block_purchase, ajax_subscription_purchase, ajax_cart_item_delete
+    ajax_block_purchase, ajax_subscription_purchase, ajax_cart_item_delete,
+    ajax_add_booking_to_basket,
 )
 
 from .block_views import BlockListView, BlockDetailView

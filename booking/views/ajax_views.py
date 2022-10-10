@@ -22,7 +22,7 @@ from merchandise.models import ProductPurchase
 
 from common.utils import full_name, start_of_day_in_utc
 from ..models import Booking, Block, Course, Event, WaitingListUser, BlockConfig, Subscription, \
-    SubscriptionConfig, GiftVoucher
+    SubscriptionConfig, GiftVoucher, valid_dropin_block_configs
 from ..utils import (
     calculate_user_cart_total, has_available_block, has_available_subscription,
     get_active_user_course_block,
@@ -263,8 +263,6 @@ def ajax_toggle_booking(request, event_id):
             messages.success(request, f"{event}: {alert_message['message']}")
             if ref == "bookings":
                 url = reverse("booking:bookings")
-            elif ref == "course_events":
-                url = reverse("booking:course_events", args=(event.course.slug,))
             else:
                 url = reverse("booking:events", args=(event.event_type.track.slug,))
             return JsonResponse({"redirect": True, "url": url + f"?page={page}"})
@@ -292,6 +290,8 @@ def ajax_toggle_booking(request, event_id):
     return JsonResponse(
         {
             "html": html,
+            "button_text": button_info["text"],
+            "hide_payment_button": "payment_options" not in button_info["buttons"],
             "block_info_html": block_info_html,
             "event_availability_html": event_availability_html,
             "event_info_xs_html": event_info_xs_html,
@@ -405,13 +405,17 @@ def ajax_cart_item_delete(request):
     item = get_object_or_404(ITEM_TYPE_MODEL_MAPPING[item_type], pk=item_id)
     refresh = False
     if request.user.is_authenticated:
-        if isinstance(item, Block) and item.voucher is not None and item.voucher.item_count > 1:
-            refresh = True
+        if isinstance(item, Block):
+            if item.voucher is not None and item.voucher.item_count > 1:
+                refresh = True
+            # delete any bookings attached to this block
+            item.bookings.all().delete()
         item.delete()
         if refresh:
             url = reverse('booking:shopping_basket')
             return JsonResponse({"redirect": True, "url": url})
         unpaid_blocks = get_unpaid_user_managed_blocks(request.user)
+        unpaid_bookingss = get_unpaid_user_managed_bookings(request.user)
         unpaid_subscriptions = get_unpaid_user_managed_subscriptions(request.user)
         unpaid_gift_vouchers = get_unpaid_user_gift_vouchers(request.user)
         unpaid_merchandise = get_unpaid_user_merchandise(request.user)
@@ -557,17 +561,63 @@ def ajax_add_booking_to_basket(request):
     shopping cart/checkout - display blocks with attached booking as booking (hide block info)
     booking buttons need to also show "payment pending" instead of "booked" where bookings are
     made but blocks not yet paid
+    ADMIN - if admin user adds a booking, either need to force it to be paid, or flag so it
+    doesn't get deleted
     """
-    user = get_object_or_404(User, pk=request.POST["user_id"])
+    user_id = request.POST["user_id"]
+    if str(user_id) == str(request.user.id):
+        user = request.user
+    else:
+        user = get_object_or_404(User, id=user_id)
     event = get_object_or_404(Event, pk=request.POST["event_id"])
     # we could get here from the events list or course events list 
-    ref = get_object_or_404(Event, pk=request.POST["ref"])
+    ref = request.POST["ref"]
     
     ######################################
     # check event isn't full or cancelled, return error
     # check user isn't already (open) booked, return error
     # get booking if one already exists (could have been previously cancelled)
+
+    if not has_active_disclaimer(user):
+        url = reverse('booking:disclaimer_required', args=(user_id,))
+        return JsonResponse({"redirect": True, "url": url})
+
+    if event.spaces_left <= 0 or event.cancelled:
+        # redirect if full or cancelled:
+        logger.error('Attempt to add to basket for %s event', 'cancelled' if event.cancelled else 'full')
+        return HttpResponseBadRequest(
+            "Sorry, this event {}".format(
+                "has been cancelled" if event.cancelled else "is now full")
+        )
     
+    try:
+        existing_booking = Booking.objects.get(user=user, event=event)
+    except Booking.DoesNotExist:
+        existing_booking = None
+
+    if existing_booking:
+        # redirect if user already has open booking, or if they have a no-show course booking
+        if existing_booking.status == "OPEN" and existing_booking.no_show == False:
+            if existing_booking.block:
+                return HttpResponseBadRequest("Already added to basket")
+            logger.error('Attempt to add to basket with existing open booking for event %s, user %s', event.id, user.username)
+            return HttpResponseBadRequest("Open booking already exists")
+        if event.course and existing_booking.block and existing_booking.no_show:
+            logger.error('Attempt to add to basket with existing no-show course booking for event %s, user %s', event.id, user.username)
+            return HttpResponseBadRequest("Booking can be reopened")
+
+    ######################################
+    # create booking
+    booking, _ = Booking.objects.update_or_create(
+        user=user, event=event, defaults={"status": "OPEN", "no_show": False}
+    )
+    # create block
+    single_block_config = valid_dropin_block_configs(event=event).filter(size=1).first()
+    block = Block.objects.create(block_config=single_block_config, user=user, paid=False)
+    # assign unpaid block to booking
+    booking.block = block
+    booking.save()
+
     #######################################
     alert_message = {
         "message_type": "success",
@@ -594,7 +644,6 @@ def ajax_add_booking_to_basket(request):
             "cart_item_menu_count": total_unpaid_item_count(request.user),
         }
     )
-
 
 
 @login_required

@@ -33,8 +33,11 @@ class BookingListView(DataPolicyAgreementRequiredMixin, LoginRequiredMixin, List
     def get_queryset(self):
         cutoff_time = timezone.now() - timedelta(minutes=10)
         view_as_user = get_view_as_user(self.request)
+
+        # exclude bookings with an unpaid block; these are in the cart
         # exclude fully cancelled course bookings - these will have only been cancelled by an admin
         return view_as_user.bookings.filter(event__start__gt=cutoff_time)\
+            .exclude(block__isnull=False, block__paid=False)\
             .exclude(event__course__isnull=False, status="CANCELLED")\
             .order_by('event__start__date', 'event__start__time')
 

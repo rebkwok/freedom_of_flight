@@ -24,11 +24,29 @@
               </thead>
               <tbody>
                 {% if unpaid_block_info %}
-                    <tr><td colspan="2" class="table-secondary"><strong>Credit Blocks</strong></td></tr>
+                    <tr>
+                        <td colspan="2" class="table-secondary"><strong>Bookings and Credit Blocks</strong><br/>
+                        <span class="text-danger">
+                            NOTE: class/course bookings will be removed from your cart after {{ cart_timeout_mins }} minutes
+                        </span>
+                        </td>
+                    </tr>
                 {% endif %}
+
                 {% for block_info in unpaid_block_info %}
                     <tr id="cart-row-block-{{ block_info.block.id }}" class="cart-row-block">
-                        <td class="p-1">{{ block_info.block.block_config }} <span class="badge badge-info">{{ block_info.block.user|full_name }}</span></td>
+                        <td class="p-1">
+                            {% if block_info.block.bookings.exists %}
+                                {% if block_info.block.block_config.course %}
+                                    <strong>Course booking:</strong> {{ block_info.block.bookings.first.event.course }}
+                                {% else %}
+                                    <strong>Booking:</strong> {{ block_info.block.bookings.first.event }}
+                                {% endif %}
+                            {% else %}
+                                <strong>Credit block:</strong> {{ block_info.block.block_config }}
+                            {% endif%} 
+                            <span class="badge badge-info">{{ block_info.block.user|full_name }}</span>
+                        </td>
                         <td class="p-1">
                             <div>Cost: {% if block_info.voucher_applied.discounted_cost is not None %}
                                     <span class="superceded-cost">£{{ block_info.original_cost }}</span> £{{ block_info.voucher_applied.discounted_cost }}
@@ -48,6 +66,7 @@
                             </div>
                         </td>
                     </tr>
+                    {% if not block_info.block.bookings.exists %}
                     <tr>
                         <td colspan="2" id="cart-row-block-warning-{{ block_info.block.id }}" class="cart-row-block-warning">
                                 {% if block_info.block.block_config.course %}
@@ -58,6 +77,7 @@
                             </span>
                         </td>
                     </tr>
+                    {% endif %}
                 {% endfor %}
 
               {% if unpaid_subscription_info %}

@@ -1,5 +1,9 @@
 {% if booking.block %}
-    {{ booking.block.block_config }} <span class='helptext'>(exp: {{ booking.block.expiry_date|date:'d-M-y' }})</span>
+    {% if booking.block.paid %}
+        {{ booking.block.block_config }} <span class='helptext'>(exp: {{ booking.block.expiry_date|date:'d-M-y' }})</span>
+    {% else %}
+    <span class='helptext text-danger'>Payment pending</span>
+    {% endif %}
 {% elif booking.subscription %}
     {{ booking.subscription.config }} <span class='helptext'>(exp: {{ booking.subscription.expiry_date|date:'d-M-y' }})</span>
 {% else %}
