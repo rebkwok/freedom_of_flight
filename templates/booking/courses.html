@@ -54,7 +54,12 @@
                         <li style="list-style: none;" class="ninety-pct"
                             {% if event.is_past %}class="expired"{% endif %}>
                             {{ event.start|date:"D d-M-y, H:i" }}-{{ event.end|date:"H:i" }}
-                            {% if event.id in user_info.booked_event_ids %}<i class="text-success fas fa-check-circle"></i>{% else %}<i class="text-dark fas fa-times-circle"></i>{% endif %}
+                            {% if event.id in user_info.in_basket_event_ids %}
+                                <i class="text-secondary fas fa-shopping-basket"></i>
+                            {% elif event.id in user_info.booked_event_ids %}
+                                <i class="text-success fas fa-check-circle"></i>{% else %}
+                                <i class="text-dark fas fa-times-circle"></i>
+                            {% endif %}
                         </li>
                         {% endfor %}
                         </ul>

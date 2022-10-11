@@ -20,6 +20,7 @@ var processBookingAddToBasket = function()  {
     //The value of the "data-event_id" attribute.
     var event_id = $button_just_clicked_on.data('event_id');
     var user_id = $button_just_clicked_on.data('user_id');
+    var course_id = $button_just_clicked_on.data('course_id');
     var ref = $button_just_clicked_on.data('ref');
     var show_warning = $button_just_clicked_on.data('show_warning');
     var cancellation_allowed = $button_just_clicked_on.data('cancellation_allowed');
@@ -79,12 +80,15 @@ var processBookingAddToBasket = function()  {
             $('#availability_' + event_id).html(result.event_availability_html);
             $('#availability_xs_' + event_id).html(result.event_availability_html);
             $('#event_info_xs_' + event_id).html(result.event_info_xs_html);
-            $('#button_text_' + event_id).html(result.button_text);
-
+            $('#button_text_' + event_id).html(result.button_info.text);
+            $('#booked_tick_' + event_id).removeClass("hidden")
+            $('#booked_tick_' + event_id).html('<i class="text-secondary fas fa-shopping-basket"></i>')
+            $('#cart_item_menu_count').text(result.cart_item_menu_count);
+            
             $('#cancelled-text-' + event_id).text("");
             $('#list-item-' + event_id).removeClass("list-group-item-secondary text-secondary");
-            $('#add_to_basket_' + event_id).text("in basket");
-            $('#add_course_to_basket_' + course_id).hide();
+            $('#add_to_basket_' + event_id).hide();
+            $('#add_course_to_basket_' + event_id).hide();
             $('#payment_options_' + event_id).hide();
           }
        };

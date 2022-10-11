@@ -89,7 +89,13 @@ def _default_button_options(user_event_info):
         text = "is past" if event.course else "has started"
         return {"buttons": [], "text": f"{event.event_type.label.title()} {text}"}, None
         
-    return {"buttons": [], "text": "", "open": user_event_info.open, "in_basket": user_event_info.booking_in_basket}
+    return {
+        "buttons": [], 
+        "text": "", 
+        "open": user_event_info.open, 
+        "in_basket": user_event_info.booking_in_basket,
+        "has_open_booking": user_event_info.has_open_booking
+    }
 
 
 # EVENTS LIST: Book/cancel/payment options/waiting list for individual classes
@@ -112,7 +118,8 @@ def button_options_events_list(user, event):
     # events list page
 
     if user_event_info.booking_in_basket:
-        options["text"] = "in basket"
+        basket_url = reverse("booking:shopping_basket")
+        options["text"] = mark_safe(f"<a href='{basket_url}'>View basket</a>")
         return options
 
     # waiting list buttons
@@ -364,17 +371,21 @@ def course_list_button_info(user, course, user_info):
             "button": "", 
             "text": mark_safe('<i class="text-success fas fa-check-circle"></i> Booked')
         }
+    
+    if user_info["items_in_basket"]:
+        options["text"] = '<i class="text-secondary fas fa-shopping-basket"></i> Item(s) in basket'
     if user_info["has_booked_dropin"]:
         if course.allow_drop_in and not course.all_events_full:
-            return {
-                "button": "", 
-                "text": mark_safe(
-                    '<span class="float-right">'
-                    '<i class="text-success fas fa-check-circle"></i> Booked drop-in'
-                    '</span></br>'
-                    'See course details for other class availability.'
-                )
-            }
+            if options["text"]:
+                options["text"] += "<br/>"
+            options["text"] += '<i class="text-success fas fa-check-circle"></i> Booked drop-in'
+    if user_info["has_booked_dropin"] or user_info["items_in_basket"]:
+        options["text"] = f"<span class='float-right'>{options['text']}</span>"
+        if course.allow_drop_in and not course.all_events_full:
+            options["text"] += "</br><span class='float-right'>See course details for other class availability.</span>"
+            options["text"] = mark_safe(options["text"])
+        return options
+
     if course.full:
         text = "Course is full."
         if course.allow_drop_in and not course.all_events_full:

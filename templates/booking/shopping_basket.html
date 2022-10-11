@@ -40,7 +40,7 @@
                                 {% if block_info.block.block_config.course %}
                                     <strong>Course booking:</strong> {{ block_info.block.bookings.first.event.course }}
                                 {% else %}
-                                    <strong>Booking:</strong> {{ block_info.block.bookings.first.event }}
+                                    <strong>Drop-in booking:</strong> {{ block_info.block.bookings.first.event.name }} {{ block_info.block.bookings.first.event.start|date:'d-M-y H:i' }}
                                 {% endif %}
                             {% else %}
                                 <strong>Credit block:</strong> {{ block_info.block.block_config }}

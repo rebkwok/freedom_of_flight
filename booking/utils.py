@@ -251,8 +251,10 @@ def get_user_booking_info(user, event):
 
 
 def user_course_booking_type(user, course, bookings=None):
+    # check this against PAID bookings only
+    # TODO may need an admin override for admin-added bookings
     if bookings is None:
-        bookings = user.bookings.filter(event__course=course, status="OPEN")
+        bookings = user.bookings.filter(event__course=course, status="OPEN", block__paid=True)
     if bookings:
         booking = bookings.first()
         if booking.block and booking.block.block_config.course:
@@ -263,16 +265,22 @@ def user_course_booking_type(user, course, bookings=None):
 
 def get_user_course_booking_info(user, course):
     bookings = user.bookings.filter(event__course=course, status="OPEN")
+    # booking type for PAID bookings only
     booking_type = user_course_booking_type(user, course, bookings)
     has_booked = booking_type == "course"
+    # open booked events includes unpaid, in-basket
     open_booked_events = bookings.filter(no_show=False).values_list("event_id", flat=True)
     booked_events = bookings.values_list("event_id", flat=True)
+    in_basket_event_ids = [booking.event.id for booking in bookings if booking.is_in_basket()]
+    items_in_basket = bool(in_basket_event_ids)
 
     info = {
         "hide_block_info_divider": True,
         "has_booked_course": has_booked,
         "has_booked_dropin": booking_type == "dropin",
         "has_booked_all": booked_events.count() == course.uncancelled_events.count(),
+        "items_in_basket": items_in_basket,
+        "in_basket_event_ids": in_basket_event_ids,
         "booked_event_ids": open_booked_events,
         "open": open_booked_events.exists(),  # for block info
     }

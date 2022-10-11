@@ -24,7 +24,7 @@ from common.utils import full_name, start_of_day_in_utc
 from ..models import Booking, Block, Course, Event, WaitingListUser, BlockConfig, Subscription, \
     SubscriptionConfig, GiftVoucher, valid_dropin_block_configs
 from ..utils import (
-    calculate_user_cart_total, has_available_block, has_available_subscription,
+    calculate_user_cart_total, get_user_course_booking_info, has_available_block, has_available_subscription,
     get_active_user_course_block,
     get_user_booking_info, get_available_user_subscription, has_available_course_block,
 )
@@ -286,7 +286,12 @@ def ajax_toggle_booking(request, event_id):
         html = render_to_string(f"booking/includes/events_button.txt", context, request)
     block_info_html = render_to_string(f"booking/includes/block_info.html", context, request)
     event_availability_html = render_to_string(f"booking/includes/event_availability_badge.html", {"event": event}, request)
-    event_info_xs_html = render_to_string('booking/includes/event_info_xs.html', {"event": event, "user_info": user_info}, request)
+    event_info_xs_html = render_to_string(
+        'booking/includes/event_info_xs.html', 
+        {"event": event, "user_info": user_info, "button_info": button_info}, 
+        request
+    )
+    
     return JsonResponse(
         {
             "html": html,
@@ -352,8 +357,12 @@ def ajax_course_booking(request, course_id):
     course_block = get_active_user_course_block(user, course)
     # Book all events
     for event in course.events_left:
-        booking, new = Booking.objects.get_or_create(user=user, event=event)
+        booking, _ = Booking.objects.get_or_create(user=user, event=event)
         # Make sure block is assigned and update booking statuses if already created
+        if booking.block and not booking.block.paid and booking.block.block_config.size == 1:
+            # delete any associated unpaid single blocks - these are drop-ins added 
+            # to shopping basket; we're replacing them with a course block
+            booking.block.delete()
         booking.block = course_block
         booking.status = "OPEN"
         booking.no_show = False
@@ -415,7 +424,6 @@ def ajax_cart_item_delete(request):
             url = reverse('booking:shopping_basket')
             return JsonResponse({"redirect": True, "url": url})
         unpaid_blocks = get_unpaid_user_managed_blocks(request.user)
-        unpaid_bookingss = get_unpaid_user_managed_bookings(request.user)
         unpaid_subscriptions = get_unpaid_user_managed_subscriptions(request.user)
         unpaid_gift_vouchers = get_unpaid_user_gift_vouchers(request.user)
         unpaid_merchandise = get_unpaid_user_merchandise(request.user)
@@ -630,18 +638,31 @@ def ajax_add_booking_to_basket(request):
     # update booking button (depending on value of ref)
     # use button_info to update text fields
     if ref == "events":
+        user_info = get_user_booking_info(user, event)
         button_info = button_options_events_list(user, event)
         context["button_info"] = button_info
         button_html = render(request, f"booking/includes/events_button.txt", context)
     elif ref == "course":
         context["booked"] = True
+        user_info = get_user_course_booking_info(user, event.course)
         button_info = button_options_course_events_list(user, event)
+        context["button_info"] = button_info
         button_html = render(request, f"booking/includes/course_events_button.txt", context)
 
+    event_availability_html = render_to_string(f"booking/includes/event_availability_badge.html", {"event": event}, request)
+    event_info_xs_html = render_to_string(
+        'booking/includes/event_info_xs.html', 
+        {"event": event, "user_info": user_info, "button_info": button_info}, 
+        request
+    )
+
     return JsonResponse(
-        {
+        {   
+            "button_info": button_info,
             "button_html": button_html.content.decode("utf-8"),
             "cart_item_menu_count": total_unpaid_item_count(request.user),
+            "event_availability_html": event_availability_html,
+            "event_info_xs_html": event_info_xs_html
         }
     )
 
