@@ -36,6 +36,7 @@ def get_mock_payment_intent(webhook_event_type=None, **params):
 def get_mock_webhook_event(**params):
     webhook_event_type = params.pop("webhook_event_type", "payment_intent.succeeded")
     mock_event = Mock(
+        account="id1",
         data=Mock(object=get_mock_payment_intent(webhook_event_type, **params)), type=webhook_event_type
     )
     return mock_event
@@ -46,7 +47,7 @@ class StripePaymentCompleteViewTests(TestUsersMixin, TestCase):
 
     def setUp(self):
         self.create_users()
-        baker.make(Seller, site=Site.objects.get_current())
+        baker.make(Seller, site=Site.objects.get_current(), stripe_user_id="id1")
         self.url = reverse("payments:stripe_payment_complete")
 
     @patch("payments.views.stripe.PaymentIntent")
@@ -368,7 +369,7 @@ class StripeWebhookTests(TestUsersMixin, TestCase):
 
     def setUp(self):
         self.create_users()
-        baker.make(Seller, site=Site.objects.get_current())
+        baker.make(Seller, site=Site.objects.get_current(), stripe_user_id="id1")
         self.url = reverse("payments:stripe_webhook")
         self.invoice = baker.make(
             Invoice, invoice_id="foo", amount=10, business_email="testreceiver@test.com",
