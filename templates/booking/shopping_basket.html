@@ -27,7 +27,7 @@
                     <tr>
                         <td colspan="2" class="table-secondary"><strong>Bookings and Credit Blocks</strong><br/>
                         <span class="text-danger">
-                            NOTE: drop-in and course bookings will be removed from your cart after {{ cart_timeout_mins }} minutes
+                            NOTE: drop-in and course bookings will held for {{ cart_timeout_mins }} minutes pending payment
                         </span>
                         </td>
                     </tr>
@@ -40,7 +40,7 @@
                                 {% if block_info.block.block_config.course %}
                                     <strong>Course booking:</strong> {{ block_info.block.bookings.first.event.course }}
                                 {% else %}
-                                    <strong>Drop-in booking:</strong> {{ block_info.block.bookings.first.event.name }} {{ block_info.block.bookings.first.event.start|date:'d-M-y H:i' }}
+                                    <strong>Drop-in booking:</strong> {{ block_info.block.bookings.first.event.name_and_date }}
                                 {% endif %}
                             {% else %}
                                 <strong>Credit block:</strong> {{ block_info.block.block_config }}

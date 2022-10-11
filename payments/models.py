@@ -48,10 +48,20 @@ class Invoice(models.Model):
             if block.voucher:
                 return f"£{block.cost_with_voucher} (voucher applied: {block.voucher.code})"
             return f"£{block.block_config.cost}"
+        
+        def _block_item_name(block):
+            if block.bookings.exists():
+                if block.block_config.course:
+                    return str(block.bookings.first().event.course.name)
+                else:
+                    event = block.bookings.first().event
+                    return event.name_and_date
+            return block.block_config.name
+
         blocks = {
             f"block-{item.id}": {
-                "name": item.block_config.name, "cost": _block_cost_str(item), "user": item.user
-            } for item in self.blocks.all()
+                "name": _block_item_name(item), "cost": _block_cost_str(item), "user": item.user
+            } for item in self.blocks.annotate(count=models.Count("bookings__id")).order_by("-count")
         }
         subscriptions = {
             f"subscription-{item.id}": {
