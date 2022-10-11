@@ -6,7 +6,7 @@ from django.utils.safestring import mark_safe
 
 from common.utils import full_name
 
-from ..models import has_available_block, has_available_course_block, get_active_user_course_block, has_available_subscription
+from ..models import add_to_cart_course_block_config, add_to_cart_drop_in_block_config, has_available_block, has_available_course_block, get_active_user_course_block, has_available_subscription, valid_course_block_configs, valid_dropin_block_configs
 from ..utils import can_book, can_cancel, can_rebook, user_can_book_or_cancel, user_course_booking_type
 
 
@@ -37,6 +37,10 @@ class UserEventInfo:
         self.has_available_drop_in_block = False
         self.has_available_subscription = False
         self.booking_type = None
+        self.can_add_course_to_basket = False
+        self.can_add_drop_in_to_basket = False
+        self.has_payment_options = False
+
         # course things
         self.has_available_course_block = False
         self.has_booked_dropin = False
@@ -67,6 +71,17 @@ class UserEventInfo:
         if include_course_data and self.has_available_course_block:
             self.available_course_block = get_active_user_course_block(self.user, self.course)
 
+        if self.event.course:
+            if add_to_cart_course_block_config(self.event.course) is not None:
+                self.can_add_course_to_basket = True
+        if add_to_cart_drop_in_block_config(self.event) is not None:
+            self.can_add_drop_in_to_basket = True
+
+        if not self.event.course or self.event.course.allow_drop_in:
+            if valid_dropin_block_configs(self.event).exists():
+                self.has_payment_options = True
+        elif self.event.course:
+            self.has_payment_options = valid_course_block_configs(self.event.course).exists()
 
     def update_course_booking_status(self):
         self.course_booked = self.user_course_bookings.count() == self.course.uncancelled_events.count()
@@ -176,21 +191,28 @@ def button_options_events_list(user, event):
                         options["toggle_option"] = "book_dropin"
                         return options
                 else:
-                    options["buttons"] = ["add_to_basket", "payment_options"]
-                    if not event.course.has_started:
-                        options["buttons"].insert(0, "add_course_to_basket")
+                    if user_event_info.can_add_drop_in_to_basket:
+                        options["buttons"] = ["add_to_basket"]
+                    if not event.course.has_started and user_event_info.can_add_course_to_basket:
+                        options["buttons"].append("add_course_to_basket")
+                    if user_event_info.has_payment_options:
+                        options["buttons"].append("payment_options")
                     return options
             
-            options["buttons"] = ["payment_options"]
-            if not event.course.has_started:
-                options["buttons"].insert(0, "add_course_to_basket")
+            if not event.course.has_started and user_event_info.can_add_course_to_basket:
+                options["buttons"] = ["add_course_to_basket"]
+            if user_event_info.has_payment_options:
+                options["buttons"].append("payment_options")
             return options
         elif user_event_info.has_available_drop_in_block or user_event_info.has_available_subscription:
             options["buttons"] = ["toggle_booking"]
             options["toggle_option"] = "book_dropin"
             return options
         else:
-            options["buttons"] = ["add_to_basket", "payment_options"]
+            if user_event_info.can_add_drop_in_to_basket:
+                options["buttons"] = ["add_to_basket"]
+            if user_event_info.has_payment_options:
+                options["buttons"].append("payment_options")
             return options
 
     elif user_event_info.booking_restricted:
@@ -246,7 +268,7 @@ def button_options_course_events_list(user, event):
             if not user_event_info.has_available_course_block:
                 # user has drop in block ONLY
                 # if course hasn't started yet, show add course button
-                if not event.course.has_started:
+                if not event.course.has_started and user_event_info.can_add_course_to_basket:
                     options["buttons"] = ["add_course_to_basket"]
                 if event.course.allow_drop_in:
                     options["buttons"].append("toggle_booking")
@@ -265,7 +287,8 @@ def button_options_course_events_list(user, event):
                         options["toggle_option"] = "book_dropin"
                         return options
                     else:
-                        options["buttons"] = ["add_to_basket"]
+                        if user_event_info.can_add_drop_in_to_basket:
+                            options["buttons"] = ["add_to_basket"]
                         return options
             else:
                 # course has started already, show drop-in buttons if allowed
@@ -275,18 +298,20 @@ def button_options_course_events_list(user, event):
                         options["toggle_option"] = "book_dropin"
                         return options
                     else:
-                        options["buttons"] = ["add_to_basket"]
+                        if user_event_info.can_add_drop_in_to_basket:
+                            options["buttons"] = ["add_to_basket"]
                         return options
         # no available block
         # drop in allowed
         elif event.course.allow_drop_in:
-            if not event.course.has_started:
+            if not event.course.has_started and user_event_info.can_add_course_to_basket:
                 options["buttons"].append("add_course_to_basket")
-            options["buttons"].append("add_to_basket")
+            if user_event_info.can_add_drop_in_to_basket:
+                options["buttons"].append("add_to_basket")
             return options
         # drop in not allowed
         else:
-            if not event.course.has_started:
+            if not event.course.has_started and user_event_info.can_add_course_to_basket:
                 options["buttons"] = ["add_course_to_basket"]
         return options
 
@@ -422,7 +447,8 @@ def course_list_button_info(user, course, user_info):
             options["text"] = "Course and drop-in booking is available, see course details."
         return options
     
-    options["button"] = "add_course_to_basket"
+    if add_to_cart_course_block_config(course):
+        options["button"] = "add_course_to_basket"
     if course.allow_drop_in:
         options["text"] = "Drop-in booking is also available, see course details."
     return options

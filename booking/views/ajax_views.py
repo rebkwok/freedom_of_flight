@@ -22,7 +22,7 @@ from merchandise.models import ProductPurchase
 
 from common.utils import full_name, start_of_day_in_utc
 from ..models import Booking, Block, Course, Event, WaitingListUser, BlockConfig, Subscription, \
-    SubscriptionConfig, GiftVoucher, valid_course_block_configs, valid_dropin_block_configs
+    SubscriptionConfig, GiftVoucher, add_to_cart_course_block_config, add_to_cart_drop_in_block_config, valid_course_block_configs, valid_dropin_block_configs
 from ..utils import (
     calculate_user_cart_total, get_user_course_booking_info, has_available_block, has_available_subscription,
     get_active_user_course_block,
@@ -296,7 +296,7 @@ def ajax_toggle_booking(request, event_id):
         {
             "html": html,
             "button_text": button_info["text"],
-            "hide_payment_button": "payment_options" not in button_info["buttons"],
+            "hide_payment_button": "payment_options" not in button_info.get("buttons", []),
             "block_info_html": block_info_html,
             "event_availability_html": event_availability_html,
             "event_info_xs_html": event_info_xs_html,
@@ -620,7 +620,7 @@ def ajax_add_booking_to_basket(request):
         user=user, event=event, defaults={"status": "OPEN", "no_show": False}
     )
     # create block
-    single_block_config = valid_dropin_block_configs(event=event).filter(size=1).first()
+    single_block_config = add_to_cart_drop_in_block_config(event)
     block = Block.objects.create(block_config=single_block_config, user=user, paid=False)
     # assign unpaid block to booking
     booking.block = block
@@ -717,7 +717,7 @@ def ajax_add_course_booking_to_basket(request):
             return HttpResponseBadRequest("Already added to basket")
 
     # create UNPAID block
-    block_config = valid_course_block_configs(course=course).first()
+    block_config = add_to_cart_course_block_config(course=course)
     course_block = Block.objects.create(block_config=block_config, user=user, paid=False)
 
     # Create/get bookings for all events

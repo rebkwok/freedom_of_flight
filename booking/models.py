@@ -367,6 +367,10 @@ class Event(models.Model):
     def is_past(self):
         return self.start < timezone.now()
 
+    @property
+    def name_and_date(self):
+        return f"{self.name} - {self.start.astimezone(pytz.timezone('Europe/London')).strftime('%d %b %Y, %H:%M')} "
+
     def __str__(self):
         course_str = f" ({self.course.name})" if self.course else ""
         return f"{self.name}{course_str} - {self.start.astimezone(pytz.timezone('Europe/London')).strftime('%d %b %Y, %H:%M')} " \
@@ -1607,25 +1611,47 @@ class Booking(models.Model):
 
 
 # Model-related utils
-def valid_course_block_configs(course):
+def valid_course_block_configs(course, active_only=True):
     if not course.has_started:
         # not started course - course blocks matching size and event type are valid
-        return BlockConfig.objects.filter(
-            active=True, course=True, event_type=course.event_type,
-            size=course.number_of_events
+        all_block_configs = BlockConfig.objects.filter(
+            course=True, event_type=course.event_type, size=course.number_of_events
         )
+        if active_only:
+            return all_block_configs.filter(active=True)
+        return all_block_configs.order_by("-active")
+    return BlockConfig.objects.none()
 
 
-def valid_dropin_block_configs(event=None, event_type=None):
-    if event is None:
-        assert event_type is not None
-        return BlockConfig.objects.filter(
-            active=True, course=False, event_type=event_type
-        )
-    if event.course is None or event.course.allow_drop_in:
-        return BlockConfig.objects.filter(
-            active=True, course=False, event_type=event.event_type
-        )
+def valid_dropin_block_configs(
+    event=None, event_type=None, active_only=True, size=None
+):
+    ev_type = event.event_type if event else event_type
+    all_block_configs = BlockConfig.objects.filter(
+        course=False, event_type=ev_type
+    )
+    if size:
+        all_block_configs.filter(size=size)
+    if active_only:
+        return all_block_configs.filter(active=True)
+    return all_block_configs.order_by("-active")
+
+
+def add_to_cart_course_block_config(course):
+    # get all block configs valid for the course, whether active or not
+    # we want to return an active one first, if possible
+    valid_block_configs = valid_course_block_configs(course, active_only=False)
+    return valid_block_configs.first()
+
+
+def add_to_cart_drop_in_block_config(event):
+    # get all block configs valid for the event, whether active or not
+    # find the ones that have size=1
+    # we want to return an active one first, if possible
+    valid_block_configs = valid_dropin_block_configs(
+        event, active_only=False, size=1
+    )
+    return valid_block_configs.first()
 
 
 def has_available_block(user, event, dropin_only=False):

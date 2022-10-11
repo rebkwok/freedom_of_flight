@@ -8,7 +8,7 @@ from django.test import TestCase
 from django.utils import timezone
 
 from booking.utils import full_name
-from booking.models import Course, Block, Event, Booking
+from booking.models import BlockConfig, Course, Block, Event, Booking
 from common.test_utils import TestUsersMixin, EventTestMixin
 
 
@@ -135,7 +135,15 @@ class CourseListViewTests(EventTestMixin, TestUsersMixin, TestCase):
     def test_courses_list_with_no_block_available(self):
         self.login(self.student_user)
         resp = self.client.get(self.url(self.adult_track))
-        assert "Add to basket (course)" in resp.rendered_content
+        # Add to cart isn't shown if no block config available
+        assert "Add to cart (course)" not in resp.rendered_content
+        # make a block config (doesn't have to be active)
+        baker.make(
+            BlockConfig, course=True, event_type=self.course.event_type, 
+            size=self.course.number_of_events, active=False
+        )
+        resp = self.client.get(self.url(self.adult_track))
+        assert "Add to cart (course)" in resp.rendered_content
 
     def test_courses_list_with_block_available(self):
         # make usable block

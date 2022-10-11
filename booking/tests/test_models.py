@@ -746,12 +746,23 @@ class BlockTests(TestUsersMixin, TestCase):
         assert not self.course_block.valid_for_course(invalid_course2)
 
     def test_delete(self):
-        # deleting block removes it from bookings
+        # deleting block removes it from bookings if the block is paid
+        self.dropin_block.paid = True
+        self.dropin_block.save()
         booking1 = baker.make(Booking, block=self.dropin_block)
         assert booking1.block == self.dropin_block
         self.dropin_block.delete()
         booking1.refresh_from_db()
         assert booking1.block is None
+
+    def test_delete_unpaid_block(self):
+        # deleting an unpaid block deletes its bookings
+        assert self.dropin_block.paid == False
+        booking1 = baker.make(Booking, block=self.dropin_block)
+        booking1_id = booking1.id
+        assert booking1.block == self.dropin_block
+        self.dropin_block.delete()
+        assert not Booking.objects.filter(id=booking1_id),exists()
 
 
 class SubscriptionConfigTests(TestUsersMixin, TestCase):
