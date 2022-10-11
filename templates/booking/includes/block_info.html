@@ -1,7 +1,7 @@
 {% load bookingtags %}
 
 {% if user_info.open %}
-    {% if user_info.used_block and not button_info.in_basket %}
+    {% if user_info.used_block and user_info.used_block.paid %}
         {% if not user_info.hide_block_info_divider %}| {% endif %}
         <span class="helptext d-none d-sm-inline-block">Credit block used</span>
         <span data-toggle="tooltip" data-html="true" title="<span class='helptext'><span class='helptext d-inline-block d-sm-none'>Credit block used: </span> {{ user_info.used_block|user_block_info:0 }}</span>">

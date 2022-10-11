@@ -119,7 +119,11 @@ def button_options_events_list(user, event):
 
     if user_event_info.booking_in_basket:
         basket_url = reverse("booking:shopping_basket")
-        options["text"] = mark_safe(f"<a href='{basket_url}'>View basket</a>")
+        options["text"] = mark_safe(
+            f"<a class='btn btn-xs btn-primary' href='{basket_url}'>"
+            "<i class='fas fa-shopping-cart'></i> View cart</a>"
+        )
+        options["text_no_style"] = True
         return options
 
     # waiting list buttons
@@ -172,21 +176,21 @@ def button_options_events_list(user, event):
                         options["toggle_option"] = "book_dropin"
                         return options
                 else:
-                    options["buttons"] = ["payment_options", "add_to_basket"]
+                    options["buttons"] = ["add_to_basket", "payment_options"]
                     if not event.course.has_started:
-                        options["buttons"].append("add_course_to_basket")
+                        options["buttons"].insert(0, "add_course_to_basket")
                     return options
             
             options["buttons"] = ["payment_options"]
             if not event.course.has_started:
-                options["buttons"].append("add_course_to_basket")
+                options["buttons"].insert(0, "add_course_to_basket")
             return options
         elif user_event_info.has_available_drop_in_block or user_event_info.has_available_subscription:
             options["buttons"] = ["toggle_booking"]
             options["toggle_option"] = "book_dropin"
             return options
         else:
-            options["buttons"] = ["payment_options", "add_to_basket"]
+            options["buttons"] = ["add_to_basket", "payment_options"]
             return options
 
     elif user_event_info.booking_restricted:
@@ -210,7 +214,12 @@ def button_options_course_events_list(user, event):
         return options
 
     if user_event_info.booking_in_basket:
-        options["text"] = "in basket"
+        basket_url = reverse("booking:shopping_basket")
+        options["text"] = mark_safe(
+            f"<a class='btn btn-xs btn-primary' href='{basket_url}'>"
+            "<i class='fas fa-shopping-cart'></i> View cart</a>"
+        )
+        options["text_no_style"] = True
         return options
         
     # course events list page
@@ -366,14 +375,23 @@ def button_options_book_course_button(user, course):
 def course_list_button_info(user, course, user_info):
     options = {"button": "", "text": ""}
 
-    if user_info["has_booked_all"]:
+    if user_info["has_booked_all"] and not user_info["items_in_basket"]:
         return {
             "button": "", 
             "text": mark_safe('<i class="text-success fas fa-check-circle"></i> Booked')
         }
     
     if user_info["items_in_basket"]:
-        options["text"] = '<i class="text-secondary fas fa-shopping-basket"></i> Item(s) in basket'
+        if not user_info["has_booked_all"]:
+            options["text"] = f"<span class='helptext'>Item(s) in cart</span></br>"
+        basket_url = reverse("booking:shopping_basket")
+        options["text"] += (
+            f"<a class='btn btn-xs btn-primary' href='{basket_url}'>"
+            "<i class='fas fa-shopping-cart'></i> View cart</a>"
+        )
+        options["text"] = mark_safe(options["text"])
+        options["text_no_style"] = True
+
     if user_info["has_booked_dropin"]:
         if course.allow_drop_in and not course.all_events_full:
             if options["text"]:
@@ -381,9 +399,9 @@ def course_list_button_info(user, course, user_info):
             options["text"] += '<i class="text-success fas fa-check-circle"></i> Booked drop-in'
     if user_info["has_booked_dropin"] or user_info["items_in_basket"]:
         options["text"] = f"<span class='float-right'>{options['text']}</span>"
-        if course.allow_drop_in and not course.all_events_full:
+        if course.allow_drop_in and not course.all_events_full and not user_info["has_booked_all"]:
             options["text"] += "</br><span class='float-right'>See course details for other class availability.</span>"
-            options["text"] = mark_safe(options["text"])
+        options["text"] = mark_safe(options["text"])
         return options
 
     if course.full:

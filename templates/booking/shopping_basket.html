@@ -27,7 +27,7 @@
                     <tr>
                         <td colspan="2" class="table-secondary"><strong>Bookings and Credit Blocks</strong><br/>
                         <span class="text-danger">
-                            NOTE: class/course bookings will be removed from your cart after {{ cart_timeout_mins }} minutes
+                            NOTE: drop-in and course bookings will be removed from your cart after {{ cart_timeout_mins }} minutes
                         </span>
                         </td>
                     </tr>
@@ -202,7 +202,8 @@
 
                       <div>Add additional items:<br/>
                       {% if request.user.is_authenticated %}
-                          <a class="btn btn-xs btn-outline-primary" href="{% url 'booking:purchase_options' %}">Payment plans</a>
+                            <a class="btn btn-xs btn-outline-primary" href="{% url 'booking:schedule' %}">Classes</a>
+                            <a class="btn btn-xs btn-outline-primary" href="{% url 'booking:purchase_options' %}">Payment plans</a>
                           <a class="btn btn-xs btn-outline-primary" href="{% url 'merchandise:products' %}">Merchandise</a>
                       {% endif %}
                       <a class="btn btn-xs btn-outline-primary" href="{% url 'booking:buy_gift_voucher' %}">Gift vouchers</a>

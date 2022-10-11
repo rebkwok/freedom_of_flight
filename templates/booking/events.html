@@ -25,7 +25,7 @@
 
     <div class="row">
     {% if course %}
-        <div class="col-12">
+        <div class="col-12 mb-2">
         {% if request.user.is_authenticated %}
             <span id="course_button_pre_text">
                 {{ book_course_button_options.pre_button_text }}
@@ -63,7 +63,7 @@
         {% endif %}
         </div>
     {% endif %}
-    <div class="col-12">
+    <div class="col-12 mb-2">
         {% if courses_available %}
             <span class="float-left"><a class="btn btn-outline-primary btn-sm" href="{% url 'booking:courses' track.slug %}">View courses</a></span>
         {% endif %}
@@ -74,15 +74,15 @@
 
         {% endif %}
         {% if request.user.is_authenticated %}<span class="float-right"><a class="btn btn-outline-primary btn-sm" href="{% url 'booking:bookings' %}">My Bookings</a></span>{% endif %}
-
-    </div>
+    </div>    
+    <div>
         {% if not course %}
         <form class="mt-2" method="get">
             {{ name_filter_form }}
         </form>
         {% endif %}
     </div>
-
+</div>
 
 <div class="row">
     <div class="col-12">
@@ -120,7 +120,7 @@
                             <!-- Event name and info (availability, user blocks) on smaller screens -->
                             <span id="booked_tick_{{ event.id }}" {% if not button_info.open or not button_info.has_open_booking %}class="hidden"{% endif %}>
                                 {% if button_info.in_basket %}
-                                    <i class="text-secondary fas fa-shopping-basket"></i>
+                                    <i class="text-secondary fas fa-shopping-cart"></i>
                                 {% else %}
                                     <i class="text-success fas fa-check-circle"></i>
                                 {% endif %}
@@ -141,7 +141,7 @@
                                 </span>
                             {% endif %}
                             {% if view_as_user|has_disclaimer %}
-                                <span class="helptext float-right col-12">
+                                <span class="{% if not button_info.text_no_style %}helptext{% endif %} float-right col-12">
                                     <span class="float-right" id="button_text_{{ event.id }}">{{ button_info.text }}</span>
                                 </span>
                                 {% if button_info.buttons %}
@@ -183,11 +183,8 @@
                                                       data-ref={% if course %}"course"{% else %}"events"{% endif %}
                                                       class="ajax_add_to_basket_btn"
                                                     > 
-                                                        {% if event.course %} 
-                                                            <span class="btn btn-xs btn-outline-primary float-right mb-2"><i id="loader_{{ event.id }}"></i> Add single {{ event.event_type.label }} to basket</span>
-                                                        {% else %}
-                                                            <span class="btn btn-xs btn-outline-primary float-right mb-2"><i id="loader_{{ event.id }}"></i> Add to basket</span>
-                                                        {% endif %}
+                                                    <span class="btn btn-xs btn-xs-wider btn-outline-dark float-right mb-2">
+                                                        <i id="loader_{{ event.id }}"></i> Add to cart (drop-in)</span>
                                                     </span/>
                                                 </span>
                                         {% elif button == "add_course_to_basket" %}
@@ -200,20 +197,20 @@
                                                     data-ref={% if course %}"course"{% else %}"events"{% endif %}
                                                     class="ajax_add_course_to_basket_btn"
                                                 > 
-                                                    ###Add course to basket###
+                                                <span class="btn btn-xs btn-xs-wider btn-outline-dark float-right mb-2"><i id="loader_course_{{ event.id }}"></i> Add to cart (course)</span>
                                                 </span/>
                                             </span/>
                                         {% elif button == "payment_options" %}
                                             {% if event.course %}
                                                 <a 
                                                   id="payment_options_{{ event.id }}"  
-                                                  class="btn btn-xs btn-outline-dark float-right mb-2" 
+                                                  class="btn btn-xs btn-xs-wider btn-outline-dark float-right mb-2" 
                                                   href="{% url 'booking:course_purchase_options' event.course.slug %}"
                                                 >Payment Options</a><br/>
                                             {% else %}
                                                 <a 
                                                   id="payment_options_{{ event.id }}"
-                                                  class="btn btn-xs btn-outline-dark float-right mb-2" 
+                                                  class="btn btn-xs btn-xs-wider btn-outline-dark float-right mb-2" 
                                                   href="{% url 'booking:event_purchase_options' event.slug %}"
                                                 >Payment Options</a><br/>
                                             {% endif %}

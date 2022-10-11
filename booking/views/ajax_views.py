@@ -22,7 +22,7 @@ from merchandise.models import ProductPurchase
 
 from common.utils import full_name, start_of_day_in_utc
 from ..models import Booking, Block, Course, Event, WaitingListUser, BlockConfig, Subscription, \
-    SubscriptionConfig, GiftVoucher, valid_dropin_block_configs
+    SubscriptionConfig, GiftVoucher, valid_course_block_configs, valid_dropin_block_configs
 from ..utils import (
     calculate_user_cart_total, get_user_course_booking_info, has_available_block, has_available_subscription,
     get_active_user_course_block,
@@ -682,9 +682,66 @@ def ajax_add_course_booking_to_basket(request):
     add a stripe checkout flag when user proceeds to checkout (similar to merch)
     shopping cart/checkout - display blocks with attached course booking as course (hide block info)
     """
-    user = get_object_or_404(User, pk=request.POST["user_id"])
-    course = get_object_or_404(Event, pk=request.POST["course_id"])
+    user_id = request.POST["user_id"]
+    if str(user_id) == str(request.user.id):
+        user = request.user
+    else:
+        user = get_object_or_404(User, id=user_id)
+    course = get_object_or_404(Course, pk=request.POST["course_id"])
+    # we could get here from the events list or course events list 
+    ref = request.POST["ref"]
+
     # See ajax_course_booking
     # check course isn't full or cancelled, return error
+    if not has_active_disclaimer(user):
+        url = reverse('booking:disclaimer_required', args=(user_id,))
+        return JsonResponse({"redirect": True, "url": url})
+    if course.full or course.cancelled:
+        logger.error('Attempt to add %s course to basket', 'cancelled' if course.cancelled else 'full')
+        return HttpResponseBadRequest(
+            "Sorry, this course {}".format("has been cancelled" if course.cancelled else "is now full")
+        )
+
     # check user isn't already booked, return error
-    # get booking if one already exists (could have been previously cancelled)
+    existing_course_block_bookings = user.bookings.filter(
+        block__block_config__course=True, event__course=course
+    )
+
+    if existing_course_block_bookings.count() == course.uncancelled_events.count():
+        if existing_course_block_bookings.first().block.paid:
+            # user has bookings with paid course block for full course
+            logger.error('Attempt to add to basket with existing course booking for course %s, user %s', course.id, user.username)
+            return HttpResponseBadRequest("Course booking already exists")
+        else:
+            logger.error('Already added course %s to basket', course.id)
+            return HttpResponseBadRequest("Already added to basket")
+
+    # create UNPAID block
+    block_config = valid_course_block_configs(course=course).first()
+    course_block = Block.objects.create(block_config=block_config, user=user, paid=False)
+
+    # Create/get bookings for all events
+    for event in course.events_left:
+        booking, _ = Booking.objects.get_or_create(user=user, event=event)
+        # Make sure block is assigned and update booking statuses if already created
+        existing_block = booking.block
+        if existing_block and not existing_block.paid and existing_block.block_config.size == 1:
+            # delete any associated unpaid single blocks - these are drop-ins added 
+            # to shopping basket; we're replacing them with a course block
+            existing_block.delete()
+        booking.block = course_block
+        booking.status = "OPEN"
+        booking.no_show = False
+        booking.save()
+    
+    #######################################
+    messages.success(request, f"Booking for {course} added to cart for {full_name(user)}")
+    # we need to update info about all course events, so we redirect to refresh the page
+    if ref == "course":  # events list for a course
+        redirect_url = reverse("booking:course_events", args=(course.slug,))
+    elif ref == "course_list":  # courses list
+        redirect_url = reverse("booking:courses", args=(course.event_type.track.slug,))
+    else: # events list (all)
+        redirect_url = reverse("booking:events", args=(course.event_type.track.slug,))
+
+    return JsonResponse({"redirect": True, "url": redirect_url})

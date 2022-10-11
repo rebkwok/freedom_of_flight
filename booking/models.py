@@ -662,13 +662,19 @@ class Block(models.Model):
 
     def delete(self, *args, **kwargs):
         bookings = self.bookings.all() if hasattr(self, "bookings") else []
-        for booking in bookings:
-            booking.block = None
-
-            booking.save()
+        if not self.paid:
+            booking_ids = "".join([str(bk_id) for bk_id in bookings.values_list("id", flat=True)])
+            bookings.delete()
             ActivityLog.objects.create(
-                log=f'Booking id {booking.id} booked with deleted block {self.id} has been reset'
+                log=f'Booking ids {booking_ids} booked with deleted unpaid block {self.id} have been deleted'
             )
+        else:
+            for booking in bookings:
+                booking.block = None
+                booking.save()
+                ActivityLog.objects.create(
+                    log=f'Booking id {booking.id} booked with deleted block {self.id} has been reset'
+                )
         super().delete(*args, **kwargs)
 
     def save(self, *args, **kwargs):

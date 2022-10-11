@@ -119,6 +119,57 @@ var processBookingAddToBasket = function()  {
 };
 
 
+var processCourseBookingAddToBasket = function()  {
+
+  //In this scope, "this" is the button just clicked on.
+  //The "this" in processResult is *not* the button just clicked
+  //on.
+  var $button_just_clicked_on = $(this);
+
+  //The value of the "data-event_id" attribute.
+  var event_id = $button_just_clicked_on.data('event_id');
+  var user_id = $button_just_clicked_on.data('user_id');
+  var course_id = $button_just_clicked_on.data('course_id');
+  var ref = $button_just_clicked_on.data('ref');
+
+  doTheAjax()
+  
+  function doTheAjax() {
+
+      var processResult = function(
+         result, status, jqXHR)  {
+        //console.log("sf result='" + result + "', status='" + status + "', jqXHR='" + jqXHR + "'");
+        if (result.redirect) {
+          window.location = result.url;
+        }
+     };
+
+      var processFailure = function(
+         result, status, jqXHR)  {
+        //console.log("sf result='" + result + "', status='" + status + "', jqXHR='" + jqXHR + "'");
+        if (result.responseText) {
+          vNotify.error({text:result.responseText,title:'Error',position: 'bottomRight'});
+        }
+     };
+
+     $.ajax(
+         {
+            url: '/ajax-add-course-booking-to-basket/',
+            dataType: 'json',
+            type: 'POST',
+            data: {csrfmiddlewaretoken: window.CSRF_TOKEN, "course_id": course_id, "user_id": user_id, "ref": ref},
+            beforeSend: function() {$("#loader_course_" + event_id).addClass("fa fa-spinner fa-spin").show()},
+            success: processResult,
+            //Should also have a "fail" call as well.
+            complete: function() {$("#loader_course_" + event_id).removeClass("fa fa-spinner fa-spin").hide();},
+            error: processFailure
+         }
+     );
+  }
+
+};
+
+
 /**
    The Ajax "main" function. Attaches the listeners to the elements on
    page load, each of which only take effect every
@@ -148,6 +199,7 @@ $(document).ready(function()  {
     click would be processed twice.
    */
   $('.ajax_add_to_basket_btn').click(_.debounce(processBookingAddToBasket, MILLS_TO_IGNORE, true));
+  $('.ajax_add_course_to_basket_btn').click(_.debounce(processCourseBookingAddToBasket, MILLS_TO_IGNORE, true));
 
   /*
     Warning: Placing the true parameter outside of the debounce call:
