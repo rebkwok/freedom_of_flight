@@ -637,13 +637,12 @@ class BlockTests(TestUsersMixin, TestCase):
         assert self.dropin_block.active_block is False
         assert self.dropin_block.full is True
 
-    @patch('booking.models.timezone.now')
-    def test_str(self, mock_now):
-        mock_now.return_value = datetime(2015, 2, 1, tzinfo=dt_timezone.utc) # this will be purchase date, used in str
+    @pytest.mark.freeze_time('2015-02-01')
+    def test_str(self):
         self.dropin_block.paid = True
         self.dropin_block.save()
 
-        assert str(self.dropin_block) == f'{self.dropin_block.user.username} -- {self.dropin_block.block_config} -- purchased 01 Feb 2015'
+        assert str(self.dropin_block) == f'{self.dropin_block.user.username} -- {self.dropin_block.block_config} -- created 01 Feb 2015'
 
     def test_cost_with_voucher(self):
         assert self.dropin_block.cost_with_voucher == 10.00

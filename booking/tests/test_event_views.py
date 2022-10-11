@@ -33,15 +33,11 @@ class EventListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         url = url or self.adult_url
         response = self.client.get(url)
         soup = BeautifulSoup(response.rendered_content, features="html.parser")
-        if event.course:
-            add_course = soup.find(id=f"add_course_to_basket_{event.course.id}")
-        else:
-            add_course = None
         return {
             "button_text": soup.find(id=f"button_text_{event.id}"),
             "toggle_booking": soup.find(id=f"book_{event.id}"),
             "add_event": soup.find(id=f"add_to_basket_{event.id}"),
-            "add_course": add_course,
+            "add_course": soup.find(id=f"add_course_to_basket_{event.id}"),
             "payment_options":  soup.find(id=f"payment_options_{event.id}"),
             "waiting_list":  soup.find(id=f"waiting_list_button_{event.id}"),
         }
@@ -186,10 +182,10 @@ class EventListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         """
         self.make_disclaimer(self.student_user)
         for event in self.aerial_events:
-            # create a booking for this user for all events
+            # create a paid booking for this user for all events
             baker.make(
                 Booking, block__block_config__event_type=self.aerial_event_type,
-                user=self.student_user, event=event
+                user=self.student_user, event=event, block__paid=True
             )
 
         resp = self.client.get(self.adult_url)
@@ -223,6 +219,15 @@ class EventListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         assert 'Cancel' in resp.rendered_content
         # course details button shown for the unbooked course
         assert 'Course details' in resp.rendered_content
+
+        # make all bookings unpaid
+        for booking in Booking.objects.all():
+            booking.block.paid = False
+            booking.block.save()
+        resp = self.client.get(self.adult_url)
+        # No cancel buttons shown as all the booked events are unpaid
+        assert 'Cancel' not in resp.rendered_content
+        assert 'View basket' in resp.rendered_content
 
     def test_cancelled_events_are_not_listed(self):
         resp = self.client.get(self.adult_url)
