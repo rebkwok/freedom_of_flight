@@ -141,7 +141,7 @@
                                 </span>
                             {% endif %}
                             {% if view_as_user|has_disclaimer %}
-                                <span class="{% if not button_info.text_no_style %}helptext{% endif %} float-right col-12">
+                                <span id="button_text_wrapper_{{ event.id }}" class="{% if not button_info.text_no_style %}helptext{% endif %} float-right col-12">
                                     <span class="float-right" id="button_text_{{ event.id }}">{{ button_info.text }}</span>
                                 </span>
                                 {% if button_info.buttons %}

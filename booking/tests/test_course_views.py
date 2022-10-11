@@ -135,7 +135,7 @@ class CourseListViewTests(EventTestMixin, TestUsersMixin, TestCase):
     def test_courses_list_with_no_block_available(self):
         self.login(self.student_user)
         resp = self.client.get(self.url(self.adult_track))
-        assert "Add course to basket" in resp.rendered_content
+        assert "Add to basket (course)" in resp.rendered_content
 
     def test_courses_list_with_block_available(self):
         # make usable block

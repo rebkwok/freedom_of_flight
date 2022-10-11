@@ -9,7 +9,8 @@ from shortuuid import ShortUUID
 
 from django.db import models
 from django.conf import settings
-from django.contrib.auth.models import Group, User
+from django.contrib.auth.models import User
+from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.urls import reverse
 from django.utils import timezone
@@ -528,6 +529,9 @@ class Block(models.Model):
     manual_expiry_date = models.DateTimeField(blank=True, null=True)
     expiry_date = models.DateTimeField(blank=True, null=True)
 
+    # Flag to set when cart total is checked to avoid deleting when payment activity may be in progress
+    time_checked = models.DateTimeField(blank=True, null=True)
+
     class Meta:
         ordering = ['user__username']
         indexes = [
@@ -659,6 +663,61 @@ class Block(models.Model):
                 has_bookings_on_other_courses = self.bookings.exclude(event__course=course).exists()
                 return not has_bookings_on_other_courses
         return False
+
+    def mark_checked(self):
+        self.time_checked = timezone.now()
+        self.save()
+
+    @classmethod
+    def cleanup_expired_blocks(cls, user=None, use_cache=False):
+        if use_cache:
+            # check cache to see if we cleaned up recently
+            if cache.get("expired_blocks_cleaned"):
+                logger.info("Expired blocks cleaned up within past 2 mins; no cleanup required")
+                return
+
+        # timeout defaults to 15 mins
+        timeout = settings.CART_TIMEOUT_MINUTES
+        if user:
+            # If we have a user, we're at the checkout, so get all unpaid purchases for
+            # this user only
+            unpaid_blocks = Block.objects.filter(
+                user__in=user.managed_users_including_self, paid=False
+            )
+        else:
+            # no user, doing a general cleanup.  Don't delete anything that was time-checked
+            # (done at final checkout stage) within the past 5 mins, in case we delete something
+            # that's in the process of being paid
+            unpaid_blocks = cls.objects.filter(paid=False).filter(
+                models.Q(time_checked__lt=timezone.now() - timedelta(seconds=60 * 5)) | models.Q(time_checked__isnull=True)
+            )
+        # filter unpaid blocks to those created before the allowed timeout
+        expired_blocks = unpaid_blocks.filter(
+            created_date__lt=timezone.now() - timedelta(seconds=60 * timeout)
+        ).annotate(count=models.Count('bookings__id')).filter(count__gt=0)
+        
+        if expired_blocks.exists():
+            if user is not None:
+                ActivityLog.objects.create(
+                    log=f"{expired_blocks.count()} unpaid blocks with bookings in cart "
+                        f"(ids {','.join(str(block.id) for block in expired_blocks.all())} "
+                        f"for user {user} expired and were deleted"
+                )
+            else:
+                ActivityLog.objects.create(
+                    log=f"{expired_blocks.count()} unpaid blocks with bookings "
+                        f"(ids {','.join(str(block.id) for block in expired_blocks.all())} "
+                        f"expired and were deleted"
+                )
+            # delete individually to ensure save method is called and associated bookings are 
+            # deleted
+            for block in expired_blocks:
+                block.delete()
+
+        if use_cache:
+            logger.info("Expired blocks with bookings cleaned up")
+            # cache for 2 mins
+            cache.set("expired_blocks_cleaned", True, timeout=60*2)
 
     def delete(self, *args, **kwargs):
         bookings = self.bookings.all() if hasattr(self, "bookings") else []

@@ -15,7 +15,7 @@ from .button_utils import (
     button_options_course_events_list, 
     button_options_book_course_button
 )
-from .views_utils import DataPolicyAgreementRequiredMixin
+from .views_utils import DataPolicyAgreementRequiredMixin, CleanUpBlocksMixin
 
 
 def home(request):
@@ -25,7 +25,7 @@ def home(request):
     return HttpResponseRedirect(reverse("booking:events", args=(track.slug,)))
 
 
-class EventListView(DataPolicyAgreementRequiredMixin, ListView):
+class EventListView(CleanUpBlocksMixin, DataPolicyAgreementRequiredMixin, ListView):
 
     model = Event
     context_object_name = 'events_by_date'

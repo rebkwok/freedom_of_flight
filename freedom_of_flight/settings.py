@@ -30,7 +30,7 @@ env = environ.Env(
     LOCAL=(bool, False),
     USE_CDN=(bool, False),
     MERCHANDISE_CART_TIMEOUT_MINUTES=(int, 15),
-    CART_TIMEOUT_MINUTES=(int, 15),
+    CART_TIMEOUT_MINUTES=(int, 1),
 )
 
 

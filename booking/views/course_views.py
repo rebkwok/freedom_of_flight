@@ -15,10 +15,10 @@ from ..forms import AvailableUsersForm
 from ..models import Course, Track
 from ..utils import get_view_as_user, get_user_course_booking_info, full_name
 from .button_utils import course_list_button_info
-from .views_utils import DataPolicyAgreementRequiredMixin
+from .views_utils import DataPolicyAgreementRequiredMixin, CleanUpBlocksMixin
 
 
-class CourseListView(DataPolicyAgreementRequiredMixin, ListView):
+class CourseListView(CleanUpBlocksMixin, DataPolicyAgreementRequiredMixin, ListView):
 
     model = Course
     context_object_name = 'courses'

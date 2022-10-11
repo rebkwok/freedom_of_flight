@@ -1,6 +1,6 @@
 from django.template.loader import render_to_string
 from django import template
-from django.db.models import Q
+from django.db.models import Q, Count
 from django.utils import timezone
 from common.utils import full_name, start_of_day_in_utc
 from ..models import EventType, WaitingListUser
@@ -63,7 +63,8 @@ def has_unpaid_block(user, block_config):
 
 @register.filter
 def unpaid_block_count(user, block_config):
-    return user.blocks.filter(block_config=block_config, paid=False).count()
+    # unpaid block count for blocks with no associated bookings
+    return user.blocks.filter(block_config=block_config, paid=False).annotate(count=Count("bookings__id")).exclude(count__gt=0).count()
 
 
 @register.simple_tag

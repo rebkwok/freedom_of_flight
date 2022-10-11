@@ -81,6 +81,7 @@ var processBookingAddToBasket = function()  {
             $('#availability_xs_' + event_id).html(result.event_availability_html);
             $('#event_info_xs_' + event_id).html(result.event_info_xs_html);
             $('#button_text_' + event_id).html(result.button_info.text);
+            $('#button_text_wrapper_' + event_id).removeClass("helptext");
             $('#booked_tick_' + event_id).removeClass("hidden")
             $('#booked_tick_' + event_id).html('<i class="text-secondary fas fa-shopping-basket"></i>')
             $('#cart_item_menu_count').text(result.cart_item_menu_count);

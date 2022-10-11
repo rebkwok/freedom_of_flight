@@ -303,6 +303,26 @@ class BookingToggleAjaxViewTests(EventTestMixin, TestUsersMixin, TestCase):
         assert mail.outbox[0].bcc == ["student1@test.com"]
         assert mail.outbox[1].to == ["student@test.com"]
 
+    def test_cancel_booking_made_with_full_block (self):
+        event = baker.make_recipe("booking.future_event", event_type=self.floor_event_type, max_participants=2)
+        # make (full) block and booking
+        block = baker.make(
+            Block, 
+            block_config__event_type=self.floor_event_type, block_config__size=1,
+            user=self.student_user, paid=True
+        )
+        booking = baker.make(Booking, user=self.student_user, event=event, block=block)
+        assert block.full
+
+        # cancel booking
+        resp = self.client.post(self.url(event.id), data={"user_id": self.student_user.id})
+        assert resp.json()["redirect"]
+        booking.refresh_from_db()
+        block.refresh_from_db()
+        assert booking.status == "CANCELLED"
+        assert booking.block is None
+        assert not block.full
+
     def test_cancel_booking_for_full_event_sends_waiting_list_emails_to_managed_user_email(self):
         event = baker.make_recipe("booking.future_event", event_type=self.floor_event_type, max_participants=2)
         # user has available block and booking

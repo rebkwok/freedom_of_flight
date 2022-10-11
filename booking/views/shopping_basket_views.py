@@ -224,7 +224,7 @@ def shopping_basket(request):
     )
 
 
-def _check_items_and_get_updated_invoice(request):
+def _check_items_and_get_updated_invoice(request, mark_items_checked=False):
     total = Decimal(request.POST.get("cart_total"))
 
     checked = {
@@ -239,8 +239,17 @@ def _check_items_and_get_updated_invoice(request):
         unpaid_subscriptions = get_unpaid_user_managed_subscriptions(request.user)
         unpaid_gift_vouchers = get_unpaid_user_gift_vouchers(request.user)
         unpaid_merchandise = get_unpaid_user_merchandise(request.user)
-        for pp in unpaid_merchandise:
-            pp.mark_checked()
+
+        if mark_items_checked:
+            # this is the last stop before paypal checkout
+            # Mark any unpaid merch and blocks as checked to avoid cleaning them
+            # up while payment is being processed
+            # NOTE Stripe has an extra stage `check_total` where we do this for 
+            # stripe checkouts
+            for pp in unpaid_merchandise:
+                pp.mark_checked()
+            for block in unpaid_blocks:
+                block.mark_checked()
 
         if not (unpaid_blocks or unpaid_subscriptions or unpaid_gift_vouchers or unpaid_merchandise):
             messages.warning(request, "Your cart is empty")
@@ -362,14 +371,12 @@ def _check_items_and_get_updated_invoice(request):
 @require_http_methods(['POST'])
 def ajax_checkout(request):
     """
-    Called when clicking on checkout from the shopping basket page
+    Called when clicking on "Checkout with paypal" from the shopping cart page (PayPal payment method)
     Re-check the voucher codes and the total
     """
-    checked_dict = _check_items_and_get_updated_invoice(request)
+    checked_dict = _check_items_and_get_updated_invoice(request, mark_items_checked=True)
     if checked_dict["redirect"]:
         return JsonResponse({"redirect": True, "url": checked_dict["redirect_url"]})
-
-    total = checked_dict["total"]
     invoice = checked_dict["invoice"]
     # encrypted custom field so we can verify it on return from paypal
     paypal_form = get_paypal_form(request, invoice)
@@ -384,7 +391,7 @@ def ajax_checkout(request):
 @require_http_methods(['POST'])
 def stripe_checkout(request):
     """
-    Called when clicking on checkout from the shopping basket page
+    Called when clicking on checkout from the shopping cart page (Stripe payment method)
     Re-check the voucher codes and the total
     """
     checked_dict = _check_items_and_get_updated_invoice(request)
@@ -468,6 +475,9 @@ def stripe_checkout(request):
 
 
 def check_total(request):
+    """
+    Last check that total matches before submitting payments to stripe.  
+    """
     if request.user.is_authenticated:
         unpaid_blocks = get_unpaid_user_managed_blocks(request.user)
         unpaid_subscriptions = get_unpaid_user_managed_subscriptions(request.user)
@@ -475,6 +485,12 @@ def check_total(request):
         unpaid_merchandise = get_unpaid_user_merchandise(request.user)
         total_voucher = _get_and_verify_total_vouchers(request)
         _verify_block_vouchers(unpaid_blocks)
+        # Mark any unpaid merch and blocks as checked to avoid cleaning them
+        # up while payment is being processed
+        for pp in unpaid_merchandise:
+            pp.mark_checked()
+        for block in unpaid_blocks:
+            block.mark_checked()
     else:
         unpaid_blocks = unpaid_subscriptions = unpaid_merchandise = []
         total_voucher = None

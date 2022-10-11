@@ -537,6 +537,11 @@ def managed_users_excluding_self(self):
 
 
 @property
+def managed_users_including_self(self):
+    return [self, *_get_managed_users(self)]
+
+
+@property
 def managed_student_users(self):
     if self.userprofile.student:
         return _get_managed_users(self)
@@ -599,6 +604,7 @@ def contact_email(self):
 
 User.add_to_class("managed_users", managed_users)
 User.add_to_class("managed_users_excluding_self", managed_users_excluding_self)
+User.add_to_class("managed_users_including_self", managed_users_including_self)
 User.add_to_class("managed_student_users", managed_student_users)
 User.add_to_class("is_student", is_student)
 User.add_to_class("is_manager", is_manager)
