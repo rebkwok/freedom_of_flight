@@ -72,9 +72,13 @@ class UserEventInfo:
             self.available_course_block = get_active_user_course_block(self.user, self.course)
 
         if self.event.course:
-            if add_to_cart_course_block_config(self.event.course) is not None:
+            if add_to_cart_course_block_config(self.event.course) is not None \
+                and not self.has_available_course_block \
+                    and not self.event.course.full \
+                        and not self.event.course.has_started:
                 self.can_add_course_to_basket = True
-        if add_to_cart_drop_in_block_config(self.event) is not None:
+        if add_to_cart_drop_in_block_config(self.event) is not None \
+            and not self.has_available_drop_in_block and not self.event.full:
             self.can_add_drop_in_to_basket = True
 
         if not self.event.course or self.event.course.allow_drop_in:
@@ -113,8 +117,8 @@ def _default_button_options(user_event_info):
     }
 
 
-# EVENTS LIST: Book/cancel/payment options/waiting list for individual classes
-def button_options_events_list(user, event):
+# EVENTS/COURSE EVENTS LIST: Book/cancel/payment options/waiting list for individual classes
+def button_options_events_list(user, event, course=False):
     """
     Determine button/payment options that should be shown for a given user and event
     """
@@ -130,12 +134,13 @@ def button_options_events_list(user, event):
         return options
 
     user_event_info.update()
-    # events list page
+    if event.course:
+        user_event_info.update_course_booking_status()
 
     if user_event_info.booking_in_basket:
         basket_url = reverse("booking:shopping_basket")
         options["text"] = mark_safe(
-            f"<a class='btn btn-xs btn-primary' href='{basket_url}'>"
+            f"<a class='btn btn-xs btn-xs btn-xs-wider btn-primary' href='{basket_url}'>"
             "<i class='fas fa-shopping-cart'></i> View cart</a>"
         )
         options["text_no_style"] = True
@@ -155,11 +160,13 @@ def button_options_events_list(user, event):
         event.course.has_started and not 
         any([event.course.allow_drop_in, user_event_info.has_open_booking])
     ):
-        return {**options, "buttons": ["course_details"], "text": "Course has started"}
+        return {**options, "buttons": [], "text": "Course has started"}
 
     if user_event_info.can_book_or_cancel:
         if user_event_info.can_cancel:
             options["buttons"] = ["toggle_booking"]
+            if user_event_info.can_unenroll:
+                options["buttons"].append("unenroll")
             options["toggle_option"] = "cancel"
             return options
         
@@ -171,149 +178,47 @@ def button_options_events_list(user, event):
         assert user_event_info.can_book
 
         if event.course:
-            if not event.course.has_started and user_event_info.has_available_course_block:
-                # user has a course block, send them to the course details page to book whole course
-                text = mark_safe(
-                    '<span class="helptext float-right">NOT BOOKED</span><br/>'
-                    '<span class="helptext float-right">Payment plan available; see course details</span>'
-                )
-                return {**options, "buttons": [], "text": text}
+            if not event.course.has_started and not event.course.full and \
+            user_event_info.has_available_course_block:
+                # user has a course block
+                options["buttons"] = ["book_course"]
             if event.course.allow_drop_in:
                 if user_event_info.has_available_drop_in_block:
-                    if not event.course.has_started or user_event_info.has_booked_dropin:
-                        text = mark_safe(
-                            '<span class="helptext float-right">Drop-in and course options available;'
-                            '<br/>see course details to book</span>'
-                        )
-                        return {**options, "buttons": [], "text": text}
-                    else:
-                        options["buttons"] = ["toggle_booking"]
-                        options["toggle_option"] = "book_dropin"
-                        return options
+                    if event.course.has_started:
+                        options["text"] = "Course has started"
+                    options["buttons"].append("toggle_booking")
+                    options["toggle_option"] = "book_dropin"
+                    if user_event_info.can_add_course_to_basket:
+                        options["buttons"].append("add_course_to_basket")
+                    options["buttons"].append("payment_options")
+                    return options
                 else:
                     if user_event_info.can_add_drop_in_to_basket:
-                        options["buttons"] = ["add_to_basket"]
-                    if not event.course.has_started and user_event_info.can_add_course_to_basket:
+                        options["buttons"].append("add_to_basket")
+                    if user_event_info.can_add_course_to_basket:
                         options["buttons"].append("add_course_to_basket")
                     if user_event_info.has_payment_options:
                         options["buttons"].append("payment_options")
                     return options
             
-            if not event.course.has_started and user_event_info.can_add_course_to_basket:
-                options["buttons"] = ["add_course_to_basket"]
+            if user_event_info.can_add_course_to_basket:
+                options["buttons"].append("add_course_to_basket")
             if user_event_info.has_payment_options:
                 options["buttons"].append("payment_options")
             return options
         elif user_event_info.has_available_drop_in_block or user_event_info.has_available_subscription:
-            options["buttons"] = ["toggle_booking"]
+            options["buttons"].append("toggle_booking")
             options["toggle_option"] = "book_dropin"
             return options
         else:
             if user_event_info.can_add_drop_in_to_basket:
-                options["buttons"] = ["add_to_basket"]
+                options["buttons"].append("add_to_basket")
             if user_event_info.has_payment_options:
                 options["buttons"].append("payment_options")
             return options
 
     elif user_event_info.booking_restricted:
         return {**options, "buttons": [], "text": f"Unavailable { event.event_type.booking_restriction } mins before start"}
-
-
-# COURSE EVENTS LIST: Book class / book course /cancel/payment options/waiting list for individual classes on a single course
-def button_options_course_events_list(user, event):
-    """
-    Determine button/payment options that should be shown for a given user and event
-    """
-    # Has user booked already?
-    # Has user booked and cancelled?
-    # Is event cancelled?
-    # Is event full?
-    # Can event be booked?
-    user_event_info = UserEventInfo(user, event)
-    options = _default_button_options(user_event_info)
-    if not user_event_info.open:
-        # event is cancelled or past
-        return options
-
-    if user_event_info.booking_in_basket:
-        basket_url = reverse("booking:shopping_basket")
-        options["text"] = mark_safe(
-            f"<a class='btn btn-xs btn-primary' href='{basket_url}'>"
-            "<i class='fas fa-shopping-cart'></i> View cart</a>"
-        )
-        options["text_no_style"] = True
-        return options
-        
-    # course events list page
-    # waiting list buttons
-    # if event allows drop in, we can show waiting list and book buttons
-    user_event_info.update()
-    if event.full:
-        if not (user_event_info.has_open_booking or user_event_info.can_rebook):
-            return {**options, "buttons": ["waiting_list"], "text": ""}
-
-    if user_event_info.can_book_or_cancel:
-        if user_event_info.can_cancel:
-            options["buttons"] = ["toggle_booking"]
-            options["toggle_option"] = "cancel"
-            return options
-        
-        if user_event_info.can_rebook:
-            options["buttons"] = ["toggle_booking"]
-            options["toggle_option"] = "rebook",
-            return options
-
-        if user_event_info.has_available_block:
-            # has either a dropin or course block
-            if not user_event_info.has_available_course_block:
-                # user has drop in block ONLY
-                # if course hasn't started yet, show add course button
-                if not event.course.has_started and user_event_info.can_add_course_to_basket:
-                    options["buttons"] = ["add_course_to_basket"]
-                if event.course.allow_drop_in:
-                    options["buttons"].append("toggle_booking")
-                    options["toggle_option"] = "book_dropin"
-                return options
-            # user definitely has a course block and MAY have a drop in block too
-            if not event.course.has_started:
-                # course hasn't started, instruct to book using book course button
-                options["text"] = mark_safe(
-                    '<span class="float-right">You have an available course payment plan<br/>Use the button above to book the full course</span><br/>'
-                    )
-                if event.course.allow_drop_in:
-                    # if they've already booked drop in, either show dropin option, or add note about drop-in booking
-                    if user_event_info.has_available_drop_in_block:
-                        options["buttons"] = ["toggle_booking"]
-                        options["toggle_option"] = "book_dropin"
-                        return options
-                    else:
-                        if user_event_info.can_add_drop_in_to_basket:
-                            options["buttons"] = ["add_to_basket"]
-                        return options
-            else:
-                # course has started already, show drop-in buttons if allowed
-                if event.course.allow_drop_in:
-                    if user_event_info.has_available_drop_in_block:
-                        options["buttons"] = ["toggle_booking"]
-                        options["toggle_option"] = "book_dropin"
-                        return options
-                    else:
-                        if user_event_info.can_add_drop_in_to_basket:
-                            options["buttons"] = ["add_to_basket"]
-                        return options
-        # no available block
-        # drop in allowed
-        elif event.course.allow_drop_in:
-            if not event.course.has_started and user_event_info.can_add_course_to_basket:
-                options["buttons"].append("add_course_to_basket")
-            if user_event_info.can_add_drop_in_to_basket:
-                options["buttons"].append("add_to_basket")
-            return options
-        # drop in not allowed
-        else:
-            if not event.course.has_started and user_event_info.can_add_course_to_basket:
-                options["buttons"] = ["add_course_to_basket"]
-        return options
 
 
 # Main course book button on course events page
@@ -411,7 +316,7 @@ def course_list_button_info(user, course, user_info):
             options["text"] = f"<span class='helptext'>Item(s) in cart</span></br>"
         basket_url = reverse("booking:shopping_basket")
         options["text"] += (
-            f"<a class='btn btn-xs btn-primary' href='{basket_url}'>"
+            f"<a class='btn btn-xs btn-xs btn-xs-wider btn-primary' href='{basket_url}'>"
             "<i class='fas fa-shopping-cart'></i> View cart</a>"
         )
         options["text"] = mark_safe(options["text"])

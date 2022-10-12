@@ -17,7 +17,7 @@ from django.utils import timezone
 from accounts.models import has_active_disclaimer
 from activitylog.models import ActivityLog
 from booking.views.button_utils import booking_list_button
-from booking.views.event_views import button_options_course_events_list, button_options_events_list
+from booking.views.event_views import button_options_events_list
 from merchandise.models import ProductPurchase
 
 from common.utils import full_name, start_of_day_in_utc
@@ -269,7 +269,7 @@ def ajax_toggle_booking(request, event_id):
 
     user_info = get_user_booking_info(user, event)
     if ref == "course":
-        button_info = button_options_course_events_list(user, event)
+        button_info = button_options_events_list(user, event, course=True)
     elif ref == "events":
         button_info = button_options_events_list(user, event)
     elif ref == "bookings":
@@ -391,9 +391,11 @@ def ajax_course_booking(request, course_id):
 
     messages.success(request, f"Course {course.name} booked")
 
+    page = request.POST.get("page", 1)
     if ref == "course_list":
-        page = request.POST.get("page", 1)
         url = reverse('booking:courses', args=(course.event_type.track.slug,)) + f"?page={page}"
+    elif ref == "events":
+        url = reverse('booking:events', args=(course.event_type.track.slug,)) + f"?page={page}"
     else:
         url = reverse('booking:course_events', args=(course.slug,))
     return JsonResponse({"redirect": True, "url": url})
@@ -645,7 +647,7 @@ def ajax_add_booking_to_basket(request):
     elif ref == "course":
         context["booked"] = True
         user_info = get_user_course_booking_info(user, event.course)
-        button_info = button_options_course_events_list(user, event)
+        button_info = button_options_events_list(user, event, course=True)
         context["button_info"] = button_info
         button_html = render(request, f"booking/includes/course_events_button.txt", context)
 

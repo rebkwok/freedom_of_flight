@@ -57,11 +57,6 @@ def user_block_info(block, include_user=True):
 
 
 @register.filter
-def has_unpaid_block(user, block_config):
-    return any(block for block in user.blocks.filter(paid=False) if block.block_config == block_config)
-
-
-@register.filter
 def unpaid_block_count(user, block_config):
     # unpaid block count for blocks with no associated bookings
     return user.blocks.filter(block_config=block_config, paid=False).annotate(count=Count("bookings__id")).exclude(count__gt=0).count()

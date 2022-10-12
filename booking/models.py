@@ -207,18 +207,18 @@ class Course(models.Model):
             event.bookings.filter(status="OPEN").count() for event in self.uncancelled_events
         ])
 
-    @cached_property
+    @property
     def start(self):
         if self.uncancelled_events:
-            return self.uncancelled_events.order_by("start").first().start
+            return self.uncancelled_events.first().start
 
     @property
     def has_started(self):
         return self.start and self.start < timezone.now()
 
-    @cached_property
+    @property
     def last_event_date(self):
-        last_event = self.uncancelled_events.order_by("start").last()
+        last_event = self.uncancelled_events.last()
         if last_event:
             return last_event.start
 
@@ -327,7 +327,7 @@ class Event(models.Model):
     def course_order(self):
         if self.course and self.course.events.exists():
             if not self.cancelled:
-                events_in_order = self.course.uncancelled_events.order_by("start").values_list("id", flat=True)
+                events_in_order = self.course.uncancelled_events.values_list("id", flat=True)
                 return f"{list(events_in_order).index(self.id) + 1}/{events_in_order.count()}"
             return "-"
 
@@ -656,7 +656,7 @@ class Block(models.Model):
             # For partial course blocks we can still just check the first uncancelled event;
             # _valid_and_active_for_event only checks that the block expiry date is after the start of the first
             # course event
-            event = event or course.uncancelled_events.order_by("start").first()
+            event = event or course.uncancelled_events.first()
             valid_for_event = True
             if event:
                 # If there's no uncancelled events yet, the block is so far valid for the course in general

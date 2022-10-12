@@ -14,9 +14,9 @@
 
 
 {% if button_info.toggle_option == "cancel"  %}
-    <div class="btn btn-xs btn-xs-narrow btn-dark float-right" href="#"><i id="loader_{{ event.id }}"></i> Cancel</div>
+    <div class="btn btn-xs btn-xs-wider btn-dark float-right mb-1" href="#"><i id="loader_{{ event.id }}"></i> Cancel</div>
 {% elif button_info.toggle_option == "book_dropin"  %}
-    <div class="btn btn-xs btn-xs-narrow btn-success float-right" href="#"><i id="loader_{{ event.id }}"></i> Book Drop-in</div>
+    <div class="btn btn-xs btn-xs-wider btn-success float-right mb-1" href="#"><i id="loader_{{ event.id }}"></i> Book Drop-in</div>
 {% elif button_info.toggle_option == "rebook"  %}
-    <div class="btn btn-xs btn-xs-narrow btn-success float-right" href="#"><i id="loader_{{ event.id }}"></i> Rebook</div>
+    <div class="btn btn-xs btn-xs-wider btn-success float-right mb-1" href="#"><i id="loader_{{ event.id }}"></i> Rebook</div>
 {% endif %}

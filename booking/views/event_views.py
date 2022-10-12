@@ -12,7 +12,6 @@ from ..models import Course, Event, Track, get_active_user_course_block
 from ..utils import get_view_as_user, get_user_booking_info
 from .button_utils import (
     button_options_events_list, 
-    button_options_course_events_list, 
     button_options_book_course_button
 )
 from .views_utils import DataPolicyAgreementRequiredMixin, CleanUpBlocksMixin
@@ -133,7 +132,7 @@ class CourseEventsListView(EventListView):
 
     def _get_button_info(self, user, events):
         return {
-            event.id: button_options_course_events_list(user, event) for event in events
+            event.id: button_options_events_list(user, event, course=True) for event in events
         }
 
     def get_context_data(self, **kwargs):

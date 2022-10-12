@@ -64,7 +64,7 @@ class CourseListView(CleanUpBlocksMixin, DataPolicyAgreementRequiredMixin, ListV
 def unenroll(request):
     course_user = get_object_or_404(User, pk=request.POST["user_id"])
     course = get_object_or_404(Course, pk=request.POST["course_id"])
-
+    ref = request.POST.get("ref", "course")
     course_bookings = course_user.bookings.filter(event__course__id=course.id)
     if not course_bookings:
         messages.error(request, f"{full_name(course_user)} is not booked on this course, cannot unenroll")
@@ -74,4 +74,8 @@ def unenroll(request):
             log=f"User {full_name(course_user)} unenrolled from course {course} by user {request.user}"
         )
         messages.success(request, f"{full_name(course_user)} unenrolled from {course}")
-    return HttpResponseRedirect(reverse("booking:course_events", args=(course.slug,)))
+    if ref == "course":
+        url = reverse("booking:course_events", args=(course.slug,))
+    else:
+        url = reverse("booking:events", args=(course.event_type.track.slug,))
+    return HttpResponseRedirect(url)

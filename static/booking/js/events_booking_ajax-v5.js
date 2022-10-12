@@ -256,6 +256,8 @@ $(document).ready(function()  {
   $('.ajax_events_btn').click(_.debounce(processBookingToggleRequest, MILLS_TO_IGNORE, true));
   $('.ajax_course_events_btn').click(_.debounce(processCourseBookingRequest, MILLS_TO_IGNORE, true));
   $('.ajax_events_waiting_list_btn').click(_.debounce(toggleWaitingList, MILLS_TO_IGNORE, true));
+  $('.ajax_book_course_events_btn').click(_.debounce(processCourseBookingRequest, MILLS_TO_IGNORE, true));
+
 
   $( ".event_info_popover" ).on('click', 'a', function( event ) {
     console.log("Clicked the popover");
