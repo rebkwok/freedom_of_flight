@@ -14,11 +14,16 @@
           <i class="fas fa-info-circle"></i>
         </span>
     {% endif %}
-{% elif user_info.available_block and not button_info.in_basket %}
+  {% elif user_info.available_block and not button_info.in_basket %}
       {% if not event.course or not event.course.has_started %}
         <span class="helptext d-none d-sm-inline-block">Credit block available</span>
         <span data-toggle="tooltip" data-html="true" title="<span class='helptext'><span class='helptext d-inline-block d-sm-none'>Credit block used: </span> {{ user_info.available_block|user_block_info:0 }}</span>">
           <i class="fas fa-info-circle"></i>
         </span>
-      {% endif %}  
+      {% endif %} 
+  {% elif user_info.available_subscription_info and not button_info.in_basket %}
+        <span class="helptext d-none d-sm-inline-block">Subscription available</span>
+        <span data-toggle="tooltip" data-html="true" title="<span class='helptext'><span class='helptext d-inline-block d-sm-none'>Subscription available: </span> {{ user_info.available_subscription_info }}</span>">
+          <i class="fas fa-info-circle"></i>
+        </span>
 {% endif %}
