@@ -9,9 +9,9 @@ from django.urls import reverse
 from django.test import TestCase
 from django.utils import timezone
 
-from accounts.models import has_active_disclaimer
+from accounts.models import OnlineDisclaimer, has_active_disclaimer
 
-from booking.models import Booking, Block, WaitingListUser, BlockConfig, GiftVoucher
+from booking.models import Booking, Block, Course, WaitingListUser, BlockConfig, GiftVoucher
 from common.test_utils import TestUsersMixin, EventTestMixin
 
 
@@ -250,14 +250,18 @@ class BookingToggleAjaxViewTests(EventTestMixin, TestUsersMixin, TestCase):
             Booking, user=self.student_user, event=self.aerial_events[0], status="OPEN", no_show=True,
             block=block
         )
-        resp = self.client.post(self.url(self.aerial_events[0].id), data={"user_id": self.student_user.id})
+        resp = self.client.post(
+            self.url(self.aerial_events[0].id), 
+            data={"user_id": self.student_user.id, "ref": "bookings"}
+        )
         booking.refresh_from_db()
         assert booking.status == "OPEN"
         assert booking.no_show is False
         # block is not removed from no-show
         assert booking.block == block
         assert resp.context['alert_message']['message'] ==  'Booking has been reopened'
-
+        assert resp.context['button_info']['button'] == "toggle_booking"
+        assert resp.context['button_info']['toggle_option'] == "cancel"
         # email to student only
         assert len(mail.outbox) == 1
         assert mail.outbox[0].to == ["student@test.com"]
@@ -269,9 +273,10 @@ class BookingToggleAjaxViewTests(EventTestMixin, TestUsersMixin, TestCase):
         )
         baker.make(WaitingListUser, user=self.student_user, event=self.aerial_events[0])
         assert WaitingListUser.objects.filter(user=self.student_user, event=self.aerial_events[0]).exists() is True
-        resp = self.client.post(self.url(self.aerial_events[0].id), data={"user_id": self.student_user.id})
+        resp = self.client.post(self.url(self.aerial_events[0].id), data={"user_id": self.student_user.id, "ref": "course"})
         assert Booking.objects.count() == 1
         assert resp.context['alert_message']['message'] ==  'Booking has been opened'
+        assert resp.context['button_info']['buttons'] == ["toggle_booking"]
         # user removed from waiting list
         assert WaitingListUser.objects.filter(user=self.student_user, event=self.aerial_events[0]).exists() is False
 
@@ -322,6 +327,27 @@ class BookingToggleAjaxViewTests(EventTestMixin, TestUsersMixin, TestCase):
         assert booking.status == "CANCELLED"
         assert booking.block is None
         assert not block.full
+
+    def test_make_booking_that_completes_block (self):
+        event = baker.make_recipe("booking.future_event", event_type=self.floor_event_type, max_participants=2)
+        # make block and booking
+        block = baker.make(
+            Block, 
+            block_config__event_type=self.floor_event_type, block_config__size=1,
+            user=self.student_user, paid=True
+        )
+        assert not block.full
+
+        # make booking
+        resp = self.client.post(
+            self.url(event.id), data={"user_id": self.student_user.id, "ref": "bookings"}
+        ).json()
+        assert resp["redirect"]
+        assert reverse("booking:bookings") in resp["url"]
+        block.refresh_from_db()
+        assert block.full
+        assert block.bookings.first().user == self.student_user
+        assert block.bookings.first().event == event
 
     def test_cancel_booking_for_full_event_sends_waiting_list_emails_to_managed_user_email(self):
         event = baker.make_recipe("booking.future_event", event_type=self.floor_event_type, max_participants=2)
@@ -565,6 +591,36 @@ class BookingAjaxCourseBookingViewTests(EventTestMixin, TestUsersMixin, TestCase
         resp = self.client.post(self.url(self.course.id), data={"user_id": self.student_user.id})
         assert resp.status_code == 400
 
+    def test_book_course_removed_unpaid_dropin_blocks(self):
+        # make usable block
+        course_block = baker.make(
+            Block, user=self.student_user, block_config__event_type=self.aerial_event_type,
+            block_config__course=True, block_config__size=self.course.number_of_events,
+            paid=True
+        )
+        # make drop in block
+        unpaid_dropin_block = baker.make(
+            Block, user=self.student_user, block_config__event_type=self.aerial_event_type,
+            block_config__course=False, block_config__size=1, paid=False
+        )
+        unpaid_dropin_block_id = unpaid_dropin_block.id
+        # make an in-cart booking 
+        booking = baker.make(
+            Booking, user=self.student_user, block=unpaid_dropin_block, event=self.course_event
+        )
+        assert booking.is_in_basket()
+
+        self.client.post(
+            self.url(self.course.id),
+            data={"user_id": self.student_user.id, "ref": "events"}
+        )
+        
+        assert list(course_block.bookings.values_list("event_id", flat=True)) == \
+            list(self.course.uncancelled_events.values_list("id", flat=True))
+        booking.refresh_from_db()
+        assert booking.block == course_block
+        assert not Block.objects.filter(id=unpaid_dropin_block_id).exists()
+
 
 class WaitinglistToggleAjaxViewTests(EventTestMixin, TestUsersMixin, TestCase):
 
@@ -780,3 +836,104 @@ class AjaxBlockPurchaseTests(TestUsersMixin, TestCase):
 
         resp_json = resp.json()
         assert resp_json["cart_item_menu_count"] == 4
+
+
+import pytest
+pytestmark = pytest.mark.django_db
+
+def test_ajax_add_booking_to_basket(client, users):
+    client.force_login(users["student_user"])
+    event = baker.make_recipe("booking.future_event")
+    dropin_cart_config = baker.make(
+        BlockConfig, active=True, course=False, size=1, event_type=event.event_type
+    )
+    assert not Block.objects.exists()
+    assert not Booking.objects.exists()
+    data = {"user_id": users["student_user"].id, "event_id": event.id, "ref": "events"}
+    resp = client.post(reverse("booking:ajax_add_booking_to_basket"), data)
+
+    assert Booking.objects.count() == Block.objects.count() == 1
+    booking = Booking.objects.first()
+    assert booking.is_in_basket()
+    assert booking.user == users["student_user"]
+    assert resp["cart_item_menu_count"] == 1
+
+
+def test_ajax_add_single_course_booking_to_basket_for_another_user(client, users):
+    client.force_login(users["manager_user"])
+    event = baker.make_recipe("booking.future_event")
+    course = baker.make(Course, event_type=event.event_type, number_of_events=2, allow_drop_in=True)
+    event.course = course
+    event.save()
+    dropin_cart_config = baker.make(
+        BlockConfig, active=True, course=False, size=1, event_type=event.event_type
+    )
+    assert not Block.objects.exists()
+    assert not Booking.objects.exists()
+    data = {"user_id": users["child_user"].id, "event_id": event.id, "ref": "course"}
+    resp = client.post(reverse("booking:ajax_add_booking_to_basket"), data)
+
+    assert Booking.objects.count() == Block.objects.count() == 1
+    booking = Booking.objects.first()
+    assert booking.is_in_basket()
+    assert booking.user == users["child_user"]
+    assert resp["cart_item_menu_count"] == 1
+
+
+def test_ajax_add_booking_to_basket_disclaimer_required(client, users):
+    users["student_user"].online_disclaimer.all().delete()
+    client.force_login(users["student_user"])
+    event = baker.make_recipe("booking.future_event")
+    data = {"user_id": users["student_user"].id, "event_id": event.id, "ref": "events"}
+    resp = client.post(reverse("booking:ajax_add_booking_to_basket"), data).json()
+    assert resp["redirect"]
+    assert resp["url"] == reverse('booking:disclaimer_required', args=(users["student_user"].id,))
+
+
+def test_ajax_add_booking_to_basket_full_event(client, users):
+    client.force_login(users["student_user"])
+    event = baker.make_recipe("booking.future_event", max_participants=1)
+    baker.make(Booking, event=event)
+    data = {"user_id": users["student_user"].id, "event_id": event.id, "ref": "events"}
+    resp = client.post(reverse("booking:ajax_add_booking_to_basket"), data)
+    assert resp.status_code == 400
+    assert "full" in resp.content.decode()
+
+
+def test_ajax_add_booking_to_basket_cancelled_event(client, users):
+    client.force_login(users["student_user"])
+    event = baker.make_recipe("booking.future_event", max_participants=1, cancelled=True)
+    data = {"user_id": users["student_user"].id, "event_id": event.id, "ref": "events"}
+    resp = client.post(reverse("booking:ajax_add_booking_to_basket"), data)
+    assert resp.status_code == 400
+    assert "cancelled" in resp.content.decode()
+
+
+def test_ajax_add_booking_to_basket_already_in_basket(client, users):
+    client.force_login(users["student_user"])
+    event = baker.make_recipe("booking.future_event", max_participants=1)
+    booking = baker.make(Booking, user=users["student_user"], event=event, block__paid=False)
+    data = {"user_id": users["student_user"].id, "event_id": event.id, "ref": "events"}
+    resp = client.post(reverse("booking:ajax_add_booking_to_basket"), data)
+    assert resp.status_code == 400
+    assert "Already added to cart" in resp.content.decode()
+
+    # without block
+    booking.block = None
+    booking.save()
+    resp = client.post(reverse("booking:ajax_add_booking_to_basket"), data)
+    assert resp.status_code == 400
+    assert "Open booking already exists" in resp.content.decode()
+
+
+def test_ajax_add_booking_to_basket_no_show_course_booking(client, users):
+    client.force_login(users["student_user"])
+    event = baker.make_recipe("booking.future_event", max_participants=1)
+    baker.make(Booking, user=users["student_user"], event=event, block__paid=False, no_show=True)
+    course = baker.make(Course, event_type=event.event_type, number_of_events=2, allow_drop_in=True)
+    event.course = course
+    event.save()
+    data = {"user_id": users["student_user"].id, "event_id": event.id, "ref": "events"}
+    resp = client.post(reverse("booking:ajax_add_booking_to_basket"), data)
+    assert resp.status_code == 400
+    assert "Booking can be reopened" in resp.content.decode()

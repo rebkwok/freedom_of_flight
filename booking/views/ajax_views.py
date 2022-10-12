@@ -359,14 +359,16 @@ def ajax_course_booking(request, course_id):
     for event in course.events_left:
         booking, _ = Booking.objects.get_or_create(user=user, event=event)
         # Make sure block is assigned and update booking statuses if already created
-        if booking.block and not booking.block.paid and booking.block.block_config.size == 1:
-            # delete any associated unpaid single blocks - these are drop-ins added 
-            # to shopping basket; we're replacing them with a course block
-            booking.block.delete()
+        old_block = booking.block
+        # switch block first so we don't delete bookings when we delete the block
         booking.block = course_block
         booking.status = "OPEN"
         booking.no_show = False
         booking.save()
+        if old_block and not old_block.paid and old_block.block_config.size == 1:
+            # delete any associated unpaid single blocks - these are drop-ins added 
+            # to shopping basket; we're replacing them with a course block
+            old_block.delete()
 
     ActivityLog.objects.create(
         log=f'Course {course} (start {course.start.strftime("%d-%m-%Y")} for {user.first_name} {user.last_name} '
@@ -587,18 +589,9 @@ def ajax_add_booking_to_basket(request):
     # check event isn't full or cancelled, return error
     # check user isn't already (open) booked, return error
     # get booking if one already exists (could have been previously cancelled)
-
-    if not has_active_disclaimer(user):
-        url = reverse('booking:disclaimer_required', args=(user_id,))
+    if not has_active_disclaimer(request.user):
+        url = reverse('booking:disclaimer_required', args=(request.user.id,))
         return JsonResponse({"redirect": True, "url": url})
-
-    if event.spaces_left <= 0 or event.cancelled:
-        # redirect if full or cancelled:
-        logger.error('Attempt to add to basket for %s event', 'cancelled' if event.cancelled else 'full')
-        return HttpResponseBadRequest(
-            "Sorry, this event {}".format(
-                "has been cancelled" if event.cancelled else "is now full")
-        )
     
     try:
         existing_booking = Booking.objects.get(user=user, event=event)
@@ -607,14 +600,22 @@ def ajax_add_booking_to_basket(request):
 
     if existing_booking:
         # redirect if user already has open booking, or if they have a no-show course booking
-        if existing_booking.status == "OPEN" and existing_booking.no_show == False:
+        if existing_booking.status == "OPEN" and existing_booking.no_show is False:
             if existing_booking.block:
-                return HttpResponseBadRequest("Already added to basket")
-            logger.error('Attempt to add to basket with existing open booking for event %s, user %s', event.id, user.username)
+                return HttpResponseBadRequest("Already added to cart")
+            logger.error('Attempt to add to cart with existing open booking for event %s, user %s', event.id, user.username)
             return HttpResponseBadRequest("Open booking already exists")
         if event.course and existing_booking.block and existing_booking.no_show:
-            logger.error('Attempt to add to basket with existing no-show course booking for event %s, user %s', event.id, user.username)
+            logger.error('Attempt to add to cart with existing no-show course booking for event %s, user %s', event.id, user.username)
             return HttpResponseBadRequest("Booking can be reopened")
+
+    if event.spaces_left <= 0 or event.cancelled:
+        # redirect if full or cancelled:
+        logger.error('Attempt to add to cart for %s event', 'cancelled' if event.cancelled else 'full')
+        return HttpResponseBadRequest(
+            "Sorry, this event {}".format(
+                "has been cancelled" if event.cancelled else "is now full")
+        )
 
     ######################################
     # create booking
