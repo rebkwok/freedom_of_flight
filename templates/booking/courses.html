@@ -91,17 +91,26 @@
                                                     data-ref="course_list"
                                                     class="ajax_add_course_to_basket_btn"
                                                 > 
-                                                <span class="btn btn-xs btn-outline-dark float-right mb-2"><i id="loader_course_{{ course.events.first.id }}"></i> Add to cart (course)</span>
+                                                <span class="btn btn-sm btn-primary float-right mb-2"><i id="loader_course_{{ course.events.first.id }}"></i><i class="fas fa-shopping-cart"></i> Add course</span>
                                                 </span/>
                                             </span/>
+                                        {% elif button_info.button == "view_cart" %}
+                                            <span id="view_cart_{{ course.id }}" class="float-right">
+                                                <a class="btn btn-sm btn-outline-primary mb-2" href="{% url 'booking:shopping_basket' %}">
+                                                <i class="fas fa-shopping-cart"></i> View cart
+                                                </a>
+                                            </span
                                         {% endif %}
                                         
-                                        <span class="float-right {% if not button_info.text_no_style %}helptext{% endif %}">{{ button_info.text }}</span>
                                         {% if user_info.has_booked_course %}
                                             <br/><span class="float-right">{% include "booking/includes/block_info.html" %}</span>
                                         {% endif %}
                        
                                     </div>
+                                    <div class="col-12">
+                                        <span class="float-right {% if not button_info.text_no_style %}helptext{% endif %}">{{ button_info.text }}</span>
+                                    </div>
+
                                 </div>
                             {% elif view_as_user|has_expired_disclaimer %}
                                 <span class="helptext float-right"><a href="{% url 'accounts:disclaimer_form' view_as_user.id %}">Update expired disclaimer</a> to book</span>

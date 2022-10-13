@@ -26,9 +26,6 @@
                 {% if unpaid_block_info %}
                     <tr>
                         <td colspan="2" class="table-secondary"><strong>Bookings and Credit Blocks</strong><br/>
-                        <span class="text-danger">
-                            NOTE: drop-in and course bookings will held for {{ cart_timeout_mins }} minutes pending payment
-                        </span>
                         </td>
                     </tr>
                 {% endif %}
@@ -38,12 +35,12 @@
                         <td class="p-1">
                             {% if block_info.block.bookings.exists %}
                                 {% if block_info.block.block_config.course %}
-                                    <strong>Course booking:</strong> {{ block_info.block.bookings.first.event.course }}
+                                    <em>Course booking:</em> {{ block_info.block.bookings.first.event.course }}
                                 {% else %}
-                                    <strong>Drop-in booking:</strong> {{ block_info.block.bookings.first.event.name_and_date }}
+                                    <em>Drop-in booking:</em> {{ block_info.block.bookings.first.event.name_and_date }}
                                 {% endif %}
                             {% else %}
-                                <strong>Credit block:</strong> {{ block_info.block.block_config }}
+                                <em>Credit block:</em> {{ block_info.block.block_config }}
                             {% endif%} 
                             <span class="badge badge-info">{{ block_info.block.user|full_name }}</span>
                         </td>
@@ -137,10 +134,6 @@
                 {% if unpaid_merchandise %}
                     <tr>
                         <td colspan="2" class="table-secondary"><strong>Merchandise</strong><br/>
-                            <span class="text-danger">
-                                NOTE: merchandise cart items will be removed after {{ merchandise_cart_timeout_mins }} minutes
-                            </span>
-
                         </td>
                     </tr>
                 {% endif %}
@@ -163,6 +156,19 @@
 
               </tbody>
               <tfoot>
+              {% if unpaid_block_info or unpaid_merchandise %}
+              <tr>
+                  <td colspan=2>
+                    <span class="text-danger">
+                        {% if unpaid_block_info %}
+                        NOTE: drop-in and course bookings will held for {{ cart_timeout_mins }} minutes pending payment<br/>
+                        {% endif %}
+                        {% if unpaid_merchandise %}
+                        NOTE: merchandise will held for {{ merchandise_cart_timeout_mins }} minutes pending payment
+                        {% endif %}
+                    </span>
+              </tr>
+              {% endif %}   
               <tr>
                   <td colspan="2">
                       <strong>TOTAL:

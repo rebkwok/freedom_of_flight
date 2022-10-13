@@ -84,13 +84,27 @@ def has_subscription_availability_changed(booking, action, subscription_use_pre_
     return subscription_availability_changed
 
 
-def _get_url(event, ref):
-    if ref == "course":
-        return reverse("booking:course_events", args=(event.course.slug,))
-    elif ref == "events":
-        return reverse("booking:events", args=(event.event_type.track.slug,))
-    elif ref == "bookings":
-        return reverse("booking:bookings")
+def _get_ref_url(event=None, course=None, ref=None):
+    
+    ref_to_url = {
+        "course": lambda x: reverse("booking:course_events", args=(x.slug,)),
+        "course_events": lambda x: reverse("booking:course_events", args=(x.slug,)),
+        "bookings": lambda _: reverse("booking:bookings"),
+        "courses": lambda x: reverse('booking:courses', args=(x.event_type.track.slug,)),
+        "course_list": lambda x: reverse('booking:courses', args=(x.event_type.track.slug,)),
+        "events": lambda x: reverse("booking:events", args=(x.event_type.track.slug,))
+    }
+
+    ref = ref or "events"
+    if ref == "bookings":
+        target = None
+    elif event is not None:
+        target = event if ref == "events" else event.course
+    else:
+        assert course is not None
+        target = course if ref != "events" else course.events.first()
+
+    return ref_to_url[ref](target)
 
 
 @login_required
@@ -104,6 +118,7 @@ def ajax_toggle_booking(request, event_id):
     """
     user_id = request.POST["user_id"]
     ref = request.POST.get("ref", "events")
+    page = request.POST.get("page", 1)
 
     if str(user_id) == str(request.user.id):
         user = request.user
@@ -166,7 +181,7 @@ def ajax_toggle_booking(request, event_id):
             # rebooking, no block on booking (i.e. was fully cancelled) and no block available
             # refresh current page
             messages.error(request, "No payment method available")
-            return JsonResponse({"redirect": True, "url": _get_url(event, ref)})
+            return JsonResponse({"redirect": True, "url": _get_ref_url(event=event, ref=ref) + f"?page={page}"})
 
         # Update/create the booking
         if existing_booking is None:
@@ -254,12 +269,11 @@ def ajax_toggle_booking(request, event_id):
     alert_message['message_type'] = 'info' if requested_action == "cancelled" else 'success'
     alert_message['message'] = f"Booking has been {requested_action}"
 
-    page = request.POST.get("page", 1)
     if block_availability_changed or subscription_availability_changed:
         # subscription or block have changed, redirect to the same page again to refresh buttons
         # Ignore if we came from the course page
         messages.success(request, f"{event}: {alert_message['message']}")
-        return JsonResponse({"redirect": True, "url": _get_url(event, ref) + f"?page={page}"})
+        return JsonResponse({"redirect": True, "url": _get_ref_url(event=event, ref=ref) + f"?page={page}"})
 
     user_info = get_user_booking_info(user, event)
     if ref == "course":
@@ -326,6 +340,7 @@ def ajax_toggle_waiting_list(request, event_id):
 def ajax_course_booking(request, course_id):
     ref = request.POST.get("ref", "course")
     user_id = request.POST["user_id"]
+    page = request.POST.get("page", 1)
     if str(user_id) == str(request.user.id):
         user = request.user
     else:
@@ -339,8 +354,9 @@ def ajax_course_booking(request, course_id):
     course = Course.objects.get(id=course_id)
 
     if not has_available_course_block(user, course):
-        url = reverse('booking:course_purchase_options', args=(course.slug,))
-        return JsonResponse({"redirect": True, "url": url})
+        # no payment plan, redirect to same page to refresh
+        return JsonResponse(
+            {"redirect": True, "url": _get_ref_url(course=course, ref=ref) + f"?page={page}"})
 
     if course.full or course.cancelled:
         logger.error('Attempt to book %s course', 'cancelled' if course.cancelled else 'full')
@@ -387,14 +403,9 @@ def ajax_course_booking(request, course_id):
 
     messages.success(request, f"Course {course.name} booked")
 
-    page = request.POST.get("page", 1)
-    if ref == "course_list":
-        url = reverse('booking:courses', args=(course.event_type.track.slug,)) + f"?page={page}"
-    elif ref == "events":
-        url = reverse('booking:events', args=(course.event_type.track.slug,)) + f"?page={page}"
-    else:
-        url = reverse('booking:course_events', args=(course.slug,))
-    return JsonResponse({"redirect": True, "url": url})
+    return JsonResponse(
+        {"redirect": True, "url": _get_ref_url(course=course, ref=ref) + f"?page={page}"}
+    )
 
 
 ITEM_TYPE_MODEL_MAPPING = {
@@ -624,13 +635,7 @@ def ajax_add_booking_to_basket(request):
     booking.save()
 
     #######################################
-    alert_message = {
-        "message_type": "success",
-        "message": f"Booking for {event} added to cart for {full_name(user)}"
-    }
-    context = {
-        "alert_message": alert_message
-    }
+    context = {}
     # js needs to set "add to cart" button to empty
     # update booking button (depending on value of ref)
     # use button_info to update text fields
@@ -652,14 +657,15 @@ def ajax_add_booking_to_basket(request):
         {"event": event, "user_info": user_info, "button_info": button_info}, 
         request
     )
-
+    alert_message = f"Booking for {event} added to cart for {full_name(user)}"
+    
     return JsonResponse(
         {   
-            "button_info": button_info,
             "button_html": button_html.content.decode("utf-8"),
             "cart_item_menu_count": total_unpaid_item_count(request.user),
             "event_availability_html": event_availability_html,
-            "event_info_xs_html": event_info_xs_html
+            "event_info_xs_html": event_info_xs_html,
+            "alert_message": alert_message,
         }
     )
 
@@ -687,6 +693,7 @@ def ajax_add_course_booking_to_basket(request):
     course = get_object_or_404(Course, pk=request.POST["course_id"])
     # we could get here from the events list or course events list 
     ref = request.POST["ref"]
+    page = request.POST.get("page", 1)
 
     # check user isn't already booked, return error
     existing_course_block_bookings = user.bookings.filter(
@@ -737,11 +744,6 @@ def ajax_add_course_booking_to_basket(request):
     #######################################
     messages.success(request, f"Booking for {course} added to cart for {full_name(user)}")
     # we need to update info about all course events, so we redirect to refresh the page
-    if ref == "course":  # events list for a course
-        redirect_url = reverse("booking:course_events", args=(course.slug,))
-    elif ref == "course_list":  # courses list
-        redirect_url = reverse("booking:courses", args=(course.event_type.track.slug,))
-    else: # events list (all)
-        redirect_url = reverse("booking:events", args=(course.event_type.track.slug,))
-
-    return JsonResponse({"redirect": True, "url": redirect_url})
+    return JsonResponse(
+        {"redirect": True, "url": _get_ref_url(course=course, ref=ref) + f"?page={page}"}
+    )

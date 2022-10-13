@@ -136,14 +136,14 @@ class CourseListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         self.login(self.student_user)
         resp = self.client.get(self.url(self.adult_track))
         # Add to cart isn't shown if no block config available
-        assert "Add to cart (course)" not in resp.rendered_content
+        assert "Add course" not in resp.rendered_content
         # make a block config (doesn't have to be active)
         baker.make(
             BlockConfig, course=True, event_type=self.course.event_type, 
             size=self.course.number_of_events, active=False
         )
         resp = self.client.get(self.url(self.adult_track))
-        assert "Add to cart (course)" in resp.rendered_content
+        assert "Add course" in resp.rendered_content
 
     def test_courses_list_with_block_available(self):
         # make usable block

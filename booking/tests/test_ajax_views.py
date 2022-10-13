@@ -52,28 +52,47 @@ class BookingToggleAjaxViewTests(EventTestMixin, TestUsersMixin, TestCase):
 
     def test_create_booking_no_available_block(self):
         """
-        Test creating a booking
+        Test creating a booking with no block available redirects to page it came from
         """
         assert Booking.objects.exists() is False
-        resp = self.client.post(self.url(self.aerial_events[0].id), data={"user_id": self.student_user.id})
-        assert resp.status_code == 200
-        redirect_url = reverse('booking:event_purchase_options', args=(self.aerial_events[0].slug,))
-        assert resp.json() == {"redirect": True, "url": redirect_url}
+        ref_urls = {
+            "bookings": reverse("booking:bookings"),
+            "events": reverse("booking:events", args=(self.aerial_event_type.track.slug,)),
+        }
+        for ref, redirect_url in ref_urls.items():
+            resp = self.client.post(
+                self.url(self.aerial_events[0].id), 
+                data={"user_id": self.student_user.id, "ref": ref}
+            )
+            assert resp.status_code == 200
+            assert resp.json() == {"redirect": True, "url": redirect_url + "?page=1"}
 
     def test_create_course_booking_no_available_block(self):
         """
         Test creating a booking
         """
         assert Booking.objects.exists() is False
-        resp = self.client.post(self.url(self.course_event.id), data={"user_id": self.student_user.id})
-        assert resp.status_code == 200
-        redirect_url = reverse('booking:course_purchase_options', args=(self.course_event.course.slug,))
-        assert resp.json() == {"redirect": True, "url": redirect_url}
+        ref_urls = {
+            "bookings": reverse("booking:bookings"),
+            "events": reverse("booking:events", args=(self.aerial_event_type.track.slug,)),
+            "course": reverse("booking:course_events", args=(self.course.slug,)),
+        }
+        for ref, redirect_url in ref_urls.items():
+            resp = self.client.post(
+                self.url(self.course_event.id), 
+                data={"user_id": self.student_user.id, "ref": ref, "page": "1"}
+            )
+            assert resp.status_code == 200
+            assert resp.json() == {"redirect": True, "url": redirect_url + "?page=1"}
 
     def test_create_course_booking_with_available_block(self):
         """
         Test creating a booking
         """
+        ref_urls = {
+            "events": reverse("booking:events", args=(self.aerial_event_type.track.slug,)),
+            "course": reverse("booking:course_events", args=(self.course.slug,)),
+        }
         assert Booking.objects.exists() is False
         block = baker.make(
             Block, user=self.student_user, block_config__event_type=self.aerial_event_type,
@@ -81,11 +100,13 @@ class BookingToggleAjaxViewTests(EventTestMixin, TestUsersMixin, TestCase):
             paid=True
         )
         assert block.valid_for_course(self.course_event.course)
-
-        resp = self.client.post(self.url(self.course_event.id), data={"user_id": self.student_user.id})
-        assert resp.status_code == 200
-        redirect_url = reverse('booking:course_events', args=(self.course_event.course.slug,))
-        assert resp.json() == {"redirect": True, "url": redirect_url}
+        for ref, redirect_url in ref_urls.items():
+            resp = self.client.post(
+                self.url(self.course_event.id), 
+                data={"user_id": self.student_user.id, "ref": ref}
+            )
+            assert resp.status_code == 200
+            assert resp.json() == {"redirect": True, "url": redirect_url + "?page=1"}
 
     def test_create_booking(self):
         """
@@ -483,8 +504,8 @@ class BookingAjaxCourseBookingViewTests(EventTestMixin, TestUsersMixin, TestCase
     def test_book_course_no_available_block(self):
         resp = self.client.post(self.url(self.course.id), data={"user_id": self.student_user.id}).json()
         assert resp["redirect"] is True
-        redirect_url = reverse('booking:course_purchase_options', args=(self.course.slug,))
-        assert resp["url"] == redirect_url
+        redirect_url = reverse('booking:course_events', args=(self.course.slug,))
+        assert redirect_url in resp['url']
 
     def test_book_course(self):
         # booking a course books for all events on the course
@@ -500,7 +521,7 @@ class BookingAjaxCourseBookingViewTests(EventTestMixin, TestUsersMixin, TestCase
         resp = resp.json()
         assert resp['redirect'] is True
         redirect_url = reverse('booking:course_events', args=(self.course.slug,))
-        assert resp['url'] == redirect_url
+        assert redirect_url in resp['url']
 
         for event in self.course_events:
             assert event.bookings.filter(user=self.student_user, status="OPEN", block=block).exists()
@@ -525,7 +546,7 @@ class BookingAjaxCourseBookingViewTests(EventTestMixin, TestUsersMixin, TestCase
         resp = resp.json()
         assert resp['redirect'] is True
         redirect_url = reverse('booking:course_events', args=(self.course.slug,))
-        assert resp['url'] == redirect_url
+        assert redirect_url in resp['url']
 
         for event in self.course_events:
             assert event.bookings.filter(user=self.child_user, status="OPEN", block=block).exists()
@@ -560,7 +581,7 @@ class BookingAjaxCourseBookingViewTests(EventTestMixin, TestUsersMixin, TestCase
         resp = resp.json()
         assert resp['redirect'] is True
         redirect_url = reverse('booking:courses', args=(self.course.event_type.track.slug,)) + "?page=1"
-        assert resp['url'] == redirect_url
+        assert redirect_url in resp['url']
 
         for event in self.course_events:
             assert event.bookings.filter(user=self.student_user, status="OPEN", block=block).exists()

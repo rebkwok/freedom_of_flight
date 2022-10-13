@@ -13,7 +13,7 @@
 {% endif %}
 
 {% if button_info.toggle_option == "cancel" %}
-    <div class="btn btn-xs btn-xs-narrow btn-dark float-right" href="#"><i id="loader_{{ booking.event.id }}"></i> Cancel</div>
+    <div class="btn btn-xs btn-xs-narrow btn-dark float-right" href="#"><i id="loader_{{ booking.event.id }}"></i><i class="fas fa-window-close"></i> Cancel</div>
 {% elif button_info.toggle_option == "book" or button_info.toggle_option == "rebook" %}
     <div class="btn btn-xs btn-xs-narrow btn-success float-right" href="#">
         <i id="loader_{{ booking.event.id }}">

@@ -81,10 +81,9 @@ var processBookingAddToBasket = function()  {
             $('#availability_' + event_id).html(result.event_availability_html);
             $('#availability_xs_' + event_id).html(result.event_availability_html);
             $('#event_info_xs_' + event_id).html(result.event_info_xs_html);
-            $('#button_text_' + event_id).html(result.button_info.text);
-            $('#button_text_wrapper_' + event_id).removeClass("helptext");
             $('#booked_tick_' + event_id).removeClass("hidden")
             $('#booked_tick_' + event_id).html('<i class="text-secondary fas fa-shopping-basket"></i>')
+            $('#view_cart_' + event_id).removeClass("hidden")
             $('#cart_item_menu_count').text(result.cart_item_menu_count);
             
             $('#cancelled-text-' + event_id).text("");
@@ -92,6 +91,10 @@ var processBookingAddToBasket = function()  {
             $('#add_to_basket_' + event_id).hide();
             $('#add_course_to_basket_' + event_id).hide();
             $('#payment_options_' + event_id).hide();
+          }
+
+          if (result.alert_message) {
+            vNotify.success({text:result.alert_message,title:'Success',position: 'bottomRight'});
           }
        };
 

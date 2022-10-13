@@ -42,6 +42,7 @@ class EventListViewTests(EventTestMixin, TestUsersMixin, TestCase):
             "add_course": soup.find(id=f"add_course_to_basket_{event.id}"),
             "payment_options":  soup.find(id=f"payment_options_{event.id}"),
             "waiting_list":  soup.find(id=f"waiting_list_button_{event.id}"),
+            "view_cart":  soup.find(id=f"view_cart_{event.id}"),
         }
 
     def test_schedule_no_tracks(self):
@@ -219,8 +220,6 @@ class EventListViewTests(EventTestMixin, TestUsersMixin, TestCase):
 
         # cancel button shown for the booked events
         assert 'Cancel' in resp.rendered_content
-        # course details button shown for the unbooked course
-        assert 'Course details' in resp.rendered_content
 
         # make all bookings unpaid
         for booking in Booking.objects.all():
@@ -322,8 +321,8 @@ class EventListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         buttons = self._get_buttons(event)
         for button in ["toggle_booking", "add_course", "waiting_list", "book_course", "unenroll_course_from_event"]:
             assert buttons[button] is None
-        assert "Add to cart" in buttons["add_event"].text
-        assert "Payment Options" in buttons["payment_options"].text 
+        assert "Add drop-in" in buttons["add_event"].text
+        assert "Payment Plans" in buttons["payment_options"].text 
         assert buttons["button_text"].text == ""
 
         # cancelled, no block
@@ -331,8 +330,8 @@ class EventListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         buttons = self._get_buttons(event)
         for button in ["toggle_booking", "add_course", "waiting_list", "book_course", "unenroll_course_from_event"]:
             assert buttons[button] is None
-        assert "Add to cart" in buttons["add_event"].text
-        assert "Payment Options" in buttons["payment_options"].text 
+        assert "Add drop-in" in buttons["add_event"].text
+        assert "Payment Plans" in buttons["payment_options"].text 
         assert buttons["button_text"].text == ""
         booking.delete()
 
@@ -436,28 +435,28 @@ class EventListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         buttons = self._get_buttons(event)
         for button in ["toggle_booking", "add_event", "waiting_list", "book_course", "unenroll_course_from_event"]:
             assert buttons[button] is None
-        assert "Add to cart (course)" in buttons["add_course"].text
-        # block config is inactive, so no payment options to show
+        assert "Add course" in buttons["add_course"].text
+        # block config is inactive, so no Payment Plans to show
         assert buttons["payment_options"] is None
         assert buttons["button_text"].text == ""
 
-        # make it active, now payment options are shown
+        # make it active, now Payment Plans are shown
         course_block_config.active = True
         course_block_config.save()
         buttons = self._get_buttons(event)
-        assert "Payment Options" in buttons["payment_options"].text 
+        assert "Payment Plans" in buttons["payment_options"].text 
 
         # cancelled, no block
         booking = baker.make(Booking, user=self.student_user, event=event, status="CANCELLED")
         buttons = self._get_buttons(event)
         for button in ["toggle_booking", "add_event", "waiting_list", "book_course", "unenroll_course_from_event"]:
             assert buttons[button] is None
-        assert "Add to cart (course)" in buttons["add_course"].text
-        assert "Payment Options" in buttons["payment_options"].text 
+        assert "Add course" in buttons["add_course"].text
+        assert "Payment Plans" in buttons["payment_options"].text 
         assert buttons["button_text"].text == ""
         booking.delete()
 
-        # not booked with valid block; book course plus payment options (for dropin)
+        # not booked with valid block; book course plus Payment Plans (for dropin)
         block = baker.make_recipe(
             "booking.course_block", block_config__event_type=self.aerial_event_type,
             block_config__size=1, user=self.student_user, paid=True
@@ -465,7 +464,7 @@ class EventListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         buttons = self._get_buttons(event)
         for button in ["toggle_booking", "add_event", "add_course", "waiting_list", "unenroll_course_from_event"]:
             assert buttons[button] is None
-        assert "Payment Options" in buttons["payment_options"].text
+        assert "Payment Plans" in buttons["payment_options"].text
         assert "Book course" in buttons["book_course"].text
 
         # cancelled, with block
@@ -476,7 +475,7 @@ class EventListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         buttons = self._get_buttons(event)
         for button in ["toggle_booking", "add_event", "add_course", "waiting_list", "unenroll_course_from_event"]:
             assert buttons[button] is None
-        assert "Payment Options" in buttons["payment_options"].text
+        assert "Payment Plans" in buttons["payment_options"].text
         assert "Book course" in buttons["book_course"].text
 
         # Make course full
@@ -570,9 +569,9 @@ class EventListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         buttons = self._get_buttons(event)
         for button in ["toggle_booking", "waiting_list"]:
             assert buttons[button] is None
-        assert "Add to cart (course)" in buttons["add_course"].text
-        assert "Add to cart (drop-in)" in buttons["add_event"].text
-        # block configs aren't active, no payment options shown
+        assert "Add course" in buttons["add_course"].text
+        assert "Add drop-in" in buttons["add_event"].text
+        # block configs aren't active, no Payment Plans shown
         assert buttons["payment_options"] is None
         assert buttons["button_text"].text == ""
 
@@ -582,7 +581,7 @@ class EventListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         dropin_block_config.active = True
         dropin_block_config.save() 
         buttons = self._get_buttons(event)
-        assert "Payment Options" in buttons["payment_options"].text 
+        assert "Payment Plans" in buttons["payment_options"].text 
 
         # cancelled, no block
         booking = baker.make(
@@ -591,13 +590,13 @@ class EventListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         buttons = self._get_buttons(event)
         for button in ["toggle_booking", "waiting_list"]:
             assert buttons[button] is None
-        assert "Add to cart (course)" in buttons["add_course"].text
-        assert "Add to cart (drop-in)" in buttons["add_event"].text
-        assert "Payment Options" in buttons["payment_options"].text 
+        assert "Add course" in buttons["add_course"].text
+        assert "Add drop-in" in buttons["add_event"].text
+        assert "Payment Plans" in buttons["payment_options"].text 
         assert buttons["button_text"].text == ""
         booking.delete()
 
-        # not booked with valid course block; show book course, add drop in, and payment options
+        # not booked with valid course block; show book course, add drop in, and Payment Plans
         block = baker.make_recipe(
             "booking.course_block", block_config__event_type=self.aerial_event_type,
             block_config__size=1, user=self.student_user, paid=True
@@ -611,7 +610,7 @@ class EventListViewTests(EventTestMixin, TestUsersMixin, TestCase):
 
         # cancelled, with course block
         booking = baker.make(Booking, user=self.student_user, event=event, status="CANCELLED")
-        # Booking allowed if course isn't full; show book course, add drop in, payment options
+        # Booking allowed if course isn't full; show book course, add drop in, Payment Plans
         buttons = self._get_buttons(event)
         for button in ["add_course", "waiting_list", "toggle_booking"]:
             assert buttons[button] is None
@@ -839,12 +838,13 @@ class CourseEventsListViewTests(EventTestMixin, TestUsersMixin, TestCase):
             "unenroll_course_from_event": soup.find(id=f"unenroll_course_from_event_{event.id}"),
             "add_event": soup.find(id=f"add_to_basket_{event.id}"),
             "add_course": soup.find(id=f"add_course_to_basket_{event.id}"),
-            "payment_options":  soup.find(id=f"payment_options_{event.id}"),
-            "waiting_list":  soup.find(id=f"waiting_list_button_{event.id}"),
+            "payment_options": soup.find(id=f"payment_options_{event.id}"),
+            "waiting_list": soup.find(id=f"waiting_list_button_{event.id}"),
+            "view_cart": soup.find(id=f"view_cart_{event.id}"),
         }
 
         for button_key in event_buttons:
-            if event_buttons[button_key]:
+            if event_buttons[button_key] and button_key != "view_cart":
                 event_buttons[button_key] = event_buttons[button_key].text.replace("\n", "").strip()
        
         return book_course_button, event_buttons
@@ -866,14 +866,14 @@ class CourseEventsListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         assert len(sum(list(resp.context_data['events_by_date'].values()), [])) == 3
 
     def test_course_list_with_booked_course(self):
-        baker.make(Booking, event=self.course_event, user=self.student_user)
-        baker.make(Booking, event=self.course_event1, user=self.student_user)
+        baker.make(Booking, event=self.course_event, user=self.student_user, block__paid=True)
+        baker.make(Booking, event=self.course_event1, user=self.student_user, block__paid=True)
         resp = self.client.get(self.url)
         assert resp.context_data["book_course_button_options"]["pre_button_text"] == "Student User is attending this course."
     
     def test_course_list_with_booked_course_unenroll(self):
-        booking = baker.make(Booking, event=self.course_event, user=self.student_user)
-        booking1 = baker.make(Booking, event=self.course_event1, user=self.student_user)
+        booking = baker.make(Booking, event=self.course_event, user=self.student_user, block__paid=True)
+        booking1 = baker.make(Booking, event=self.course_event1, user=self.student_user, block__paid=True)
         resp = self.client.get(self.url)
         assert resp.context_data["book_course_button_options"]["button"] == "unenroll"
 
@@ -911,8 +911,8 @@ class CourseEventsListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         assert resp.context_data["book_course_button_options"]["button"] is None
 
         # create a booking for the managed user
-        baker.make(Booking, event=self.course_event, user=self.child_user)
-        baker.make(Booking, event=self.course_event1, user=self.child_user)
+        baker.make(Booking, event=self.course_event, user=self.child_user, block__paid=True)
+        baker.make(Booking, event=self.course_event1, user=self.child_user, block__paid=True)
         resp = self.client.get(self.url)
         # booking just made, can unenroll
         assert resp.context_data["book_course_button_options"]["button"] == "unenroll"
@@ -949,7 +949,7 @@ class CourseEventsListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         assert course_button["pre_text"] == ""
         assert course_button["post_text"] == ""
 
-        # There are no valid block configs; no add to basket buttons or payment options shown
+        # There are no valid block configs; no add to basket buttons or Payment Plans shown
         assert add_to_cart_course_block_config(self.course) is None
         assert add_to_cart_drop_in_block_config(self.course.events.first()) is None
         for button in [
@@ -959,7 +959,8 @@ class CourseEventsListViewTests(EventTestMixin, TestUsersMixin, TestCase):
             "waiting_list",
             "add_event",
             "add_course", 
-            "payment_options"
+            "payment_options",
+            "view_cart",
         ]:
             assert event_buttons[button] is None, button
         assert event_buttons["button_text"] == ""
@@ -978,9 +979,11 @@ class CourseEventsListViewTests(EventTestMixin, TestUsersMixin, TestCase):
             "unenroll_course_from_event",
             "waiting_list",
             "add_event", # dropin not allowed
-            "payment_options" # no purchaseable blocks
+            "payment_options", # no purchaseable blocks
         ]:
             assert event_buttons[button] is None, button
+        # view cart button is always present but hidden
+        assert "hidden" in event_buttons["view_cart"].attrs["class"]
         for button in ["add_course"]:
             assert event_buttons[button] is not None, button
         assert event_buttons["button_text"] == ""
@@ -998,6 +1001,9 @@ class CourseEventsListViewTests(EventTestMixin, TestUsersMixin, TestCase):
             "add_event", # dropin not allowed
         ]:
             assert event_buttons[button] is None, button
+        # view cart button is always present but hidden
+        assert "hidden" in event_buttons["view_cart"].attrs["class"]
+        
         for button in ["add_course", "payment_options"]:
             assert event_buttons[button] is not None, button
         assert event_buttons["button_text"] == ""
@@ -1019,6 +1025,9 @@ class CourseEventsListViewTests(EventTestMixin, TestUsersMixin, TestCase):
             assert event_buttons[button] is None, button
         for button in ["add_course", "payment_options"]:
             assert event_buttons[button] is not None, button
+        # view cart button is always present but hidden
+        assert "hidden" in event_buttons["view_cart"].attrs["class"]
+        
         assert event_buttons["button_text"] == ""
         booking.delete()
 
@@ -1041,6 +1050,9 @@ class CourseEventsListViewTests(EventTestMixin, TestUsersMixin, TestCase):
             "add_event", # dropin not allowed
         ]:
             assert event_buttons[button] is None, button
+        # view cart button is always present but hidden
+        assert "hidden" in event_buttons["view_cart"].attrs["class"]
+        
         for button in ["book_course", "payment_options"]:
             assert event_buttons[button] is not None, button
         assert event_buttons["button_text"] == ""
@@ -1062,6 +1074,9 @@ class CourseEventsListViewTests(EventTestMixin, TestUsersMixin, TestCase):
             "add_event", # dropin not allowed
         ]:
             assert event_buttons[button] is None, button
+        # view cart button is always present but hidden
+        assert "hidden" in event_buttons["view_cart"].attrs["class"]
+        
         for button in ["book_course", "payment_options"]:
             assert event_buttons[button] is not None, button
         assert event_buttons["button_text"] == ""
@@ -1083,11 +1098,14 @@ class CourseEventsListViewTests(EventTestMixin, TestUsersMixin, TestCase):
             "waiting_list",
             "payment_options",
             "add_event", # dropin not allowed
-            "unenroll_course_from_event" # not shown for event b/c cancelled so show rebook
+            "unenroll_course_from_event", # not shown for event b/c cancelled so show rebook
         ]:
             assert event_buttons[button] is None, button
         for button in ["toggle_booking"]:
             assert event_buttons[button] is not None, button
+        # view cart button is always present but hidden
+        assert "hidden" in event_buttons["view_cart"].attrs["class"]
+        
         assert event_buttons["toggle_booking"] == "Rebook"
         assert event_buttons["button_text"] == ""
         booking.delete()
@@ -1110,7 +1128,9 @@ class CourseEventsListViewTests(EventTestMixin, TestUsersMixin, TestCase):
             assert event_buttons[button] is None, button
         assert event_buttons["waiting_list"] == "Join waiting list"
         assert event_buttons["button_text"] == "Class is full"
-
+        # view cart button is always present but hidden
+        assert "hidden" in event_buttons["view_cart"].attrs["class"]
+        
         # event full, on waiting list
         baker.make(WaitingListUser, event=event, user=self.student_user)
         course_button, event_buttons = self._get_book_course_buttons(self.course)
@@ -1136,6 +1156,9 @@ class CourseEventsListViewTests(EventTestMixin, TestUsersMixin, TestCase):
             "waiting_list",
         ]:
             assert event_buttons[button] is None, button
+        # view cart button is always present but hidden
+        assert "hidden" in event_buttons["view_cart"].attrs["class"]
+        
         assert event_buttons["toggle_booking"] == "Cancel"
         assert event_buttons["unenroll_course_from_event"] is not None
         assert event_buttons["button_text"] == ""
@@ -1217,6 +1240,9 @@ class CourseEventsListViewTests(EventTestMixin, TestUsersMixin, TestCase):
             "toggle_booking",
         ]:
             assert event_buttons[button] is None, button
+        # view cart button is always present but hidden
+        assert "hidden" in event_buttons["view_cart"].attrs["class"]
+        
         for button in [
             "add_course",
             "add_event",
@@ -1238,6 +1264,9 @@ class CourseEventsListViewTests(EventTestMixin, TestUsersMixin, TestCase):
             "toggle_booking",
         ]:
             assert event_buttons[button] is None, button
+        # view cart button is always present but hidden
+        assert "hidden" in event_buttons["view_cart"].attrs["class"]
+        
         for button in [
             "add_course",
             "add_event",
@@ -1261,6 +1290,9 @@ class CourseEventsListViewTests(EventTestMixin, TestUsersMixin, TestCase):
             "toggle_booking",
         ]:
             assert event_buttons[button] is None, button
+        # view cart button is always present but hidden
+        assert "hidden" in event_buttons["view_cart"].attrs["class"]
+        
         for button in [
             "book_course",
             "add_event",
@@ -1282,9 +1314,12 @@ class CourseEventsListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         assert "You have an available drop-in payment plan" in course_button["post_text"]
         for button in [
             "add_course",
-            "add_event"
+            "add_event",
         ]:
             assert event_buttons[button] is None, button
+        # view cart button is always present but hidden
+        assert "hidden" in event_buttons["view_cart"].attrs["class"]
+        
         for button in [
             "book_course",
             "toggle_booking",
@@ -1304,7 +1339,7 @@ class CourseEventsListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         assert "You have an available drop-in payment plan" in course_button["post_text"]
         for button in [
             "book_course",
-            "add_event"
+            "add_event",
         ]:
             assert event_buttons[button] is None, button
         for button in [
@@ -1313,6 +1348,9 @@ class CourseEventsListViewTests(EventTestMixin, TestUsersMixin, TestCase):
             "payment_options",
         ]:
             assert event_buttons[button] is not None, button
+        # view cart button is always present but hidden
+        assert "hidden" in event_buttons["view_cart"].attrs["class"]
+        
         assert event_buttons["toggle_booking"] == "Book Drop-in"
         assert event_buttons["button_text"] == ""
 
@@ -1325,9 +1363,12 @@ class CourseEventsListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         assert "You have an available drop-in payment plan" in course_button["post_text"]
         for button in [
             "book_course",
-            "add_event"
+            "add_event",
         ]:
             assert event_buttons[button] is None, button
+        # view cart button is always present but hidden
+        assert "hidden" in event_buttons["view_cart"].attrs["class"]
+        
         for button in [
             "add_course",
             "toggle_booking",
@@ -1338,6 +1379,8 @@ class CourseEventsListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         assert event_buttons["button_text"] == ""
 
         # no-show, with course block
+        course_block.paid = True
+        course_block.save()
         booking.block = course_block
         booking.status = "OPEN"
         booking.no_show = True
@@ -1351,9 +1394,12 @@ class CourseEventsListViewTests(EventTestMixin, TestUsersMixin, TestCase):
             "book_course",
             "add_course",
             "add_event",
-            "payment_options"
+            "payment_options",
         ]:
             assert event_buttons[button] is None, button
+        # view cart button is always present but hidden
+        assert "hidden" in event_buttons["view_cart"].attrs["class"]
+        
         assert event_buttons["toggle_booking"] == "Rebook"
         assert event_buttons["button_text"] == ""
         booking.delete()
@@ -1403,15 +1449,18 @@ class CourseEventsListViewTests(EventTestMixin, TestUsersMixin, TestCase):
             "book_course",
             "add_course",
             "add_event",
-            "payment_options"
+            "payment_options",
         ]:
             assert event_buttons[button] is None, button
+        # view cart button is always present but hidden
+        assert "hidden" in event_buttons["view_cart"].attrs["class"]
+        
         assert event_buttons["toggle_booking"] == "Cancel"
         assert event_buttons["button_text"] == ""
 
         # booked dropin for some events only with dropin block
         # course block available
-        baker.make_recipe(
+        course_block2 = baker.make_recipe(
             "booking.course_block", block_config__event_type=self.aerial_event_type,
             block_config__size=2, user=self.student_user, paid=True
         )
@@ -1424,9 +1473,12 @@ class CourseEventsListViewTests(EventTestMixin, TestUsersMixin, TestCase):
             "book_course",
             "add_course",
             "add_event",
-            "payment_options"
+            "payment_options",
         ]:
             assert event_buttons[button] is None, button
+        # view cart button is always present but hidden
+        assert "hidden" in event_buttons["view_cart"].attrs["class"]
+        
         assert event_buttons["toggle_booking"] == "Cancel"
         assert event_buttons["button_text"] == ""
 
@@ -1444,8 +1496,36 @@ class CourseEventsListViewTests(EventTestMixin, TestUsersMixin, TestCase):
             "book_course",
             "add_course",
             "add_event",
-            "payment_options"
+            "payment_options",
         ]:
             assert event_buttons[button] is None, button
+        # view cart button is always present but hidden
+        assert "hidden" in event_buttons["view_cart"].attrs["class"]
+        
         assert event_buttons["toggle_booking"] == "Cancel"
+        assert event_buttons["button_text"] == ""
+    
+        # course in basket
+        Booking.objects.all().delete()
+        course_block2 = baker.make_recipe(
+            "booking.course_block", block_config__event_type=self.aerial_event_type,
+            block_config__size=2, user=self.student_user, paid=False
+        )
+        for event in self.course.uncancelled_events:
+            baker.make(Booking, user=self.student_user, block=course_block2, event=event)
+        course_button, event_buttons = self._get_book_course_buttons(self.course)
+        assert course_button["book_button"] is None
+        assert course_button["unenroll"] is None
+        assert "Booking is provisionally held pending payment." in course_button["pre_text"]
+        assert course_button["post_text"] == ""
+        for button in [
+            "book_course",
+            "add_course",
+            "add_event",
+            "payment_options",
+            "toggle_booking"
+        ]:
+            assert event_buttons[button] is None, button
+        # view cart button is always present but hidden if necessary
+        assert "hidden" not in event_buttons["view_cart"].attrs.get("class", [])
         assert event_buttons["button_text"] == ""

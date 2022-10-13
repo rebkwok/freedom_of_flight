@@ -88,8 +88,9 @@ class UserEventInfo:
             self.has_payment_options = valid_course_block_configs(self.event.course).exists()
 
     def update_course_booking_status(self):
-        self.course_booked = self.user_course_bookings.count() == self.course.uncancelled_events.count()
-        self.booked_for_course_events = self.user_course_bookings.filter(no_show=False).exists()
+        self.course_booked = self.user_course_bookings.filter(block__paid=True).count() == self.course.uncancelled_events.count()
+        self.course_in_basket = not self.course_booked and self.user_course_bookings.count() == self.course.uncancelled_events.count()
+        self.booked_for_course_events = self.user_course_bookings.filter(block__paid=True, no_show=False).exists()
 
         if self.course_booked:
             date_course_first_booked = self.user_course_bookings.first().date_booked
@@ -139,11 +140,7 @@ def button_options_events_list(user, event, course=False):
         user_event_info.update_course_booking_status()
 
     if user_event_info.booking_in_basket:
-        basket_url = reverse("booking:shopping_basket")
-        options["text"] = mark_safe(
-            f"<a class='btn btn-xs btn-xs btn-xs-wider btn-primary' href='{basket_url}'>"
-            "<i class='fas fa-shopping-cart'></i> View cart</a>"
-        )
+        options["buttons"].append("view_cart")
         options["text_no_style"] = True
         return options
 
@@ -247,6 +244,10 @@ def button_options_book_course_button(user, course):
             )
         return options
     
+    if user_event_info.course_in_basket:
+        options["pre_button_text"] = f"Booking is provisionally held pending payment."
+        return options
+    
     user_event_info.update(include_course_data=True)
     # already booked for events, but not all (i.e. drop in)
     if user_event_info.booked_for_course_events:
@@ -315,11 +316,7 @@ def course_list_button_info(user, course, user_info):
     if user_info["items_in_basket"]:
         if not user_info["has_booked_all"]:
             options["text"] = f"<span class='helptext'>Item(s) in cart</span></br>"
-        basket_url = reverse("booking:shopping_basket")
-        options["text"] += (
-            f"<a class='btn btn-xs btn-xs btn-xs-wider btn-primary' href='{basket_url}'>"
-            "<i class='fas fa-shopping-cart'></i> View cart</a>"
-        )
+        options["button"] = "view_cart"
         options["text"] = mark_safe(options["text"])
         options["text_no_style"] = True
 
