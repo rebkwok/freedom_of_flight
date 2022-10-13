@@ -25,7 +25,7 @@
                 <tbody>
                     {% for item in cart_items %}
                         <tr>
-                            <td>{{ item.name }}</td>
+                            <td>{{ item.name }} {% if item.user %}({{ item.user|full_name }}){% endif %}</td>
                             <td>{{ item.cost }}</td>
                         </tr>
 
