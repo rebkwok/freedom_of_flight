@@ -1,4 +1,3 @@
-from django.template.loader import render_to_string
 from django import template
 from django.db.models import Q, Count
 from django.utils import timezone
@@ -8,16 +7,11 @@ from ..models import has_available_course_block as has_available_course_block_ut
 from ..models import has_available_block, has_available_subscription
 
 from ..utils import (
-    get_block_status, user_can_book_or_cancel, get_user_booking_info, user_subscription_info,
+    get_block_status, get_user_booking_info, user_subscription_info,
     show_warning
 )
 
 register = template.Library()
-
-
-@register.filter
-def has_available_course_block(user, course):
-    return has_available_course_block_util(user, course)
 
 
 @register.filter
@@ -89,7 +83,6 @@ def active_subscription_info(user_active_subscriptions, subscription_config):
 def on_waiting_list(user, event):
     if user.is_authenticated:
         return WaitingListUser.objects.filter(user=user, event=event).exists()
-    return False
 
 
 @register.filter
@@ -120,11 +113,6 @@ def subscription_start_text(subscription):
 
 
 @register.filter
-def can_book_or_cancel(booking):
-    return user_can_book_or_cancel(event=booking.event, user_booking=booking)
-
-
-@register.filter
 def show_booking_warning(booking):
     return show_warning(event=booking.event, user_booking=booking)
 
@@ -139,6 +127,7 @@ def booking_user_info(booking):
     user_info = get_user_booking_info(booking.user, booking.event)
     user_info["hide_block_info_divider"] = True
     return user_info
+
 
 @register.filter
 def format_subscription_config_start_options(subscription_config_dict):
@@ -182,6 +171,7 @@ def can_purchase_subscription(user, subscription_config):
 @register.filter
 def at_least_one_user_can_purchase(available_users, block_or_subscription):
     return any(user for user in available_users if block_or_subscription.available_to_user(user))
+
 
 @register.filter
 def get_range(value, start=0):
