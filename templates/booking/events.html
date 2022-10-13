@@ -177,6 +177,7 @@
                                                     <span 
                                                       id="add_to_basket_{{ event.id }}"
                                                       data-event_id="{{ event.id }}"
+                                                      data-event_str="{{ event.name }} ({{ event.start|date:'D d b H:i'|title }})"
                                                       data-course_id={% if event.course %}"{{ event.course.id }}"{% else %}""{% endif %}
                                                       data-user_id="{{ view_as_user.id }}"
                                                       data-show_warning={{ user_info.show_warning|yesno:"1,0" }}

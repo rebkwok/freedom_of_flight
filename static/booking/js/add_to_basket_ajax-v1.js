@@ -19,50 +19,51 @@ var processBookingAddToBasket = function()  {
 
     //The value of the "data-event_id" attribute.
     var event_id = $button_just_clicked_on.data('event_id');
+    var event_str = $button_just_clicked_on.data('event_str');
     var user_id = $button_just_clicked_on.data('user_id');
-    var course_id = $button_just_clicked_on.data('course_id');
     var ref = $button_just_clicked_on.data('ref');
     var show_warning = $button_just_clicked_on.data('show_warning');
     var cancellation_allowed = $button_just_clicked_on.data('cancellation_allowed');
 
     if (show_warning) {
-          $('#confirm-dialog').dialog({
-            height: "auto",
-            width: 500,
-            modal: true,
-            closeOnEscape: true,
-            dialogClass: "no-close",
-            title: "Warning!",
-            open: function() {
-              let contentText;
-              const eventText = "<strong>" + event_str + "</strong><br/>";
-              if (!cancellation_allowed) {
-                  contentText = "Cancellation is not allowed; if you choose to cancel you will not receive any credit back to your block/subscription or any refund.";
-              } else {
-                  contentText = 'The allowed cancellation period has passed; if you choose to cancel you will not receive any credit back to your block/subscription or any refund.';
+        $('#confirm-dialog').dialog({
+          height: "auto",
+          width: 500,
+          modal: true,
+          closeOnEscape: true,
+          dialogClass: "no-close",
+          title: "Warning!",
+          open: function() {
+            let contentText;
+            const eventText = "<strong>" + event_str + "</strong><br/>";
+            console.log("eventText " + eventText);
+            if (!cancellation_allowed) {
+                contentText = "Cancellation is not allowed; if you purchase this booking and cancel you will not be eligible for any credit or refund.";
+            } else {
+                contentText = 'The allowed cancellation period has passed; if you purchase this booking and cancel you will not be eligible for any credit or refund.';
+            }
+            $(this).html(eventText + contentText + "<br>Please confirm you want to continue.");
+          },
+          buttons: [
+              {
+                  text: "Continue",
+                  click: function () {
+                      doTheAjax();
+                      $(this).dialog('close');
+                  },
+                  "class": "btn btn-success"
+              },
+              {
+                  text: "Go back",
+                  click: function () {
+                      $(this).dialog('close');
+                  },
+                  "class": "btn btn-dark"
               }
-              $(this).html(eventText + contentText + "<br>Please confirm you want to continue.");
-            },
-            buttons: [
-                {
-                    text: "Continue",
-                    click: function () {
-                        doTheAjax();
-                        $(this).dialog('close');
-                    },
-                    "class": "btn btn-success"
-                },
-                {
-                    text: "Go back",
-                    click: function () {
-                        $(this).dialog('close');
-                    },
-                    "class": "btn btn-dark"
-                }
-            ]
-        })
-      } else {
-          doTheAjax()
+          ]
+      })
+    } else {
+      doTheAjax()
     }
 
     function doTheAjax() {

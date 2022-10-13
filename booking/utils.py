@@ -185,10 +185,6 @@ def show_warning(event, user_booking, has_available_payment_method=None):
                      has_available_subscription(user_booking.user, event)]
                 )
 
-    if not has_available_payment_method:
-        # we'll be showing the payment options button
-        return False
-
     if not event.event_type.allow_booking_cancellation:
         # events that never allow full cancellation
         return True
