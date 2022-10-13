@@ -84,6 +84,15 @@ def has_subscription_availability_changed(booking, action, subscription_use_pre_
     return subscription_availability_changed
 
 
+def _get_url(event, ref):
+    if ref == "course":
+        return reverse("booking:course_events", args=(event.course.slug,))
+    elif ref == "events":
+        return reverse("booking:events", args=(event.event_type.track.slug,))
+    elif ref == "bookings":
+        return reverse("booking:bookings")
+
+
 @login_required
 @require_http_methods(['POST'])
 def ajax_toggle_booking(request, event_id):
@@ -149,25 +158,15 @@ def ajax_toggle_booking(request, event_id):
                         "has been cancelled" if event.cancelled else "is now full")
                 )
 
-        # has available course block/subscription
-        if event.course and ref == "events" and has_available_course_block(user, event.course):
-            if requested_action == "opened" or existing_booking and existing_booking.status == "CANCELLED":
-                # First time booking for a course event, or reopening a fully cancelled course booking - redirect to book course
-                # rebookings for no-shows can be done from events page
-                url = reverse('booking:course_events', args=(event.course.slug,))
-                return JsonResponse({"redirect": True, "url": url})
-
         # get drop-in and subscription payment methods only; course bookings are done from
         # the course page (apart from no_show course bookings)
         has_payment_method = has_available_block(user, event, dropin_only=True) or has_available_subscription(user, event)
         no_show_course_booking = event.course and existing_booking and existing_booking.no_show
         if not no_show_course_booking and not has_payment_method:
             # rebooking, no block on booking (i.e. was fully cancelled) and no block available
-            if event.course:
-                url = reverse("booking:course_purchase_options", args=(event.course.slug,))
-            else:
-                url = reverse("booking:event_purchase_options", args=(event.slug,))
-            return JsonResponse({"redirect": True, "url": url})
+            # refresh current page
+            messages.error(request, "No payment method available")
+            return JsonResponse({"redirect": True, "url": _get_url(event, ref)})
 
         # Update/create the booking
         if existing_booking is None:
@@ -255,17 +254,12 @@ def ajax_toggle_booking(request, event_id):
     alert_message['message_type'] = 'info' if requested_action == "cancelled" else 'success'
     alert_message['message'] = f"Booking has been {requested_action}"
 
-    if ref != "course":
-        page = request.POST.get("page", 1)
-        if block_availability_changed or subscription_availability_changed:
-            # subscription or block have changed, redirect to the same page again to refresh buttons
-            # Ignore if we came from the course page
-            messages.success(request, f"{event}: {alert_message['message']}")
-            if ref == "bookings":
-                url = reverse("booking:bookings")
-            else:
-                url = reverse("booking:events", args=(event.event_type.track.slug,))
-            return JsonResponse({"redirect": True, "url": url + f"?page={page}"})
+    page = request.POST.get("page", 1)
+    if block_availability_changed or subscription_availability_changed:
+        # subscription or block have changed, redirect to the same page again to refresh buttons
+        # Ignore if we came from the course page
+        messages.success(request, f"{event}: {alert_message['message']}")
+        return JsonResponse({"redirect": True, "url": _get_url(event, ref) + f"?page={page}"})
 
     user_info = get_user_booking_info(user, event)
     if ref == "course":
