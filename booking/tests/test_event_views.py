@@ -636,9 +636,8 @@ class EventListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         # But not if the course has started, so just show drop in is available
         self.course.number_of_events = 2
         self.course.save()
-        baker.make_recipe(
-            "booking.future_event", event_type=self.aerial_event_type, course=self.course,
-            start=timezone.now() - timedelta(days=1)
+        past_event = baker.make_recipe(
+            "booking.past_event", event_type=self.aerial_event_type, course=self.course,
         )
         buttons = self._get_buttons(event)
         for button in ["add_course", "add_event", "book_course", "waiting_list"]:
@@ -647,6 +646,11 @@ class EventListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         assert buttons["button_text"].text  == "Course has started"
         assert "Book Drop-in" in buttons["toggle_booking"].text
 
+        # past event isn't shown
+        buttons = self._get_buttons(past_event)
+        for button in buttons:
+            assert buttons[button] is None
+            
         # Make course full
         for courseevent in self.course.events.all():
             baker.make(Booking, event=courseevent, status="OPEN",
@@ -706,7 +710,7 @@ class EventListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         assert buttons["button_text"].text  == ""
         assert "Rebook" in buttons["toggle_booking"].text
         booking.delete()
-    
+
     # def test_online_event_video_link(self):
     #     online_class = baker.make_recipe(
     #         'booking.future_CL', event_type__subtype="Online class", video_link="https://foo.test"
@@ -1168,7 +1172,7 @@ class CourseEventsListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         # get the event buttons for the first event (past)
         course_button, event_buttons = self._get_book_course_buttons(self.course)
         assert "This course has started" in course_button["pre_text"]
-        assert event_buttons["button_text"] == ""
+        assert event_buttons["button_text"] == "Class is past"
 
     def test_button_display_course_event_drop_in_allowed(self):
         # With a course event, check that the button displays as expected for:
@@ -1383,3 +1387,65 @@ class CourseEventsListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         assert course_button["unenroll"] == ""  # unenroll is a form, no text
         assert "Student User is attending this course" in course_button["pre_text"]
         assert "You can reschedule" in course_button["post_text"]
+
+        # booked dropin for some events only with dropin block
+        # no course block available
+        self.course.number_of_events = 2
+        self.course.save()
+        second_event = baker.make_recipe("booking.future_event", event_type=self.aerial_event_type, course=self.course)
+
+        course_button, event_buttons = self._get_book_course_buttons(self.course)
+        assert course_button["book_button"] is None
+        assert course_button["unenroll"] is None
+        assert "Student User has booked for classes on this course." in course_button["pre_text"]
+        assert course_button["post_text"] == ""
+        for button in [
+            "book_course",
+            "add_course",
+            "add_event",
+            "payment_options"
+        ]:
+            assert event_buttons[button] is None, button
+        assert event_buttons["toggle_booking"] == "Cancel"
+        assert event_buttons["button_text"] == ""
+
+        # booked dropin for some events only with dropin block
+        # course block available
+        baker.make_recipe(
+            "booking.course_block", block_config__event_type=self.aerial_event_type,
+            block_config__size=2, user=self.student_user, paid=True
+        )
+        course_button, event_buttons = self._get_book_course_buttons(self.course)
+        assert course_button["book_button"] == "Book Course"
+        assert course_button["unenroll"] is None
+        assert "Student User has booked for classes on this course." in course_button["pre_text"]
+        assert "You have a course credit block available" in course_button["post_text"]
+        for button in [
+            "book_course",
+            "add_course",
+            "add_event",
+            "payment_options"
+        ]:
+            assert event_buttons[button] is None, button
+        assert event_buttons["toggle_booking"] == "Cancel"
+        assert event_buttons["button_text"] == ""
+
+        # booked dropin for some events only with dropin block
+        # course block available but course not full
+        baker.make(Booking, event=second_event, _quantity=self.course.max_participants)
+        self.course.refresh_from_db()
+        assert self.course.full
+        course_button, event_buttons = self._get_book_course_buttons(self.course)
+        assert course_button["book_button"] is None
+        assert course_button["unenroll"] is None
+        assert "Student User has booked for classes on this course." in course_button["pre_text"]
+        assert course_button["post_text"] == ""
+        for button in [
+            "book_course",
+            "add_course",
+            "add_event",
+            "payment_options"
+        ]:
+            assert event_buttons[button] is None, button
+        assert event_buttons["toggle_booking"] == "Cancel"
+        assert event_buttons["button_text"] == ""

@@ -101,12 +101,13 @@ class UserEventInfo:
         
 def _default_button_options(user_event_info):
     event = user_event_info.event
-    if event.cancelled:
-        return {"buttons": [], "text": f"{event.event_type.label.upper()} CANCELLED"}, None
+    # cancelled events shouldn't ever be shown, but just in case
+    if event.cancelled:  # pragma: noqa
+        return {"buttons": [], "text": f"{event.event_type.label.upper()} CANCELLED"}
     
     if event.is_past:
         text = "is past" if event.course else "has started"
-        return {"buttons": [], "text": f"{event.event_type.label.title()} {text}"}, None
+        return {"buttons": [], "text": f"{event.event_type.label.title()} {text}"}
         
     return {
         "buttons": [], 

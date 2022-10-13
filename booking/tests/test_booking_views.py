@@ -146,3 +146,21 @@ class BookingHistoryListViewTests(TestUsersMixin, EventTestMixin, TestCase):
         assert Booking.objects.all().count() == 3
         assert resp.status_code == 200
         assert resp.context_data['bookings'].count() == 1
+
+    def test_booking_list_by_managed_user(self):
+        """
+        Test that only bookings for this user are listed
+        """
+        baker.make(Booking, user=self.child_user, event=self.aerial_events[0])
+        baker.make(Booking, event=self.past_aerial_event, user=self.child_user)
+        # by default view_as_user for manager user is child user
+        self.login(self.manager_user)
+        resp = self.client.get(self.url)
+        assert self.client.session["user_id"] == self.child_user.id
+        # only shows past booking
+        assert resp.context_data['bookings'].count() == 1
+
+        # post sets the session user id and redirects to the booking page again
+        resp = self.client.post(self.url, data={"view_as_user": self.manager_user.id}, follow=True)
+        assert self.client.session["user_id"] == self.manager_user.id
+        assert resp.context_data['bookings'].count() == 0
