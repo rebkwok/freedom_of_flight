@@ -30,10 +30,13 @@ class EventListView(CleanUpBlocksMixin, DataPolicyAgreementRequiredMixin, ListVi
     context_object_name = 'events_by_date'
     template_name = 'booking/events.html'
 
+    def _redirect_url(self):
+        return reverse("booking:events", args=(self.kwargs["track"],))
+
     def post(self, request, *args, **kwargs):
         view_as_user = request.POST.get("view_as_user")
         self.request.session["user_id"] = int(view_as_user)
-        return HttpResponseRedirect(reverse("booking:events", args=(self.kwargs["track"],)))
+        return HttpResponseRedirect(self._redirect_url())
 
     def get_queryset(self):
         track = get_object_or_404(Track, slug=self.kwargs["track"])
@@ -121,10 +124,8 @@ class CourseEventsListView(EventListView):
     def get_title(self):
         return Course.objects.get(slug=self.kwargs["course_slug"]).name
 
-    def post(self, request, *args, **kwargs):
-        view_as_user = request.POST.get("view_as_user")
-        self.request.session["user_id"] = view_as_user
-        return HttpResponseRedirect(reverse("booking:course_events", args=(self.kwargs["course_slug"],)))
+    def _redirect_url(self):
+        return reverse("booking:course_events", args=(self.kwargs["course_slug"],))
 
     def get_queryset(self):
         course_slug =self.kwargs["course_slug"]

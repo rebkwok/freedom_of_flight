@@ -398,9 +398,29 @@ class CourseUnenrollViewTests(EventTestMixin, TestUsersMixin, TestCase):
         assert not self.course_block.active_block
 
         self.client.login(username=self.student_user.username, password="test")
-        self.client.post(
+        resp = self.client.post(
             self.url, {"user_id": self.student_user.id, "course_id": self.course.id}
         )
+        assert reverse("booking:course_events", args=(self.course.slug,)) in resp.url
+
+        cancelled_booked_events = self.student_user.bookings.filter(status="CANCELLED").values_list("event_id", flat=True)
+        for event in self.course.events.all():
+            assert event.id in cancelled_booked_events
+        
+        self.course_block.refresh_from_db()
+        assert self.course_block.active_block
+    
+    def test_unenroll_from_events_page(self):
+        booked_events = self.student_user.bookings.filter(status="OPEN").values_list("event_id", flat=True)
+        for event in self.course.events.all():
+            assert event.id in booked_events
+        assert not self.course_block.active_block
+
+        self.client.login(username=self.student_user.username, password="test")
+        resp = self.client.post(
+            self.url, {"user_id": self.student_user.id, "course_id": self.course.id, "ref": "events"}
+        )
+        assert reverse("booking:events", args=(self.course.event_type.track.slug,)) in resp.url
 
         cancelled_booked_events = self.student_user.bookings.filter(status="CANCELLED").values_list("event_id", flat=True)
         for event in self.course.events.all():
