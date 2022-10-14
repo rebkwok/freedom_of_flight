@@ -1901,3 +1901,67 @@ class GiftVoucherTests(TestCase):
         gift_voucher1.voucher.purchaser_email = "foo@bar.com"
         gift_voucher1.save()
         assert str(gift_voucher1) == f"{gift_voucher1.voucher.code} - Gift Voucher: £10 - foo@bar.com"
+
+
+@pytest.mark.django_db
+@pytest.mark.freeze_time('2017-05-21 10:00')
+def test_cleanup_expired_blocks(client, freezer):
+    block = baker.make(Block)
+    assert Block.objects.count() == 1
+    # block was just made, not cleaned up
+    Block.cleanup_expired_blocks()
+    assert Block.objects.count() == 1
+
+    freezer.move_to('2017-05-21 10:30')
+    # no bookings on it, still not cleaned up
+    Block.cleanup_expired_blocks()
+    assert Block.objects.count() == 1
+
+    # now it has bookings, but checkout within last 5 mins
+    baker.make(Booking, block=block)
+    block.time_checked = timezone.now() - timedelta(minutes=4)
+    block.save()
+    Block.cleanup_expired_blocks()
+    assert Block.objects.count() == 1
+    
+    # move time on 5 more mins
+    freezer.move_to('2017-05-21 10:35')
+    Block.cleanup_expired_blocks()
+    assert Block.objects.count() == 0
+
+
+@pytest.mark.django_db
+@pytest.mark.freeze_time('2017-05-21 10:00')
+def test_cleanup_expired_blocks_unpaid_only(client, freezer):
+    # another user's block, with booking
+    unpaid = baker.make(Block)
+    baker.make(Booking, block=unpaid)
+
+    paid = baker.make(Block, paid=True)
+    baker.make(Booking, block=paid)
+
+    assert Block.objects.count() == 2
+    
+    freezer.move_to('2017-05-21 10:30')
+    Block.cleanup_expired_blocks()
+    assert Block.objects.count() == 1
+    assert Block.objects.first() == paid
+
+
+@pytest.mark.django_db
+@pytest.mark.freeze_time('2017-05-21 10:00')
+def test_cleanup_expired_blocks_for_user(client, freezer, student_user):
+    # another user's block, with booking
+    other_user_block = baker.make(Block)
+    baker.make(Booking, block=other_user_block)
+
+    # student user's block, with booking
+    block = baker.make(Block, user=student_user)
+    baker.make(Booking, block=block, user=student_user)
+    assert Block.objects.count() == 2
+
+    # cleanup just for this user
+    freezer.move_to('2017-05-21 10:30')
+    Block.cleanup_expired_blocks(student_user)
+    assert Block.objects.count() == 1
+    assert Block.objects.first() == other_user_block
