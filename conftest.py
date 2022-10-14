@@ -9,6 +9,7 @@ from model_bakery import baker
 
 from accounts.models import UserProfile, ChildUserProfile
 from booking.models import Block, BlockConfig, Booking, Course, EventType
+from booking.tests.test_course_views import CourseListViewTests
 from common.test_utils import TestUsersMixin
 
 
@@ -125,15 +126,10 @@ def event_type():
 
 
 @pytest.fixture
-def event(event_type):
-    yield baker.make_recipe("booking.future_event", event_type=event_type, max_participants=2)
-
-
-@pytest.fixture
 def course_cart_block_config(event_type):
     # make add-to-cart config
     yield baker.make(
-        BlockConfig, event_type=event_type, course=True, size=2
+        BlockConfig, event_type=event_type, course=True, size=2, active=True
     )
 
 
@@ -141,18 +137,36 @@ def course_cart_block_config(event_type):
 def dropin_cart_block_config(event_type):
     # make add-to-cart config
     yield baker.make(
-        BlockConfig, event_type=event_type, course=False, size=1
+        BlockConfig, event_type=event_type, course=False, size=1, active=True
     )
+
+
+@pytest.fixture
+def event(event_type, dropin_cart_block_config):
+    yield baker.make_recipe("booking.future_event", event_type=event_type, max_participants=2)
 
 
 @pytest.fixture
 def course(course_cart_block_config, event_type):
     # make configured course
-    course1 = baker.make(Course, event_type=event_type, max_participants=2, number_of_events=2)
+    course1 = baker.make(
+        Course, event_type=event_type, max_participants=2, number_of_events=2,
+        show_on_site=True,
+    )
     baker.make_recipe(
         "booking.future_event", event_type=event_type, course=course1, _quantity=2
     )
     yield course1
+
+
+@pytest.fixture
+def course_event(course):
+    course.events.first().delete()
+    course_event = baker.make_recipe(
+        "booking.future_event", event_type=event_type, max_participants=2,
+        course=course    
+    )
+    yield course_event
 
 
 @pytest.fixture
@@ -182,3 +196,10 @@ def course_bookings(course, student_user, course_block):
     for event in course.events.all():
         baker.make(Booking, user=student_user, event=event, block=course_block)
     yield Booking.objects.filter(event__course=course)
+
+
+@pytest.fixture
+def drop_in_course_bookings(drop_in_course, student_user, course_block):
+    for event in drop_in_course.events.all():
+        baker.make(Booking, user=student_user, event=event, block=course_block)
+    yield Booking.objects.filter(event__course=drop_in_course)

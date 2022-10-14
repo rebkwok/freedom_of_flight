@@ -64,7 +64,10 @@ class CourseListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         self.login(self.student_user)
         resp = self.client.get(self.url(self.adult_track))
         user_course_booking_info = resp.context_data['user_course_booking_info']
-        booked = [course_id for course_id, user_info in user_course_booking_info.items() if user_info.get("open")]
+        booked = [
+            course_id for course_id, user_info in user_course_booking_info.items() 
+            if user_info['has_booked_course'] or user_info['has_booked_dropin']
+        ]
         assert len(booked) == 0
         # bookings have no block associated, so these are considered dropin
         assert user_course_booking_info[self.course.id]["has_booked_dropin"] is False
@@ -102,7 +105,11 @@ class CourseListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         self.login(self.student_user)
         resp = self.client.get(self.url(self.adult_track))
         user_course_booking_info = resp.context_data['user_course_booking_info']
-        booked = [course_id for course_id, user_info in user_course_booking_info.items() if user_info.get("open")]
+        booked = [
+            course_id for course_id, user_info in user_course_booking_info.items() 
+            if user_info['has_booked_course'] or user_info['has_booked_dropin']
+        ]
+
         assert len(booked) == 1
         assert booked == [self.course.id]
         # bookings have no block associated, so these are considered dropin
@@ -139,7 +146,10 @@ class CourseListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         self.login(self.student_user)
         resp = self.client.get(self.url(self.adult_track))
         user_course_booking_info = resp.context_data['user_course_booking_info']
-        booked = [course_id for course_id, user_info in user_course_booking_info.items() if user_info.get("open")]
+        booked = [
+            course_id for course_id, user_info in user_course_booking_info.items() 
+            if user_info['has_booked_course'] or user_info['has_booked_dropin']
+        ]
         assert len(booked) == 1
         assert booked == [self.course.id]
         assert user_course_booking_info[self.course.id]["has_booked_dropin"]
@@ -164,7 +174,10 @@ class CourseListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         self.login(self.student_user)
         resp = self.client.get(self.url(self.adult_track))
         user_course_booking_info = resp.context_data['user_course_booking_info']
-        booked = [course_id for course_id, user_info in user_course_booking_info.items() if user_info.get("open")]
+        booked = [
+            course_id for course_id, user_info in user_course_booking_info.items() 
+            if user_info['has_booked_course'] or user_info['has_booked_dropin']
+        ]
         assert len(booked) == 1
         assert booked == [self.course.id]
         course_booking_info = resp.context_data['user_course_booking_info'][self.course.id]
@@ -191,7 +204,10 @@ class CourseListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         self.login(self.student_user)
         resp = self.client.get(self.url(self.adult_track))
         user_course_booking_info = resp.context_data['user_course_booking_info']
-        booked = [course_id for course_id, user_info in user_course_booking_info.items() if user_info.get("open")]
+        booked = [
+            course_id for course_id, user_info in user_course_booking_info.items() 
+            if user_info['has_booked_course'] or user_info['has_booked_dropin']
+        ]
         assert len(booked) == 1
         assert booked == [self.course.id]
         course_booking_info = resp.context_data['user_course_booking_info'][self.course.id]
@@ -309,14 +325,20 @@ class CourseListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         # manager is a student, so by default shows them as view_as_user
         resp = self.client.get(self.url(self.adult_track))
         user_course_booking_info = resp.context_data['user_course_booking_info']
-        booked_count = sum([1 if user_info.get("open") else 0 for user_info in user_course_booking_info.values()])
+        booked_count = sum(
+            [1 if user_info['has_booked_course'] or user_info['has_booked_dropin']
+            else 0 for user_info in user_course_booking_info.values()]
+        )
         assert booked_count == 1
 
         # post to change the user
         resp = self.client.post(self.url(self.adult_track), data={"view_as_user": self.child_user.id}, follow=True)
         assert self.client.session["user_id"] == self.child_user.id
         user_course_booking_info = resp.context_data['user_course_booking_info']
-        booked_count = sum([1 if user_info.get("open") else 0 for user_info in user_course_booking_info.values()])
+        booked_count = sum(
+            [1 if user_info['has_booked_course'] or user_info['has_booked_dropin']
+            else 0 for user_info in user_course_booking_info.values()]
+        )
         assert booked_count == 0
 
     def test_courses_ordered_by_start_date(self):

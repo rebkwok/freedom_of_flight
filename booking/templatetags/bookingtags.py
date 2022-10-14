@@ -3,11 +3,9 @@ from django.db.models import Q, Count
 from django.utils import timezone
 from common.utils import full_name, start_of_day_in_utc
 from ..models import EventType, WaitingListUser
-from ..models import has_available_course_block as has_available_course_block_util
-from ..models import has_available_block, has_available_subscription
 
 from ..utils import (
-    get_block_status, get_user_booking_info, user_subscription_info,
+    get_block_status, user_subscription_info,
     show_warning
 )
 
@@ -29,7 +27,6 @@ def get_block_info(block, include_user=True):
         return f"{base_text}; never expires</span>"
 
 
-@register.filter
 def user_block_info(block, include_user=True):
     include_user = bool(include_user)
     if include_user:
@@ -113,12 +110,6 @@ def show_booking_warning(booking):
 def lookup_dict(dictionary, key):
     if dictionary:
         return dictionary.get(key)
-
-@register.simple_tag
-def booking_user_info(booking):
-    user_info = get_user_booking_info(booking.user, booking.event)
-    user_info["hide_block_info_divider"] = True
-    return user_info
 
 
 @register.filter
