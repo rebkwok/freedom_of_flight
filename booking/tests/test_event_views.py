@@ -1529,3 +1529,38 @@ class CourseEventsListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         # view cart button is always present but hidden if necessary
         assert "hidden" not in event_buttons["view_cart"].attrs.get("class", [])
         assert event_buttons["button_text"] == ""
+
+        # course full for one event (i.e. entire course full), but space on another event
+        # dropin allowed, no block available
+        Booking.objects.all().delete()
+        dropin_block.paid = False
+        dropin_block.save()
+        baker.make(
+            Booking, event=self.course.uncancelled_events[0],
+            _quantity=self.course.max_participants
+        )
+        self.course.refresh_from_db()
+        assert self.course.full
+        course_button, _ = self._get_book_course_buttons(self.course, event=self.course)
+        assert course_button["book_button"] is None
+        assert course_button["pre_text"] == "There are no spaces left for the full course. Drop-in is available for some classes."
+        assert course_button["post_text"] == ""
+
+        # with dropin block
+        dropin_block.paid = True
+        dropin_block.save()
+        course_button, _ = self._get_book_course_buttons(self.course, event=self.course)
+        assert course_button["book_button"] is None
+        assert course_button["pre_text"] == "There are no spaces left for the full course. Drop-in is available for some classes."
+        assert course_button["post_text"] == "You have an available drop-in payment plan"
+
+        # course started
+        Booking.objects.all().delete()
+        ev = self.course.uncancelled_events.first()
+        ev.start = timezone.now() - timedelta(3)
+        ev.save()
+        self.course.refresh_from_db()
+        assert self.course.has_started
+        course_button, _ = self._get_book_course_buttons(self.course, event=self.course)
+        assert "This course has started" in course_button["pre_text"]
+        assert "You can book individual classes on this course as drop in" in course_button["pre_text"]

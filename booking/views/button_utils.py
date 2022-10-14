@@ -103,7 +103,7 @@ class UserEventInfo:
 def _default_button_options(user_event_info):
     event = user_event_info.event
     # cancelled events shouldn't ever be shown, but just in case
-    if event.cancelled:  # pragma: noqa
+    if event.cancelled:  # pragma: no cover
         return {"buttons": [], "text": f"{event.event_type.label.upper()} CANCELLED"}
     
     if event.is_past:
@@ -321,10 +321,9 @@ def course_list_button_info(user, course, user_info):
         options["text_no_style"] = True
 
     if user_info["has_booked_dropin"]:
-        if course.allow_drop_in and not course.all_events_full:
-            if options["text"]:
-                options["text"] += "<br/>"
-            options["text"] += '<i class="text-success fas fa-check-circle"></i> Booked drop-in'
+        if options["text"]:
+            options["text"] += "<br/>"
+        options["text"] += '<i class="text-success fas fa-check-circle"></i> Booked drop-in'
     if user_info["has_booked_dropin"] or user_info["items_in_basket"]:
         options["text"] = f"<span class='float-right'>{options['text']}</span>"
         if course.allow_drop_in and not course.all_events_full and not user_info["has_booked_all"]:
@@ -362,6 +361,7 @@ def booking_list_button(booking, history=False):
     if booking.event.cancelled:
         options["text"] = f"{booking.event.event_type.label.upper()} CANCELLED"
         options["styling"] = "cancelled"
+        return options
     elif booking.status == "CANCELLED" or booking.no_show:
         options["text"] = "You have cancelled this booking."
         options["styling"] = "cancelled"
@@ -379,16 +379,12 @@ def booking_list_button(booking, history=False):
             options["button"] = "toggle_booking"
             options["toggle_option"] = "rebook"
         elif can_book(booking, booking.event):
-            if has_available_block(booking.user, booking.event):
+            if has_available_block(booking.user, booking.event) or has_available_subscription(booking.user, booking.event):
                 options["button"] = "toggle_booking"
                 options["toggle_option"] = "book"
             else:
                 track_url = reverse("booking:events", args=(booking.event.event_type.track.slug,))
-                extra_text = f"Go to <a href='{track_url}'>schedule</a> for booking options"
-                if options["text"]:
-                    options["text"] += f"</br>{extra_text}"
-                else:
-                    options["text"] = extra_text
+                options["text"] += f"</br>Go to <a href='{track_url}'>schedule</a> for booking options"
     elif booking.event.full:
         if booking.status == "CANCELLED" or booking.no_show:
             options["button"] = "waiting_list"

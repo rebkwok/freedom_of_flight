@@ -863,25 +863,25 @@ import pytest
 pytestmark = pytest.mark.django_db
 # ajax_add_booking_to_basket tests
 
-def test_ajax_add_booking_to_basket(client, users):
-    client.force_login(users["student_user"])
+def test_ajax_add_booking_to_basket(client, student_user):
+    client.force_login(student_user)
     event = baker.make_recipe("booking.future_event")
     dropin_cart_config = baker.make(
         BlockConfig, active=True, course=False, size=1, event_type=event.event_type
     )
     assert not Block.objects.exists()
     assert not Booking.objects.exists()
-    data = {"user_id": users["student_user"].id, "event_id": event.id, "ref": "events"}
+    data = {"user_id": student_user.id, "event_id": event.id, "ref": "events"}
     resp = client.post(reverse("booking:ajax_add_booking_to_basket"), data).json()
     assert Booking.objects.count() == Block.objects.count() == 1
     booking = Booking.objects.first()
     assert booking.is_in_basket()
-    assert booking.user == users["student_user"]
+    assert booking.user == student_user
     assert resp["cart_item_menu_count"] == 1
 
 
-def test_ajax_add_single_course_booking_to_basket_for_another_user(client, users):
-    client.force_login(users["manager_user"])
+def test_ajax_add_single_course_booking_to_basket_for_another_user(client, manager_user, child_user):
+    client.force_login(manager_user)
     event = baker.make_recipe("booking.future_event")
     course = baker.make(Course, event_type=event.event_type, number_of_events=2, allow_drop_in=True)
     event.course = course
@@ -891,50 +891,50 @@ def test_ajax_add_single_course_booking_to_basket_for_another_user(client, users
     )
     assert not Block.objects.exists()
     assert not Booking.objects.exists()
-    data = {"user_id": users["child_user"].id, "event_id": event.id, "ref": "course"}
+    data = {"user_id": child_user.id, "event_id": event.id, "ref": "course"}
     resp = client.post(reverse("booking:ajax_add_booking_to_basket"), data).json()
 
     assert Booking.objects.count() == Block.objects.count() == 1
     booking = Booking.objects.first()
     assert booking.is_in_basket()
-    assert booking.user == users["child_user"]
+    assert booking.user == child_user
     assert resp["cart_item_menu_count"] == 1
 
 
-def test_ajax_add_booking_to_basket_disclaimer_required(client, users):
-    users["student_user"].online_disclaimer.all().delete()
-    client.force_login(users["student_user"])
+def test_ajax_add_booking_to_basket_disclaimer_required(client, student_user):
+    student_user.online_disclaimer.all().delete()
+    client.force_login(student_user)
     event = baker.make_recipe("booking.future_event")
-    data = {"user_id": users["student_user"].id, "event_id": event.id, "ref": "events"}
+    data = {"user_id": student_user.id, "event_id": event.id, "ref": "events"}
     resp = client.post(reverse("booking:ajax_add_booking_to_basket"), data).json()
     assert resp["redirect"]
-    assert resp["url"] == reverse('booking:disclaimer_required', args=(users["student_user"].id,))
+    assert resp["url"] == reverse('booking:disclaimer_required', args=(student_user.id,))
 
 
-def test_ajax_add_booking_to_basket_full_event(client, users):
-    client.force_login(users["student_user"])
+def test_ajax_add_booking_to_basket_full_event(client, student_user):
+    client.force_login(student_user)
     event = baker.make_recipe("booking.future_event", max_participants=1)
     baker.make(Booking, event=event)
-    data = {"user_id": users["student_user"].id, "event_id": event.id, "ref": "events"}
+    data = {"user_id": student_user.id, "event_id": event.id, "ref": "events"}
     resp = client.post(reverse("booking:ajax_add_booking_to_basket"), data)
     assert resp.status_code == 400
     assert "full" in resp.content.decode()
 
 
-def test_ajax_add_booking_to_basket_cancelled_event(client, users):
-    client.force_login(users["student_user"])
+def test_ajax_add_booking_to_basket_cancelled_event(client, student_user):
+    client.force_login(student_user)
     event = baker.make_recipe("booking.future_event", max_participants=1, cancelled=True)
-    data = {"user_id": users["student_user"].id, "event_id": event.id, "ref": "events"}
+    data = {"user_id": student_user.id, "event_id": event.id, "ref": "events"}
     resp = client.post(reverse("booking:ajax_add_booking_to_basket"), data)
     assert resp.status_code == 400
     assert "cancelled" in resp.content.decode()
 
 
-def test_ajax_add_booking_to_basket_already_in_basket(client, users):
-    client.force_login(users["student_user"])
+def test_ajax_add_booking_to_basket_already_in_basket(client, student_user):
+    client.force_login(student_user)
     event = baker.make_recipe("booking.future_event", max_participants=1)
-    booking = baker.make(Booking, user=users["student_user"], event=event, block__paid=False)
-    data = {"user_id": users["student_user"].id, "event_id": event.id, "ref": "events"}
+    booking = baker.make(Booking, user=student_user, event=event, block__paid=False)
+    data = {"user_id": student_user.id, "event_id": event.id, "ref": "events"}
     resp = client.post(reverse("booking:ajax_add_booking_to_basket"), data)
     assert resp.status_code == 400
     assert "Already added to cart" in resp.content.decode()
@@ -947,14 +947,14 @@ def test_ajax_add_booking_to_basket_already_in_basket(client, users):
     assert "Open booking already exists" in resp.content.decode()
 
 
-def test_ajax_add_booking_to_basket_no_show_course_booking(client, users):
-    client.force_login(users["student_user"])
+def test_ajax_add_booking_to_basket_no_show_course_booking(client, student_user):
+    client.force_login(student_user)
     event = baker.make_recipe("booking.future_event", max_participants=1)
-    baker.make(Booking, user=users["student_user"], event=event, block__paid=False, no_show=True)
+    baker.make(Booking, user=student_user, event=event, block__paid=False, no_show=True)
     course = baker.make(Course, event_type=event.event_type, number_of_events=2, allow_drop_in=True)
     event.course = course
     event.save()
-    data = {"user_id": users["student_user"].id, "event_id": event.id, "ref": "events"}
+    data = {"user_id": student_user.id, "event_id": event.id, "ref": "events"}
     resp = client.post(reverse("booking:ajax_add_booking_to_basket"), data)
     assert resp.status_code == 400
     assert "Booking can be reopened" in resp.content.decode()
@@ -962,183 +962,152 @@ def test_ajax_add_booking_to_basket_no_show_course_booking(client, users):
 
 # ajax_add_course_booking_to_basket tests
 
-@pytest.fixture
-def course_with_events():
-    track = baker.make(Track, name="test")
-    event_type = baker.make(EventType, name="Aerial", track=track)
-    course = baker.make(
-        Course, event_type=event_type, number_of_events=2, allow_drop_in=True,
-        max_participants=2
-    )
-    baker.make_recipe(
-        "booking.future_event", course=course, event_type=event_type, _quantity=2
-    )
-    baker.make(
-        BlockConfig, active=True, course=False, size=1, event_type=event_type
-    )
-    baker.make(
-        BlockConfig, active=True, course=True, size=2, event_type=event_type
-    )
-    yield course
-
-
-def test_ajax_add_course_booking_to_basket(client, users, course_with_events):
-    client.force_login(users["student_user"])
+def test_ajax_add_course_booking_to_basket(client, student_user, drop_in_course):
+    client.force_login(student_user)
     url = reverse("booking:ajax_add_course_booking_to_basket")
     assert not Block.objects.exists()
     assert not Booking.objects.exists()
-    data = {"user_id": users["student_user"].id, "course_id": course_with_events.id, "ref": "events"}
+    data = {"user_id": student_user.id, "course_id": drop_in_course.id, "ref": "events"}
     resp = client.post(url, data).json()
     assert resp["redirect"]
-    assert reverse("booking:events", args=(course_with_events.event_type.track.slug,)) in resp["url"]
+    assert reverse("booking:events", args=(drop_in_course.event_type.track.slug,)) in resp["url"]
     
     assert Block.objects.count() == 1
     block = Block.objects.first()
-    assert block.user == users["student_user"]
+    assert block.user == student_user
     assert not block.paid 
     assert block.block_config.course
     assert Booking.objects.count() == 2
     for booking in Booking.objects.all():
-        assert booking.user == users["student_user"]
+        assert booking.user == student_user
 
 
-def test_ajax_add_course_booking_to_basket_from_courses(client, users, course_with_events):
-    client.force_login(users["student_user"])
+def test_ajax_add_course_booking_to_basket_from_courses(client, student_user, drop_in_course):
+    client.force_login(student_user)
     url = reverse("booking:ajax_add_course_booking_to_basket")
-    data = {"user_id": users["student_user"].id, "course_id": course_with_events.id, "ref": "course_list"}
+    data = {"user_id": student_user.id, "course_id": drop_in_course.id, "ref": "course_list"}
     resp = client.post(url, data).json()
     assert resp["redirect"]
-    assert reverse("booking:courses", args=(course_with_events.event_type.track.slug,)) in resp["url"]
+    assert reverse("booking:courses", args=(drop_in_course.event_type.track.slug,)) in resp["url"]
 
 
-def test_ajax_add_course_booking_to_basket_from_course_events(client, users, course_with_events):
-    client.force_login(users["student_user"])
+def test_ajax_add_course_booking_to_basket_from_course_events(client, student_user, drop_in_course):
+    client.force_login(student_user)
     url = reverse("booking:ajax_add_course_booking_to_basket")
-    data = {"user_id": users["student_user"].id, "course_id": course_with_events.id, "ref": "course"}
+    data = {"user_id": student_user.id, "course_id": drop_in_course.id, "ref": "course"}
     resp = client.post(url, data).json()
     assert resp["redirect"]
-    assert reverse("booking:course_events", args=(course_with_events.slug,)) in resp["url"]
+    assert reverse("booking:course_events", args=(drop_in_course.slug,)) in resp["url"]
 
 
-def test_ajax_add_course_booking_to_basket(client, users, course_with_events):
-    client.force_login(users["student_user"])
+def test_ajax_add_course_booking_to_basket_disclaimer_required(client, student_user, drop_in_course):
+    student_user.online_disclaimer.all().delete()
+    client.force_login(student_user)
     url = reverse("booking:ajax_add_course_booking_to_basket")
-    assert not Block.objects.exists()
-    assert not Booking.objects.exists()
-    data = {"user_id": users["student_user"].id, "course_id": course_with_events.id, "ref": "events"}
+    data = {"user_id": student_user.id, "course_id": drop_in_course.id, "ref": "events"}
     resp = client.post(url, data).json()
     assert resp["redirect"]
-    assert reverse("booking:events", args=(course_with_events.event_type.track.slug,)) in resp["url"]
+    assert resp["url"] == reverse('booking:disclaimer_required', args=(student_user.id,))
 
 
-def test_ajax_add_course_booking_to_basket_disclaimer_required(client, users, course_with_events):
-    users["student_user"].online_disclaimer.all().delete()
-    client.force_login(users["student_user"])
-    url = reverse("booking:ajax_add_course_booking_to_basket")
-    data = {"user_id": users["student_user"].id, "course_id": course_with_events.id, "ref": "events"}
-    resp = client.post(url, data).json()
-    assert resp["redirect"]
-    assert resp["url"] == reverse('booking:disclaimer_required', args=(users["student_user"].id,))
-
-
-def test_ajax_add_course_booking_to_basket_full_course(client, users, course_with_events):
-    client.force_login(users["student_user"])
-    for event in course_with_events.events.all():
+def test_ajax_add_course_booking_to_basket_full_course(client, student_user, drop_in_course):
+    client.force_login(student_user)
+    for event in drop_in_course.events.all():
         baker.make(Booking, event=event, _quantity=2)
-    assert course_with_events.full
+    assert drop_in_course.full
     url = reverse("booking:ajax_add_course_booking_to_basket")
-    data = {"user_id": users["student_user"].id, "course_id": course_with_events.id, "ref": "events"}
+    data = {"user_id": student_user.id, "course_id": drop_in_course.id, "ref": "events"}
     resp = client.post(url, data)
     assert resp.status_code == 400
     assert "full" in resp.content.decode()
 
 
-def test_ajax_add_course_booking_to_basket_cancelled_course(client, users, course_with_events):
-    client.force_login(users["student_user"])
-    course_with_events.cancelled = True
-    course_with_events.save()
+def test_ajax_add_course_booking_to_basket_cancelled_course(client, student_user, drop_in_course):
+    client.force_login(student_user)
+    drop_in_course.cancelled = True
+    drop_in_course.save()
     url = reverse("booking:ajax_add_course_booking_to_basket")
-    data = {"user_id": users["student_user"].id, "course_id": course_with_events.id, "ref": "events"}
+    data = {"user_id": student_user.id, "course_id": drop_in_course.id, "ref": "events"}
     resp = client.post(url, data)
     assert resp.status_code == 400
     assert "cancelled" in resp.content.decode()
 
 
-def test_ajax_add_course_booking_to_basket_already_booked(client, users, course_with_events):
-    client.force_login(users["student_user"])
-    for event in course_with_events.events.all():
+def test_ajax_add_course_booking_to_basket_already_booked(client, student_user, drop_in_course):
+    client.force_login(student_user)
+    for event in drop_in_course.events.all():
         baker.make(
-            Booking, event=event, user=users["student_user"], block__block_config__course=True,
+            Booking, event=event, user=student_user, block__block_config__course=True,
             block__paid=True
         )
     url = reverse("booking:ajax_add_course_booking_to_basket")
-    data = {"user_id": users["student_user"].id, "course_id": course_with_events.id, "ref": "events"}
+    data = {"user_id": student_user.id, "course_id": drop_in_course.id, "ref": "events"}
     resp = client.post(url, data)
     assert resp.status_code == 400
     assert "Course booking already exists" in resp.content.decode()
 
 
-def test_ajax_add_course_booking_to_basket_already_booked_course_full(client, users, course_with_events):
-    client.force_login(users["student_user"])
-    for event in course_with_events.events.all():
+def test_ajax_add_course_booking_to_basket_already_booked_course_full(client, student_user, drop_in_course):
+    client.force_login(student_user)
+    for event in drop_in_course.events.all():
         baker.make(
-            Booking, event=event, user=users["student_user"], block__block_config__course=True,
+            Booking, event=event, user=student_user, block__block_config__course=True,
             block__paid=True
         )
         baker.make( Booking, event=event)
-    course_with_events.refresh_from_db()
-    assert course_with_events.full
+    drop_in_course.refresh_from_db()
+    assert drop_in_course.full
     url = reverse("booking:ajax_add_course_booking_to_basket")
-    data = {"user_id": users["student_user"].id, "course_id": course_with_events.id, "ref": "events"}
+    data = {"user_id": student_user.id, "course_id": drop_in_course.id, "ref": "events"}
     resp = client.post(url, data)
     assert resp.status_code == 400
     assert "Course booking already exists" in resp.content.decode()
 
 
-def test_ajax_add_course_booking_to_basket_already_in_basket(client, users, course_with_events):
-    client.force_login(users["student_user"])
-    for event in course_with_events.events.all():
+def test_ajax_add_course_booking_to_basket_already_in_basket(client, student_user, drop_in_course):
+    client.force_login(student_user)
+    for event in drop_in_course.events.all():
         baker.make(
-            Booking, event=event, user=users["student_user"], block__block_config__course=True,
+            Booking, event=event, user=student_user, block__block_config__course=True,
             block__paid=False
         )
     url = reverse("booking:ajax_add_course_booking_to_basket")
-    data = {"user_id": users["student_user"].id, "course_id": course_with_events.id, "ref": "events"}
+    data = {"user_id": student_user.id, "course_id": drop_in_course.id, "ref": "events"}
     resp = client.post(url, data)
     assert resp.status_code == 400
     assert "Already added to cart" in resp.content.decode()
 
 
-def test_ajax_add_course_booking_to_basket_for_another_user(client, users, course_with_events):
-    client.force_login(users["manager_user"])
+def test_ajax_add_course_booking_to_basket_for_another_user(client, manager_user, child_user, drop_in_course):
+    client.force_login(manager_user)
     url = reverse("booking:ajax_add_course_booking_to_basket")
     assert not Block.objects.exists()
     assert not Booking.objects.exists()
-    data = {"user_id": users["child_user"].id, "course_id": course_with_events.id, "ref": "events"}
+    data = {"user_id": child_user.id, "course_id": drop_in_course.id, "ref": "events"}
     resp = client.post(url, data)
   
     assert Block.objects.count() == 1
     block = Block.objects.first()
-    assert block.user == users["child_user"]
+    assert block.user == child_user
     assert not block.paid 
     assert block.block_config.course
     assert Booking.objects.count() == 2
     for booking in Booking.objects.all():
-        assert booking.user == users["child_user"]
+        assert booking.user == child_user
 
 
-def test_ajax_add_course_booking_to_basket_deletes_drop_in_unpaid_blocks(client, users, course_with_events):
-    client.force_login(users["student_user"])
+def test_ajax_add_course_booking_to_basket_deletes_drop_in_unpaid_blocks(client, student_user, drop_in_course):
+    client.force_login(student_user)
     url = reverse("booking:ajax_add_course_booking_to_basket")
     
     # make a dropin cart booking
-    event = course_with_events.events.first()
-    block = baker.make(Block, user=users["student_user"], paid=False, block_config__size=1)
-    booking = baker.make(Booking, event=event, user=users["student_user"], block=block)
+    event = drop_in_course.events.first()
+    block = baker.make(Block, user=student_user, paid=False, block_config__size=1)
+    booking = baker.make(Booking, event=event, user=student_user, block=block)
     
     block_id = block.id
 
-    data = {"user_id": users["student_user"].id, "course_id": course_with_events.id, "ref": "events"}
+    data = {"user_id": student_user.id, "course_id": drop_in_course.id, "ref": "events"}
     client.post(url, data)
     
     # old block has been deleted
@@ -1149,21 +1118,21 @@ def test_ajax_add_course_booking_to_basket_deletes_drop_in_unpaid_blocks(client,
 
     assert Booking.objects.count() == 2
     for booking in Booking.objects.all():
-        assert booking.user == users["student_user"] 
+        assert booking.user == student_user 
         assert booking.block == new_block
     assert booking in new_block.bookings.all()
 
 
-def test_ajax_add_course_booking_to_basket_does_not_deletes_paid_blocks(client, users, course_with_events):
-    client.force_login(users["student_user"])
+def test_ajax_add_course_booking_to_basket_does_not_deletes_paid_blocks(client, student_user, drop_in_course):
+    client.force_login(student_user)
     url = reverse("booking:ajax_add_course_booking_to_basket")
     
     # make a paid dropin booking
-    event = course_with_events.events.first()
-    block = baker.make(Block, user=users["student_user"], paid=True, block_config__size=1)
-    booking = baker.make(Booking, event=event, user=users["student_user"], block=block)
+    event = drop_in_course.events.first()
+    block = baker.make(Block, user=student_user, paid=True, block_config__size=1)
+    booking = baker.make(Booking, event=event, user=student_user, block=block)
     
-    data = {"user_id": users["student_user"].id, "course_id": course_with_events.id, "ref": "events"}
+    data = {"user_id": student_user.id, "course_id": drop_in_course.id, "ref": "events"}
     client.post(url, data)
     
     # old block has not been deleted
@@ -1173,6 +1142,6 @@ def test_ajax_add_course_booking_to_basket_does_not_deletes_paid_blocks(client, 
 
     assert Booking.objects.count() == 2
     for booking in Booking.objects.all():
-        assert booking.user == users["student_user"] 
+        assert booking.user == student_user 
         assert booking.block == new_block
     assert booking in new_block.bookings.all()
