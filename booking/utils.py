@@ -212,38 +212,10 @@ def get_user_booking_info(user, event):
     else:
         user_booking = user.bookings.filter(event=event).first()
 
-    available_subscription = get_available_user_subscription(user, event)
-    
-    # Used for displaying available block/subscription info in templates/includes/event_info_xs.html only
-    available_subscription_info = user_subscription_info(available_subscription, event, include_user=False)
-    if event.course:
-        if event.course.has_started:
-            # available block can only be a dropin one
-            available_block = get_active_user_block(user, event, dropin_only=True)
-        else:
-            available_block = get_active_user_block(user, event, dropin_only=False)
-    else:
-        available_block = get_active_user_block(user, event, dropin_only=True)
-
-    info = {
-        "available_block": available_block,
-        "available_subscription_info": available_subscription_info,
+    return {
         "show_warning": show_warning(event, user_booking),
         "on_waiting_list": can_leave_waiting_list(user, event, user_booking)
     }
-
-    if user_booking:
-        if available_subscription == user_booking.subscription:
-            booking_subscription_info = available_subscription_info
-        else:
-            booking_subscription_info = user_subscription_info(user_booking.subscription, event, include_user=False)
-        info.update({
-            "open": user_booking.status == "OPEN" and not user_booking.no_show,
-            "used_block": user_booking.block,
-            "used_subscription": user_booking.subscription,
-            "used_subscription_info": booking_subscription_info,
-        })
-    return info
 
 
 def user_course_booking_type(user, course, bookings=None):
@@ -271,14 +243,12 @@ def get_user_course_booking_info(user, course):
     items_in_basket = bool(in_basket_event_ids)
 
     info = {
-        "hide_block_info_divider": True,
         "has_booked_course": has_booked,
         "has_booked_dropin": booking_type == "dropin",
         "has_booked_all": booked_events.count() == course.uncancelled_events.count(),
         "items_in_basket": items_in_basket,
         "in_basket_event_ids": in_basket_event_ids,
         "booked_event_ids": open_booked_events,
-        "open": open_booked_events.exists(),  # for block info
     }
     if has_booked:
         iter_used_blocks = (

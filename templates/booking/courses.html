@@ -101,10 +101,6 @@
                                                 </a>
                                             </span
                                         {% endif %}
-                                        
-                                        {% if user_info.has_booked_course %}
-                                            <br/><span class="float-right">{% include "booking/includes/block_info.html" %}</span>
-                                        {% endif %}
                        
                                     </div>
                                     <div class="col-12">
@@ -135,6 +131,6 @@
 {% endblock content %}
 
 {% block extra_js %}
-<script type='text/javascript' src="{% static 'booking/js/events_booking_ajax-v5.js' %}"></script>
+<script type='text/javascript' src="{% static 'booking/js/events_booking_ajax-v6.js' %}"></script>
 <script type='text/javascript' src="{% static 'booking/js/add_to_basket_ajax-v1.js' %}"></script>
 {% endblock %}

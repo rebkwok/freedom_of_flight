@@ -60,13 +60,7 @@
                         {% if booking.event.course %}
                             <a href="{% url 'booking:course_events' booking.event.course.slug %}"><span class="badge badge-course">Course: {{ booking.event.course.name|truncatechars:30 }} ({{ booking.event.course_order }})</span></a>
                         {% endif %}
-                        {% if not booking.event.cancelled %}
-                            {% booking_user_info booking as user_info %}
-                            <span id="block_info_{{booking.event.id}}">
-                                {% include 'booking/includes/block_info.html' %}
-                            </span>
 
-                        {% endif %}
                     </div>
                     {% endwith %}
                 {% endfor %}
@@ -83,5 +77,5 @@
 
 
 {% block extra_js %}
-<script type='text/javascript' src="{% static 'booking/js/events_booking_ajax-v5.js' %}"></script>
+<script type='text/javascript' src="{% static 'booking/js/events_booking_ajax-v6.js' %}"></script>
 {% endblock %}

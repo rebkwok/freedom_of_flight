@@ -3,7 +3,7 @@
 
 {% block messagecontent %}
 
-<p>Thank you for your booking for the course: {{ course }} ({{ course_user.first_name}} {{ course_user.last_name}}).  You have been registered for all course classes.</p>
+<p>{{ course_user.first_name}} {{ course_user.last_name}} has been enrolled in course: {{ course }}.</p>
 
 <ul>
     {% for event in course.events_left.all %}

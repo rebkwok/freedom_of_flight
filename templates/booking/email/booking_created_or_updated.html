@@ -3,8 +3,8 @@
 
 {% block messagecontent %}
     {%  if requested_action == "cancelled" %}
-        <p>Your booking for {{ event }} ({{ booking.user.first_name}} {{ booking.user.last_name}}) has been cancelled.</p>
+        <p>Booking for {{ event }} ({{ booking.user.first_name}} {{ booking.user.last_name}}) has been cancelled.</p>
     {% else %}
-        <p>Thank you for your booking for {{ event }} ({{ booking.user.first_name}} {{ booking.user.last_name}}).</p>
+        <p>{{ booking.user.first_name}} {{ booking.user.last_name}} has booked for {{ event }}.</p>
     {% endif %}
 {% endblock %}

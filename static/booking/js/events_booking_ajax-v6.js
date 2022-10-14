@@ -78,7 +78,6 @@ var processBookingToggleRequest = function()  {
           else {
             $("#loader_" + event_id).removeClass("fa fa-spinner fa-spin").hide();
             $('#book_' + event_id).html(result.html);
-            $('#block_info_' + event_id).html(result.block_info_html);
             $('#availability_' + event_id).html(result.event_availability_html);
             $('#availability_xs_' + event_id).html(result.event_availability_html);
             $('#event_info_xs_' + event_id).html(result.event_info_xs_html);

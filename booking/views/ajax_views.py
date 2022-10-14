@@ -292,7 +292,6 @@ def ajax_toggle_booking(request, event_id):
         html = render_to_string(f"booking/includes/bookings_button.txt", context, request)
     else:
         html = render_to_string(f"booking/includes/events_button.txt", context, request)
-    block_info_html = render_to_string(f"booking/includes/block_info.html", context, request)
     event_availability_html = render_to_string(f"booking/includes/event_availability_badge.html", {"event": event}, request)
     event_info_xs_html = render_to_string(
         'booking/includes/event_info_xs.html', 
@@ -305,7 +304,6 @@ def ajax_toggle_booking(request, event_id):
             "html": html,
             "button_text": button_info["text"],
             "hide_payment_button": "payment_options" not in button_info.get("buttons", []),
-            "block_info_html": block_info_html,
             "event_availability_html": event_availability_html,
             "event_info_xs_html": event_info_xs_html,
             "just_cancelled": requested_action == "cancelled",

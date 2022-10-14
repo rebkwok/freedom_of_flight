@@ -9,11 +9,6 @@
         <span class="badge badge-course">{{ event.course.name|truncatechars:25 }} ({{ event.course_order }})
 </span></a>
     {% endif %}
-    {% if request.user.is_authenticated %}
-        <span id="block_info_{{event.id}}">
-        {% include 'booking/includes/block_info.html' %}
-        </span>
-    {% endif %}
 </span>
 
 <span class="d-inline-block d-sm-none">
