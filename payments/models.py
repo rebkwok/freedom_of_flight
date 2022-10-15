@@ -56,7 +56,7 @@ class Invoice(models.Model):
                 else:
                     event = block.bookings.first().event
                     return event.name_and_date
-            return block.block_config.name
+            return f"Credit block: {block.block_config.name}"
 
         blocks = {
             f"block-{item.id}": {

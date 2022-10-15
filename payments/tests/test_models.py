@@ -98,7 +98,7 @@ class TestModels(TestCase):
         assert invoice.items_metadata() == {
             "test course": f"£50.00 (block-{course_booking_block.id})",
             "test class - 01 Nov 2022, 10:00": f"£8.00 (block-{booking_block.id})",
-            "test block": f"£10.00 (block-{block.id})",
+            "Credit block: test block": f"£10.00 (block-{block.id})",
             "test subscription": f"£50.00 (subscription-{subscription.id})",
             "Gift Voucher: £10.00": f"£10.00 (gift_voucher-{gift_voucher.id})",
             "Clothing - Hoodie - S": f"£5.00 (product_purchase-{product_purchase.id})",
