@@ -96,7 +96,7 @@
 
     {% if events_by_date %}
         {% for date, events in events_by_date.items %}
-            <div class="row event-card event-card-header list-group-item-secondary">
+            <div class="row event-card event-card-header list-group-item-secondary mb-1">
                 <div class="col-12 p-1">{{ date|date:"D d M Y" }}</div>
             </div>
             {% for event in events %}
@@ -117,9 +117,8 @@
                     
                     <div class="col-1 pt-2 pb-2 pl-1">
                         <small>{{ event.start|date:"H:i"  }}-{{ event.end|date:"H:i" }}</small>
-
                     </div>
-                    <div class="col-11 pt-2 pb-2">
+                    <div class="col-8 col-sm-9 col-lg-10 pt-2 pb-2">
                             <!-- Event name and info (availability, user blocks) on smaller screens -->
                             <span id="booked_tick_{{ event.id }}" {% if not button_info.open or not button_info.has_open_booking %}class="hidden"{% endif %}>
                                 {% if button_info.in_basket %}
@@ -136,20 +135,16 @@
                             {% include 'booking/includes/events_info.html' %}
                     </div>
 
-                    <div class="col-12 pr-1 pl-1 float-right">
+                    <div class="col-3 col-sm-2 col-lg-1 pr-1 pl-1 float-right">
                         <!-- booking buttons and info text -->
                         {% if request.user.is_authenticated %}
                             
                             {% if view_as_user|has_disclaimer %}
-                                <span class="helptext float-right col-12">
-                                    <span class="float-right" id="button_text_{{ event.id }}">{{ button_info.text }}</span>
-                                </span>
+                                <span class="helptext float-right" id="button_text_{{ event.id }}">{{ button_info.text }}</span>
                                 {% if button_info.buttons %}
-                                <span class="float-right col-12">
-                                    <span class="float-right" id="buttons_{{event.id}}">
+                                   <span class="float-right" id="buttons_{{event.id}}">
                                         {% include 'booking/includes/events_buttons.html' %}
                                   </span> 
-                                </span> 
                                 {% endif %}
              
                             {% elif view_as_user|has_expired_disclaimer %}

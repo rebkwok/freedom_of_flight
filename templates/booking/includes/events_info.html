@@ -1,26 +1,27 @@
 {% if not event.cancelled %} {# Cancelled events still show up with their courses #}
-<span class="d-none d-sm-inline-block">
-    <span class="helptext">{{event.event_type.name|title}}</span>
-    <span class="helptext"> | 
-        <span id="availability_{{ event.id }}">{% include 'booking/includes/event_availability_badge.html' %}</span>
-    </span>
-    {% if event.course and not course %}
-        | <a href="{% url 'booking:course_events' event.course.slug %}">
-        <span class="badge badge-course">{{ event.course.name|truncatechars:25 }} ({{ event.course_order }})
-</span></a>
-    {% endif %}
-</span>
 
-<span class="d-inline-block d-sm-none">
-    <span class="helptext" id="availability_xs_{{ event.id }}">{% include 'booking/includes/event_availability_badge.html' %}</span>
-</span>
-<span class="d-inline-block d-sm-none">
+    <span class="d-none d-sm-inline-block">
+        <span class="helptext"> | 
+            <span id="availability_{{ event.id }}">{% include 'booking/includes/event_availability_badge.html' %}</span>
+        </span>
+        {% if event.course and not course %}
+            | <a href="{% url 'booking:course_events' event.course.slug %}">
+                <span class="badge badge-course">{{ event.course.name|truncatechars:25 }} ({{ event.course_order }})</span>
+            </a>
+        {% endif %}
+    </span>
+
+    <span class="d-inline-block d-sm-none">
+        <span class="helptext" id="availability_xs_{{ event.id }}">{% include 'booking/includes/event_availability_badge.html' %}</span>
+    </span>
+
     {% if event.course and not course %}
-        <a href="{% url 'booking:course_events' event.course.slug %}">
-            <span class="badge badge-course">{{ event.course.name|truncatechars:25 }} ({{ event.course_order }})
-            </span>
-        </a>
+        <br/><span class="d-inline-block d-sm-none">
+            <a href="{% url 'booking:course_events' event.course.slug %}">
+                <span class="badge badge-course">{{ event.course.name|truncatechars:25 }} ({{ event.course_order }})
+                </span>
+            </a>
+        </span>
     {% endif %}
-</span>
 {% endif %}
 

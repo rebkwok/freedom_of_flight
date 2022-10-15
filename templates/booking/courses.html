@@ -70,7 +70,12 @@
                             {% if request.user.is_authenticated %}
                             {% if view_as_user|has_disclaimer %}
                                 <div class="row">
+                                    <div class="col-12 float-right">
+                                        <span class="float-right helptext">{{ button_info.text }}</span>
+                                    </div>
                                     <div class="col-12">
+                                        
+
                                         {% if button_info.button == "book" %}
                                             <div
                                                 id="book_course_{{ course.id }}"
@@ -102,9 +107,6 @@
                                             </span
                                         {% endif %}
                        
-                                    </div>
-                                    <div class="col-12">
-                                        <span class="float-right {% if not button_info.text_no_style %}helptext{% endif %}">{{ button_info.text }}</span>
                                     </div>
 
                                 </div>
