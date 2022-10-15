@@ -639,7 +639,7 @@ def _get_book_course_buttons(client, course, event=None):
     }
 
     for button_key in event_buttons:
-        if event_buttons[button_key] and button_key != "view_cart":
+        if event_buttons[button_key] is not None:
             event_buttons[button_key] = event_buttons[button_key].text.replace("\n", "").strip()
     
     return book_course_button, event_buttons
@@ -672,10 +672,9 @@ def test_buttons_course_not_booked_no_purchaseable_block_configs(client, student
             "waiting_list",
             "add_event", # dropin not allowed
             "payment_options", # no purchaseable blocks
+            "view_cart"
         ]:
         assert event_buttons[button] is None, button
-    # view cart button is always present but hidden
-    assert "hidden" in event_buttons["view_cart"].attrs["class"]
     for button in ["add_course"]:
         assert event_buttons[button] is not None, button
     assert event_buttons["button_text"] == ""
@@ -718,10 +717,9 @@ def test_buttons_course_not_booked_with_purchaseable_block_configs(client, stude
         "unenroll_course_from_event",
         "waiting_list",
         "add_event", # dropin not allowed
+        "view_cart"
     ]:
         assert event_buttons[button] is None, button
-    # view cart button is always present but hidden
-    assert "hidden" in event_buttons["view_cart"].attrs["class"]
     
     for button in ["add_course", "payment_options"]:
         assert event_buttons[button] is not None, button
@@ -745,12 +743,11 @@ def test_buttons_course_cancelled_booking(client, student_user, course, booking)
         "unenroll_course_from_event",
         "waiting_list",
         "add_event", # dropin not allowed
+        "view_cart"
     ]:
         assert event_buttons[button] is None, button
     for button in ["add_course", "payment_options"]:
         assert event_buttons[button] is not None, button
-    # view cart button is always present but hidden
-    assert "hidden" in event_buttons["view_cart"].attrs["class"]
     
     assert event_buttons["button_text"] == ""
 
@@ -769,10 +766,9 @@ def test_buttons_course_not_booked_block_available(client, student_user, course,
         "unenroll_course_from_event",
         "waiting_list",
         "add_event", # dropin not allowed
+        "view_cart"
     ]:
         assert event_buttons[button] is None, button
-    # view cart button is always present but hidden
-    assert "hidden" in event_buttons["view_cart"].attrs["class"]
     
     for button in ["book_course", "payment_options"]:
         assert event_buttons[button] is not None, button
@@ -796,10 +792,9 @@ def test_buttons_course_cancelled_booking_block_available(client, student_user, 
         "unenroll_course_from_event",
         "waiting_list",
         "add_event", # dropin not allowed
+        "view_cart"
     ]:
         assert event_buttons[button] is None, button
-    # view cart button is always present but hidden
-    assert "hidden" in event_buttons["view_cart"].attrs["class"]
     
     for button in ["book_course", "payment_options"]:
         assert event_buttons[button] is not None, button
@@ -825,12 +820,11 @@ def test_buttons_course_no_show_booking_block_available(client, student_user, co
         "payment_options",
         "add_event", # dropin not allowed
         "unenroll_course_from_event", # not shown for event b/c cancelled so show rebook
+        "view_cart"
     ]:
         assert event_buttons[button] is None, button
     for button in ["toggle_booking"]:
         assert event_buttons[button] is not None, button
-    # view cart button is always present but hidden
-    assert "hidden" in event_buttons["view_cart"].attrs["class"]
     
     assert event_buttons["toggle_booking"] == "Rebook"
     assert event_buttons["button_text"] == ""
@@ -852,12 +846,11 @@ def test_buttons_course_full(client, student_user, course):
         "payment_options",
         "add_event", # dropin not allowed
         "toggle_booking",
+        "view_cart"
     ]:
         assert event_buttons[button] is None, button
     assert event_buttons["waiting_list"] == "Join waiting list"
     assert event_buttons["button_text"] == "Class is full"
-    # view cart button is always present but hidden
-    assert "hidden" in event_buttons["view_cart"].attrs["class"]
 
     # on waiting list
     baker.make(WaitingListUser, event=course.uncancelled_events.first(), user=student_user)
@@ -885,10 +878,9 @@ def test_buttons_course_full_has_booking(client, student_user, course, course_bo
         "payment_options",
         "add_event", # dropin not allowed
         "waiting_list",
+        "view_cart"
     ]:
         assert event_buttons[button] is None, button
-    # view cart button is always present but hidden
-    assert "hidden" in event_buttons["view_cart"].attrs["class"]
     
     assert event_buttons["toggle_booking"] == "Cancel"
     assert event_buttons["unenroll_course_from_event"] is not None
@@ -960,10 +952,9 @@ def test_buttons_dropin_course_not_booked(client, student_user, drop_in_course):
     for button in [
         "book_course",
         "toggle_booking",
+        "view_cart"
     ]:
         assert event_buttons[button] is None, button
-    # view cart button is always present but hidden
-    assert "hidden" in event_buttons["view_cart"].attrs["class"]
     
     for button in [
         "add_course",
@@ -987,10 +978,9 @@ def test_buttons_dropin_course_cancelled_no_block(client, student_user, drop_in_
     for button in [
         "book_course",
         "toggle_booking",
+        "view_cart"
     ]:
         assert event_buttons[button] is None, button
-    # view cart button is always present but hidden
-    assert "hidden" in event_buttons["view_cart"].attrs["class"]
     
     for button in [
         "add_course",
@@ -1012,10 +1002,9 @@ def test_buttons_dropin_course_not_booked_with_course_block(client, student_user
     for button in [
         "add_course",
         "toggle_booking",
+        "view_cart"
     ]:
         assert event_buttons[button] is None, button
-    # view cart button is always present but hidden
-    assert "hidden" in event_buttons["view_cart"].attrs["class"]
     
     for button in [
         "book_course",
@@ -1037,10 +1026,9 @@ def test_buttons_dropin_course_not_booked_with_course_and_dropin_block(client, s
     for button in [
         "add_course",
         "add_event",
+        "view_cart"
     ]:
         assert event_buttons[button] is None, button
-    # view cart button is always present but hidden
-    assert "hidden" in event_buttons["view_cart"].attrs["class"]
     
     for button in [
         "book_course",
@@ -1063,6 +1051,7 @@ def test_buttons_dropin_course_not_booked_with_dropin_block(client, student_user
     for button in [
         "book_course",
         "add_event",
+        "view_cart"
     ]:
         assert event_buttons[button] is None, button
     for button in [
@@ -1071,8 +1060,6 @@ def test_buttons_dropin_course_not_booked_with_dropin_block(client, student_user
         "payment_options",
     ]:
         assert event_buttons[button] is not None, button
-    # view cart button is always present but hidden
-    assert "hidden" in event_buttons["view_cart"].attrs["class"]
     
     assert event_buttons["toggle_booking"] == "Book Drop-in"
     assert event_buttons["button_text"] == ""
@@ -1092,10 +1079,9 @@ def test_buttons_dropin_course_cancelled_with_dropin_block(client, student_user,
     for button in [
         "book_course",
         "add_event",
+        "view_cart"
     ]:
         assert event_buttons[button] is None, button
-    # view cart button is always present but hidden
-    assert "hidden" in event_buttons["view_cart"].attrs["class"]
     
     for button in [
         "add_course",
@@ -1123,10 +1109,9 @@ def test_buttons_dropin_course_no_show_with_course_block(client, student_user, d
         "add_course",
         "add_event",
         "payment_options",
+        "view_cart"
     ]:
         assert event_buttons[button] is None, button
-    # view cart button is always present but hidden
-    assert "hidden" in event_buttons["view_cart"].attrs["class"]
     
     assert event_buttons["toggle_booking"] == "Rebook"
     assert event_buttons["button_text"] == ""
@@ -1164,10 +1149,9 @@ def test_buttons_dropin_course_booked_dropin_event_full(client, student_user, dr
         "add_course",
         "add_event",
         "payment_options",
+        "view_cart"
     ]:
         assert event_buttons[button] is None, button
-    # view cart button is always present but hidden
-    assert "hidden" in event_buttons["view_cart"].attrs["class"]
     
     assert event_buttons["toggle_booking"] == "Cancel"
     assert event_buttons["button_text"] == ""
@@ -1190,10 +1174,9 @@ def test_buttons_dropin_course_booked_dropin_event_course_block_available(
         "add_course",
         "add_event",
         "payment_options",
+        "view_cart"
     ]:
         assert event_buttons[button] is None, button
-    # view cart button is always present but hidden
-    assert "hidden" in event_buttons["view_cart"].attrs["class"]
     
     assert event_buttons["toggle_booking"] == "Cancel"
     assert event_buttons["button_text"] == ""
@@ -1220,8 +1203,8 @@ def test_buttons_dropin_course_in_basket(
     ]:
         assert event_buttons[button] is None, button
     # view cart button is always present but hidden if necessary
-    assert "hidden" not in event_buttons["view_cart"].attrs.get("class", [])
-    assert event_buttons["button_text"] == ""
+    assert "View cart" in event_buttons["view_cart"]
+    assert event_buttons["button_text"] == "In cart"
 
 
 def test_buttons_dropin_course_full_for_one_event(client, student_user, drop_in_course, dropin_block):

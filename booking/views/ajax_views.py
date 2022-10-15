@@ -286,12 +286,13 @@ def ajax_toggle_booking(request, event_id):
         "booking": booking,
         "event": event,
         "alert_message": alert_message,
-        "button_info": button_info
+        "button_info": button_info,
+        "user_info": user_info
     }
     if ref == "bookings":
         html = render_to_string(f"booking/includes/bookings_button.txt", context, request)
     else:
-        html = render_to_string(f"booking/includes/events_button.txt", context, request)
+        html = render_to_string(f"booking/includes/events_buttons.html", context, request)
     event_availability_html = render_to_string(f"booking/includes/event_availability_badge.html", {"event": event}, request)
     event_info_xs_html = render_to_string(
         'booking/includes/event_info_xs.html', 
@@ -301,9 +302,8 @@ def ajax_toggle_booking(request, event_id):
     
     return JsonResponse(
         {
-            "html": html,
+            "buttons_html": html,
             "button_text": button_info["text"],
-            "hide_payment_button": "payment_options" not in button_info.get("buttons", []),
             "event_availability_html": event_availability_html,
             "event_info_xs_html": event_info_xs_html,
             "just_cancelled": requested_action == "cancelled",
@@ -639,15 +639,12 @@ def ajax_add_booking_to_basket(request):
     # use button_info to update text fields
     if ref == "events":
         user_info = get_user_booking_info(user, event)
-        button_info = button_options_events_list(user, event)
-        context["button_info"] = button_info
-        button_html = render(request, f"booking/includes/events_button.txt", context)
     elif ref == "course":
-        context["booked"] = True
         user_info = get_user_course_booking_info(user, event.course)
-        button_info = button_options_events_list(user, event, course=True)
-        context["button_info"] = button_info
-        button_html = render(request, f"booking/includes/course_events_button.txt", context)
+    button_info = button_options_events_list(user, event)
+    context["button_info"] = button_info
+    context["user_info"] = button_info
+    button_html = render(request, f"booking/includes/events_buttons.html", context)
 
     event_availability_html = render_to_string(f"booking/includes/event_availability_badge.html", {"event": event}, request)
     event_info_xs_html = render_to_string(
@@ -659,7 +656,7 @@ def ajax_add_booking_to_basket(request):
     
     return JsonResponse(
         {   
-            "button_html": button_html.content.decode("utf-8"),
+            "buttons_html": button_html.content.decode("utf-8"),
             "cart_item_menu_count": total_unpaid_item_count(request.user),
             "event_availability_html": event_availability_html,
             "event_info_xs_html": event_info_xs_html,

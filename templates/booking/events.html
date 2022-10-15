@@ -141,105 +141,13 @@
                         {% if request.user.is_authenticated %}
                             
                             {% if view_as_user|has_disclaimer %}
-                                <span id="button_text_wrapper_{{ event.id }}" class="{% if not button_info.text_no_style %}helptext{% endif %} float-right col-12">
+                                <span class="helptext float-right col-12">
                                     <span class="float-right" id="button_text_{{ event.id }}">{{ button_info.text }}</span>
                                 </span>
                                 {% if button_info.buttons %}
                                 <span class="float-right col-12">
-                                    <span class="float-right">
-                                    {% for button in button_info.buttons %}
-                                        {% if button == "waiting_list" %}
-                                                <span
-                                                    id="waiting_list_button_{{ event.id }}"
-                                                    data-event_id="{{ event.id }}"
-                                                    data-user_id="{{ view_as_user.id }}"
-                                                    class="ajax_events_waiting_list_btn">
-                                                {% include "booking/includes/waiting_list_button.html" %}
-                                                </span>
-                                        {% elif button == "toggle_booking" %}
-                                            <span
-                                                id="book_{{ event.id }}"
-                                                data-event_id="{{ event.id }}"
-                                                data-course_id={% if event.course %}"{{ event.course.id }}"{% else %}""{% endif %}
-                                                data-event_str="{{ event.name }} ({{ event.start|date:'D d b H:i'|title }})"
-                                                data-user_id="{{ view_as_user.id }}"
-                                                data-ref={% if course %}"course"{% else %}"events"{% endif %}
-                                                data-page="{{ request.GET.page }}"
-                                                data-show_warning={{ user_info.show_warning|yesno:"1,0" }}
-                                                data-cancellation_allowed={{ event.event_type.allow_booking_cancellation|yesno:"1,0" }}
-                                                class="ajax_events_btn">
-                                                {% include "booking/includes/events_button.txt" %}
-                                            </span>
-                                        {% elif button == "add_to_basket" %}
-                                                    <span 
-                                                      id="add_to_basket_{{ event.id }}"
-                                                      data-event_id="{{ event.id }}"
-                                                      data-event_str="{{ event.name }} ({{ event.start|date:'D d b H:i'|title }})"
-                                                      data-course_id={% if event.course %}"{{ event.course.id }}"{% else %}""{% endif %}
-                                                      data-user_id="{{ view_as_user.id }}"
-                                                      data-show_warning={{ user_info.show_warning|yesno:"1,0" }}
-                                                      data-cancellation_allowed={{ event.event_type.allow_booking_cancellation|yesno:"1,0" }}
-                                                      data-ref={% if course %}"course"{% else %}"events"{% endif %}
-                                                      class="ajax_add_to_basket_btn"
-                                                    > 
-                                                    <span class="btn btn-xs btn-xs-wider btn-primary mb-1">
-                                                        <i id="loader_{{ event.id }}"></i><i class="fas fa-shopping-cart"></i> Add drop-in</span>
-                                                    </span>
-                                        {% elif button == "add_course_to_basket" %}
-                                                <span 
-                                                    id="add_course_to_basket_{{ event.id }}"
-                                                    data-course_id={% if event.course %}"{{ event.course.id }}"{% else %}""{% endif %}
-                                                    data-event_id="{{ event.id }}"
-                                                    data-user_id="{{ view_as_user.id }}"
-                                                    data-ref={% if course %}"course"{% else %}"events"{% endif %}
-                                                    class="ajax_add_course_to_basket_btn"
-                                                > 
-                                                <span class="btn btn-xs btn-xs-wider btn-primary mb-1"><i id="loader_course_{{ event.id }}"></i><i class="fas fa-shopping-cart"></i> Add course</span>
-                                        {% elif button == "book_course" %}
-                                            <span
-                                                id="book_course_event_{{ event.id }}"
-                                                data-event_id="{{ event.id }}"
-                                                data-course_id="{{ event.course.id }}"
-                                                data-user_id="{{ view_as_user.id }}"
-                                                data-ref={% if course %}"course"{% else %}"events"{% endif %}
-                                                data-page="{{ request.GET.page }}"
-                                                class="ajax_book_course_events_btn">
-                                                <span class="btn btn-xs btn-xs-wider btn-success mb-1"><i id="loader_book_course_{{ event.id }}"></i><i class="fas fa-clone"></i> Book course</span>
-                                            </span>
-                                        {% elif button == "unenroll" %}
-                                            <form id="unenroll_course_from_event_{{ event.id }}" class="mb-2"    action="{% url 'booking:unenroll_course' %}" method="post">
-                                                {% csrf_token %}
-                                                <input type="hidden" id="user_id" name="user_id" value="{{ view_as_user.id }}">
-                                                <input type="hidden" id="ref" name="ref" value={% if course %}"course"{% else %}"events"{% endif %}>
-                                                <input type="hidden" id="course_id" name="course_id" value="{{ event.course.id }}">
-                                                <input type="submit" class="btn btn-xs btn-xs-wider btn-warning mb-1" value="Unenroll course">
-                                            </form>
-                                        {% elif button == "payment_options" %}
-                                            <span>
-                                            {% if event.course %}
-                                                <a 
-                                                  id="payment_options_{{ event.id }}"  
-                                                  class="btn btn-xs btn-xs-wider btn-outline-dark mb-1" 
-                                                  href="{% url 'booking:course_purchase_options' event.course.slug %}"
-                                                >Payment Plans</a>
-                                            {% else %}
-                                                <a 
-                                                  id="payment_options_{{ event.id }}"
-                                                  class="btn btn-xs btn-xs-wider btn-outline-dark mb-1" 
-                                                  href="{% url 'booking:event_purchase_options' event.slug %}"
-                                                >Payment Plans</a>
-                                            {% endif %}
-                                            </span>
-                                        {% elif button == "view_cart" %}    
-                                        {% else %}
-                                            ###unknown###{{ button }}###
-                                        {% endif %}
-                                    {% endfor %}
-                                    <span id="view_cart_{{ event.id }}" {% if not "view_cart"|inlist:button_info.buttons %} class="hidden"{% endif %}>
-                                        <a class="btn btn-xs btn-xs btn-xs-wider btn-outline-primary mb-1" href="{% url 'booking:shopping_basket' %}">
-                                        <i class="fas fa-shopping-cart"></i> View cart
-                                        </a>
-                                    </span>
+                                    <span class="float-right" id="buttons_{{event.id}}">
+                                        {% include 'booking/includes/events_buttons.html' %}
                                   </span> 
                                 </span> 
                                 {% endif %}

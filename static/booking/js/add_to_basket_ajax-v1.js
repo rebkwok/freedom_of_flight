@@ -76,21 +76,17 @@ var processBookingAddToBasket = function()  {
           }
           else {
             $("#loader_" + event_id).removeClass("fa fa-spinner fa-spin").hide();
-            $('#book_' + event_id).html(result.button_html);
+            $('#buttons_' + event_id).html(result.buttons_html);
 
             $('#availability_' + event_id).html(result.event_availability_html);
             $('#availability_xs_' + event_id).html(result.event_availability_html);
             $('#event_info_xs_' + event_id).html(result.event_info_xs_html);
             $('#booked_tick_' + event_id).removeClass("hidden")
             $('#booked_tick_' + event_id).html('<i class="text-secondary fas fa-shopping-basket"></i>')
-            $('#view_cart_' + event_id).removeClass("hidden")
             $('#cart_item_menu_count').text(result.cart_item_menu_count);
             
             $('#cancelled-text-' + event_id).text("");
             $('#list-item-' + event_id).removeClass("list-group-item-secondary text-secondary");
-            $('#add_to_basket_' + event_id).hide();
-            $('#add_course_to_basket_' + event_id).hide();
-            $('#payment_options_' + event_id).hide();
           }
 
           if (result.alert_message) {

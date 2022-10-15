@@ -178,12 +178,11 @@ class CourseListViewTests(EventTestMixin, TestUsersMixin, TestCase):
             course_id for course_id, user_info in user_course_booking_info.items() 
             if user_info['has_booked_course'] or user_info['has_booked_dropin']
         ]
-        assert len(booked) == 1
-        assert booked == [self.course.id]
+        assert len(booked) == 0
         course_booking_info = resp.context_data['user_course_booking_info'][self.course.id]
         assert course_booking_info["items_in_basket"] is True
         assert course_booking_info["has_booked_dropin"] is False
-        assert course_booking_info["has_booked_course"] is True
+        assert course_booking_info["has_booked_course"] is False
         assert course_booking_info["has_booked_all"] is True
         assert 'fas fa-shopping-cart' in resp.rendered_content
         # not show b/c all course items are in cart
@@ -208,10 +207,9 @@ class CourseListViewTests(EventTestMixin, TestUsersMixin, TestCase):
             course_id for course_id, user_info in user_course_booking_info.items() 
             if user_info['has_booked_course'] or user_info['has_booked_dropin']
         ]
-        assert len(booked) == 1
-        assert booked == [self.course.id]
+        assert len(booked) == 0
         course_booking_info = resp.context_data['user_course_booking_info'][self.course.id]
-        assert course_booking_info["has_booked_dropin"] is True
+        assert course_booking_info["has_booked_dropin"] is False
         assert course_booking_info["has_booked_course"] is False
         assert course_booking_info["has_booked_all"] is False
         assert course_booking_info["items_in_basket"] is True

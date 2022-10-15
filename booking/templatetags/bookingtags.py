@@ -160,8 +160,3 @@ def at_least_one_user_can_purchase(available_users, block_or_subscription):
 def get_range(value, start=0):
     # start: 0 or 1
     return range(start, value + start)
-
-
-@register.filter
-def inlist(value, target_list):
-    return value in target_list

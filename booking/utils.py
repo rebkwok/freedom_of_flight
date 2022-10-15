@@ -220,7 +220,8 @@ def get_user_booking_info(user, event):
 
 def user_course_booking_type(user, course, bookings=None):
     # check this against PAID bookings only
-    # TODO may need an admin override for admin-added bookings
+    # if there are no paid bookings, check for bookings with no block - these are single
+    # bookings added by admins, so are considered dropin
     if bookings is None:
         bookings = user.bookings.filter(event__course=course, status="OPEN", block__paid=True)
     if bookings:
@@ -229,12 +230,17 @@ def user_course_booking_type(user, course, bookings=None):
             return "course"
         else:
             return "dropin"
+    else:
+        # no paid bookings, check for bookings without block, we consider these dropin also
+        if user.bookings.filter(event__course=course, status="OPEN", block__isnull=True).exists():
+            return "dropin"
+
 
 
 def get_user_course_booking_info(user, course):
     bookings = user.bookings.filter(event__course=course, status="OPEN")
     # booking type for PAID bookings only
-    booking_type = user_course_booking_type(user, course, bookings)
+    booking_type = user_course_booking_type(user, course)
     has_booked = booking_type == "course"
     # open booked events includes unpaid, in-basket
     open_booked_events = bookings.filter(no_show=False).values_list("event_id", flat=True)

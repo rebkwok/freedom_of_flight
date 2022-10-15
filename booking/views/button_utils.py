@@ -141,7 +141,7 @@ def button_options_events_list(user, event, course=False):
 
     if user_event_info.booking_in_basket:
         options["buttons"].append("view_cart")
-        options["text_no_style"] = True
+        options["text"] = "In cart"
         return options
 
     # waiting list buttons
@@ -315,10 +315,9 @@ def course_list_button_info(user, course, user_info):
     
     if user_info["items_in_basket"]:
         if not user_info["has_booked_all"]:
-            options["text"] = f"<span class='helptext'>Item(s) in cart</span></br>"
+            options["text"] = f"<span class='float-right'>Item(s) in cart</span>"
         options["button"] = "view_cart"
         options["text"] = mark_safe(options["text"])
-        options["text_no_style"] = True
 
     if user_info["has_booked_dropin"]:
         if options["text"]:

@@ -19,7 +19,6 @@ var processBookingToggleRequest = function()  {
 
     //The value of the "data-event_id" attribute.
     var event_id = $button_just_clicked_on.data('event_id');
-    var course_id = $button_just_clicked_on.data('course_id');
     var event_str = $button_just_clicked_on.data('event_str');
     var user_id = $button_just_clicked_on.data('user_id');
     var ref = $button_just_clicked_on.data('ref');
@@ -77,7 +76,7 @@ var processBookingToggleRequest = function()  {
           }
           else {
             $("#loader_" + event_id).removeClass("fa fa-spinner fa-spin").hide();
-            $('#book_' + event_id).html(result.html);
+            $('#buttons_' + event_id).html(result.buttons_html);
             $('#availability_' + event_id).html(result.event_availability_html);
             $('#availability_xs_' + event_id).html(result.event_availability_html);
             $('#event_info_xs_' + event_id).html(result.event_info_xs_html);
@@ -90,20 +89,7 @@ var processBookingToggleRequest = function()  {
                 $('#booked_tick_' + event_id).show();
                 $('#cancelled-text-' + event_id).text("");
                 $('#list-item-' + event_id).removeClass("list-group-item-secondary text-secondary");
-                $('#add_to_basket_' + event_id).hide();
-                $('#add_course_to_basket_' + course_id).hide();
-              }
-              if (result.hide_payment_button) {
-                $('#payment_options_' + event_id).hide();
-              }
-              if (result.hide_add_to_basket_button) {
-                $('#payment_options_' + event_id).hide();
-              }
-              if (result.hide_add_to_basket_button) {
-                $('#payment_options_' + event_id).hide();
-              }
-              if (result.hide_payment_button) {
-                $('#payment_options_' + event_id).hide();
+ 
               }
           }
        };
