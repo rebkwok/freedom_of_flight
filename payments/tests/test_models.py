@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 import os
 from unittest.mock import patch
 from hashlib import sha512
@@ -7,7 +8,7 @@ from django.test import TestCase
 
 from model_bakery import baker
 
-from booking.models import Block, Subscription, GiftVoucher
+from booking.models import Block, Booking, EventType, Subscription, GiftVoucher
 from merchandise.tests.utils import make_purchase
 from ..models import Invoice, Seller
 
@@ -63,12 +64,40 @@ class TestModels(TestCase):
     def test_invoice_items_metadata(self):
         invoice = baker.make(Invoice, invoice_id="foo123")
         block = baker.make(Block, block_config__cost=10, block_config__name="test block", invoice=invoice)
+        booking_block = baker.make(
+            Block, block_config__cost=8, block_config__name="dropin block", block_config__size=1, invoice=invoice)
+        baker.make(
+            Booking, event__name="test class", 
+            event__start=datetime(2022, 11, 1, 10, 0, tzinfo=timezone.utc), 
+            block=booking_block
+        )
+        event_type = baker.make(EventType)
+        course_booking_block = baker.make(
+            Block, 
+            block_config__course=True, 
+            block_config__cost=50, 
+            block_config__name="course block", 
+            block_config__size=12, 
+            block_config__event_type=event_type,
+            invoice=invoice
+        )
+        baker.make(
+            Booking, 
+            block=course_booking_block, 
+            event__course__event_type=event_type,
+            event__event_type=event_type,
+            event__course__name="test course", 
+            _quantity=2
+        )
+        
         subscription = baker.make(Subscription, config__name="test subscription", config__cost=50, invoice=invoice)
         gift_voucher = baker.make(GiftVoucher, gift_voucher_config__discount_amount=10, invoice=invoice)
         product_purchase = make_purchase(invoice=invoice)
         product_purchase_no_size = make_purchase(size=None, product_name="Onesie", invoice=invoice)
 
         assert invoice.items_metadata() == {
+            "test course": f"£50.00 (block-{course_booking_block.id})",
+            "test class - 01 Nov 2022, 10:00": f"£8.00 (block-{booking_block.id})",
             "test block": f"£10.00 (block-{block.id})",
             "test subscription": f"£50.00 (subscription-{subscription.id})",
             "Gift Voucher: £10.00": f"£10.00 (gift_voucher-{gift_voucher.id})",

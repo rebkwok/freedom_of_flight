@@ -369,7 +369,7 @@ class Event(models.Model):
 
     @property
     def name_and_date(self):
-        return f"{self.name} - {self.start.astimezone(pytz.timezone('Europe/London')).strftime('%d %b %Y, %H:%M')} "
+        return f"{self.name} - {self.start.astimezone(pytz.timezone('Europe/London')).strftime('%d %b %Y, %H:%M')}"
 
     def __str__(self):
         course_str = f" ({self.course.name})" if self.course else ""
