@@ -12,13 +12,9 @@ from ..utils import (
 register = template.Library()
 
 
-def get_block_info(block, include_user=True):
-    if include_user:
-        user_info_text = f"{full_name(block.user)}: "
-    else:
-        user_info_text = ""
+def get_block_info(block):
     used, total = get_block_status(block)
-    base_text = f"<span class='helptext'>{user_info_text}{block.block_config.name} ({total - used}/{total} remaining)"
+    base_text = f"<span class='helptext'>{full_name(block.user)}: {block.block_config.name} ({total - used}/{total} remaining)"
     if block.expiry_date:
         return f"{base_text}; expires {block.expiry_date.strftime('%d-%b-%y')}</span>"
     elif block.block_config.duration:
@@ -27,16 +23,11 @@ def get_block_info(block, include_user=True):
         return f"{base_text}; never expires</span>"
 
 
-def user_block_info(block, include_user=True):
-    include_user = bool(include_user)
-    if include_user:
-        user_info_text = f"{full_name(block.user)}: "
-    else:
-        user_info_text = ""
+def user_block_info(block):
     if block.block_config.course:
         # Don't show the used/total for course blocks
-        return f"<span class='helptext'>{user_info_text}{block.block_config.name}</span>"
-    return get_block_info(block, include_user)
+        return f"<span class='helptext'>{full_name(block.user)}: {block.block_config.name}</span>"
+    return get_block_info(block)
 
 
 @register.filter
