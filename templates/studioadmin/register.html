@@ -40,18 +40,16 @@
         <table class="table">
             <thead>
             <tr class="compress">
-                <th scope="col" class="text-center"><div class="btn btn-xs btn-primary" onclick="toggleNotes()"><i class="fas fa-eye"></i> Notes</div></th>
+                <th scope="col" class="text-center"></th>
                 <th scope="col" class="text-center">Attended</th>
-                <th scope="col" class="text-center">User</th>
+                <th scope="col" class="text-center" style="min-width: 100px;">
+                    User <span onclick="toggleNotes()"><i class="text-primary far fa-arrow-alt-circle-right"></i> </span>
+                </th>
                 <th id="notes-header" scope="col" class="text-center hidden" style="min-width: 100px;">Notes</th>
                 <th scope="col" class="text-center">Details</th>
                 <th scope="col" class="text-center">Block</th>
             </tr>
             </thead>
-            
-            <!-- Modal -->
-            {% comment %} <div class="modal fade" id="RegisterBookingAddModal" tabindex="-1" role="dialog" aria-labelledby="RegisterBookingAddModalLabel"></div> {% endcomment %}
-            <!-- /.modal -->
 
             <tbody>
             {% if bookings %}

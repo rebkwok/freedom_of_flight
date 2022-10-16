@@ -388,6 +388,7 @@ hr.tooltip-hr {
   width: 1.5em;
   border-radius: 10px;
   border-color: dimgrey;
+  font-size: small;
 }
 
 .btn-toggle {
