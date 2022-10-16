@@ -371,6 +371,20 @@ class Event(models.Model):
     def name_and_date(self):
         return f"{self.name} - {self.start.astimezone(pytz.timezone('Europe/London')).strftime('%d %b %Y, %H:%M')}"
 
+    @property
+    def cost_str(self):
+        cost = ""
+        if self.course and not self.course.has_started:
+            course_booking_block = add_to_cart_course_block_config(self.course)
+            if course_booking_block:
+                cost += f"{course_booking_block.cost_str} (course)"
+        cart_booking_block = add_to_cart_drop_in_block_config(self)
+        if cart_booking_block:
+            if cost:
+                cost += " / "
+            cost += f"{cart_booking_block.cost_str} (drop-in)"
+        return cost
+
     def __str__(self):
         course_str = f" ({self.course.name})" if self.course else ""
         return f"{self.name}{course_str} - {self.start.astimezone(pytz.timezone('Europe/London')).strftime('%d %b %Y, %H:%M')} " \
@@ -425,6 +439,10 @@ class BlockConfig(models.Model):
         if self.event_type.age_restrictions:
             return f"Valid for {self.event_type.age_restrictions}"
 
+    @property
+    def cost_str(self):
+        cost = int(self.cost) if int(self.cost) == self.cost else self.cost
+        return f"£{cost}"
 
 class BaseVoucher(models.Model):
     code = models.CharField(max_length=255, unique=True)

@@ -152,13 +152,12 @@ def button_options_events_list(user, event, course=False):
             options["text"] = f"{event.event_type.label.title()} is full"
             return options
 
-    # an event from a course which has started and doesn't allow any booking options
-    if (
-        event.course and 
-        event.course.has_started and not 
-        any([event.course.allow_drop_in, user_event_info.has_open_booking])
-    ):
-        return {**options, "buttons": [], "text": "Course has started"}
+    # an event from a course which has started
+    if event.course and event.course.has_started:
+        options["text"] = "Course has started"
+        # and doesn't allow any booking options
+        if not any([event.course.allow_drop_in, user_event_info.has_open_booking]):
+            return options
 
     if user_event_info.can_book_or_cancel:
         if user_event_info.can_cancel:
@@ -182,8 +181,6 @@ def button_options_events_list(user, event, course=False):
                 options["buttons"] = ["book_course"]
             if event.course.allow_drop_in:
                 if user_event_info.has_available_drop_in_block:
-                    if event.course.has_started:
-                        options["text"] = "Course has started"
                     options["buttons"].append("toggle_booking")
                     options["toggle_option"] = "book_dropin"
                     if user_event_info.can_add_course_to_basket:
@@ -294,8 +291,8 @@ def button_options_book_course_button(user, course):
             options["post_button_text"] = "You have an available drop-in payment plan"
         else:
             options["post_button_text"] += f'''
-            To book drop in, either add classes to your basket below, or go to the
-            <a href="{purchase_url}">payment plans</a> page to see available payment options.
+            <em>To book drop in, add classes below, or go to the
+            <a href="{purchase_url}">payment plans</a> page to see alternative payment options.</em>
             '''
             
     options["pre_button_text"] = mark_safe(options["pre_button_text"])

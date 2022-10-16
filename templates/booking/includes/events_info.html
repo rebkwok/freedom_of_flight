@@ -11,17 +11,15 @@
         {% endif %}
     </span>
 
-    <span class="d-inline-block d-sm-none">
-        <span class="helptext" id="availability_xs_{{ event.id }}">{% include 'booking/includes/event_availability_badge.html' %}</span>
-    </span>
-
     {% if event.course and not course %}
-        <br/><span class="d-inline-block d-sm-none">
+        <br/>
             <a href="{% url 'booking:course_events' event.course.slug %}">
                 <span class="badge badge-course">{{ event.course.name|truncatechars:25 }} ({{ event.course_order }})
                 </span>
             </a>
-        </span>
     {% endif %}
+
+    <br/>
+    <small>{{ event.cost_str }}</small>
 {% endif %}
 

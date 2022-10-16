@@ -948,7 +948,7 @@ def test_buttons_dropin_course_not_booked(client, student_user, drop_in_course):
     assert course_button["book_button"] is None
     assert not course_button["unenroll"]
     assert "You can book the full course or drop in" in course_button["pre_text"]
-    assert "To book drop in, either add classes" in course_button["post_text"]
+    assert "To book drop in, add classes" in course_button["post_text"]
     for button in [
         "book_course",
         "toggle_booking",
@@ -974,7 +974,7 @@ def test_buttons_dropin_course_cancelled_no_block(client, student_user, drop_in_
     assert course_button["book_button"] is None
     assert not course_button["unenroll"]
     assert "You can book the full course or drop in" in course_button["pre_text"]
-    assert "To book drop in, either add classes" in course_button["post_text"]
+    assert "To book drop in, add classes" in course_button["post_text"]
     for button in [
         "book_course",
         "toggle_booking",
@@ -998,7 +998,7 @@ def test_buttons_dropin_course_not_booked_with_course_block(client, student_user
     assert "Book Course" in course_button["book_button"]
     assert not course_button["unenroll"]
     assert "You can book the full course or drop in" in course_button["pre_text"]
-    assert "To book drop in, either add classes" in course_button["post_text"]
+    assert "To book drop in, add classes" in course_button["post_text"]
     for button in [
         "add_course",
         "toggle_booking",

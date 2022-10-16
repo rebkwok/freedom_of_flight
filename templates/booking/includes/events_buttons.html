@@ -36,11 +36,11 @@
         class="ajax_events_btn float-right">
         
         {% if button_info.toggle_option == "cancel"  %}
-            <span class="btn btn-xs btn-xs-wider btn-dark mb-1" href="#"><i id="loader_{{ event.id }}"></i><i class="fas fa-window-close"></i> Cancel</span>
+            <span class="btn btn-xs btn-xs-wider btn-dark mb-1 float-right" href="#"><i id="loader_{{ event.id }}"></i><i class="fas fa-window-close"></i> Cancel</span>
         {% elif button_info.toggle_option == "book_dropin"  %}
-            <span class="btn btn-xs btn-xs-wider btn-success mb-1" href="#"><i id="loader_{{ event.id }}"></i><i class="fas fa-sm fa-square"></i> Book Drop-in</span>
+            <span class="btn btn-xs btn-xs-wider btn-success mb-1 float-right" href="#"><i id="loader_{{ event.id }}"></i><i class="fas fa-sm fa-square"></i> Book Drop-in</span>
         {% elif button_info.toggle_option == "rebook"  %}
-            <span class="btn btn-xs btn-xs-wider btn-success mb-1" href="#"><i id="loader_{{ event.id }}"></i></i>  Rebook</span>
+            <span class="btn btn-xs btn-xs-wider btn-success mb-1 float-right" href="#"><i id="loader_{{ event.id }}"></i></i>  Rebook</span>
         {% endif %}
 
     </span>
@@ -56,7 +56,7 @@
               data-ref={% if course %}"course"{% else %}"events"{% endif %}
               class="ajax_add_to_basket_btn float-right"
             > 
-            <span class="btn btn-xs btn-xs-wider btn-primary mb-1">
+            <span class="btn btn-xs btn-xs-wider btn-primary mb-1 float-right">
                 <i id="loader_{{ event.id }}"></i><i class="fas fa-shopping-cart"></i> Add drop-in</span>
             </span>
 {% elif button == "add_course_to_basket" %}
@@ -68,7 +68,7 @@
             data-ref={% if course %}"course"{% else %}"events"{% endif %}
             class="ajax_add_course_to_basket_btn float-right"
         > 
-        <span class="btn btn-xs btn-xs-wider btn-primary mb-1"><i id="loader_course_{{ event.id }}"></i><i class="fas fa-shopping-cart"></i> Add course</span>
+        <span class="btn btn-xs btn-xs-wider btn-primary mb-1 float-right"><i id="loader_course_{{ event.id }}"></i><i class="fas fa-shopping-cart"></i> Add course</span>
 {% elif button == "book_course" %}
     <span
         id="book_course_event_{{ event.id }}"
@@ -78,7 +78,7 @@
         data-ref={% if course %}"course"{% else %}"events"{% endif %}
         data-page="{{ request.GET.page }}"
         class="ajax_book_course_events_btn float-right">
-        <span class="btn btn-xs btn-xs-wider btn-success mb-1"><i id="loader_book_course_{{ event.id }}"></i><i class="fas fa-clone"></i> Book course</span>
+        <span class="btn btn-xs btn-xs-wider btn-success mb-1 float-right"><i id="loader_book_course_{{ event.id }}"></i><i class="fas fa-clone"></i> Book course</span>
     </span>
 {% elif button == "unenroll" %}
     <form 
@@ -98,13 +98,13 @@
     {% if event.course %}
         <a 
           id="payment_options_{{ event.id }}"  
-          class="btn btn-xs btn-xs-wider btn-outline-dark mb-1" 
+          class="btn btn-xs btn-xs-wider btn-outline-dark mb-1 float-right" 
           href="{% url 'booking:course_purchase_options' event.course.slug %}"
         >Payment Plans</a>
     {% else %}
         <a 
           id="payment_options_{{ event.id }}"
-          class="btn btn-xs btn-xs-wider btn-outline-dark mb-1" 
+          class="btn btn-xs btn-xs-wider btn-outline-dark mb-1 float-right" 
           href="{% url 'booking:event_purchase_options' event.slug %}"
         >Payment Plans</a>
     {% endif %}

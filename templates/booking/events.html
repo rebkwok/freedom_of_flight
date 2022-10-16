@@ -58,6 +58,7 @@
             {% endif %}
 
             <span id="course_button_post_text">
+                {% if not book_course_button_options.button %}</br>{% endif %}
                 {{ book_course_button_options.post_button_text }}
             </span>    
             
@@ -118,7 +119,7 @@
                     <div class="col-1 pt-2 pb-2 pl-1">
                         <small>{{ event.start|date:"H:i"  }}-{{ event.end|date:"H:i" }}</small>
                     </div>
-                    <div class="col-8 col-sm-9 col-lg-10 pt-2 pb-2">
+                    <div class="col-7 col-sm-9 col-lg-10 pt-2 pb-2">
                             <!-- Event name and info (availability, user blocks) on smaller screens -->
                             <span id="booked_tick_{{ event.id }}" {% if not button_info.open or not button_info.has_open_booking %}class="hidden"{% endif %}>
                                 {% if button_info.in_basket %}
@@ -134,8 +135,7 @@
                             <!-- availability, user blocks etc on larger screens plus course info on all -->
                             {% include 'booking/includes/events_info.html' %}
                     </div>
-
-                    <div class="col-3 col-sm-2 col-lg-1 pr-1 pl-1 float-right">
+                    <div class="col-4 col-sm-2 col-lg-1 pr-1 pl-1 float-right">
                         <!-- booking buttons and info text -->
                         {% if request.user.is_authenticated %}
                             
