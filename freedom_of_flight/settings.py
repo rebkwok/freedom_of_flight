@@ -104,6 +104,7 @@ INSTALLED_APPS = [
     'paypal.standard.pdt',
     'payments',
     'email_obfuscator',
+    'notices',
 ]
 
 MIDDLEWARE = [
@@ -174,6 +175,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'booking.context_processors.booking',
+                'notices.context_processors.notices',
             ],
         },
     },

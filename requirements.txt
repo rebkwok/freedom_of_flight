@@ -49,6 +49,7 @@ django==4.1.1
     #   django-extensions
     #   django-js-asset
     #   django-migration-testcase
+    #   django-one-time-notices
     #   django-paypal
     #   dynamic-django-forms
     #   model-bakery
@@ -64,6 +65,7 @@ django-classy-tags==3.0.1
     # via
     #   -r requirements.in
     #   django-cookie-law
+    #   django-one-time-notices
 django-cookie-law==2.2.0
     # via -r requirements.in
 django-crispy-forms==1.14.0
@@ -81,6 +83,8 @@ django-imagekit==4.1.0
 django-js-asset==2.0.0
     # via django-ckeditor
 django-migration-testcase==0.0.15
+    # via -r requirements.in
+django-one-time-notices==0.1.1
     # via -r requirements.in
 django-paypal==2.0
     # via -r requirements.in
