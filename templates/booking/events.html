@@ -97,11 +97,11 @@
 
     {% if events_by_date %}
         {% for date, events in events_by_date.items %}
-            <div class="row event-card event-card-header list-group-item-secondary mb-1">
+            <div class="row event-card event-card-header list-group-item-secondary">
                 <div class="col-12 p-1">{{ date|date:"D d M Y" }}</div>
             </div>
             {% for event in events %}
-                <div class="row event-card event-card-item {% if event.is_past or event.cancelled %}list-group-item-secondary{% endif %}">
+                <div class="row event-card event-card-item mt-1{% if event.is_past or event.cancelled %}list-group-item-secondary{% endif %}">
                 {% with button_info=button_options|lookup_dict:event.id user_info=user_booking_info|lookup_dict:event.id %}
                     {% if button_info.open %}
                         {% if event.show_video_link %}
@@ -116,10 +116,10 @@
                     {% endif %}
                     
                     
-                    <div class="col-1 pt-2 pb-2 pl-1">
-                        <small>{{ event.start|date:"H:i"  }}-{{ event.end|date:"H:i" }}</small>
+                    <div class="col-2 col-md-1 pt-2 pb-2 pl-1">
+                        <small>{{ event.start|date:"H:i"  }}-<span class="d-md-none"> </span>{{ event.end|date:"H:i" }}</small>
                     </div>
-                    <div class="col-7 col-sm-9 col-lg-10 pt-2 pb-2">
+                    <div class="col-6 col-md-9 col-lg-10 pt-2 pb-2">
                             <!-- Event name and info (availability, user blocks) on smaller screens -->
                             <span id="booked_tick_{{ event.id }}" {% if not button_info.open or not button_info.has_open_booking %}class="hidden"{% endif %}>
                                 {% if button_info.in_basket %}

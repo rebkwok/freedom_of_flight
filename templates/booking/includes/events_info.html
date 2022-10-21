@@ -10,7 +10,7 @@
             </a>
         {% endif %}
     </span>
-
+    <span class="d-inline-block d-sm-none">
     {% if event.course and not course %}
         <br/>
             <a href="{% url 'booking:course_events' event.course.slug %}">
@@ -18,7 +18,7 @@
                 </span>
             </a>
     {% endif %}
-
+    </span>
     <br/>
     <small>{{ event.cost_str }}</small>
 {% endif %}
