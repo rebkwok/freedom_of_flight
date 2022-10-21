@@ -59,11 +59,14 @@
                     <ol>
                         <li>Log in to <a href="booking.freedomofflightaerial.com">booking.freedomofflightaerial.com</a></li>
                         {% if voucher.block_configs.exists %}
-                        <li>Go to Payment Plans and select {% if voucher.block_configs.count > 1 %}a{% else %}the{% endif %} credit block listed above</li>
+                            <li>Go to Payment Plans and select {% if voucher.block_configs.count > 1 %}a{% else %}the{% endif %} credit block listed above</li>
+                            Or if your voucher is for a single class or course:
+                            <li>Go to the class schedule and add your selected class/course to your shopping cart</li>
                         {% else %}
-                            <li>Go to Shop and add items to shopping basket</li>
+                            <li>Go to Shop and add items to shopping cart and/or</li>
+                            <li>Go to the class schedule and add classes to your shopping cart</li>
                         {% endif %}
-                        <li>On the Shopping Basket page, enter your voucher code and click Apply</li>
+                        <li>On the Shopping Cart page, enter your voucher code and click Apply</li>
                         <li>If you are only purchasing items covered by the voucher type/amount, the total will now be £0. Click Submit to complete your purchase.</li>
                     </ol>
                     <span class="helptext">Terms and conditions apply to all purchases, full T&C available <a href="{% url 'booking:terms_and_conditions' %}" target="_blank">here</a></span>

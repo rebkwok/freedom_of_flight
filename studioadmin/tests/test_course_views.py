@@ -172,16 +172,6 @@ class CourseAjaxToggleTests(TestUsersMixin, TestCase):
         self.course.refresh_from_db()
         assert self.course.allow_drop_in is False
 
-    def test_toggle_partial_booking(self):
-        url = reverse("studioadmin:ajax_toggle_course_allow_partial_booking", args=(self.course.id,))
-        self.login(self.staff_user)
-        assert self.course.allow_partial_booking is False
-        self.client.post(url)
-        self.course.refresh_from_db()
-        assert self.course.allow_partial_booking is True
-        self.client.post(url)
-        self.course.refresh_from_db()
-        assert self.course.allow_partial_booking is False
 
 class CancelCourseViewTests(EventTestMixin, TestUsersMixin, TestCase):
 

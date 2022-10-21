@@ -12,23 +12,11 @@
     {% endif %}
 {% endif %}
 
-{% if booking.status == "OPEN" and not booking.no_show %}
-    <div class="btn btn-xs btn-xs-narrow btn-dark float-right" href="#"><i id="loader_{{ booking.event.id }}"></i> Cancel</div>
-{% elif booking.event.course %}
+{% if button_info.toggle_option == "cancel" %}
+    <div class="btn btn-xs btn-xs-narrow btn-dark float-right" href="#"><i id="loader_{{ booking.event.id }}"></i><i class="fas fa-window-close"></i> Cancel</div>
+{% elif button_info.toggle_option == "book" or button_info.toggle_option == "rebook" %}
     <div class="btn btn-xs btn-xs-narrow btn-success float-right" href="#">
         <i id="loader_{{ booking.event.id }}">
-        </i> {% if booking.status == "CANCELLED" or booking.no_show %}Rebook{% else %}View/Book Course{% endif %}
+        </i> {{ button_info.toggle_option|title }}
     </div>
-{% elif booking.event.has_space %}
-    {% if not booking.has_available_block and not booking.has_available_subscription %}
-        {% if booking.event.course %}
-            <div class="btn btn-xs btn-xs-narrow btn-outline-success float-right" href="#">Course details</div>
-        {% else %}
-            <div class="btn btn-xs btn-xs-narrow btn-info float-right" href="#"><i id="loader_{{ booking.event.id }}"></i> Payment Options</div>
-        {% endif %}
-    {% else %}
-        <div class="btn btn-xs btn-success float-right" href="#"><i id="loader_{{ booking.event.id }}">
-            </i> {% if booking.status == "CANCELLED" or booking.no_show %}Rebook{% else %}Book{% endif %} Drop-in
-        </div>
-    {% endif %}
 {% endif %}

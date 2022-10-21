@@ -242,4 +242,4 @@ class UserInvoiceListView(LoginRequiredMixin, ListView):
     template_name = "payments/invoices.html"
 
     def get_queryset(self):
-        return Invoice.objects.filter(paid=True, username=self.request.user.email)
+        return Invoice.objects.filter(paid=True, username=self.request.user.username)

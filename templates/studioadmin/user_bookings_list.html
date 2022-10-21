@@ -62,9 +62,15 @@
                         </td>
                         <td>
                             {% if booking.block %}
+                                {% if booking.block.paid %}
                                 <div class="badge badge-info" data-toggle="tooltip" data-placement="top" title="{{ booking.block.block_config.name }} (block)">
                                     Yes
                                 </div>
+                                {% else %}
+                                <div class="badge badge-danger" data-toggle="tooltip" data-placement="top" title="{{ booking.block.block_config.name }} (block)">
+                                    Payment pending
+                                </div>
+                                {% endif %}
                             {% elif booking.subscription %}
                                 <div class="badge badge-warning" data-toggle="tooltip" data-placement="top" title="{{ booking.subscription.config.name }} (subscription)">
                                     Yes

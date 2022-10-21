@@ -87,10 +87,6 @@ class UtilsTests(EventTestMixin, TestUsersMixin, TestCase):
 
         assert part_course_block.valid_for_course(self.course) is False
         assert part_course_block.valid_for_course(self.in_progress_course) is False
-        self.in_progress_course.allow_partial_booking = True
-        self.in_progress_course.save()
-        assert part_course_block.valid_for_course(self.in_progress_course) is True
-        assert full_course_block.valid_for_course(self.in_progress_course) is True
 
     def test_used_block_not_valid_for_course(self):
         full_course_block = baker.make(Block, block_config=self.course_config, user=self.student_user, paid=True)
@@ -127,13 +123,7 @@ class UtilsTests(EventTestMixin, TestUsersMixin, TestCase):
         )
 
         assert get_active_user_course_block(self.student_user, self.course) == full_course_block_oldest
-        # in progress course doesn't allow partial booking
-        assert get_active_user_course_block(self.student_user, self.in_progress_course) == full_course_block_oldest
-
-        self.in_progress_course.allow_partial_booking = True
-        self.in_progress_course.save()
-        assert get_active_user_course_block(self.student_user, self.in_progress_course) == part_course_block_oldest
-
+        
         assert get_active_user_course_block(self.student_user1, self.course) is None
         assert get_active_user_course_block(self.student_user1, self.in_progress_course) is None
 
@@ -167,15 +157,6 @@ class UtilsTests(EventTestMixin, TestUsersMixin, TestCase):
         assert get_active_user_block(self.student_user, self.course_event, dropin_only=False) == full_course_block
         assert get_active_user_course_block(self.student_user, self.course_event.course) == full_course_block
 
-        # in progress course doesn't allow partial booking or drop in booking
-        assert self.in_progress_course.allow_partial_booking is False
-        # returns the full course block, which is still valid for the course
-        assert get_active_user_block(self.student_user, self.in_progress_course_event, dropin_only=False) == full_course_block
-        # but if partial booking is allowed, it returns the partial block first
-        self.in_progress_course.allow_partial_booking = True
-        self.in_progress_course.save()
-        assert get_active_user_block(self.student_user, self.in_progress_course_event, dropin_only=False) == part_course_block
-
         assert get_active_user_block(self.student_user1, self.course_event, dropin_only=False) is None
         assert get_active_user_block(self.student_user1, self.in_progress_course_event, dropin_only=False) is None
         assert get_active_user_block(self.student_user1, self.drop_in_allowed_course_event, dropin_only=False) is None
@@ -187,13 +168,6 @@ class UtilsTests(EventTestMixin, TestUsersMixin, TestCase):
         full_course_block.delete()
         part_course_block.delete()
         assert get_active_user_block(self.student_user, self.drop_in_allowed_course_event) == drop_in_block
-
-        # in progress course allows partial booking but not drop in, but user now has no block
-        assert get_active_user_block(self.student_user, self.in_progress_course_event, dropin_only=False) is None
-
-        self.in_progress_course.allow_drop_in = True
-        self.in_progress_course.save()
-        assert get_active_user_block(self.student_user, self.in_progress_course_event) == drop_in_block
 
     def test_user_can_book_or_cancel(self):
         event = self.aerial_events[0]

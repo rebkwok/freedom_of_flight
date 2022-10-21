@@ -1,4 +1,4 @@
-{% load bookingtags static %}
+{% load bookingtags static email_obfuscator %}
 
 {% if alert_message %}
     {% if alert_message.message_type == 'warning' %}
@@ -12,57 +12,6 @@
     {% endif %}
 {% endif %}
 
-{% if already_booked %}
-    <p>{{ view_as_user.first_name }} {{ view_as_user.last_name }} is attending this course.</p>
-{% elif booked_for_events %}
-    <p>{{ view_as_user.first_name }} {{ view_as_user.last_name }} has booked for classes on this course.</p>
-    {% if not course.full %}
-        {% if has_available_course_block %}
-            <em>
-            You have a course credit block available; you can switch your current class bookings to a course booking if you wish.
-            </em><br/>
-            <em>
-            Payment plan available: Credit block - {{ available_course_block.block_config.name }}
-            </em><br/>
-            <a class="btn btn-success mb-2" href="#"><i id="loader_{{ course.id }}"></i> Book Course</a>
-        {% elif not course.has_started %}
-            <p>Course booking is also available.<br/>
-            Go to the <a href="{% url 'booking:course_purchase_options' course.slug %}">payment plans</a> page to see available
-            payment plans for this course.  After completing your purchase, return to this page, and you will be able to
-            switch your current drop-in bookings to a full course booking. <p/>
-        {% endif %}
-    {% endif %}
-{% elif course.full %}
-    {% if course.allow_drop_in and not course.all_events_full %}
-        <p>There are no spaces left for the full course. Drop-in is available for some classes.</p>
-    {% else %}
-        <p>This course is now full.
-    {% endif %}
-    </p>
-{% elif not has_available_course_block %}
-    {% if not has_available_dropin_block %}
-        <p><em>You need a payment plan to book this course</em></p>
-        <p>
-        Go to the <a href="{% url 'booking:course_purchase_options' course.slug %}">payment plans</a> page to see available
-        payment plans for this course.
-        After completing your purchase, return to this page to book into the course.
-        </p>
-    {% else %}
-        <p><em>You can book individual classes on this course as drop in</em></p>
-        {% if not course.has_started %}
-        <p>You can also book the full course; go to the <a href="{% url 'booking:course_purchase_options' course.slug %}">payment plans</a>
-        page to see available payment plans for this course.
-        </p>
-        {% elif course.allow_partial_booking and course.has_available_payment_plan %}
-            <p>You can also book the rest of the course with a course credit block; go to the
-                <a href="{% url 'booking:course_purchase_options' course.slug %}">payment plans</a>
-                page to see available payment plans for this course.
-            </p>
-        {% endif %}
-    {% endif %}
-{% else %}
-    <em>
-    Payment plan available: Credit block - {{ available_course_block.block_config.name }}
-    </em><br/>
-    <a class="btn btn-success mb-2" href="#"><i id="loader_{{ course.id }}"></i> Book Course</a>
+{% if not booked %}
+<a class="btn btn-success mb-2" href="#"><i id="loader_{{ course.id }}"></i> Book Course</a>
 {% endif %}

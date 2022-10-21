@@ -7,12 +7,14 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.generic import ListView, DetailView
 
-
 from ..forms import AvailableUsersForm, EventNameFilterForm
-from ..models import Course, Event, Track, has_available_block, has_available_course_block, \
-    get_active_user_course_block
+from ..models import Course, Event, Track, get_active_user_course_block
 from ..utils import get_view_as_user, get_user_booking_info
-from .views_utils import DataPolicyAgreementRequiredMixin
+from .button_utils import (
+    button_options_events_list, 
+    button_options_book_course_button
+)
+from .views_utils import DataPolicyAgreementRequiredMixin, CleanUpBlocksMixin
 
 
 def home(request):
@@ -22,16 +24,19 @@ def home(request):
     return HttpResponseRedirect(reverse("booking:events", args=(track.slug,)))
 
 
-class EventListView(DataPolicyAgreementRequiredMixin, ListView):
+class EventListView(CleanUpBlocksMixin, DataPolicyAgreementRequiredMixin, ListView):
 
     model = Event
     context_object_name = 'events_by_date'
     template_name = 'booking/events.html'
 
+    def _redirect_url(self):
+        return reverse("booking:events", args=(self.kwargs["track"],))
+
     def post(self, request, *args, **kwargs):
         view_as_user = request.POST.get("view_as_user")
         self.request.session["user_id"] = int(view_as_user)
-        return HttpResponseRedirect(reverse("booking:events", args=(self.kwargs["track"],)))
+        return HttpResponseRedirect(self._redirect_url())
 
     def get_queryset(self):
         track = get_object_or_404(Track, slug=self.kwargs["track"])
@@ -46,6 +51,11 @@ class EventListView(DataPolicyAgreementRequiredMixin, ListView):
 
     def get_title(self):
         return Track.objects.get(slug=self.kwargs["track"]).name
+
+    def _get_button_info(self, user, events):
+        return {
+            event.id: button_options_events_list(user, event) for event in events
+        }
 
     def get_context_data(self, **kwargs):
         # Call the base implementation first to get a context
@@ -86,6 +96,7 @@ class EventListView(DataPolicyAgreementRequiredMixin, ListView):
             }
             context["user_booking_info"] = user_booking_info
             context["available_users_form"] = AvailableUsersForm(request=self.request, view_as_user=view_as_user)
+            context["button_options"] = self._get_button_info(view_as_user, page_events.object_list)
         return context
 
 
@@ -113,14 +124,17 @@ class CourseEventsListView(EventListView):
     def get_title(self):
         return Course.objects.get(slug=self.kwargs["course_slug"]).name
 
-    def post(self, request, *args, **kwargs):
-        view_as_user = request.POST.get("view_as_user")
-        self.request.session["user_id"] = view_as_user
-        return HttpResponseRedirect(reverse("booking:course_events", args=(self.kwargs["course_slug"],)))
+    def _redirect_url(self):
+        return reverse("booking:course_events", args=(self.kwargs["course_slug"],))
 
     def get_queryset(self):
         course_slug =self.kwargs["course_slug"]
         return Event.objects.filter(course__slug=course_slug).order_by('start__date', 'start__time')
+
+    def _get_button_info(self, user, events):
+        return {
+            event.id: button_options_events_list(user, event, course=True) for event in events
+        }
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -128,18 +142,6 @@ class CourseEventsListView(EventListView):
         context["course"] = course
         if self.request.user.is_authenticated:
             view_as_user = get_view_as_user(self.request)
-            # already booked == has an open (no-show or not) booking for all events in the course
-            already_booked = view_as_user.bookings.filter(event__course=course, status="OPEN").count() == course.uncancelled_events.count()
-            context["already_booked"] = already_booked
-            if already_booked:
-                date_first_booked = view_as_user.bookings.filter(event__course=course).first().date_booked
-                unenrollment_time = date_first_booked + timedelta(hours=24)
-                within_unenrollment_time = timezone.now() < unenrollment_time
-                context["can_unenroll"] = not course.has_started and within_unenrollment_time
-                context["unenroll_end_date"] = min(unenrollment_time, course.start)
-
-            context["booked_for_events"] = view_as_user.bookings.filter(event__course=course, status="OPEN", no_show=False).exists()
-            context["has_available_course_block"] = has_available_course_block(view_as_user, course)
-            context["has_available_dropin_block"] = has_available_block(view_as_user, course.events.first(), dropin_only=True)
             context["available_course_block"] = get_active_user_course_block(view_as_user, course)
+            context["book_course_button_options"] = button_options_book_course_button(view_as_user, course)
         return context

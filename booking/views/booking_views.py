@@ -3,15 +3,16 @@ from datetime import timedelta
 from django.core.paginator import Paginator
 from django.db.models import Count
 from django.utils import timezone
-from django.shortcuts import get_object_or_404, HttpResponseRedirect
+from django.shortcuts import HttpResponseRedirect
 from django.views.generic import ListView
 from django.urls import reverse
 
 from braces.views import LoginRequiredMixin
 
 from ..forms import AvailableUsersForm
-from ..models import Booking, Event, WaitingListUser
+from ..models import Booking
 from ..utils import get_view_as_user
+from .button_utils import booking_list_button
 from .views_utils import DataPolicyAgreementRequiredMixin
 
 
@@ -32,10 +33,18 @@ class BookingListView(DataPolicyAgreementRequiredMixin, LoginRequiredMixin, List
     def get_queryset(self):
         cutoff_time = timezone.now() - timedelta(minutes=10)
         view_as_user = get_view_as_user(self.request)
+
+        # exclude bookings with an unpaid block; these are in the cart
         # exclude fully cancelled course bookings - these will have only been cancelled by an admin
         return view_as_user.bookings.filter(event__start__gt=cutoff_time)\
+            .exclude(block__isnull=False, block__paid=False)\
             .exclude(event__course__isnull=False, status="CANCELLED")\
             .order_by('event__start__date', 'event__start__time')
+
+    def _get_button_options(self, page_bookings):
+        return {
+            booking.id: booking_list_button(booking) for booking in page_bookings
+        }
 
     def get_context_data(self, **kwargs):
         # Call the base implementation first to get a context
@@ -49,6 +58,9 @@ class BookingListView(DataPolicyAgreementRequiredMixin, LoginRequiredMixin, List
         bookings_by_date = {}
         for booking_info in booking_ids_by_date:
             bookings_by_date.setdefault(booking_info["event__start__date"], []).append(all_bookings.get(id=booking_info["id"]))
+        
+        context["button_options"] = self._get_button_options(page_bookings)
+
         context["page_obj"] = page_bookings
         context["bookings_by_date"] = bookings_by_date
         context["available_users_form"] = AvailableUsersForm(request=self.request, view_as_user=get_view_as_user(self.request))
@@ -68,6 +80,12 @@ class BookingHistoryListView(BookingListView):
         return view_as_user.bookings.filter(event__start__lte=cutoff_time)\
             .exclude(event__course__isnull=False, status="CANCELLED")\
             .order_by('-event__start__date', 'event__start__time')
+
+    def _get_button_options(self, page_bookings):
+        return {
+            booking.id: booking_list_button(booking, history=True) 
+            for booking in page_bookings
+        }
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data()

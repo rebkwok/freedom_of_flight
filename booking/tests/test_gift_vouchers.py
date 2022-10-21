@@ -226,10 +226,10 @@ class GiftVoucherDetailViewTests(TestUsersMixin, TestCase):
     def test_voucher_instructions(self):
         resp = self.client.get(self.block_voucher_url)
         assert "Go to Payment Plans and select" in resp.rendered_content
-        assert "Go to Shop and add items to shopping basket" not in resp.rendered_content
+        assert "Go to Shop and add items to shopping cart" not in resp.rendered_content
 
         resp = self.client.get(self.total_voucher_url)
-        assert "Go to Shop and add items to shopping basket" in resp.rendered_content
+        assert "Go to Shop and add items to shopping cart" in resp.rendered_content
         assert "Go to Payment Plans and select" not in resp.rendered_content
 
 

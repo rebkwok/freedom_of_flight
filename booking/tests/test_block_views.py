@@ -1,9 +1,11 @@
+from datetime import timedelta
 from model_bakery import baker
 
 from django.urls import reverse
 from django.test import TestCase
+from django.utils import timezone
 
-from booking.models import Block, BlockConfig, Course, Event, EventType
+from booking.models import Block
 from common.test_utils import TestUsersMixin
 
 
@@ -41,11 +43,21 @@ class BlockListViewTests(TestUsersMixin, TestCase):
 
     def test_unpaid_blocks_not_listed(self):
         baker.make(Block, user=self.student_user, block_config__size=2, paid=True)
+        # unpaid
         baker.make(Block, user=self.student_user, block_config__size=2)
+        # expired paid
+        baker.make(
+            Block, user=self.student_user, block_config__size=2, paid=True,
+            expiry_date=timezone.now() - timedelta(2))
         self.login(self.student_user)
         resp = self.client.get(self.url)
         blocks = resp.context_data["blocks"]
         assert len(blocks) == 1
+
+        resp = self.client.get(self.url + "?include-expired=true")
+        blocks = resp.context_data["blocks"]
+        assert len(blocks) == 2
+
 
     def test_block_list_by_managed_user(self):
         baker.make(Block, user=self.child_user, block_config__size=1, paid=True)

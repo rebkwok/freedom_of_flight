@@ -31,7 +31,16 @@
                 <th class="text-center">Purchased</th>
                 <th class="text-center">Start</th>
                 <th class="text-center">Expiry</th>
-                <th class="text-center">Delete<br/><span class="helptext">Unpaid only</span></th>
+                <th class="text-center">Paid</th>
+                <th class="text-center">Delete 
+                    <span class="text-secondary"
+                        data-toggle="tooltip"
+                            data-placement="top"
+                            data-html="true"
+                            title="<ul class='helptext pl-0'>Unpaid blocks only; will also delete associated bookings</ul>"
+                    ><i class="fas fa-info-circle"></i>
+                </span>
+            </th>
             </tr>
             </thead>
 
@@ -87,8 +96,19 @@
                         {% endif %}
                         </td>
                         <td class="text-center"><small>{{ block.purchase_date|date:"d-M-y" }}</small></td>
-                        <td class="text-center"><small>{{ block.start_date|date:"d-M-y" }}</small></td>
-                        <td class="text-center"><small>{{ block.expiry_date|date:"d-M-y" }}</small></td>
+                        <td class="text-center"><small>{% if block.paid %}{{ block.start_date|date:"d-M-y" }}{% endif %}</small></td>
+                        <td class="text-center"><small>{% if block.paid %}{{ block.expiry_date|date:"d-M-y" }}{% endif %}</small></td>
+                        <td class="text-center">
+                            {% if block.paid %}
+                                <div class="badge badge-success">
+                                    Yes
+                                </div>
+                                {% else %}
+                                <div class="badge badge-danger">
+                                    Pending
+                                </div>
+                            {% endif %}
+                        </td>    
                         <td class="text-center">
                             {% if not block.paid %}
                                 <span

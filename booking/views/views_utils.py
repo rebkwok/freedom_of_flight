@@ -1,5 +1,6 @@
 from datetime import timedelta
 
+from django.db.models import Count
 from django.urls import reverse
 from django.shortcuts import HttpResponseRedirect
 from django.utils import timezone
@@ -18,6 +19,14 @@ class DataPolicyAgreementRequiredMixin:
             return HttpResponseRedirect(
                 reverse('accounts:data_privacy_review') + '?next=' + request.path
             )
+        return super().dispatch(request, *args, **kwargs)
+
+
+class CleanUpBlocksMixin:
+
+    def dispatch(self, request, *args, **kwargs):
+        # Cleanup blocks so user is looking at updated class/course availablility
+        Block.cleanup_expired_blocks(use_cache=True)
         return super().dispatch(request, *args, **kwargs)
 
 
@@ -43,18 +52,18 @@ def redirect_to_voucher_cart(view_func):
     return wrap
 
 
-def _managed_user_plus_self(user):
-    return {user, *user.managed_users}
-
-
 def get_unpaid_user_managed_blocks(user):
+    # clean up expired blocks that have associated bookings (i.e. bookings added directly to cart)
+    Block.cleanup_expired_blocks(user=user)
+    # order by bookings count then user id
+    # this puts all direct purchases (single blocks with associated bookings) first
     return Block.objects.filter(
-        user__in=_managed_user_plus_self(user), paid=False
-    ).order_by('user_id', "id")
+        user__in=user.managed_users_including_self, paid=False
+    ).annotate(count=Count('bookings__id')).order_by("-count", 'user_id', "id")
 
 
 def get_unpaid_user_managed_subscriptions(user):
-    return Subscription.objects.filter(user__in=_managed_user_plus_self(user), paid=False).order_by('user_id')
+    return Subscription.objects.filter(user__in=user.managed_users_including_self, paid=False).order_by('user_id')
 
 
 def get_unpaid_user_gift_vouchers(user):

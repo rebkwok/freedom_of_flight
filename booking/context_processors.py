@@ -41,6 +41,7 @@ def booking(request):
         'cart_item_count': cart_item_count,
         'view_as_user': view_as_user,
         'checkout_method': settings.CHECKOUT_METHOD,
+        'cart_timeout_mins': settings.CART_TIMEOUT_MINUTES,
         'gift_vouchers_available': GiftVoucherConfig.objects.filter(active=True).exists(),
         'merchandise_available': Product.objects.filter(active=True).exists(),
         'merchandise_cart_timeout_mins': settings.MERCHANDISE_CART_TIMEOUT_MINUTES,

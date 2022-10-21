@@ -1,6 +1,6 @@
 {% extends 'email_base.txt' %}
 {% block messagecontent %}
-Thank you for your booking for the course: {{ course }} ({{ course_user.first_name}} {{ course_user.last_name}}).  You have been registered for all course classes.
+{{ course_user.first_name}} {{ course_user.last_name}} has been enrolled in course: {{ course }}.
 {% for event in course.events_left.all %}
 -{{ event }}
 {% endfor %}

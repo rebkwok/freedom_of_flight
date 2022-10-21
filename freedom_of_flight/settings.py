@@ -30,6 +30,7 @@ env = environ.Env(
     LOCAL=(bool, False),
     USE_CDN=(bool, False),
     MERCHANDISE_CART_TIMEOUT_MINUTES=(int, 15),
+    CART_TIMEOUT_MINUTES=(int, 15),
 )
 
 
@@ -103,6 +104,7 @@ INSTALLED_APPS = [
     'paypal.standard.pdt',
     'payments',
     'email_obfuscator',
+    'notices',
 ]
 
 MIDDLEWARE = [
@@ -173,6 +175,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'booking.context_processors.booking',
+                'notices.context_processors.notices',
             ],
         },
     },
@@ -232,7 +235,10 @@ STATIC_ROOT = root('collected-static')
 MEDIA_URL = '/media/'
 MEDIA_ROOT = root('media')
 
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+if env("LOCAL") or env("CI"):
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+else:
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_USE_TLS = True
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_HOST_USER = 'freedomofflightbooking@gmail.com'
@@ -480,3 +486,4 @@ STRIPE_CONNECT_CLIENT_ID = env("STRIPE_CONNECT_CLIENT_ID")
 STRIPE_ENDPOINT_SECRET = env("STRIPE_ENDPOINT_SECRET")
 
 MERCHANDISE_CART_TIMEOUT_MINUTES = env("MERCHANDISE_CART_TIMEOUT_MINUTES")
+CART_TIMEOUT_MINUTES = env("CART_TIMEOUT_MINUTES")

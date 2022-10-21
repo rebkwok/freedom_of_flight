@@ -8,7 +8,7 @@ from django.test import TestCase
 from django.utils import timezone
 
 from booking.utils import full_name
-from booking.models import Course, Block, Event, Booking
+from booking.models import BlockConfig, Course, Block, Event, Booking
 from common.test_utils import TestUsersMixin, EventTestMixin
 
 
@@ -51,6 +51,44 @@ class CourseListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         resp = self.client.get(self.url(self.adult_track))
         assert sorted(course.id for course in resp.context_data["courses"]) == sorted([self.course.id, shown.id, part_done_course.id])
 
+    def test_courses_list_with_unbooked_courses(self):
+        """
+        test that booked courses are shown on listing
+        """
+        # make events for course
+        baker.make_recipe(
+            "booking.future_event", course=self.course, event_type=self.aerial_event_type,
+            _quantity=self.course.number_of_events - self.course.uncancelled_events.count()
+        )
+
+        self.login(self.student_user)
+        resp = self.client.get(self.url(self.adult_track))
+        user_course_booking_info = resp.context_data['user_course_booking_info']
+        booked = [
+            course_id for course_id, user_info in user_course_booking_info.items() 
+            if user_info['has_booked_course'] or user_info['has_booked_dropin']
+        ]
+        assert len(booked) == 0
+        # bookings have no block associated, so these are considered dropin
+        assert user_course_booking_info[self.course.id]["has_booked_dropin"] is False
+        assert user_course_booking_info[self.course.id]["has_booked_course"] is False
+        assert user_course_booking_info[self.course.id]["has_booked_all"] is False
+        assert user_course_booking_info[self.course.id]["items_in_basket"] is False
+        # no block config available
+        assert '<i class="text-primary fas fa-shopping-cart"></i> Add course' not in resp.rendered_content
+
+        # make valid block config
+        baker.make(BlockConfig, event_type=self.course.event_type, course=True, size=self.course.number_of_events)
+        resp = self.client.get(self.url(self.adult_track))
+        assert '<i class="fas fa-shopping-cart"></i> Add course</span>' in resp.rendered_content
+        assert "Drop-in booking is also available" not in resp.rendered_content
+
+        self.course.allow_drop_in = True
+        self.course.save()
+        resp = self.client.get(self.url(self.adult_track))
+        assert '<i class="fas fa-shopping-cart"></i> Add course</span>' in resp.rendered_content
+        assert "Drop-in booking is also available" in resp.rendered_content
+
     def test_courses_list_with_booked_courses(self):
         """
         test that booked courses are shown on listing
@@ -67,12 +105,16 @@ class CourseListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         self.login(self.student_user)
         resp = self.client.get(self.url(self.adult_track))
         user_course_booking_info = resp.context_data['user_course_booking_info']
-        booked = [course_id for course_id, user_info in user_course_booking_info.items() if user_info.get("open")]
+        booked = [
+            course_id for course_id, user_info in user_course_booking_info.items() 
+            if user_info['has_booked_course'] or user_info['has_booked_dropin']
+        ]
+
         assert len(booked) == 1
         assert booked == [self.course.id]
         # bookings have no block associated, so these are considered dropin
         assert user_course_booking_info[self.course.id]["has_booked_dropin"]
-        assert user_course_booking_info[self.course.id]["has_booked"] is False
+        assert user_course_booking_info[self.course.id]["has_booked_course"] is False
         assert user_course_booking_info[self.course.id]["has_booked_all"] is True
         assert '<i class="text-success fas fa-check-circle"></i> Booked' in resp.rendered_content
 
@@ -82,9 +124,105 @@ class CourseListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         resp = self.client.get(self.url(self.adult_track))
         course_booking_info = resp.context_data['user_course_booking_info'][self.course.id]
         assert course_booking_info["has_booked_dropin"] is False
-        assert course_booking_info["has_booked"] is True
+        assert course_booking_info["has_booked_course"] is True
         assert course_booking_info["has_booked_all"] is True
         assert '<i class="text-success fas fa-check-circle"></i> Booked' in resp.rendered_content
+
+    def test_courses_list_with_drop_in_booking(self):
+        """
+        test that booked courses are shown on listing
+        """
+        # make events for course
+        baker.make_recipe(
+            "booking.future_event", course=self.course, event_type=self.aerial_event_type,
+            _quantity=self.course.number_of_events - self.course.uncancelled_events.count()
+        )
+        # create a drop in booking for this user, with paid block
+        block = baker.make_recipe(
+            "booking.dropin_block", user=self.student_user, block_config__size=1, paid=True
+        )
+        baker.make(Booking, user=self.student_user, event=self.course.uncancelled_events[0], block=block)
+        
+        self.login(self.student_user)
+        resp = self.client.get(self.url(self.adult_track))
+        user_course_booking_info = resp.context_data['user_course_booking_info']
+        booked = [
+            course_id for course_id, user_info in user_course_booking_info.items() 
+            if user_info['has_booked_course'] or user_info['has_booked_dropin']
+        ]
+        assert len(booked) == 1
+        assert booked == [self.course.id]
+        assert user_course_booking_info[self.course.id]["has_booked_dropin"]
+        assert user_course_booking_info[self.course.id]["has_booked_course"] is False
+        assert user_course_booking_info[self.course.id]["has_booked_all"] is False
+        assert '<i class="text-success fas fa-check-circle"></i> Booked drop-in' in resp.rendered_content
+     
+    def test_courses_list_with_course_in_basket(self):
+        # make events for course
+        baker.make_recipe(
+            "booking.future_event", course=self.course, event_type=self.aerial_event_type,
+            _quantity=self.course.number_of_events - self.course.uncancelled_events.count()
+        )
+
+        # create a booking for this user, with unpaid block
+        block = baker.make_recipe(
+            "booking.course_block", user=self.student_user, block_config__size=self.course.number_of_events,
+            paid=False
+        )
+        for event in self.course.events.all():
+            baker.make(Booking, user=self.student_user, event=event, block=block)
+        self.login(self.student_user)
+        resp = self.client.get(self.url(self.adult_track))
+        user_course_booking_info = resp.context_data['user_course_booking_info']
+        booked = [
+            course_id for course_id, user_info in user_course_booking_info.items() 
+            if user_info['has_booked_course'] or user_info['has_booked_dropin']
+        ]
+        assert len(booked) == 0
+        course_booking_info = resp.context_data['user_course_booking_info'][self.course.id]
+        assert course_booking_info["items_in_basket"] is True
+        assert course_booking_info["has_booked_dropin"] is False
+        assert course_booking_info["has_booked_course"] is False
+        assert course_booking_info["has_booked_all"] is True
+        assert 'fas fa-shopping-cart' in resp.rendered_content
+        # not show b/c all course items are in cart
+        assert 'Item(s) in cart' not in resp.rendered_content
+
+    def test_courses_list_with_dropin_in_basket(self):
+        # make events for course
+        baker.make_recipe(
+            "booking.future_event", course=self.course, event_type=self.aerial_event_type,
+            _quantity=self.course.number_of_events - self.course.uncancelled_events.count()
+        )
+
+        # create a drop in booking for this user, with unpaid block
+        block = baker.make_recipe(
+            "booking.dropin_block", user=self.student_user, block_config__size=1, paid=False
+        )
+        baker.make(Booking, user=self.student_user, event=self.course.uncancelled_events[0], block=block)
+        self.login(self.student_user)
+        resp = self.client.get(self.url(self.adult_track))
+        user_course_booking_info = resp.context_data['user_course_booking_info']
+        booked = [
+            course_id for course_id, user_info in user_course_booking_info.items() 
+            if user_info['has_booked_course'] or user_info['has_booked_dropin']
+        ]
+        assert len(booked) == 0
+        course_booking_info = resp.context_data['user_course_booking_info'][self.course.id]
+        assert course_booking_info["has_booked_dropin"] is False
+        assert course_booking_info["has_booked_course"] is False
+        assert course_booking_info["has_booked_all"] is False
+        assert course_booking_info["items_in_basket"] is True
+        assert 'fas fa-shopping-cart' in resp.rendered_content
+        assert 'Item(s) in cart' in resp.rendered_content
+        
+        assert not self.course.allow_drop_in
+        assert "See course details for other class availability" not in resp.rendered_content
+
+        self.course.allow_drop_in = True
+        self.course.save()
+        resp = self.client.get(self.url(self.adult_track))
+        assert "See course details for other class availability" in resp.rendered_content
 
     def test_courses_list_with_full_course(self):
         self.login(self.student_user)
@@ -115,8 +253,7 @@ class CourseListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         self.course.allow_drop_in = True
         self.course.save()
         resp = self.client.get(self.url(self.adult_track))
-        assert 'Course is full' not in resp.rendered_content, resp.rendered_content
-        assert "Full course booking is not available." in resp.rendered_content
+        assert "Course is full" in resp.rendered_content
         assert "Drop-in is available for some classes" in resp.rendered_content
 
     def test_courses_list_with_course_with_cancelled_events(self):
@@ -132,12 +269,26 @@ class CourseListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         self.login(self.student_user)
         resp = self.client.get(self.url(self.adult_track))
         assert 'Course has started' in resp.rendered_content
+        assert "Drop-in is available for some classes" not in resp.rendered_content
+
+        self.course.allow_drop_in = True
+        self.course.save()
+        resp = self.client.get(self.url(self.adult_track))
+        assert 'Course has started' in resp.rendered_content
+        assert "Drop-in is available for some classes" in resp.rendered_content
 
     def test_courses_list_with_no_block_available(self):
         self.login(self.student_user)
         resp = self.client.get(self.url(self.adult_track))
-        assert 'NOT BOOKED' in resp.rendered_content
-        assert 'Payment options' in resp.rendered_content
+        # Add to cart isn't shown if no block config available
+        assert "Add course" not in resp.rendered_content
+        # make a block config (doesn't have to be active)
+        baker.make(
+            BlockConfig, course=True, event_type=self.course.event_type, 
+            size=self.course.number_of_events, active=False
+        )
+        resp = self.client.get(self.url(self.adult_track))
+        assert "Add course" in resp.rendered_content
 
     def test_courses_list_with_block_available(self):
         # make usable block
@@ -153,6 +304,11 @@ class CourseListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         assert 'NOT BOOKED' in resp.rendered_content
         assert 'Book Course' in resp.rendered_content
 
+        self.course.allow_drop_in = True
+        self.course.save()
+        resp = self.client.get(self.url(self.adult_track))
+        assert "Course and drop-in booking is available" in resp.rendered_content
+
     def test_courses_list_change_view_as_user(self):
         # manager is also a student
         self.make_disclaimer(self.manager_user)
@@ -167,14 +323,20 @@ class CourseListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         # manager is a student, so by default shows them as view_as_user
         resp = self.client.get(self.url(self.adult_track))
         user_course_booking_info = resp.context_data['user_course_booking_info']
-        booked_count = sum([1 if user_info.get("open") else 0 for user_info in user_course_booking_info.values()])
+        booked_count = sum(
+            [1 if user_info['has_booked_course'] or user_info['has_booked_dropin']
+            else 0 for user_info in user_course_booking_info.values()]
+        )
         assert booked_count == 1
 
         # post to change the user
         resp = self.client.post(self.url(self.adult_track), data={"view_as_user": self.child_user.id}, follow=True)
         assert self.client.session["user_id"] == self.child_user.id
         user_course_booking_info = resp.context_data['user_course_booking_info']
-        booked_count = sum([1 if user_info.get("open") else 0 for user_info in user_course_booking_info.values()])
+        booked_count = sum(
+            [1 if user_info['has_booked_course'] or user_info['has_booked_dropin']
+            else 0 for user_info in user_course_booking_info.values()]
+        )
         assert booked_count == 0
 
     def test_courses_ordered_by_start_date(self):
@@ -234,9 +396,29 @@ class CourseUnenrollViewTests(EventTestMixin, TestUsersMixin, TestCase):
         assert not self.course_block.active_block
 
         self.client.login(username=self.student_user.username, password="test")
-        self.client.post(
+        resp = self.client.post(
             self.url, {"user_id": self.student_user.id, "course_id": self.course.id}
         )
+        assert reverse("booking:course_events", args=(self.course.slug,)) in resp.url
+
+        cancelled_booked_events = self.student_user.bookings.filter(status="CANCELLED").values_list("event_id", flat=True)
+        for event in self.course.events.all():
+            assert event.id in cancelled_booked_events
+        
+        self.course_block.refresh_from_db()
+        assert self.course_block.active_block
+    
+    def test_unenroll_from_events_page(self):
+        booked_events = self.student_user.bookings.filter(status="OPEN").values_list("event_id", flat=True)
+        for event in self.course.events.all():
+            assert event.id in booked_events
+        assert not self.course_block.active_block
+
+        self.client.login(username=self.student_user.username, password="test")
+        resp = self.client.post(
+            self.url, {"user_id": self.student_user.id, "course_id": self.course.id, "ref": "events"}
+        )
+        assert reverse("booking:events", args=(self.course.event_type.track.slug,)) in resp.url
 
         cancelled_booked_events = self.student_user.bookings.filter(status="CANCELLED").values_list("event_id", flat=True)
         for event in self.course.events.all():

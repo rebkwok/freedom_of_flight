@@ -16,8 +16,10 @@
         <div href="#" class="btn btn-cart-xs btn-table-xs btn-success mt-1 mb-1 p-1">
         <i id="loader_{{ available_user.id }}_{{ available_block_config.id }}">
         <span class="pr-1"></i>Add <i class="fas fa-shopping-cart"></i>
-        {% if available_user|has_unpaid_block:available_block_config %}
-            <span class="helptext"> ({{ available_user|unpaid_block_count:available_block_config }})</span>
+        {% with unpaid_count=available_user|unpaid_block_count:available_block_config %}    
+        {% if unpaid_count > 0 %}
+            <span class="helptext"> ({{ unpaid_count }})</span>
          {% endif %}
+         {% endwith %}
          </span></div>
 </div>

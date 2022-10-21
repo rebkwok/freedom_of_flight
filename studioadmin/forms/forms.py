@@ -193,7 +193,6 @@ class CourseUpdateForm(forms.ModelForm):
             "number_of_events",
             "max_participants",
             "show_on_site",
-            "allow_partial_booking",
             "allow_drop_in",
             "cancelled",
         )
@@ -203,7 +202,7 @@ class CourseUpdateForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.back_url = reverse("studioadmin:courses")
         for name, field in self.fields.items():
-            if name in ["show_on_site", "allow_partial_booking", "allow_drop_in"]:
+            if name in ["show_on_site", "allow_drop_in"]:
                 field.widget.attrs = {"class": "form-check-inline"}
             elif name == "cancelled" and self.instance:
                 if self.instance.cancelled:
@@ -215,10 +214,6 @@ class CourseUpdateForm(forms.ModelForm):
                 if name == "description":
                     field.widget.attrs.update({"rows": 10})
 
-        self.fields["allow_partial_booking"].label = "Allow booking after the course has started (Not recommended)"
-        self.fields["allow_partial_booking"].help_text = """
-            Users can book after a course has started (not recommended - use 'allow drop-in' instead)
-        """
         self.fields["allow_drop_in"].label = "Allow drop-in booking"
 
         self.hide_events = False
@@ -284,7 +279,6 @@ class CourseUpdateForm(forms.ModelForm):
             "max_participants",
             "show_on_site",
             "allow_drop_in",
-            Div("allow_partial_booking", css_class="text-secondary"),
             Hidden("cancelled", self.instance.cancelled) if hide_cancelled else "cancelled",
         )
 

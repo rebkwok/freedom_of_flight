@@ -5,7 +5,7 @@ dj-database-url
 django-allauth
 django-braces
 django-ckeditor
-django-classy-tags  # for cookie-law
+django-classy-tags  # for cookie-law and django-one-time-notices
 django-cookie-law
 django-crispy-forms
 django-debug-toolbar
@@ -16,6 +16,7 @@ django-imagekit
 django-migration-testcase
 django-paypal
 dynamic-django-forms
+django-one-time-notices
 openpyxl
 psycopg2
 python-dateutil

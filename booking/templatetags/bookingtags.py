@@ -1,40 +1,20 @@
-from django.template.loader import render_to_string
 from django import template
-from django.db.models import Q
+from django.db.models import Q, Count
 from django.utils import timezone
 from common.utils import full_name, start_of_day_in_utc
 from ..models import EventType, WaitingListUser
-from ..models import has_available_course_block as has_available_course_block_util
-from ..models import has_available_block, has_available_subscription
 
 from ..utils import (
-    get_block_status, user_can_book_or_cancel, get_user_booking_info, user_subscription_info,
+    get_block_status, user_subscription_info,
     show_warning
 )
 
 register = template.Library()
 
 
-@register.filter
-def has_available_course_block(user, course):
-    return has_available_course_block_util(user, course)
-
-
-@register.filter
-def has_available_payment_method(user, event):
-    if event.course:
-        return has_available_course_block_util(user, event.course)
-    else:
-        return any([has_available_block(user, event), has_available_subscription(user, event)])
-
-
-def get_block_info(block, include_user=True):
-    if include_user:
-        user_info_text = f"{full_name(block.user)}: "
-    else:
-        user_info_text = ""
+def get_block_info(block):
     used, total = get_block_status(block)
-    base_text = f"<span class='helptext'>{user_info_text}{block.block_config.name} ({total - used}/{total} remaining)"
+    base_text = f"<span class='helptext'>{full_name(block.user)}: {block.block_config.name} ({total - used}/{total} remaining)"
     if block.expiry_date:
         return f"{base_text}; expires {block.expiry_date.strftime('%d-%b-%y')}</span>"
     elif block.block_config.duration:
@@ -43,27 +23,17 @@ def get_block_info(block, include_user=True):
         return f"{base_text}; never expires</span>"
 
 
-@register.filter
-def user_block_info(block, include_user=True):
-    include_user = bool(include_user)
-    if include_user:
-        user_info_text = f"{full_name(block.user)}: "
-    else:
-        user_info_text = ""
+def user_block_info(block):
     if block.block_config.course:
         # Don't show the used/total for course blocks
-        return f"<span class='helptext'>{user_info_text}{block.block_config.name}</span>"
-    return get_block_info(block, include_user)
-
-
-@register.filter
-def has_unpaid_block(user, block_config):
-    return any(block for block in user.blocks.filter(paid=False) if block.block_config == block_config)
+        return f"<span class='helptext'>{full_name(block.user)}: {block.block_config.name}</span>"
+    return get_block_info(block)
 
 
 @register.filter
 def unpaid_block_count(user, block_config):
-    return user.blocks.filter(block_config=block_config, paid=False).count()
+    # unpaid block count for blocks with no associated bookings
+    return user.blocks.filter(block_config=block_config, paid=False).annotate(count=Count("bookings__id")).exclude(count__gt=0).count()
 
 
 @register.simple_tag
@@ -93,7 +63,6 @@ def active_subscription_info(user_active_subscriptions, subscription_config):
 def on_waiting_list(user, event):
     if user.is_authenticated:
         return WaitingListUser.objects.filter(user=user, event=event).exists()
-    return False
 
 
 @register.filter
@@ -124,11 +93,6 @@ def subscription_start_text(subscription):
 
 
 @register.filter
-def can_book_or_cancel(booking):
-    return user_can_book_or_cancel(event=booking.event, user_booking=booking)
-
-
-@register.filter
 def show_booking_warning(booking):
     return show_warning(event=booking.event, user_booking=booking)
 
@@ -138,9 +102,6 @@ def lookup_dict(dictionary, key):
     if dictionary:
         return dictionary.get(key)
 
-@register.simple_tag
-def booking_user_info(booking):
-    return get_user_booking_info(booking.user, booking.event)
 
 @register.filter
 def format_subscription_config_start_options(subscription_config_dict):
@@ -184,6 +145,7 @@ def can_purchase_subscription(user, subscription_config):
 @register.filter
 def at_least_one_user_can_purchase(available_users, block_or_subscription):
     return any(user for user in available_users if block_or_subscription.available_to_user(user))
+
 
 @register.filter
 def get_range(value, start=0):

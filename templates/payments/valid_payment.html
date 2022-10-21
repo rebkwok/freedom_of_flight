@@ -25,7 +25,7 @@
                 <tbody>
                     {% for item in cart_items %}
                         <tr>
-                            <td>{{ item.name }}</td>
+                            <td>{{ item.name }} {% if item.user %}({{ item.user|full_name }}){% endif %}</td>
                             <td>{{ item.cost }}</td>
                         </tr>
 
@@ -41,7 +41,11 @@
                 <strong><span class="text-danger">Please note</span>: purchasing a credit block or subscription does not automatically book you into
                     any specific course or class.</strong></p>
 
-            <p>You can now go to the
+            <p> If you purchased classes/courses/workshops directly, your bookings are now confirmed.  View 
+                your bookings <a href="{% url 'booking:bookings' %}">here</a>.
+            </p>
+            <p>
+                If you purchased credit block(s),you can now go to the
                 {% if redirect_track %}
                     <a href="{% url 'booking:events' redirect_track.slug %}">schedule</a>
                 {% else %}

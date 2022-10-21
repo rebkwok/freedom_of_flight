@@ -2,21 +2,21 @@
 
 {% if booking %}
         {% if view_as_user|on_waiting_list:event %}
-                <a href="#" class="btn btn-xs btn-warning" id="leave_waiting_list_button">
+                <a href="#" class="btn btn-xs  btn-xs-wider btn-warning" id="leave_waiting_list_button">
                         <i id="loader_{{ booking.event.id }}"></i> Leave waiting list
                 </a>
         {% else %}
-                <a href="#" class="btn btn-xs btn-outline-dark" id="join_waiting_list_button">
+                <a href="#" class="btn btn-xs  btn-xs-wider btn-outline-dark" id="join_waiting_list_button">
                         <i id="loader_{{ booking.event.id }}"></i> Join waiting list
                 </a>
         {% endif %}
 {% else %}
         {% if user_info.on_waiting_list %}
-        <a href="#" class="btn btn-xs btn-warning" id="leave_waiting_list_button">
+        <a href="#" class="btn btn-xs btn-xs-wider btn-warning float-right" id="leave_waiting_list_button">
                 <i id="loader_{{ event.id }}"></i> Leave waiting list
         </a>
         {% else %}
-        <a href="#" class="btn btn-xs btn-outline-dark" id="join_waiting_list_button">
+        <a href="#" class="btn btn-xs btn-xs-wider btn-outline-dark float-right" id="join_waiting_list_button">
                 <i id="loader_{{ event.id }}"></i> Join waiting list
         </a>
         {% endif %}

@@ -14,10 +14,11 @@ from activitylog.models import ActivityLog
 from ..forms import AvailableUsersForm
 from ..models import Course, Track
 from ..utils import get_view_as_user, get_user_course_booking_info, full_name
-from .views_utils import DataPolicyAgreementRequiredMixin
+from .button_utils import course_list_button_info
+from .views_utils import DataPolicyAgreementRequiredMixin, CleanUpBlocksMixin
 
 
-class CourseListView(DataPolicyAgreementRequiredMixin, ListView):
+class CourseListView(CleanUpBlocksMixin, DataPolicyAgreementRequiredMixin, ListView):
 
     model = Course
     context_object_name = 'courses'
@@ -48,6 +49,11 @@ class CourseListView(DataPolicyAgreementRequiredMixin, ListView):
             user_course_booking_info = {
                 course.id: get_user_course_booking_info(view_as_user, course) for course in self.object_list
             }
+
+            context["button_options"] = {
+                course.id: course_list_button_info(view_as_user, course, user_course_booking_info[course.id]) 
+                for course in self.object_list
+            }
             context["user_course_booking_info"] = user_course_booking_info
             context["available_users_form"] = AvailableUsersForm(request=self.request, view_as_user=view_as_user)
         return context
@@ -58,7 +64,7 @@ class CourseListView(DataPolicyAgreementRequiredMixin, ListView):
 def unenroll(request):
     course_user = get_object_or_404(User, pk=request.POST["user_id"])
     course = get_object_or_404(Course, pk=request.POST["course_id"])
-
+    ref = request.POST.get("ref", "course")
     course_bookings = course_user.bookings.filter(event__course__id=course.id)
     if not course_bookings:
         messages.error(request, f"{full_name(course_user)} is not booked on this course, cannot unenroll")
@@ -68,4 +74,8 @@ def unenroll(request):
             log=f"User {full_name(course_user)} unenrolled from course {course} by user {request.user}"
         )
         messages.success(request, f"{full_name(course_user)} unenrolled from {course}")
-    return HttpResponseRedirect(reverse("booking:course_events", args=(course.slug,)))
+    if ref == "course":
+        url = reverse("booking:course_events", args=(course.slug,))
+    else:
+        url = reverse("booking:events", args=(course.event_type.track.slug,))
+    return HttpResponseRedirect(url)

@@ -11,7 +11,7 @@
 
 <div class="container-fluid">
     <div class="row">
-        <h3 class="mt-1">Shopping Basket</h3>
+        <h3 class="mt-1">Shopping Cart</h3>
     
         {% if unpaid_items %}
 
@@ -24,11 +24,26 @@
               </thead>
               <tbody>
                 {% if unpaid_block_info %}
-                    <tr><td colspan="2" class="table-secondary"><strong>Credit Blocks</strong></td></tr>
+                    <tr>
+                        <td colspan="2" class="table-secondary"><strong>Bookings and Credit Blocks</strong><br/>
+                        </td>
+                    </tr>
                 {% endif %}
+
                 {% for block_info in unpaid_block_info %}
                     <tr id="cart-row-block-{{ block_info.block.id }}" class="cart-row-block">
-                        <td class="p-1">{{ block_info.block.block_config }} <span class="badge badge-info">{{ block_info.block.user|full_name }}</span></td>
+                        <td class="p-1">
+                            {% if block_info.block.bookings.exists %}
+                                {% if block_info.block.block_config.course %}
+                                    <em>Course booking:</em> {{ block_info.block.bookings.first.event.course }}
+                                {% else %}
+                                    <em>Drop-in booking:</em> {{ block_info.block.bookings.first.event.name_and_date }}
+                                {% endif %}
+                            {% else %}
+                                <em>Credit block:</em> {{ block_info.block.block_config }}
+                            {% endif%} 
+                            <span class="badge badge-info">{{ block_info.block.user|full_name }}</span>
+                        </td>
                         <td class="p-1">
                             <div>Cost: {% if block_info.voucher_applied.discounted_cost is not None %}
                                     <span class="superceded-cost">£{{ block_info.original_cost }}</span> £{{ block_info.voucher_applied.discounted_cost }}
@@ -48,6 +63,7 @@
                             </div>
                         </td>
                     </tr>
+                    {% if not block_info.block.bookings.exists %}
                     <tr>
                         <td colspan="2" id="cart-row-block-warning-{{ block_info.block.id }}" class="cart-row-block-warning">
                                 {% if block_info.block.block_config.course %}
@@ -58,6 +74,7 @@
                             </span>
                         </td>
                     </tr>
+                    {% endif %}
                 {% endfor %}
 
               {% if unpaid_subscription_info %}
@@ -117,10 +134,6 @@
                 {% if unpaid_merchandise %}
                     <tr>
                         <td colspan="2" class="table-secondary"><strong>Merchandise</strong><br/>
-                            <span class="text-danger">
-                                NOTE: merchandise cart items will be removed after {{ merchandise_cart_timeout_mins }} minutes
-                            </span>
-
                         </td>
                     </tr>
                 {% endif %}
@@ -143,6 +156,19 @@
 
               </tbody>
               <tfoot>
+              {% if unpaid_block_info or unpaid_merchandise %}
+              <tr>
+                  <td colspan=2>
+                    <span class="text-danger">
+                        {% if unpaid_block_info %}
+                        NOTE: drop-in and course bookings will held for {{ cart_timeout_mins }} minutes pending payment<br/>
+                        {% endif %}
+                        {% if unpaid_merchandise %}
+                        NOTE: merchandise will held for {{ merchandise_cart_timeout_mins }} minutes pending payment
+                        {% endif %}
+                    </span>
+              </tr>
+              {% endif %}   
               <tr>
                   <td colspan="2">
                       <strong>TOTAL:
@@ -182,7 +208,8 @@
 
                       <div>Add additional items:<br/>
                       {% if request.user.is_authenticated %}
-                          <a class="btn btn-xs btn-outline-primary" href="{% url 'booking:purchase_options' %}">Payment plans</a>
+                            <a class="btn btn-xs btn-outline-primary" href="{% url 'booking:schedule' %}">Classes</a>
+                            <a class="btn btn-xs btn-outline-primary" href="{% url 'booking:purchase_options' %}">Payment plans</a>
                           <a class="btn btn-xs btn-outline-primary" href="{% url 'merchandise:products' %}">Merchandise</a>
                       {% endif %}
                       <a class="btn btn-xs btn-outline-primary" href="{% url 'booking:buy_gift_voucher' %}">Gift vouchers</a>

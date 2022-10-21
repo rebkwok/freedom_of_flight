@@ -9,7 +9,8 @@ from shortuuid import ShortUUID
 
 from django.db import models
 from django.conf import settings
-from django.contrib.auth.models import Group, User
+from django.contrib.auth.models import User
+from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.urls import reverse
 from django.utils import timezone
@@ -167,11 +168,6 @@ class Course(models.Model):
     cancelled = models.BooleanField(default=False)
     max_participants = models.PositiveIntegerField(default=10, help_text="Overrides any value set on individual linked events")
     show_on_site = models.BooleanField(default=False, help_text="Overrides any value set on individual linked events")
-    allow_partial_booking = models.BooleanField(
-        default=False,
-        help_text="Users can book after a course has started (if they have purchased a credit "
-                  "block valid for the remaining number of classes)"
-    )
     allow_drop_in = models.BooleanField(
         default=False,
         help_text="Users can book individual events with a drop-in credit block valid for this event type"
@@ -211,18 +207,18 @@ class Course(models.Model):
             event.bookings.filter(status="OPEN").count() for event in self.uncancelled_events
         ])
 
-    @cached_property
+    @property
     def start(self):
         if self.uncancelled_events:
-            return self.uncancelled_events.order_by("start").first().start
+            return self.uncancelled_events.first().start
 
     @property
     def has_started(self):
         return self.start and self.start < timezone.now()
 
-    @cached_property
+    @property
     def last_event_date(self):
-        last_event = self.uncancelled_events.order_by("start").last()
+        last_event = self.uncancelled_events.last()
         if last_event:
             return last_event.start
 
@@ -331,7 +327,7 @@ class Event(models.Model):
     def course_order(self):
         if self.course and self.course.events.exists():
             if not self.cancelled:
-                events_in_order = self.course.uncancelled_events.order_by("start").values_list("id", flat=True)
+                events_in_order = self.course.uncancelled_events.values_list("id", flat=True)
                 return f"{list(events_in_order).index(self.id) + 1}/{events_in_order.count()}"
             return "-"
 
@@ -355,7 +351,7 @@ class Event(models.Model):
         if self.course:
             # this event is not full; if the course is full or the course has started,
             # can only book single event if drop in is allowed
-            if self.course.full or (self.course.has_started and not self.course.allow_partial_booking):
+            if self.course.full or self.course.has_started:
                 if not self.course.allow_drop_in:
                     return False
         return True
@@ -370,6 +366,24 @@ class Event(models.Model):
     @property
     def is_past(self):
         return self.start < timezone.now()
+
+    @property
+    def name_and_date(self):
+        return f"{self.name} - {self.start.astimezone(pytz.timezone('Europe/London')).strftime('%d %b %Y, %H:%M')}"
+
+    @property
+    def cost_str(self):
+        cost = ""
+        if self.course and not self.course.has_started:
+            course_booking_block = add_to_cart_course_block_config(self.course)
+            if course_booking_block:
+                cost += f"{course_booking_block.cost_str} (course)"
+        cart_booking_block = add_to_cart_drop_in_block_config(self)
+        if cart_booking_block:
+            if cost:
+                cost += " / "
+            cost += f"{cart_booking_block.cost_str} (drop-in)"
+        return cost
 
     def __str__(self):
         course_str = f" ({self.course.name})" if self.course else ""
@@ -425,6 +439,10 @@ class BlockConfig(models.Model):
         if self.event_type.age_restrictions:
             return f"Valid for {self.event_type.age_restrictions}"
 
+    @property
+    def cost_str(self):
+        cost = int(self.cost) if int(self.cost) == self.cost else self.cost
+        return f"£{cost}"
 
 class BaseVoucher(models.Model):
     code = models.CharField(max_length=255, unique=True)
@@ -523,6 +541,7 @@ class Block(models.Model):
     user = models.ForeignKey(User, related_name='blocks', on_delete=models.CASCADE)
     block_config = models.ForeignKey(BlockConfig, on_delete=models.CASCADE)
     purchase_date = models.DateTimeField(default=timezone.now)
+    created_date = models.DateTimeField(default=timezone.now)
     start_date = models.DateTimeField(null=True, blank=True)
     paid = models.BooleanField(default=False, help_text='Payment has been made by user')
 
@@ -531,6 +550,9 @@ class Block(models.Model):
 
     manual_expiry_date = models.DateTimeField(blank=True, null=True)
     expiry_date = models.DateTimeField(blank=True, null=True)
+
+    # Flag to set when cart total is checked to avoid deleting when payment activity may be in progress
+    time_checked = models.DateTimeField(blank=True, null=True)
 
     class Meta:
         ordering = ['user__username']
@@ -541,7 +563,7 @@ class Block(models.Model):
             ]
 
     def __str__(self):
-        return f"{self.user.username} -- {self.block_config} -- purchased {self.purchase_date.strftime('%d %b %Y')}"
+        return f"{self.user.username} -- {self.block_config} -- created {self.created_date.strftime('%d %b %Y')}"
 
     @property
     def cost_with_voucher(self):
@@ -645,9 +667,6 @@ class Block(models.Model):
             # check the number of events
             # It's always valid if it's for the full course
             valid_for_course = self.block_config.size == course.number_of_events
-            # If size doesn't match, it can also be valid if we allow partial booking and it's valid for the courses left
-            if not valid_for_course and course.has_started and course.allow_partial_booking:
-                valid_for_course = self.block_config.size == course.events_left.count()
 
         if valid_for_course:
             # it's valid for courses, event type matches, and it's the right size for the course
@@ -655,7 +674,7 @@ class Block(models.Model):
             # For partial course blocks we can still just check the first uncancelled event;
             # _valid_and_active_for_event only checks that the block expiry date is after the start of the first
             # course event
-            event = event or course.uncancelled_events.order_by("start").first()
+            event = event or course.uncancelled_events.first()
             valid_for_event = True
             if event:
                 # If there's no uncancelled events yet, the block is so far valid for the course in general
@@ -667,15 +686,76 @@ class Block(models.Model):
                 return not has_bookings_on_other_courses
         return False
 
+    def mark_checked(self):
+        self.time_checked = timezone.now()
+        self.save()
+
+    @classmethod
+    def cleanup_expired_blocks(cls, user=None, use_cache=False):
+        if use_cache:
+            # check cache to see if we cleaned up recently
+            if cache.get("expired_blocks_cleaned"):
+                logger.info("Expired blocks cleaned up within past 2 mins; no cleanup required")
+                return
+
+        # timeout defaults to 15 mins
+        timeout = settings.CART_TIMEOUT_MINUTES
+        if user:
+            # If we have a user, we're at the checkout, so get all unpaid purchases for
+            # this user only
+            unpaid_blocks = Block.objects.filter(
+                user__in=user.managed_users_including_self, paid=False
+            )
+        else:
+            # no user, doing a general cleanup.  Don't delete anything that was time-checked
+            # (done at final checkout stage) within the past 5 mins, in case we delete something
+            # that's in the process of being paid
+            unpaid_blocks = cls.objects.filter(paid=False).filter(
+                models.Q(time_checked__lt=timezone.now() - timedelta(seconds=60 * 5)) | models.Q(time_checked__isnull=True)
+            )
+        # filter unpaid blocks to those created before the allowed timeout
+        expired_blocks = unpaid_blocks.filter(
+            created_date__lt=timezone.now() - timedelta(seconds=60 * timeout)
+        ).annotate(count=models.Count('bookings__id')).filter(count__gt=0)
+        
+        if expired_blocks.exists():
+            if user is not None:
+                ActivityLog.objects.create(
+                    log=f"{expired_blocks.count()} unpaid blocks with bookings in cart "
+                        f"(ids {','.join(str(block.id) for block in expired_blocks.all())} "
+                        f"for user {user} expired and were deleted"
+                )
+            else:
+                ActivityLog.objects.create(
+                    log=f"{expired_blocks.count()} unpaid blocks with bookings "
+                        f"(ids {','.join(str(block.id) for block in expired_blocks.all())} "
+                        f"expired and were deleted"
+                )
+            # delete individually to ensure save method is called and associated bookings are 
+            # deleted
+            for block in expired_blocks:
+                block.delete()
+
+        if use_cache:
+            logger.info("Expired blocks with bookings cleaned up")
+            # cache for 2 mins
+            cache.set("expired_blocks_cleaned", True, timeout=60*2)
+
     def delete(self, *args, **kwargs):
         bookings = self.bookings.all() if hasattr(self, "bookings") else []
-        for booking in bookings:
-            booking.block = None
-
-            booking.save()
+        if not self.paid:
+            booking_ids = "".join([str(bk_id) for bk_id in bookings.values_list("id", flat=True)])
+            bookings.delete()
             ActivityLog.objects.create(
-                log=f'Booking id {booking.id} booked with deleted block {self.id} has been reset'
+                log=f'Booking ids {booking_ids} booked with deleted unpaid block {self.id} have been deleted'
             )
+        else:
+            for booking in bookings:
+                booking.block = None
+                booking.save()
+                ActivityLog.objects.create(
+                    log=f'Booking id {booking.id} booked with deleted block {self.id} has been reset'
+                )
         super().delete(*args, **kwargs)
 
     def save(self, *args, **kwargs):
@@ -1469,6 +1549,9 @@ class Booking(models.Model):
     def has_available_subscription(self):
         return has_available_subscription(self.user, self.event)
 
+    def is_in_basket(self):
+        return self.block is not None and not self.block.paid
+
     def assign_next_available_subscription_or_block(self, dropin_only=True):
         """
         Checks for and assigns next available subscription or block.
@@ -1546,32 +1629,47 @@ class Booking(models.Model):
 
 
 # Model-related utils
-def valid_course_block_configs(course):
+def valid_course_block_configs(course, active_only=True):
     if not course.has_started:
         # not started course - course blocks matching size and event type are valid
-        return BlockConfig.objects.filter(
-            active=True, course=True, event_type=course.event_type,
-            size=course.number_of_events
+        all_block_configs = BlockConfig.objects.filter(
+            course=True, event_type=course.event_type, size=course.number_of_events
         )
-    elif course.allow_partial_booking:
-        # started course - course blocks match event type and number of
-        # remaining classes are valid
-        return BlockConfig.objects.filter(
-            active=True, course=True, event_type=course.event_type,
-            size=course.events_left.count()
-        )
+        if active_only:
+            return all_block_configs.filter(active=True)
+        return all_block_configs.order_by("-active")
+    return BlockConfig.objects.none()
 
 
-def valid_dropin_block_configs(event=None, event_type=None):
-    if event is None:
-        assert event_type is not None
-        return BlockConfig.objects.filter(
-            active=True, course=False, event_type=event_type
-        )
-    if event.course is None or event.course.allow_drop_in:
-        return BlockConfig.objects.filter(
-            active=True, course=False, event_type=event.event_type
-        )
+def valid_dropin_block_configs(
+    event=None, event_type=None, active_only=True, size=None
+):
+    ev_type = event.event_type if event else event_type
+    all_block_configs = BlockConfig.objects.filter(
+        course=False, event_type=ev_type
+    )
+    if size:
+        all_block_configs.filter(size=size)
+    if active_only:
+        return all_block_configs.filter(active=True)
+    return all_block_configs.order_by("-active")
+
+
+def add_to_cart_course_block_config(course):
+    # get all block configs valid for the course, whether active or not
+    # we want to return an active one first, if possible
+    valid_block_configs = valid_course_block_configs(course, active_only=False)
+    return valid_block_configs.first()
+
+
+def add_to_cart_drop_in_block_config(event):
+    # get all block configs valid for the event, whether active or not
+    # find the ones that have size=1
+    # we want to return an active one first, if possible
+    valid_block_configs = valid_dropin_block_configs(
+        event, active_only=False, size=1
+    )
+    return valid_block_configs.first()
 
 
 def has_available_block(user, event, dropin_only=False):
@@ -1615,13 +1713,6 @@ def get_active_user_course_block(user, course):
     # already sorted by expiry date, so we can just get the next valid one
     # UNLESS the course has started and allows part booking - then we want to make sure we return a valid part
     # block before a full block
-    if course.has_started and course.allow_partial_booking:
-        valid_blocks = sorted(
-            list(valid_blocks),
-            key=lambda block: block.block_config.size < course.number_of_events,
-            reverse=True
-        )
-        return valid_blocks[0] if valid_blocks else None
     return next(valid_blocks, None)
 
 

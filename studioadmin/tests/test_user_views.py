@@ -746,41 +746,8 @@ class UserCourseBookingAddViewTests(EventTestMixin, TestUsersMixin, TestCase):
         assert self.student_user.bookings.exists() is False
         # This block is one event smaller than the full course but is valid because it's already started
         block = baker.make(Block, user=self.student_user, block_config=self.part_course_config, paid=True)
-        # Not valid unless course allows partial booking
+        # Not valid if course has started
         assert block.valid_for_course(self.in_progress_course) is False
-        self.in_progress_course.allow_partial_booking = True
-        self.in_progress_course.save()
-        assert block.valid_for_course(self.in_progress_course) is True
-
-        assert block.block_config.size < self.in_progress_course.uncancelled_events.count()
-        self.client.post(self.url, {"course": self.in_progress_course.id})
-        # course has started, only books for remaining classes
-        assert self.in_progress_course.events_left.count() == self.in_progress_course.number_of_events - 1
-        assert self.student_user.bookings.count() == self.in_progress_course.events_left.count()
-        for booking in self.student_user.bookings.all():
-            assert booking.event.course == self.in_progress_course
-            assert booking.block == block
-
-    def test_autoassigns_part_block_first_for_in_progress_course(self):
-        assert self.student_user.bookings.exists() is False
-        # This block is one event smaller than the full course but is valid because it's already started
-        full_block = baker.make(Block, user=self.student_user, block_config=self.course_config, paid=True)
-        assert full_block.valid_for_course(self.in_progress_course) is True
-        assert self.student_user.bookings.exists() is False
-        # This block is the same size as the full course
-        part_block = baker.make(Block, user=self.student_user, block_config=self.part_course_config, paid=True)
-        # Not valid unless course allows partial booking
-        self.in_progress_course.allow_partial_booking = True
-        self.in_progress_course.save()
-        assert part_block.valid_for_course(self.in_progress_course) is True
-
-        self.client.post(self.url, {"course": self.in_progress_course.id})
-        # course has started, only books for remaining classes
-        assert self.in_progress_course.events_left.count() == self.in_progress_course.number_of_events - 1
-        assert self.student_user.bookings.count() == self.in_progress_course.events_left.count()
-        for booking in self.student_user.bookings.all():
-            assert booking.event.course == self.in_progress_course
-            assert booking.block == part_block
 
 
 class UserBlockChangeCourseTests(EventTestMixin, TestUsersMixin, TestCase):

@@ -28,7 +28,7 @@ from studioadmin.views import (
     email_subscription_users_view,
     UserSubscriptionsListView, SubscriptionAddView, SubscriptionEditView, ajax_subscription_delete,
     course_booking_add_view, course_block_change_view, export_users,
-    ajax_toggle_course_partial_booking, ajax_toggle_course_dropin_booking,
+    ajax_toggle_course_dropin_booking,
     email_waiting_list_view, users_with_unused_blocks,
     StripeAuthorizeView, connect_stripe_view, StripeAuthorizeCallbackView, InvoiceListView,
     VoucherDetailView, VoucherUpdateView, VoucherCreateView, VoucherListView, GiftVoucherListView,
@@ -69,10 +69,6 @@ urlpatterns = [
     path('courses/not-started/', NotStartedYetCourseAdminListView.as_view(), name='not_started_courses'),
     path('course/<slug>/cancel/', cancel_course_view, name='cancel_course'),
     path('ajax-toggle-course-visible/<int:course_id>/', ajax_toggle_course_visible, name="ajax_toggle_course_visible"),
-    path(
-        'ajax-toggle-course-allow-partial-booking/<int:course_id>/',
-        ajax_toggle_course_partial_booking, name="ajax_toggle_course_allow_partial_booking"
-    ),
     path(
         'ajax-toggle-course-allow-dropin-booking/<int:course_id>/',
         ajax_toggle_course_dropin_booking, name="ajax_toggle_course_allow_dropin_booking"
