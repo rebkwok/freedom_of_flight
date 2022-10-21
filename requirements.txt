@@ -10,11 +10,6 @@ attrs==22.1.0
     # via pytest
 babel==2.10.3
     # via delorean
-backports-zoneinfo==0.2.1
-    # via
-    #   django
-    #   pytz-deprecation-shim
-    #   tzlocal
 beautifulsoup4==4.11.1
     # via -r requirements.in
 certifi==2022.9.24
@@ -35,7 +30,7 @@ delorean==1.0.0
     # via -r requirements.in
 dj-database-url==1.0.0
     # via -r requirements.in
-django==4.1.1
+django==4.1.2
     # via
     #   -r requirements.in
     #   dj-database-url
