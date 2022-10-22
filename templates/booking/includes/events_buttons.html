@@ -68,7 +68,9 @@
             data-ref={% if course %}"course"{% else %}"events"{% endif %}
             class="ajax_add_course_to_basket_btn float-right"
         > 
-        <span class="btn btn-xs btn-xs-wider btn-primary mb-1 float-right"><i id="loader_course_{{ event.id }}"></i><i class="fas fa-shopping-cart"></i> Add course</span>
+        <span id="add_course_inner_{{ event.id }}" class="btn btn-xs btn-xs-wider btn-primary mb-1 float-right">
+            <i id="loader_course_{{ event.id }}"></i><i class="fas fa-shopping-cart"></i> Add course
+        </span>
 {% elif button == "book_course" %}
     <span
         id="book_course_event_{{ event.id }}"
