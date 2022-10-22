@@ -96,12 +96,13 @@
         <div class="row event-card event-card-item p-2">{{ course.description|linebreaks }}</div>
     {% endif %}
 
-    {% if events_by_date %}
-        {% for date, events in events_by_date.items %}
+    {% if page_events %}
+        {% regroup page_events.object_list by start.date as events_by_date %}
+        {% for events in events_by_date %}
             <div class="row event-card event-card-header list-group-item-secondary">
-                <div class="col-12 p-1">{{ date|date:"D d M Y" }}</div>
+                <div class="col-12 p-1">{{ events.grouper|date:"D d M Y" }}</div>
             </div>
-            {% for event in events %}
+            {% for event in events.list %}
                 <div class="row event-card event-card-item mt-1{% if event.is_past or event.cancelled %}list-group-item-secondary{% endif %}">
                 {% with button_info=button_options|lookup_dict:event.id user_info=user_booking_info|lookup_dict:event.id %}
                     {% if button_info.open %}
@@ -201,6 +202,7 @@
     {% else %}
         <p>No events scheduled.</p>
     {% endif %}
+
     </div>
 </div>
 
