@@ -108,10 +108,16 @@ var processBookingAddToBasket = function()  {
               dataType: 'json',
               type: 'POST',
               data: {csrfmiddlewaretoken: window.CSRF_TOKEN, "event_id": event_id, "user_id": user_id, "ref": ref},
-              beforeSend: function() {$("#loader_" + event_id).addClass("fa fa-spinner fa-spin").show()},
+              beforeSend: function() {
+                  $("#loader_" + event_id).addClass("fa fa-spinner fa-spin").show()
+                  $("#pending").show()
+              },
               success: processResult,
               //Should also have a "fail" call as well.
-              complete: function() {$("#loader_" + event_id).removeClass("fa fa-spinner fa-spin").hide();},
+              complete: function() {
+                  $("#loader_" + event_id).removeClass("fa fa-spinner fa-spin").hide();
+                  $("#pending").hide()
+              },
               error: processFailure
            }
        );
@@ -132,6 +138,11 @@ var processCourseBookingAddToBasket = function()  {
   var user_id = $button_just_clicked_on.data('user_id');
   var course_id = $button_just_clicked_on.data('course_id');
   var ref = $button_just_clicked_on.data('ref');
+
+   // course bookings always reload the page; just set the spinner and pending screen here
+   $("#loader_course_" + event_id).addClass("fa fa-spinner fa-spin").show()
+   $("#add_course_inner_" + event_id).text("Adding...")
+   $("#pending").show()
 
   doTheAjax()
   
@@ -159,10 +170,7 @@ var processCourseBookingAddToBasket = function()  {
             dataType: 'json',
             type: 'POST',
             data: {csrfmiddlewaretoken: window.CSRF_TOKEN, "course_id": course_id, "user_id": user_id, "ref": ref},
-            beforeSend: function() {$("#loader_course_" + event_id).addClass("fa fa-spinner fa-spin").show()},
             success: processResult,
-            //Should also have a "fail" call as well.
-            complete: function() {$("#loader_course_" + event_id).removeClass("fa fa-spinner fa-spin").hide();},
             error: processFailure
          }
      );
