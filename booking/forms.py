@@ -16,10 +16,14 @@ def get_available_users(user):
 def get_available_event_names(track):
     def callable():
         cutoff_time = timezone.now() - timedelta(minutes=10)
-        event_names = list(
-            (name, name) for name in {name.title() for name in Event.objects.select_related("event_type").filter(
-                event_type__track=track, start__gt=cutoff_time, show_on_site=True, cancelled=False
-            ).order_by("name").distinct("name").values_list("name", flat=True)}
+        event_names = set(
+            Event.objects.select_related("event_type").filter(
+                event_type__track=track, start__gt=cutoff_time, show_on_site=True,
+                cancelled=False
+            ).values_list("name", flat=True)
+        )
+        event_names = sorted(
+            [(name, name.capitalize()) for name in {name.lower() for name in event_names}]
         )
         event_names.insert(0, ("", "Show all"))
         return tuple(event_names)
