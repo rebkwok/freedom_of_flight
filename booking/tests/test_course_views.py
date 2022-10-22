@@ -75,18 +75,18 @@ class CourseListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         assert user_course_booking_info[self.course.id]["has_booked_all"] is False
         assert user_course_booking_info[self.course.id]["items_in_basket"] is False
         # no block config available
-        assert '<i class="text-primary fas fa-shopping-cart"></i> Add course' not in resp.rendered_content
+        assert 'Add course' not in resp.rendered_content
 
         # make valid block config
         baker.make(BlockConfig, event_type=self.course.event_type, course=True, size=self.course.number_of_events)
         resp = self.client.get(self.url(self.adult_track))
-        assert '<i class="fas fa-shopping-cart"></i> Add course</span>' in resp.rendered_content
+        assert 'Add course' in resp.rendered_content
         assert "Drop-in booking is also available" not in resp.rendered_content
 
         self.course.allow_drop_in = True
         self.course.save()
         resp = self.client.get(self.url(self.adult_track))
-        assert '<i class="fas fa-shopping-cart"></i> Add course</span>' in resp.rendered_content
+        assert 'Add course' in resp.rendered_content
         assert "Drop-in booking is also available" in resp.rendered_content
 
     def test_courses_list_with_booked_courses(self):
