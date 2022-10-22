@@ -1,6 +1,6 @@
 from datetime import timedelta
 
-from django.core.paginator import Paginator
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db.models import Count
 from django.shortcuts import get_object_or_404, HttpResponseRedirect, HttpResponse
 from django.urls import reverse
@@ -85,10 +85,18 @@ class EventListView(CleanUpBlocksMixin, DataPolicyAgreementRequiredMixin, ListVi
         context = super().get_context_data(**kwargs)
         all_events = self.get_queryset()
 
-        page = self.request.GET.get('page', 1)
         all_paginator = Paginator(all_events, 10)
+        page = self.request.GET.get('page', 1)
+        try:
+            page = all_paginator.validate_number(page)
+        except PageNotAnInteger:
+            page = 1
+        except EmptyPage:
+            page = int(page)
+            page = 1 if page < 1 else track_paginator.num_pages
         page_events = all_paginator.get_page(page)
-        context["page_events"] = page_events
+        context["page_obj"] = page_events
+        context["page_range"] = all_paginator.get_elided_page_range(number=page, on_each_side=2)
         context['title'] = self.get_title()
         context.update(self._extra_context(all_events=all_events))
         if self.request.user.is_authenticated:

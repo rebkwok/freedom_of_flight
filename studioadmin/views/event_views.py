@@ -4,7 +4,7 @@ from datetime import timezone as dt_timezone
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.core.paginator import Paginator
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db.models import Count, QuerySet
 from django.template.response import TemplateResponse
 from django.shortcuts import get_object_or_404, render, HttpResponseRedirect
@@ -25,6 +25,13 @@ from .utils import is_instructor_or_staff, staff_required, StaffUserMixin, Instr
 class TrackEventPaginationMixin:
     def paginate_by_date_for_track(self, track_queryset, page):
         track_paginator = Paginator(track_queryset, self.custom_paginate_by)
+        try:
+            page = track_paginator.validate_number(page)
+        except PageNotAnInteger:
+            page = 1
+        except EmptyPage:
+            page = int(page)
+            page = 1 if page < 1 else track_paginator.num_pages
         page_obj = track_paginator.get_page(page)
         if not isinstance(page_obj.object_list, QuerySet):
             paginated_ids = [event.id for event in page_obj.object_list]
@@ -35,7 +42,9 @@ class TrackEventPaginationMixin:
         events_by_date = {}
         for event_info in event_ids_by_date:
             events_by_date.setdefault(event_info["start__date"], []).append(paginated_events.get(id=event_info["id"]))
-        return page_obj, events_by_date
+        
+        page_range = track_paginator.get_elided_page_range(number=page, on_each_side=2)
+        return page_obj, page_range, events_by_date
 
 
 class BaseEventAdminListView(TrackEventPaginationMixin, ListView):
@@ -77,14 +86,14 @@ class BaseEventAdminListView(TrackEventPaginationMixin, ListView):
                 # Don't add the track tab if there are no events to display
                 page = 1
                 if "tab" in self.request.GET and tab == i:
-                    try:
-                        page = int(self.request.GET.get('page', 1))
-                    except ValueError:
-                        pass
-                page_obj, events_by_date = self.paginate_by_date_for_track(track_qs, page)
+                    # only get the page from the request for the current tab
+                    page = self.request.GET.get('page', 1)
+                page_obj, page_range, events_by_date = self.paginate_by_date_for_track(track_qs, page)
+                
                 track_obj = {
                     'index': i,
                     'page_obj': page_obj,
+                    'page_range': page_range,
                     'events_by_date': events_by_date,
                     'track': track.name
                 }

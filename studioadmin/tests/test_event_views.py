@@ -71,6 +71,11 @@ class EventAdminListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         paginator = resp.context_data['track_events'][0]["page_obj"]
         self.assertEqual(paginator.number, 2)
 
+        # page ) shows page 1
+        resp = self.client.get(self.url + '?page=0&tab=0')
+        paginator = resp.context_data['track_events'][0]["page_obj"]
+        self.assertEqual(paginator.number, 1)
+
         # page not a number shows page 1
         resp = self.client.get(self.url + '?page=one&tab=0')
         paginator = resp.context_data['track_events'][0]["page_obj"]
