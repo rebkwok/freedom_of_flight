@@ -96,15 +96,17 @@
                                                     data-ref="course_list"
                                                     class="ajax_add_course_to_basket_btn"
                                                 > 
-                                                <span class="btn btn-sm btn-primary float-right mb-2"><i id="loader_course_{{ course.events.first.id }}"></i><i class="fas fa-shopping-cart"></i> Add course</span>
-                                                </span/>
-                                            </span/>
+                                                <span id="add_course_inner_{{ course.events.first.id }}" class="btn btn-sm btn-primary float-right mb-2">
+                                                    <i id="loader_course_{{ course.events.first.id }}"></i><i class="fas fa-shopping-cart"></i> Add course
+                                                </span>
+                                                </span>
+                                            </span>
                                         {% elif button_info.button == "view_cart" %}
                                             <span id="view_cart_{{ course.id }}" class="float-right">
                                                 <a class="btn btn-sm btn-outline-primary mb-2" href="{% url 'booking:shopping_basket' %}">
                                                 <i class="fas fa-shopping-cart"></i> View cart
                                                 </a>
-                                            </span
+                                            </span>
                                         {% endif %}
                        
                                     </div>
