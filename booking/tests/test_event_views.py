@@ -51,7 +51,7 @@ class EventListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         assert resp.url == self.adult_url
 
         resp = self.client.get(self.url, follow=True)
-        assert len(sum(list(resp.context_data['events_by_date'].values()), [])) == 6
+        assert resp.context_data['page_events'].object_list.count() == 6
         assert "Log in</a>" in resp.rendered_content
         assert "register</a> to book</span>" in resp.rendered_content
 
@@ -82,7 +82,7 @@ class EventListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         resp = self.client.get(self.adult_url)
 
         # event listing should still only show future events
-        assert len(sum(list(resp.context_data['events_by_date'].values()), [])) == 6
+        assert resp.context_data['page_events'].object_list.count() == 6
 
     def test_event_list_past_event_within_10_mins_is_listed(self):
         """
@@ -96,12 +96,12 @@ class EventListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         resp = self.client.get(self.adult_url)
 
         # event listing should still only show future events
-        assert len(sum(list(resp.context_data['events_by_date'].values()), [])) == 6
+        assert resp.context_data['page_events'].object_list.count() == 6
         past.start = timezone.now() - timedelta(minutes=7)
         past.save()
         resp = self.client.get(self.adult_url)
         # event listing should shows future events plus pas within 10 mins
-        assert len(sum(list(resp.context_data['events_by_date'].values()), [])) == 7
+        assert resp.context_data['page_events'].object_list.count() == 7
 
     def test_event_list_with_anonymous_user(self):
         """
@@ -118,23 +118,23 @@ class EventListViewTests(EventTestMixin, TestUsersMixin, TestCase):
     def test_event_list_name_filter(self):
         Event.objects.all().delete()
         baker.make_recipe("booking.future_event", event_type=self.aerial_event_type, _quantity=3, name="Hoop")
-        baker.make_recipe("booking.future_event", event_type=self.aerial_event_type, _quantity=2, name="Silks")
+        baker.make_recipe("booking.future_event", event_type=self.aerial_event_type, _quantity=1, name="Silks")
         baker.make_recipe("booking.future_event", event_type=self.aerial_event_type, _quantity=2, name="silks")
         baker.make_recipe("booking.future_event", event_type=self.aerial_event_type, _quantity=4, name="Trapeze")
         
         resp = self.client.get(self.adult_url)
         # show all by default
-        assert len(sum(list(resp.context_data['events_by_date'].values()), [])) == 11
+        assert resp.context_data['page_events'].object_list.count() == 10
         
         # filter
         resp = self.client.get(self.adult_url + "?event_name=Hoop")
-        assert len(sum(list(resp.context_data['events_by_date'].values()), [])) == 3
+        assert resp.context_data['page_events'].object_list.count() == 3
         resp = self.client.get(self.adult_url + "?event_name=Trapeze")
-        assert len(sum(list(resp.context_data['events_by_date'].values()), [])) == 4
+        assert resp.context_data['page_events'].object_list.count() == 4
 
         # case insensitive
         resp = self.client.get(self.adult_url + "?event_name=silks")
-        assert len(sum(list(resp.context_data['events_by_date'].values()), [])) == 4
+        assert resp.context_data['page_events'].object_list.count() == 3
                 
     def test_event_list_with_booked_events(self):
         """
@@ -206,13 +206,13 @@ class EventListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         baker.make_recipe('booking.future_event', event_type=self.aerial_event_type, cancelled=True)
         assert Event.objects.filter(event_type__track=self.adult_track).count() == 7
         resp = self.client.get(self.adult_url)
-        assert len(sum(list(resp.context_data['events_by_date'].values()), [])) == 6
+        assert resp.context_data['page_events'].object_list.count() == 6
 
     def test_show_on_site_events_only_are_not_listed(self):
         baker.make_recipe('booking.future_event', event_type=self.aerial_event_type, show_on_site=False)
         assert Event.objects.filter(event_type__track=self.adult_track).count() == 7
         resp = self.client.get(self.adult_url)
-        assert len(sum(list(resp.context_data['events_by_date'].values()), [])) == 6
+        assert resp.context_data['page_events'].object_list.count() == 6
 
     def test_event_list_change_view_as_user(self):
         # manager is also a student
@@ -347,8 +347,8 @@ class CourseEventsListViewTests(EventTestMixin, TestUsersMixin, TestCase):
     def test_course_list(self):
         resp = self.client.get(self.url)
         # course events are displayed
-        response_events = sum(list(resp.context_data['events_by_date'].values()), [])
-        assert len(response_events) == 2
+        response_events = resp.context_data['page_events'].object_list
+        assert response_events.count() == 2
         for event in response_events:
             assert event.course == self.course
 
@@ -358,7 +358,7 @@ class CourseEventsListViewTests(EventTestMixin, TestUsersMixin, TestCase):
         )
         resp = self.client.get(self.url)
         # course events are displayed
-        assert len(sum(list(resp.context_data['events_by_date'].values()), [])) == 3
+        assert resp.context_data['page_events'].object_list.count() == 3
 
     def test_course_list_with_booked_course(self):
         baker.make(Booking, event=self.course_event, user=self.student_user, block__paid=True)
@@ -438,7 +438,7 @@ def test_event_button_dropin_event_no_disclaimer(client, student_user, event):
     client.force_login(student_user)
     url = reverse('booking:events', args=(event.event_type.track.slug,))
     resp = client.get(url)
-    assert len(sum(list(resp.context_data['events_by_date'].values()), [])) == 1
+    assert resp.context_data['page_events'].object_list.count() == 1
     assert "Complete a disclaimer" in resp.rendered_content
 
 
@@ -651,7 +651,7 @@ def test_buttons_course_no_disclaimer(client, student_user, course):
     student_user.online_disclaimer.all().delete()
     client.force_login(student_user)
     resp = client.get(reverse("booking:course_events", args=(course.slug,)))
-    assert len(sum(list(resp.context_data['events_by_date'].values()), [])) == 2
+    assert resp.context_data['page_events'].object_list.count() == 2
     assert "Complete a disclaimer" in resp.rendered_content
 
 
@@ -938,7 +938,7 @@ def test_buttons_dropin_course_no_disclaimer(client, student_user, drop_in_cours
     student_user.online_disclaimer.all().delete()
     client.force_login(student_user)
     resp = client.get(reverse("booking:course_events", args=(drop_in_course.slug,)))
-    assert len(sum(list(resp.context_data['events_by_date'].values()), [])) == 2
+    assert resp.context_data['page_events'].object_list.count() == 2
     assert "Complete a disclaimer" in resp.rendered_content
 
 
