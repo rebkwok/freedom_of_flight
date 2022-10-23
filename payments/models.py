@@ -66,7 +66,7 @@ class Invoice(models.Model):
         }
         subscriptions = {
             f"subscription-{item.id}": {
-                "name": item.config.name, "cost": f"£{item.cost_as_of_today()}", "user": item.user
+                "name": f"Sub: {item.config.name}", "cost": f"£{item.cost_as_of_today()}", "user": item.user
             } for item in self.subscriptions.all()
         }
         gift_vouchers = {
@@ -103,15 +103,23 @@ class Invoice(models.Model):
         return [key for key, count in self._item_counts().items() if count > 0]
 
     def items_metadata(self):
-        # This is used for the payment intent metadata, which is limited to 40 chars keys and string values
+        # This is used for the payment intent metadata, which is limited to 40 chars keys
+        # and string values.  Include #itemid in case of duplicate names.
         items = self.items_dict()
         metadata = {}
         if self.total_voucher_code:
             metadata = {"Voucher code used on total invoice": self.total_voucher_code}
         items = {
-            item["name"][:40]: f"{item['cost']} ({key})" for key, item in items.items()
+            f"#{key.split('-')[-1]} {item['name']}"[:40]: f"{item['cost']} ({key})"
+            for key, item in items.items()
         }
         return {**metadata, **items}
+
+    def get_final_metadata(self):
+        # Set the final state of item metadata at time invoice is paid
+        return {
+            k: {"name": v["name"], "cost": v["cost"]} for k, v in self.items_dict().items()
+        }
 
     def save(self, *args, **kwargs):
         # set the default email on save, so Django doesn't think the model has changed when we're
@@ -125,11 +133,11 @@ class Invoice(models.Model):
             # marking the invoice as paid; set the date paid
             self.date_paid = timezone.now()
         if self.id and self.paid and not self.final_metadata:
-            # ensure the state of the items metadata is saved when it's marked
+            # ensure the state of the purchased items is saved when it's marked
             # paid.  This involves iterating over related objects, so don't do it
             # if the invoice hasn't been fully created yet (in reality this should
             # only happen in tests)
-            self.final_metadata = self.items_metadata()
+            self.final_metadata = self.get_final_metadata()
         super().save()
 
 
