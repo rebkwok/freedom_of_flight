@@ -8,14 +8,18 @@
           <a class="nav-link" href="{% url 'studioadmin:block_configs' %}">Credit Blocks</a>
       </li>
       <li class="nav-item">
+        <a class="nav-link" href="{% url 'studioadmin:disabled_block_configs' %}">Disabled Credit Blocks</a>
+      </li>
+      <li class="nav-item">
           <a class="nav-link" href="{% url 'studioadmin:subscription_configs' %}">Subscriptions</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="{% url 'studioadmin:invoices' %}">Transactions</a>
       </li>
       <li class="nav-item">
           <a class="nav-link" href="{% url 'studioadmin:connect_stripe' %}">Connect</a>
       </li>
-      <li class="nav-item">
-          <a class="nav-link" href="{% url 'studioadmin:invoices' %}">Transactions</a>
-      </li>
+      
     </ul>
   </div>
 </nav>
@@ -29,9 +33,10 @@
     </a>
     <div class="dropdown-menu" aria-labelledby="navbarDropdown">
       <a class="dropdown-item" href="{% url 'studioadmin:block_configs' %}">Credit Blocks</a>
+      <a class="dropdown-item" href="{% url 'studioadmin:disabled_block_configs' %}">Disabled Credit Blocks</a>
       <a class="dropdown-item" href="{% url 'studioadmin:subscription_configs' %}">Subscriptions</a>
-      <a class="dropdown-item" href="{% url 'studioadmin:connect_stripe' %}">Connect</a>
       <a class="dropdown-item" href="{% url 'studioadmin:invoices' %}">Transactions</a>
+      <a class="dropdown-item" href="{% url 'studioadmin:connect_stripe' %}">Connect</a>
     </div>
   </li>
 </ul>

@@ -10,16 +10,18 @@ from studioadmin.forms.voucher_forms import BlockVoucherStudioadminForm, GiftVou
 
 class BlockVoucherStudioadminFormTests(TestCase):
 
-    def test_only_active_and_non_free_blocktypes_in_choices(self):
-        # inactive_block
-        baker.make(BlockConfig, active=False)
+    def test_only_enabled_blocktypes_in_choices(self):
+        # inactive - still available
+        inactive = baker.make(BlockConfig, active=False)
+        # enabled - not available
+        baker.make(BlockConfig, disabled=True)
         active_blocktypes = baker.make(BlockConfig, active=True, _quantity=2)
 
         form = BlockVoucherStudioadminForm()
         block_types = form.fields['block_configs']
         self.assertEqual(
-            sorted(list([bt.id for bt in block_types.queryset])),
-            sorted([bt.id for bt in active_blocktypes])
+            sorted([bt.id for bt in block_types.queryset]),
+            sorted([inactive.id, *[bt.id for bt in active_blocktypes]])
         )
 
     def test_validate_code(self):
