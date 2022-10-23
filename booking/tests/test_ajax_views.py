@@ -2,6 +2,7 @@
 from datetime import timedelta
 from decimal import Decimal
 from model_bakery import baker
+import pytest
 
 from django.conf import settings
 from django.core import mail
@@ -13,6 +14,9 @@ from accounts.models import OnlineDisclaimer, has_active_disclaimer
 
 from booking.models import Booking, Block, Course, EventType, WaitingListUser, BlockConfig, GiftVoucher, Track
 from common.test_utils import TestUsersMixin, EventTestMixin
+
+
+pytestmark = pytest.mark.django_db
 
 
 class BookingToggleAjaxViewTests(EventTestMixin, TestUsersMixin, TestCase):
@@ -859,8 +863,6 @@ class AjaxBlockPurchaseTests(TestUsersMixin, TestCase):
         assert resp_json["cart_item_menu_count"] == 4
 
 
-import pytest
-pytestmark = pytest.mark.django_db
 # ajax_add_booking_to_basket tests
 
 def test_ajax_add_booking_to_basket(client, student_user):

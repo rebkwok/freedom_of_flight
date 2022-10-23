@@ -1965,3 +1965,38 @@ def test_cleanup_expired_blocks_for_user(client, freezer, student_user):
     Block.cleanup_expired_blocks(student_user)
     assert Block.objects.count() == 1
     assert Block.objects.first() == other_user_block
+
+
+@pytest.mark.django_db
+def test_ajax_add_course_booking_to_basket_selects_latest_block(
+    client, student_user, event_type, drop_in_course, course_cart_block_config, 
+    dropin_cart_block_config
+):
+    client.force_login(student_user)
+    url = reverse("booking:ajax_add_course_booking_to_basket")
+
+    # make some more block configs that match
+    latest_active_config = baker.make(
+        BlockConfig, event_type=event_type, course=True, size=2, active=True
+    )
+    latest_inactive_config = baker.make(
+        BlockConfig, event_type=event_type, course=True, size=2, active=False
+    )
+    
+    # 4 block configs in total
+    assert BlockConfig.objects.count() == 4
+    # the latest one is inactive
+    assert BlockConfig.objects.latest('id') == latest_inactive_config
+    from booking.models import valid_course_block_configs, add_to_cart_course_block_config
+    # 3 valid configs for the course
+    assert valid_course_block_configs(drop_in_course, active_only=False).count() == 3
+    # the latest active one is selected
+    assert add_to_cart_course_block_config(drop_in_course) == latest_active_config
+    latest_active_config.active = False
+    latest_active_config.save()
+    # the latest active one is selected
+    assert add_to_cart_course_block_config(drop_in_course) == course_cart_block_config
+    course_cart_block_config.active = False
+    course_cart_block_config.save()
+    # if all are inactive, the latest one is selected
+    assert add_to_cart_course_block_config(drop_in_course) == latest_inactive_config

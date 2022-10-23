@@ -1637,7 +1637,10 @@ def valid_course_block_configs(course, active_only=True):
         )
         if active_only:
             return all_block_configs.filter(active=True)
-        return all_block_configs.order_by("-active")
+        # return blocks that are active first, and then order by id, latest first
+        # If no blocks are active, this means we pick the latest one that matches, which
+        # should be the one with the most up to date cost
+        return all_block_configs.order_by("-active", "-id")
     return BlockConfig.objects.none()
 
 
@@ -1652,7 +1655,7 @@ def valid_dropin_block_configs(
         all_block_configs.filter(size=size)
     if active_only:
         return all_block_configs.filter(active=True)
-    return all_block_configs.order_by("-active")
+    return all_block_configs.order_by("-active", "-id")
 
 
 def add_to_cart_course_block_config(course):
