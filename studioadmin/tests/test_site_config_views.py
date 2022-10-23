@@ -236,7 +236,7 @@ class DeleteEventTypeViewTests(EventTestMixin, TestUsersMixin, TestCase):
         assert resp.status_code == 400
 
 
-class BlockConfigListView(EventTestMixin, TestUsersMixin, TestCase):
+class BlockConfigListView(TestUsersMixin, TestCase):
 
     def setUp(self):
         self.create_users()
@@ -246,7 +246,6 @@ class BlockConfigListView(EventTestMixin, TestUsersMixin, TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.url = reverse("studioadmin:block_configs")
-        cls.create_cls_tracks_and_event_types()
 
     def test_staff_only(self):
         self.user_access_test(["staff"], self.url)
@@ -263,18 +262,39 @@ class BlockConfigListView(EventTestMixin, TestUsersMixin, TestCase):
         assert block_config_groups["Drop-in Credit Blocks"][0].active is True
 
 
-class ToggleActiveBlockConfigViewTests(EventTestMixin, TestUsersMixin, TestCase):
+class DisabledBlockConfigListView(TestUsersMixin, TestCase):
 
     def setUp(self):
         self.create_users()
         self.create_admin_users()
         self.login(self.staff_user)
-        self.block_config = baker.make(BlockConfig, name="test", event_type=self.aerial_event_type)
-        self.url = reverse("studioadmin:ajax_toggle_block_config_active")
-
+    
     @classmethod
     def setUpTestData(cls):
-        cls.create_cls_tracks_and_event_types()
+        cls.url = reverse("studioadmin:disabled_block_configs")
+
+    def test_staff_only(self):
+        self.user_access_test(["staff"], self.url)
+
+    def test_only_shows_enabled_block_configs(self):
+        baker.make(BlockConfig, course=True, active=False)
+        baker.make(BlockConfig, course=False, active=True)
+        baker.make(BlockConfig, course=False, disabled=True)
+        resp = self.client.get(self.url)
+        block_config_groups = resp.context["block_config_groups"]
+        assert len(block_config_groups["Drop-in Credit Blocks"]) == 1
+        assert len(block_config_groups["Course Credit Blocks"]) == 0
+        assert block_config_groups["Drop-in Credit Blocks"][0].disabled is True
+
+
+class ToggleActiveBlockConfigViewTests(TestUsersMixin, TestCase):
+
+    def setUp(self):
+        self.create_users()
+        self.create_admin_users()
+        self.login(self.staff_user)
+        self.block_config = baker.make(BlockConfig, name="test", active=False)
+        self.url = reverse("studioadmin:ajax_toggle_block_config_active")
 
     def test_toggle_block_config(self):
         assert self.block_config.active is False
@@ -285,6 +305,33 @@ class ToggleActiveBlockConfigViewTests(EventTestMixin, TestUsersMixin, TestCase)
 
         self.client.post(self.url, {"block_config_id": self.block_config.id})
         self.block_config.refresh_from_db()
+        assert self.block_config.active is False
+
+
+class ToggleDisabledBlockConfigViewTests(TestUsersMixin, TestCase):
+
+    def setUp(self):
+        self.create_admin_users()
+        self.login(self.staff_user)
+        self.block_config = baker.make(BlockConfig, name="test", active=True)
+        self.enable_url = reverse("studioadmin:enable_block_config", args=(self.block_config.id,))
+        self.disable_url = reverse("studioadmin:disable_block_config", args=(self.block_config.id,))
+
+    def test_toggle_block_config(self):
+        assert self.block_config.disabled is False
+        assert self.block_config.active
+        self.client.get(self.disable_url)
+        self.block_config.refresh_from_db()
+
+        # disabling makes active False
+        assert self.block_config.disabled is True
+        assert self.block_config.active is False
+
+        self.client.get(self.enable_url)
+        self.block_config.refresh_from_db()
+
+        # enabling keeps active False
+        assert self.block_config.disabled is False
         assert self.block_config.active is False
 
 

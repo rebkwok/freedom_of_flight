@@ -412,6 +412,15 @@ class Event(models.Model):
         super().save()
 
 
+class BlockConfigManager(models.Manager):
+        
+    def get_queryset(self):
+        return super().get_queryset().filter(disabled=False)
+
+    def disabled(self):
+        return super().get_queryset().filter(disabled=True)
+
+
 class BlockConfig(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField(null=True, blank=True)
@@ -424,6 +433,9 @@ class BlockConfig(models.Model):
     event_type = models.ForeignKey(EventType, on_delete=models.SET_NULL, null=True)
     course = models.BooleanField(default=False)
     active = models.BooleanField(default=False, help_text="Purchasable by users")
+    disabled = models.BooleanField(default=False, help_text="Not visible or usable")
+
+    objects = BlockConfigManager()
 
     def __str__(self):
         return self.name
@@ -443,6 +455,26 @@ class BlockConfig(models.Model):
     def cost_str(self):
         cost = int(self.cost) if int(self.cost) == self.cost else self.cost
         return f"£{cost}"
+    
+    def save(self, *args, **kwargs):
+        if self.disabled:
+            self.active = False
+        super().save(*args, **kwargs)
+
+
+class DisabledBlockConfigManager(models.Manager):
+        
+    def get_queryset(self):
+        return super().get_queryset().filter(disabled=True)
+
+
+class DisabledBlockConfig(BlockConfig):
+
+    objects = DisabledBlockConfigManager()
+    
+    class Meta:
+        proxy = True
+
 
 class BaseVoucher(models.Model):
     code = models.CharField(max_length=255, unique=True)

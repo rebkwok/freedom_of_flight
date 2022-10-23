@@ -828,7 +828,8 @@ class BlockConfigForm(forms.ModelForm):
                                                   "for the number of events you select, for events of that event type only."
             self.fields["description"].help_text = "This will be displayed to users when purchasing credit blocks."
         self.fields["name"].help_text = "A short name for the credit block"
-        self.fields["active"].help_text = "Active credit blocks are available for purchase by users and will be displayed " \
+        self.fields["active"].label = "Purchaseable on site"
+        self.fields["active"].help_text = "Available for purchase by users and will be displayed " \
                                           "on the credit block purchase page."
         self.helper = FormHelper()
         back_url = reverse('studioadmin:block_configs')

@@ -80,7 +80,7 @@ class BlockVoucherStudioadminForm(forms.ModelForm):
         self.fields['discount'].validators = [validate_discount]
         self.fields['discount_amount'].validators = [validate_greater_than_0]
         self.fields['max_vouchers'].validators = [validate_greater_than_0]
-        self.fields['block_configs'].queryset = BlockConfig.objects.filter(active=True)
+        self.fields['block_configs'].queryset = BlockConfig.objects.order_by("-active", "-id")
         self.fields['block_configs'].required = False
         self.fields['total_voucher'] = forms.BooleanField(
             required=False, label="Applied to total",

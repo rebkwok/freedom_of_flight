@@ -12,24 +12,68 @@ from django.utils.text import slugify
 from braces.views import LoginRequiredMixin
 
 from activitylog.models import ActivityLog
-from booking.models import EventType, BlockConfig, SubscriptionConfig, Subscription, Block
+from booking.models import EventType, BlockConfig, DisabledBlockConfig, SubscriptionConfig, Subscription, Block
 from common.utils import full_name
 
 from ..forms.forms import BlockConfigForm, SubscriptionConfigForm, BookableEventTypesForm
 from .utils import staff_required, StaffUserMixin, generate_workbook_response
 
 
+
 @login_required
 @staff_required
 def block_config_list_view(request):
-    block_configs = BlockConfig.objects.all().order_by("-active")
-    context = {
+    block_configs = BlockConfig.objects.all().order_by("-active", "-id")
+    return _block_config_list_view(request, block_configs)
+
+
+@login_required
+@staff_required
+def disabled_block_config_list_view(request):
+    block_configs = DisabledBlockConfig.objects.all().order_by("-id")
+    return _block_config_list_view(request, block_configs, {"disabled": True})
+
+
+def _block_config_list_view(request, block_configs, context=None):
+    context = context or {}  
+    context.update({
         "block_config_groups": {
             "Drop-in Credit Blocks": block_configs.exclude(course=True),
             "Course Credit Blocks": block_configs.filter(course=True),
         }
-    }
+    })
     return render(request, "studioadmin/credit_blocks.html", context)
+
+
+@login_required
+@staff_required
+def disable_block_config(request, block_config_id):
+    return _toggle_block_config(BlockConfig, block_config_id)
+
+
+@login_required
+@staff_required
+def enable_block_config(request, block_config_id):
+    return _toggle_block_config(DisabledBlockConfig, block_config_id)
+
+
+def _toggle_block_config(block_config_model, block_config_id):
+    block_config = get_object_or_404(block_config_model, pk=block_config_id)
+    block_config.disabled = not block_config.disabled
+    block_config.save()
+    return HttpResponseRedirect(reverse("studioadmin:block_configs"))
+
+
+@login_required
+@staff_required
+def enable_block_config(request, block_config_id):
+    block_config_model =DisabledBlockConfig
+
+    block_config = get_object_or_404(DisabledBlockConfig, pk=block_config_id)
+    block_config.disabled = False
+    block_config.save()
+    return HttpResponseRedirect(reverse("studioadmin:block_configs"))
+
 
 
 class BlockPurchaseList(LoginRequiredMixin, StaffUserMixin, ListView):

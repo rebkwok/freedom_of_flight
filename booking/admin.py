@@ -6,7 +6,7 @@ from common.utils import full_name
 from .models import (
     Block, BlockConfig, Booking, BlockVoucher, GiftVoucher, GiftVoucherConfig,
     Course, Event, EventType, Track, WaitingListUser, SubscriptionConfig, Subscription,
-    TotalVoucher
+    TotalVoucher, DisabledBlockConfig
 )
 
 
@@ -114,6 +114,7 @@ admin.site.register(Course, CourseAdmin)
 admin.site.register(Booking, BookingAdmin)
 admin.site.register(Block, BlockAdmin)
 admin.site.register(BlockConfig)
+admin.site.register(DisabledBlockConfig)
 admin.site.register(EventType)
 admin.site.register(WaitingListUser)
 admin.site.register(BlockVoucher)
