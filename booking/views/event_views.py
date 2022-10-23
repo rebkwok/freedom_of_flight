@@ -93,7 +93,7 @@ class EventListView(CleanUpBlocksMixin, DataPolicyAgreementRequiredMixin, ListVi
             page = 1
         except EmptyPage:
             page = int(page)
-            page = 1 if page < 1 else track_paginator.num_pages
+            page = 1 if page < 1 else all_paginator.num_pages
         page_events = all_paginator.get_page(page)
         context["page_obj"] = page_events
         context["page_range"] = all_paginator.get_elided_page_range(number=page, on_each_side=2)
