@@ -503,9 +503,11 @@ class ShoppingBasketViewTests(TestUsersMixin, TestCase):
             voucher.expiry_date = None
             voucher.max_per_user = 1
             voucher.save()
-            baker.make(
-                Invoice, username=self.student_user.email, total_voucher_code=voucher.code, paid=True
+            invoice = baker.make(
+                Invoice, username=self.student_user.email, total_voucher_code=voucher.code
             )
+            invoice.paid = True
+            invoice.save()
             resp = self.client.post(self.url, data={"add_voucher_code": "add_voucher_code", "code": voucher.code})
             assert resp.context_data["voucher_add_error"] == [
                 f"You have already used voucher code {voucher.code} the maximum number of times (1)"]
@@ -515,9 +517,12 @@ class ShoppingBasketViewTests(TestUsersMixin, TestCase):
             voucher.max_per_user = None
             voucher.max_vouchers = 2
             voucher.save()
-            baker.make(
-                Invoice, username=self.student_user.email, total_voucher_code=voucher.code, paid=True, _quantity=2
+            invoices = baker.make(
+                Invoice, username=self.student_user.email, total_voucher_code=voucher.code, _quantity=2
             )
+            for invoice in invoices:
+                invoice.paid = True
+                invoice.save()
             resp = self.client.post(self.url, data={"add_voucher_code": "add_voucher_code", "code": voucher.code})
             assert resp.context_data["voucher_add_error"] == [
                 f"Voucher code {voucher.code} has limited number of total uses and has expired"]
