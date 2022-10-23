@@ -26,6 +26,7 @@ class Invoice(models.Model):
     total_voucher_code = models.CharField(
         max_length=255, null=True, blank=True, help_text="Voucher applied to invoice total"
     )
+    final_metadata = models.JSONField(null=True, blank=True, default=dict)
 
     class Meta:
         ordering = ("-date_paid",)
@@ -121,7 +122,14 @@ class Invoice(models.Model):
             # If it has a paypal transaction ID, it's paid
             self.paid = True
         if self.paid and not self.date_paid:
+            # marking the invoice as paid; set the date paid
             self.date_paid = timezone.now()
+        if self.id and self.paid and not self.final_metadata:
+            # ensure the state of the items metadata is saved when it's marked
+            # paid.  This involves iterating over related objects, so don't do it
+            # if the invoice hasn't been fully created yet (in reality this should
+            # only happen in tests)
+            self.final_metadata = self.items_metadata()
         super().save()
 
 

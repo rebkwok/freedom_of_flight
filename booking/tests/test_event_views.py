@@ -1096,6 +1096,7 @@ def test_buttons_dropin_course_cancelled_with_dropin_block(client, student_user,
 def test_buttons_dropin_course_no_show_with_course_block(client, student_user, drop_in_course, drop_in_course_bookings):
     client.force_login(student_user)
     booking = drop_in_course_bookings.first()
+    booking.status = "OPEN"
     booking.no_show = True
     booking.save()
     course_button, event_buttons = _get_book_course_buttons(client, drop_in_course)
