@@ -9,6 +9,16 @@ from activitylog.models import ActivityLog
 from payments.models import Invoice, StripePaymentIntent, Seller
 
 
+def _block_item_name(block, use_bookings=True):
+    if use_bookings and block.bookings.exists():
+        if block.block_config.course:
+            return str(block.bookings.first().event.course.name)
+        else:
+            event = block.bookings.first().event
+            return event.name_and_date
+    return f"Credit block: {block.block_config.name}"
+
+
 class Command(BaseCommand):
     help = "Fix bad stripe metadata"
 
@@ -52,7 +62,16 @@ class Command(BaseCommand):
                     metadata = payment_intent.metadata.copy()
                     invoice_metadata = {k: v for k, v in metadata.items() if k in ["invoice_id", "invoice_signature"]}
                     delete_metadata = {key: "" for key in metadata if key not in invoice_metadata}
-                    update_metadata = {**invoice_metadata, **final_metadata}
+
+                    stripe_metadata = invoice.items_metadata()
+                    if invoice.date_paid < datetime(2022, 10, 22, 13, 0, tzinfo=timezone.utc):
+                        for block in invoice.blocks.all():
+                            if _block_item_name(block) != _block_item_name(block, use_bookings=False):
+                                key = f"#{block.id} {_block_item_name(block)}"[:40]
+                                new_key = f"#{block.id} {_block_item_name(block, use_bookings=False)}"[:40]
+                                stripe_metadata[new_key] = stripe_metadata[key]
+                                del stripe_metadata[key]
+                    update_metadata = {**invoice_metadata, **stripe_metadata}
                     if dry_run:
                         self.stdout.write(f"DRY RUN: update stripe metadata from {payment_intent.metadata} to {update_metadata}")
                     else:
