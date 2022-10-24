@@ -1684,7 +1684,7 @@ def valid_dropin_block_configs(
         course=False, event_type=ev_type
     )
     if size:
-        all_block_configs.filter(size=size)
+        all_block_configs = all_block_configs.filter(size=size)
     if active_only:
         return all_block_configs.filter(active=True)
     return all_block_configs.order_by("-active", "-id")
