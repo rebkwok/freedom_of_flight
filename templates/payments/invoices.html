@@ -21,8 +21,8 @@
                     <td>{% if invoice.stripe_payment_intent_id %}Stripe{% elif invoice.amount > 0 %}PayPal{% else %}Gift Voucher{% endif %}</td>
                     <td>{{ invoice.date_paid|date:"d-M-y H:i" }}</td>
                     <td>
-                            {% for name, cost in invoice.final_metadata.items %}
-                            - {{ name }} - {{ cost }}<br/>
+                            {% for item in invoice.final_metadata.values %}
+                            - {{ item.name }} - {{ item.cost }}<br/>
                             {% endfor %}
                         {% if invoice.total_voucher_code %}<span class="helptext">Voucher applied - {{ invoice.total_voucher_code }}</span>{% endif %}
                     </td>

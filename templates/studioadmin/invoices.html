@@ -32,8 +32,8 @@
                     <td>{{ invoice.date_paid|date:"d-M-y H:i" }}</td>
                     <td>
                         <ul>
-                            {% for name, cost in invoice.final_metadata.items %}
-                            <li>{{ name }} - {{ cost }}</li>
+                            {% for item in invoice.final_metadata.values %}
+                            <li>{{ item.name }} - {{ item.cost }}</li>
                             {% endfor %}
                         </ul>
                     </td>

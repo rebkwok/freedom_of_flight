@@ -94,15 +94,26 @@ class TestModels(TestCase):
         gift_voucher = baker.make(GiftVoucher, gift_voucher_config__discount_amount=10, invoice=invoice)
         product_purchase = make_purchase(invoice=invoice)
         product_purchase_no_size = make_purchase(size=None, product_name="Onesie", invoice=invoice)
-
         assert invoice.items_metadata() == {
-            "test course": f"£50.00 (block-{course_booking_block.id})",
-            "test class - 01 Nov 2022, 10:00": f"£8.00 (block-{booking_block.id})",
-            "Credit block: test block": f"£10.00 (block-{block.id})",
-            "test subscription": f"£50.00 (subscription-{subscription.id})",
-            "Gift Voucher: £10.00": f"£10.00 (gift_voucher-{gift_voucher.id})",
-            "Clothing - Hoodie - S": f"£5.00 (product_purchase-{product_purchase.id})",
-            "Clothing - Onesie": f"£5.00 (product_purchase-{product_purchase_no_size.id})",
+            f"#{course_booking_block.id} test course": f"£50.00 (block-{course_booking_block.id})",
+            f"#{booking_block.id} test class - 01 Nov 2022, 10:00": f"£8.00 (block-{booking_block.id})",
+            f"#{block.id} Credit block: test block": f"£10.00 (block-{block.id})",
+            f"#{subscription.id} Sub: test subscription": f"£50.00 (subscription-{subscription.id})",
+            f"#{gift_voucher.id} Gift Voucher: £10.00": f"£10.00 (gift_voucher-{gift_voucher.id})",
+            f"#{product_purchase.id} Clothing - Hoodie - S": f"£5.00 (product_purchase-{product_purchase.id})",
+            f"#{product_purchase_no_size.id} Clothing - Onesie": f"£5.00 (product_purchase-{product_purchase_no_size.id})",
+        }
+        assert not invoice.final_metadata
+        invoice.paid = True
+        invoice.save()
+        assert invoice.final_metadata == {
+            f"block-{course_booking_block.id}": {"name": f"test course", "cost": "£50.00"},
+            f"block-{booking_block.id}": {"name": "test class - 01 Nov 2022, 10:00", "cost": "£8.00"},
+            f"block-{block.id}": {"name": "Credit block: test block", "cost": "£10.00"},
+            f"subscription-{subscription.id}": {"name": "Sub: test subscription", "cost": "£50.00"},
+            f"gift_voucher-{gift_voucher.id}": {"name": "Gift Voucher: £10.00", "cost": "£10.00"},
+            f"product_purchase-{product_purchase.id}": {"name": "Clothing - Hoodie - S", "cost": "£5.00"},
+            f"product_purchase-{product_purchase_no_size.id}": {"name": "Clothing - Onesie", "cost": "£5.00"},
         }
 
     def test_seller_str(self):
