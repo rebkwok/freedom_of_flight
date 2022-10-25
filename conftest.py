@@ -129,7 +129,7 @@ def event_type():
 def course_cart_block_config(event_type):
     # make add-to-cart config
     yield baker.make(
-        BlockConfig, event_type=event_type, course=True, size=2, active=True
+        BlockConfig, event_type=event_type, course=True, size=2, active=True, cost=20
     )
 
 
@@ -137,7 +137,7 @@ def course_cart_block_config(event_type):
 def dropin_cart_block_config(event_type):
     # make add-to-cart config
     yield baker.make(
-        BlockConfig, event_type=event_type, course=False, size=1, active=True
+        BlockConfig, event_type=event_type, course=False, size=1, active=True, cost=10
     )
 
 
@@ -163,7 +163,7 @@ def course(course_cart_block_config, event_type):
 def course_event(course):
     course.events.first().delete()
     course_event = baker.make_recipe(
-        "booking.future_event", event_type=event_type, max_participants=2,
+        "booking.future_event", event_type=course.event_type, max_participants=2,
         course=course    
     )
     yield course_event

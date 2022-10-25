@@ -380,10 +380,16 @@ class Event(models.Model):
                 cost += f"{course_booking_block.cost_str} (course)"
         if not self.course or self.course.allow_drop_in:
             cart_booking_block = add_to_cart_drop_in_block_config(self)
-            if cart_booking_block:
+            purchaseable_dropin_blocks = valid_dropin_block_configs(self, active_only=True)
+            dropin_options = set(filter(None, [cart_booking_block, *purchaseable_dropin_blocks]))
+            if dropin_options:
+                dropin_options = sorted(dropin_options, key=lambda x: x.size)
                 if cost:
                     cost += " / "
-                cost += f"{cart_booking_block.cost_str} (drop-in)"
+                dropin_options_str = [
+                    f"{block_config.cost_str} ({block_config.size})" for block_config in dropin_options
+                ]
+                cost += f"{' - '.join(dropin_options_str)} (drop-in)"
         return cost
 
     def __str__(self):

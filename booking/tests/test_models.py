@@ -1968,13 +1968,10 @@ def test_cleanup_expired_blocks_for_user(client, freezer, student_user):
 
 
 @pytest.mark.django_db
-def test_ajax_add_course_booking_to_basket_selects_latest_block(
-    client, student_user, event_type, drop_in_course, course_cart_block_config, 
+def test_add_to_cart_course_block_config_selects_latest_block(
+    event_type, drop_in_course, course_cart_block_config, 
     dropin_cart_block_config
 ):
-    client.force_login(student_user)
-    url = reverse("booking:ajax_add_course_booking_to_basket")
-
     # make some more block configs that match
     latest_active_config = baker.make(
         BlockConfig, event_type=event_type, course=True, size=2, active=True
@@ -2000,3 +1997,33 @@ def test_ajax_add_course_booking_to_basket_selects_latest_block(
     course_cart_block_config.save()
     # if all are inactive, the latest one is selected
     assert add_to_cart_course_block_config(drop_in_course) == latest_inactive_config
+
+
+@pytest.mark.django_db
+def test_event_cost_str(
+    event_type, event, course_event, course, course_cart_block_config, 
+    dropin_cart_block_config
+):
+    # make some more block configs that match
+    active_dropin_config = baker.make(
+        BlockConfig, event_type=event_type, course=False, size=2, cost=25, active=True
+    )
+    active_dropin_config1 = baker.make(
+        BlockConfig, event_type=event_type, course=False, size=3, cost=35, active=True
+    )
+    inactive_dropin_config = baker.make(
+        BlockConfig, event_type=event_type, course=False, size=4, cost=45, active=False
+    )
+
+    assert event.cost_str == "£10 (1) - £25 (2) - £35 (3) (drop-in)"
+
+    # course event doesn't allow drop in booking
+    assert not course_event.course.allow_drop_in
+    assert course_event.cost_str == "£20 (course)"
+
+    course.allow_drop_in = True
+    course.save()
+    assert course_event.cost_str == "£20 (course) / £10 (1) - £25 (2) - £35 (3) (drop-in)"
+
+    
+    
