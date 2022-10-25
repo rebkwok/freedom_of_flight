@@ -41,8 +41,14 @@
                                 {% endif %}
                             {% else %}
                                 <em>Credit block:</em> {{ block_info.block.block_config }}
-                            {% endif%} 
-                            <span class="badge badge-info">{{ block_info.block.user|full_name }}</span>
+                            {% endif%}
+                            <span class="badge badge-info">{{ block_info.block.user|full_name }}</span><br/>
+                            
+                            {% if block_info.block.block_config.description %}
+                                {% comment %} T & C popover {% endcomment %}
+                                <div type="button" class="badge badge-danger" data-html="true" data-toggle="popover" title="Terms & Conditions: {{ block_info.block.block_config|safe }}" data-content="{{ block_info.block.block_config.description|linebreaks }}">T&C</div>
+                            {% endif %}
+
                         </td>
                         <td class="p-1">
                             <div>Cost: {% if block_info.voucher_applied.discounted_cost is not None %}
@@ -257,9 +263,35 @@
 {% endif %}
 </div>
 
+<div class="modal fade" id="tandcModal" tabindex="-1" aria-labelledby="tandcModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="tandcModalLabel">Block config name here</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+            Block config description here
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
 {% endblock content %}
 
 
 {% block extra_js %}
 <script type='text/javascript' src="{% static 'booking/js/shopping_basket_ajax-v4.js' %}"></script>
+<script>
+    $(function () {
+        $('[data-toggle="popover"]').popover()
+      })
+    {% comment %} var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'))
+    var popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
+    return new bootstrap.Popover(popoverTriggerEl, {container: 'body'})
+    }) {% endcomment %}
+</script>
 {% endblock %}
