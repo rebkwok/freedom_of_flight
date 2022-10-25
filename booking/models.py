@@ -378,11 +378,12 @@ class Event(models.Model):
             course_booking_block = add_to_cart_course_block_config(self.course)
             if course_booking_block:
                 cost += f"{course_booking_block.cost_str} (course)"
-        cart_booking_block = add_to_cart_drop_in_block_config(self)
-        if cart_booking_block:
-            if cost:
-                cost += " / "
-            cost += f"{cart_booking_block.cost_str} (drop-in)"
+        if not self.course or self.course.allow_drop_in:
+            cart_booking_block = add_to_cart_drop_in_block_config(self)
+            if cart_booking_block:
+                if cost:
+                    cost += " / "
+                cost += f"{cart_booking_block.cost_str} (drop-in)"
         return cost
 
     def __str__(self):
