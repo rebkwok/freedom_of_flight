@@ -292,15 +292,22 @@ class SignedDataPrivacyModelTests(TestUsersMixin, TestCase):
     def setUp(self):
         self.create_users()
 
-    def test_cached_on_save(self):
+    def test_cache_deleted_on_save(self):
         self.make_data_privacy_agreement(self.student_user)
+        assert cache.get(active_data_privacy_cache_key(self.student_user)) is None
+        assert has_active_data_privacy_agreement(self.student_user)
         assert cache.get(active_data_privacy_cache_key(self.student_user)) is True
 
+        # save removes cache item
+        self.student_user.data_privacy_agreement.first().save()
+        assert cache.get(active_data_privacy_cache_key(self.student_user)) is None
+        
         DataPrivacyPolicy.objects.create(content='New Foo')
         assert has_active_data_privacy_agreement(self.student_user) is False
 
     def test_delete(self):
         self.make_data_privacy_agreement(self.student_user)
+        assert has_active_data_privacy_agreement(self.student_user)
         assert cache.get(active_data_privacy_cache_key(self.student_user)) is True
 
         SignedDataPrivacy.objects.get(user=self.student_user).delete()
