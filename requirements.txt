@@ -10,14 +10,9 @@ attrs==22.1.0
     # via pytest
 babel==2.10.3
     # via delorean
-backports-zoneinfo==0.2.1
-    # via
-    #   django
-    #   pytz-deprecation-shim
-    #   tzlocal
 beautifulsoup4==4.11.1
     # via -r requirements.in
-certifi==2022.9.24
+certifi==2022.12.7
     # via requests
 cffi==1.15.1
     # via cryptography
@@ -186,9 +181,7 @@ sqlparse==0.4.3
 stripe==4.1.0
     # via -r requirements.in
 tomli==2.0.1
-    # via
-    #   coverage
-    #   pytest
+    # via pytest
 types-cryptography==3.3.23
     # via pyjwt
 tzdata==2022.4
