@@ -30,4 +30,6 @@ pytest-cov
 pytest-django
 pytest-freezegun
 pytest-mock
+pytest-env
+pytest-xdist
 stripe

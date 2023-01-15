@@ -31,12 +31,15 @@ env = environ.Env(
     USE_CDN=(bool, False),
     MERCHANDISE_CART_TIMEOUT_MINUTES=(int, 15),
     CART_TIMEOUT_MINUTES=(int, 15),
+    TESTING=(bool, False),
 )
 
 
 environ.Env.read_env(root('freedom_of_flight/.env'))  # reading .env file
 
-TESTING = any([test_str in arg for arg in sys.argv for test_str in ["test", "pytest"]])
+TESTING = env("TESTING")
+if not TESTING:  # pragma: no cover
+    TESTING = any([test_str in arg for arg in sys.argv for test_str in ["test", "pytest"]])
 
 BASE_DIR = root()
 
