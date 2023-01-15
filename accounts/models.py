@@ -125,7 +125,7 @@ class CookiePolicy(models.Model):
         if not self.id and not self.version:
             # if no version specified, go to next major version
             self.version = floor((CookiePolicy.current_version() + 1))
-        super(CookiePolicy, self).save(**kwargs)
+        super().save(**kwargs)
         ActivityLog.objects.create(
             log='Cookie Policy version {} created'.format(self.version)
         )
@@ -200,7 +200,7 @@ class SignedDataPrivacy(models.Model):
             ActivityLog.objects.create(
                 log="Signed data privacy policy agreement created: {}".format(self.__str__())
             )
-        super().save()
+        super().save(**kwargs)
 
     def delete(self, using=None, keep_parents=False):
         # clear cache if this is the active signed agreement
@@ -322,7 +322,7 @@ class OnlineDisclaimer(BaseOnlineDisclaimer):
             ActivityLog.objects.create(
                 log="Online disclaimer created: {}".format(self.__str__())
             )
-        super().save()
+        super().save(**kwargs)
 
     def delete(self, using=None, keep_parents=False):
         # clear active cache if there is any
