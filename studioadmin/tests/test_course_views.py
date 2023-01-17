@@ -536,6 +536,29 @@ class CourseUpdateViewTests(EventTestMixin, TestUsersMixin, TestCase):
         assert resp.status_code == 302
         assert resp.url == reverse("studioadmin:courses") + f"?track={self.course.event_type.track.id}"
 
+    def test_change_course_event_type(self):
+        assert self.course.event_type == self.aerial_event_type
+        baker.make_recipe(
+            "booking.future_event", event_type=self.course.event_type, course=self.course, _quantity=2
+        )
+        assert self.course.events.count() == 2
+        for event in self.course.events.all():
+            assert event.event_type == self.aerial_event_type
+
+        resp = self.client.post(
+            self.url, 
+            data={
+                **self.form_data(), 
+                "event_type": self.floor_event_type.id,
+                "events": [event.id for event in self.course.events.all()]
+            }
+        )
+        self.course.refresh_from_db()
+        assert self.course.event_type == self.floor_event_type
+        assert self.course.events.count() == 2
+        for event in self.course.events.all():
+            assert event.event_type == self.floor_event_type
+
     def test_event_type_form_field_is_shown(self):
         resp = self.client.get(self.url)
         form = resp.context_data["form"]

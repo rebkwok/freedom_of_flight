@@ -323,6 +323,9 @@ class CourseUpdateView(LoginRequiredMixin, StaffUserMixin, CourseCreateUpdateMix
                     course.events.add(event)
             # Now create any requested dates
             self._create_events(course, form)
+        
+        if course.events.exists() and {course.event_type} != set(course.events.values_list("event_type", flat=True)):
+            course.events.update(event_type=course.event_type)
         self._check_visibility_and_save(course)
 
         uncancelled_event_ids_post_save = list(

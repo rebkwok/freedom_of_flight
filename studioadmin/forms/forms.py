@@ -201,6 +201,10 @@ class CourseUpdateForm(forms.ModelForm):
         self.event_type = kwargs.pop("event_type")
         super().__init__(*args, **kwargs)
         self.back_url = reverse("studioadmin:courses")
+        self.fields["event_type"].help_text = (
+            "NOTE: Changing event type for the course will change the event type for any associated events"
+        )
+
         for name, field in self.fields.items():
             if name in ["show_on_site", "allow_drop_in"]:
                 field.widget.attrs = {"class": "form-check-inline"}
