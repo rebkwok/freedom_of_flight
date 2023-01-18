@@ -11,18 +11,30 @@
 
     <div class="card">
             <div class="card-body">
+
+                <h4 class="card-header">Personal Information</h4>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item">
+                        <b>Preferred pronouns:</b> {% if account_user.pronouns %}{{ account_user.pronouns }}{% else %}Not specified{% endif %}<br/>
+                        {% if account_user.manager_user %}
+                            <b>Date of birth:</b> {{ account_user.childuserprofile.date_of_birth }}
+                        {% else %}
+                            <b>Date of birth:</b> {{ account_user.userprofile.date_of_birth }}<br/>
+                        {% endif %}
+                        </li>
+                    </ul>
+
+
                 <h4 class="card-header">Contact Information</h4>
                     <ul class="list-group list-group-flush">
                         <li class="list-group-item">
                         {% if account_user.manager_user %}
                             <b>Address:</b> {{ account_user.childuserprofile.address }}, {{ account_user.childuserprofile.postcode }}<br/>
                             <b>Phone:</b> {{ account_user.childuserprofile.phone }}<br/>
-                            <b>Date of birth:</b> {{ account_user.childuserprofile.date_of_birth }}
                         {% else %}
                             <b>Email:</b> {{ account_user.email|obfuscate_mailto }}<br/>
                             <b>Address:</b> {{ account_user.userprofile.address }}, {{ account_user.userprofile.postcode }}<br/>
                             <b>Phone:</b> {{ account_user.userprofile.phone }}<br/>
-                            <b>Date of birth:</b> {{ account_user.userprofile.date_of_birth }}<br/>
                         {% endif %}
                         </li>
                     </ul>
