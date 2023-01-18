@@ -58,7 +58,7 @@
                         {% endif %}
                     
                         {% if booking.event.course %}
-                            <a href="{% url 'booking:course_events' booking.event.course.slug %}"><span class="badge badge-course">Course: {{ booking.event.course.name|truncatechars:30 }} ({{ booking.event.course_order }})</span></a>
+                            <a href="{% url 'booking:course_events' booking.event.course.slug %}"><span class="badge badge-course">Course: {{ booking.event.course_order }}</span></a>
                         {% endif %}
 
                     </div>
