@@ -39,7 +39,7 @@ def _include_current_started_only(course, start_of_today):
     if course.last_event_date is None:
         return False
     else:
-        return course.start >= start_of_today
+        return course.last_event_date >= start_of_today
 
 
 def _include_past_course(course, start_of_today):
