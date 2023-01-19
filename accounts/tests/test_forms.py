@@ -14,9 +14,10 @@ from common.test_utils import (
 
 class SignUpFormTests(TestUsersMixin, TestCase):
 
-    base_form_data = form_data = {
+    base_form_data = {
         'first_name': 'Test',
         'last_name': 'User',
+        'pronouns': 'they/them',
         'address': 'test',
         'postcode': 'test',
         'phone': '1234',

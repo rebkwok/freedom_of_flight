@@ -18,6 +18,7 @@ def _signup_form_data():
     return {
         'first_name': 'Test',
         'last_name': 'User',
+        'pronouns': 'they/them',
         'address': 'test',
         'postcode': 'test',
         'phone': '1234',
@@ -42,6 +43,7 @@ def test_signup(client):
     assert UserProfile.objects.count() == 1
     new_user = User.objects.first()
     assert new_user.username == "testuser@test.com"
+    assert new_user.pronouns == "they/them"
 
 
 @pytest.mark.django_db
@@ -106,6 +108,7 @@ class ChildUserCreateViewTests(TestUsersMixin, TestCase):
             {
                 'first_name': 'Bugs',
                 'last_name': "Bunny",
+                'pronouns': 'they/them',
                 "address": self.manager_user.userprofile.address,
                 "postcode": self.manager_user.userprofile.postcode,
                 "phone": self.manager_user.userprofile.phone,
@@ -116,6 +119,7 @@ class ChildUserCreateViewTests(TestUsersMixin, TestCase):
         assert child_user.email == ""
         assert child_user.manager_user == self.manager_user
         assert child_user.is_student is True
+        assert child_user.pronouns == "they/them"
 
 
 class ProfileTests(TestUsersMixin, TestCase):

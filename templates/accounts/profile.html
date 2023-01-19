@@ -12,6 +12,7 @@
                 <div class="card-text"><a class="btn btn-xs btn-xs-wide btn-success" href="{% url 'accounts:update_profile' %}">Edit</a></div>
                <div class="card-text"><strong>Username:</strong> {{ user.username }}</div>
                <div class="card-text"><strong>Name:</strong> {{ user.first_name }} {{ user.last_name }}</div>
+               <div class="card-text"><strong>Preferred pronouns:</strong> {% if user.userprofile.pronouns %} {{ user.userprofile.pronouns }}{% else %}Not specified{% endif %}</div>
                <div class="card-text"><strong>Date of birth:</strong> {{ user.userprofile.date_of_birth }}</div>
                <div class="card-text"><strong>Address:</strong> {{ user.userprofile.address }}, {{ user.userprofile.postcode }}</div>
                <div class="card-text"><strong>Phone:</strong> {{ user.userprofile.phone }}</div>
@@ -30,7 +31,8 @@
                         <strong>{{ managed_user|full_name }}</strong> (managed account)
                         <span class="text-secondary">
                             <div><strong>Personal Information</strong> <a class="btn btn-xs btn-outline-success p-0" href="{% url 'accounts:update_managed_profile' managed_user.id %}">Edit</a></div>
-                           <div><strong>Date of birth:</strong> {{ managed_user.childuserprofile.date_of_birth }}</div>
+                            <div><strong>Preferred pronouns:</strong> {% if managed_user.childuserprofile.pronouns %} {{ managed_user.childuserprofile.pronouns }}{% else %}Not specified{% endif %}</div>
+                            <div><strong>Date of birth:</strong> {{ managed_user.childuserprofile.date_of_birth }}</div>
                            <div><strong>Address:</strong> {{ managed_user.childuserprofile.address }}, {{ user.childuserprofile.postcode }}</div>
                            <div><strong>Phone:</strong> {{ managed_user.childuserprofile.phone }}</div>
                             {% if managed_user|has_disclaimer %}

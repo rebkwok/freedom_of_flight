@@ -34,6 +34,14 @@ class AccountFormMixin:
                 attrs={'class': "form-control", 'placeholder': 'Last name'}
             )
         )
+        self.fields["pronouns"] = forms.CharField(
+            max_length=50, label='Preferred pronouns (optional)',
+            widget=forms.TextInput(
+                attrs={'class': "form-control"}
+            ),
+            required=False
+        )
+        
         self.fields["date_of_birth"] = forms.DateField(
             widget=forms.DateInput(
                 attrs={"autocomplete": "off", 'class': 'form-control'}, format='%d-%b-%Y'
@@ -143,7 +151,7 @@ class ManagedProfileForm(AccountFormMixin, forms.ModelForm):
 
     class Meta:
         model = ChildUserProfile
-        fields = ("first_name", "last_name", "address", "postcode", "phone", "date_of_birth")
+        fields = ("first_name", "last_name", "pronouns", "address", "postcode", "phone", "date_of_birth")
 
 
 class ProfileForm(CoreAccountFormMixin, ManagedProfileForm):
@@ -154,7 +162,7 @@ class ProfileForm(CoreAccountFormMixin, ManagedProfileForm):
 
     class Meta:
         model = UserProfile
-        fields = ("first_name", "last_name", "address", "postcode", "phone", "date_of_birth", "student", "manager")
+        fields = ("first_name", "last_name", "pronouns", "address", "postcode", "phone", "date_of_birth", "student", "manager")
 
 
 class RegisterChildUserForm(AccountFormMixin, forms.ModelForm):
@@ -176,7 +184,7 @@ class RegisterChildUserForm(AccountFormMixin, forms.ModelForm):
 
     class Meta:
         model = ChildUserProfile
-        fields = ("first_name", "last_name", "address", "postcode", "phone", "date_of_birth")
+        fields = ("first_name", "last_name", "pronouns", "address", "postcode", "phone", "date_of_birth")
 
     def clean_date_of_birth(self):
         # override over-16 validation

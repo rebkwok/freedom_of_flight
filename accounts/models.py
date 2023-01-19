@@ -70,7 +70,7 @@ class BaseUserProfile(models.Model):
     address = models.CharField(max_length=512, null=True, blank=True)
     postcode = models.CharField(max_length=10, null=True, blank=True)
     phone = models.CharField(max_length=255, null=True, blank=True)
-
+    pronouns = models.CharField(max_length=50, null=True, blank=True)
     class Meta:
         abstract = True
 
@@ -593,6 +593,13 @@ def contact_email(self):
     return self.email
 
 
+@property
+def pronouns(self):
+    if hasattr(self, "childuserprofile"):
+        return self.childuserprofile.pronouns
+    return self.userprofile.pronouns
+
+
 User.add_to_class("managed_users", managed_users)
 User.add_to_class("managed_users_excluding_self", managed_users_excluding_self)
 User.add_to_class("managed_users_including_self", managed_users_including_self)
@@ -604,3 +611,4 @@ User.add_to_class("is_instructor", is_instructor)
 User.add_to_class("manager_user", manager_user)
 User.add_to_class("age", user_age)
 User.add_to_class("contact_email", contact_email)
+User.add_to_class("pronouns", pronouns)

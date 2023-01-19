@@ -79,7 +79,7 @@
                                 </div>
                             </td>
                         {% endif %}
-                        <td class="text-center"> {{ booking.user.first_name }} {{ booking.user.last_name }}</td>
+                        <td class="text-center"> {{ booking.user.first_name }} {{ booking.user.last_name }} {% if booking.user.pronouns %}({{ booking.user.pronouns }}){% endif %}</td>
                         <td id="notes" class="text-center hidden">
                             <input 
                                 id="booking-notes-{{ booking.id }}"
