@@ -45,9 +45,18 @@
       <!-- Fixed navbar -->
       <nav class="navbar navbar-expand-md navbar-dark fixed-top bg-dark p-1">
         <a class="navbar-brand p-0" href="/"><img class="nav-logo" src="{% static 'images/fof_logo.png' %}"></a>
+        
+        <div>
+        <span class="d-inline d-md-none">  
+          <a class="btn btn-primary btn-sm mt-1 p-2" href="{% url 'booking:shopping_basket' %}">
+            <span><i class="fas fa-shopping-cart"></i> <span class="badge badge-light" id="cart_item_menu_count">{{ cart_item_count }}</span></span>
+          </a>
+        </span>
         <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
           <span class="navbar-toggler-icon"></span>
         </button>
+      </div>
+        
       {% block navbar %}
         <div class="collapse navbar-collapse" id="navbarCollapse">
           <ul class="navbar-nav mr-auto">
@@ -79,7 +88,7 @@
 
       <span class="float-right">
         <ul class="nav navbar-nav mr-auto">
-        <li>
+        <li class="d-none d-md-inline">
           <a class="btn btn-primary btn-sm mt-1" href="{% url 'booking:shopping_basket' %}">
             <span><i class="fas fa-shopping-cart"></i> <span class="badge badge-light" id="cart_item_menu_count">{{ cart_item_count }}</span></span>
           </a>
@@ -106,7 +115,10 @@
     {% block notices %}{% NoticesModal %}{% endblock %}
 
         {% block body %}
-        {% block precontent %}<div class="container-fluid"><h1 class="pt-2">Freedom of Flight Aerial</h1></div>{% endblock %}
+        {% block precontent %}
+        <div class="container-fluid">
+          <h1 class="pt-2">Freedom of Flight Aerial</h1>
+        </div>{% endblock %}
 
         {% if messages %}
           <div class="container-fluid mt-2" id="message-row">
