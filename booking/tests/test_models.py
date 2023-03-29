@@ -71,11 +71,14 @@ class EventTests(EventTestMixin, TestCase):
         self.event.save()
         assert str(self.event) == 'Test event - 01 Jan 2015, 00:00 (Adults)'
 
-    def test_can_cancel(self):
-        self.event.start = timezone.now() + timedelta(hours=48)
+    @patch("booking.models.timezone")
+    def test_can_cancel(self, mock_tz):
+        mock_now = datetime(2022, 6, 1, 10, 0, tzinfo=timezone.utc)
+        mock_tz.now.return_value = mock_now
+        self.event.start = mock_now + timedelta(hours=48)
         self.event.save()
         assert self.event.can_cancel is True
-        self.event.start = timezone.now() + timedelta(hours=23)
+        self.event.start = mock_now + timedelta(hours=23)
         self.event.save()
         assert self.event.can_cancel is False
 
@@ -83,7 +86,7 @@ class EventTests(EventTestMixin, TestCase):
         self.event.event_type.save()
         assert self.event.can_cancel is True
 
-        # can cancel for cancellation period only
+        # can_cancel checks cancellation period only
         self.event.event_type.allow_booking_cancellation = False
         self.event.event_type.save()
         assert self.event.can_cancel is True
@@ -119,6 +122,90 @@ class EventTests(EventTestMixin, TestCase):
     def test_can_update_event_on_full_course(self):
         # TODO validation check for configured course passes if this event is already on the course
         pass
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "now,event_date,can_cancel,cancellation_period",
+    [
+        # now = DST, event = not DST
+        # Although there are only 23 hrs between now and the event datetime, cancellation
+        # is allowed because it crosses DST
+        # i.e. in local time, it's currently 9.30am, and the event start is 10am, so users
+        # expect to be able to cancel
+        (
+            datetime(2023, 3, 25, 9, 30, tzinfo=dt_timezone.utc), # not DST
+            datetime(2023, 3, 26, 9, 0, tzinfo=dt_timezone.utc), # DST
+            True,
+            24
+        ),
+        # This is > 24 hrs
+        (
+            datetime(2023, 3, 25, 8, 30, tzinfo=dt_timezone.utc), # not DST
+            datetime(2023, 3, 26, 9, 0, tzinfo=dt_timezone.utc), # DST
+            True,
+            24
+        ),
+        # less than 23 hrs
+        (
+            datetime(2023, 3, 25, 10, 5, tzinfo=dt_timezone.utc), # not DST
+            datetime(2023, 3, 26, 9, 0, tzinfo=dt_timezone.utc), # DST
+            False,
+            24
+        ),
+        # both DST, <24 hrs
+        (
+            datetime(2023, 3, 26, 9, 30, tzinfo=dt_timezone.utc),
+            datetime(2023, 3, 27, 9, 0, tzinfo=dt_timezone.utc),
+            False,
+            24
+        ),
+        # longer cancellation period
+        (
+            datetime(2023, 3, 23, 9, 30, tzinfo=dt_timezone.utc), # not DST
+            datetime(2023, 3, 26, 9, 0, tzinfo=dt_timezone.utc), # DST
+            True,
+            72
+        ),
+        # longer cancellation period
+        (
+            datetime(2023, 3, 23, 8, 30, tzinfo=dt_timezone.utc), # not DST
+            datetime(2023, 3, 26, 9, 0, tzinfo=dt_timezone.utc), # DST
+            True,
+            72
+        ),
+        # longer cancellation period
+        (
+            datetime(2023, 3, 23, 10, 30, tzinfo=dt_timezone.utc), # not DST
+            datetime(2023, 3, 26, 9, 0, tzinfo=dt_timezone.utc), # DST
+            False,
+            72
+        ),
+        # now is DST, event not DST
+        # > 24.5 hrs between now and event date
+        (
+            datetime(2022, 10, 29, 9, 30, tzinfo=dt_timezone.utc), # DST; 10:30 local
+            datetime(2022, 10, 30, 10, 0, tzinfo=dt_timezone.utc), # not DST
+            False,
+            24
+        ),
+        (
+            datetime(2022, 10, 29, 8, 55, tzinfo=dt_timezone.utc), # DST; 10:30 local
+            datetime(2022, 10, 30, 10, 0, tzinfo=dt_timezone.utc), # not DST
+            True,
+            24
+        ),
+    ]
+)
+@patch('booking.models.timezone')
+def test_can_cancel_with_daylight_savings_time(mock_tz, now, event_date, can_cancel, cancellation_period):
+    mock_tz.now.return_value = now
+    event = baker.make_recipe(
+        'booking.future_event',
+        start=event_date,
+        event_type__cancellation_period=cancellation_period
+    )
+    assert event.can_cancel == can_cancel
 
 
 class BookingTests(EventTestMixin, TestUsersMixin, TestCase):
