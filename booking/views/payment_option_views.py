@@ -106,7 +106,7 @@ def subscription_config_context(request, event_type=None):
     if event_type is not None:
         subscription_configs = [
             subscription_config for subscription_config in subscription_configs if
-            event_type.id in subscription_config.bookable_event_types
+            str(event_type.id) in subscription_config.bookable_event_types
         ]
 
     def _start_options_for_users(config):
@@ -116,7 +116,6 @@ def subscription_config_context(request, event_type=None):
                 for managed_user in request.user.managed_users
             }
         return {}
-
     subscription_config_info = [
         {
             "config": config,
