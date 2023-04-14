@@ -940,7 +940,7 @@ class GiftVoucher(models.Model):
     @property
     def name(self):
         if self.block_voucher:
-            return f"Gift Voucher: {self.gift_voucher_config.block_config.name}"
+            return f"Gift Voucher: {self.block_voucher.block_configs.first().name}"
         elif self.total_voucher:
             return f"Gift Voucher: £{self.total_voucher.discount_amount}"
 
