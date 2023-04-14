@@ -31,8 +31,11 @@
         created by adding directly to the shopping cart).
     </p>
     <p>
-        Note that a credit block can only be deleted if no purchases have been made yet. If 
-        purchases have been made, a block can be disabled - this will make it un-usable and un-purchaseable.
+        Note that a credit block can only be deleted or disabled if no purchases have been made yet, 
+        and there are no vouchers or gift voucher options active that use the block. If 
+        purchases have been made, but there are no active vouchers, a block can be disabled - this will
+        make it un-usable and un-purchaseable. Blocks can always be made un-purchaseable; this will 
+        not prevent them from being used via vouchers or drop-in options.
     </p>
 
     <!-- Modals -->
@@ -101,7 +104,9 @@
                             <a href="{% url 'studioadmin:block_config_purchases' block_config.id %}">{{ block_config.blocks_purchased }}</a></td>
                         <td class="text-center">
                             {% if not disabled %}
-                                {% if not block_config.blocks_purchased %}
+                                {% if block_config.active_vouchers_or_gift_voucher_configs %}
+                                    <span class="helptext">Vouchers/Gift vouchers active; can't disable.</span>
+                                {% elif not block_config.blocks_purchased %}
                                     <div
                                         class="block-config-delete-btn"
                                         data-block_config_id="{{ block_config.id }}"
@@ -109,11 +114,11 @@
                                         <span class="btn btn-sm btn-danger pt-0 pb-0"><i class="far fa-trash-alt"></i></span>
                                     </div>
                                 {% else %}
-                                <a href="{% url "studioadmin:disable_block_config" block_config.id %}">
-                                    <span class="btn btn-sm btn-dark">
-                                        Disable
-                                    </span>
-                                </a>
+                                    <a href="{% url "studioadmin:disable_block_config" block_config.id %}">
+                                        <span class="btn btn-sm btn-dark">
+                                            Disable
+                                        </span>
+                                    </a>
                                 {% endif %}
                             {% else %}
                                 <a href="{% url "studioadmin:enable_block_config" block_config.id %}">

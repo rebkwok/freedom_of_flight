@@ -80,7 +80,7 @@ class BlockVoucherStudioadminForm(forms.ModelForm):
         self.fields['discount'].validators = [validate_discount]
         self.fields['discount_amount'].validators = [validate_greater_than_0]
         self.fields['max_vouchers'].validators = [validate_greater_than_0]
-        self.fields['block_configs'].queryset = BlockConfig.objects.order_by("-active", "-id")
+        self.fields['block_configs'].queryset = BlockConfig.objects.enabled().order_by("-active", "-id")
         self.fields['block_configs'].required = False
         self.fields['total_voucher'] = forms.BooleanField(
             required=False, label="Applied to total",
@@ -289,7 +289,7 @@ class BlockVoucherStudioadminForm(forms.ModelForm):
 
 class BlockConfigModelChoiceField(forms.ModelChoiceField):
     def label_from_instance(self, obj):
-        return f"{obj}{' (inactive)' if not obj.active else ''}"
+        return f"{obj}{' (not purchaseable on site)' if not obj.active else ''}"
 
 
 class GiftVoucherConfigForm(forms.ModelForm):
@@ -311,7 +311,7 @@ class GiftVoucherConfigForm(forms.ModelForm):
         for field in self.fields.values():
             field.required = False
         self.fields["block_config"] = BlockConfigModelChoiceField(
-            queryset=BlockConfig.objects.order_by("-active"), required=False
+            queryset=BlockConfig.objects.enabled().order_by("-active"), required=False
         )
 
         self.helper = FormHelper()

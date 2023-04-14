@@ -439,8 +439,8 @@ class Event(models.Model):
 
 
 class BlockConfigManager(models.Manager):
-        
-    def get_queryset(self):
+
+    def enabled(self):
         return super().get_queryset().filter(disabled=False)
 
     def disabled(self):
@@ -469,6 +469,15 @@ class BlockConfig(models.Model):
     def blocks_purchased(self):
         return self.block_set.filter(paid=True).count()
 
+    def active_vouchers_or_gift_voucher_configs(self):
+        # At least one active voucher or gift voucher config uses this block_config
+        if any(
+            voucher for voucher in BlockVoucher.objects.all() 
+            if voucher.check_block_config(self) and not voucher.has_expired
+        ):
+            return True
+        return GiftVoucherConfig.objects.filter(block_config__isnull=False).filter(block_config_id=self.id, active=True)
+    
     def available_to_user(self, user):
         return self.event_type.valid_for_user(user)
 
@@ -1687,7 +1696,7 @@ class Booking(models.Model):
 def valid_course_block_configs(course, active_only=True):
     if not course.has_started:
         # not started course - course blocks matching size and event type are valid
-        all_block_configs = BlockConfig.objects.filter(
+        all_block_configs = BlockConfig.objects.enabled().filter(
             course=True, event_type=course.event_type, size=course.number_of_events
         )
         if active_only:
@@ -1703,7 +1712,7 @@ def valid_dropin_block_configs(
     event=None, event_type=None, active_only=True, size=None
 ):
     ev_type = event.event_type if event else event_type
-    all_block_configs = BlockConfig.objects.filter(
+    all_block_configs = BlockConfig.objects.enabled().filter(
         course=False, event_type=ev_type
     )
     if size:

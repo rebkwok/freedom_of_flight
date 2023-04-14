@@ -23,7 +23,7 @@ from .utils import staff_required, StaffUserMixin, generate_workbook_response
 @login_required
 @staff_required
 def block_config_list_view(request):
-    block_configs = BlockConfig.objects.all().order_by("-active", "-id")
+    block_configs = BlockConfig.objects.enabled().order_by("-active", "-id")
     return _block_config_list_view(request, block_configs)
 
 
@@ -67,8 +67,6 @@ def _toggle_block_config(block_config_model, block_config_id):
 @login_required
 @staff_required
 def enable_block_config(request, block_config_id):
-    block_config_model =DisabledBlockConfig
-
     block_config = get_object_or_404(DisabledBlockConfig, pk=block_config_id)
     block_config.disabled = False
     block_config.save()
