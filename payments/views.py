@@ -126,8 +126,9 @@ def stripe_payment_complete(request):
             invoice = get_invoice_from_payment_intent(payment_intent, raise_immediately=False)
         except UnknownTransactionError as e:
             # This is a transaction from teamup; just log it and ignore
-            logger.error(e)
-            return
+            logger.warning(e)
+            error = "Unknown transaction"
+            failed = True
         
         if invoice is not None:
             try:
@@ -223,8 +224,8 @@ def stripe_webhook(request):
             invoice = get_invoice_from_payment_intent(payment_intent, raise_immediately=True)
         except UnknownTransactionError as e:
             # This is a transaction from teamup; just log it and ignore
-            logger.error(e)
-            return
+            logger.warning(e)
+            return HttpResponse("Ignored: Unknown transaction", status=200)
         error = None
         if event.type == "payment_intent.succeeded":
             _process_completed_stripe_payment(payment_intent, invoice)
