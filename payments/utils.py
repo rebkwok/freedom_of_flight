@@ -3,7 +3,7 @@ from django.urls import reverse
 
 from activitylog.models import ActivityLog
 from .emails import send_processed_payment_emails
-from .exceptions import PayPalProcessingError, StripeProcessingError
+from .exceptions import PayPalProcessingError, StripeProcessingError, UnknownTransactionError
 from .forms import PayPalPaymentsFormWithId
 from .models import Invoice
 
@@ -165,6 +165,11 @@ def retrieve_invoice_from_paypal_data(ipn_or_pdt):
 
 def get_invoice_from_payment_intent(payment_intent, raise_immediately=False):
     # Don't raise the exception here so we don't expose it to the user; leave it for the webhook
+    if "teamup_pipeline_id" in payment_intent.metadata:
+        raise UnknownTransactionError(
+            f"Unknown transaction for stripe payment intent {payment_intent.id}"
+        )
+    
     invoice_id = payment_intent.metadata.get("invoice_id")
     if not invoice_id:
         if raise_immediately:

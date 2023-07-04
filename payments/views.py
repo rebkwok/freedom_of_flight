@@ -16,7 +16,7 @@ import stripe
 
 from activitylog.models import ActivityLog
 from .emails import send_failed_payment_emails, send_processed_refund_emails
-from .exceptions import PayPalProcessingError, StripeProcessingError
+from .exceptions import PayPalProcessingError, StripeProcessingError, UnknownTransactionError
 from .models import Invoice, Seller, StripePaymentIntent
 from .utils import check_paypal_data, get_paypal_form, get_invoice_from_ipn_or_pdt, \
     get_invoice_from_payment_intent, check_stripe_data, process_invoice_items
@@ -122,7 +122,13 @@ def stripe_payment_complete(request):
     failed = False
 
     if payment_intent.status == "succeeded":
-        invoice = get_invoice_from_payment_intent(payment_intent, raise_immediately=False)
+        try:  
+            invoice = get_invoice_from_payment_intent(payment_intent, raise_immediately=False)
+        except UnknownTransactionError as e:
+            # This is a transaction from teamup; just log it and ignore
+            logger.error(e)
+            return
+        
         if invoice is not None:
             try:
                 _process_completed_stripe_payment(payment_intent, invoice, seller)
@@ -213,7 +219,12 @@ def stripe_webhook(request):
                 # relates to a different seller, just return and let the next webhook manage it
                 logger.info("Mismatched seller account %s", account)
                 return HttpResponse("Ignored: Mismatched seller account", status=200)
-        invoice = get_invoice_from_payment_intent(payment_intent, raise_immediately=True)
+        try:  
+            invoice = get_invoice_from_payment_intent(payment_intent, raise_immediately=True)
+        except UnknownTransactionError as e:
+            # This is a transaction from teamup; just log it and ignore
+            logger.error(e)
+            return
         error = None
         if event.type == "payment_intent.succeeded":
             _process_completed_stripe_payment(payment_intent, invoice)

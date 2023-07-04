@@ -560,8 +560,5 @@ class StripeWebhookTests(TestUsersMixin, TestCase):
         # invoice and block is still unpaid
         assert self.block.paid is False
         assert self.invoice.paid is False
-
-        assert len(mail.outbox) == 1
-        assert mail.outbox[0].to == [settings.SUPPORT_EMAIL]
-        assert "WARNING: Something went wrong with a payment!" in mail.outbox[0].subject
-        assert "Payment intent requires action: id mock-intent-id; invoice id foo" in mail.outbox[0].body
+        # no emails sent
+        assert len(mail.outbox) == 0

@@ -6,3 +6,7 @@ class PayPalProcessingError(Exception):
 
 class StripeProcessingError(Exception):
     pass
+
+
+class UnknownTransactionError(Exception):
+    pass
